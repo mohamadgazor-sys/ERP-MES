@@ -1,6 +1,6 @@
 # ERP/MES Claude Code Starter Files
 
-Copy the contents of this package into the root of your existing ERP-MES project. Do not overwrite the three specifications with older versions. Keep the specs in `docs/` using these exact filenames:
+The starter files have been placed in the repository (Phase 0.1 housekeeping): `CLAUDE.md` at the repository root; specifications, logs and this file under `docs/`. Do not overwrite the three specifications with older versions. Keep the specs in `docs/` using these exact filenames:
 
 - `ERP_MES_CSharp_Master_Specification_Current_State.md`
 - `ERP_MES_CSharp_Architecture_Specification.md`
