@@ -69,3 +69,38 @@ Append one dated entry after every substantial session. Do not replace prior ent
 
 ### Recommended exact next action
 - Review and merge the housekeeping PR, then decide D1-D4 (see audit section 5.1) before Milestone 1.
+
+---
+
+### Date / session
+- Date: 2026-10-09
+- Claude Code session ID (if useful): session_01JCnmzjXbpMcTjwPcE9vsqQ (Phase 0.1 amendment to PR #2)
+
+### Goal
+- Narrow amendment to PR #2: make the `.gitignore` rules for business documents less broad without weakening protection of private data.
+
+### Completed
+- Kept the repository-wide ignores for `*.pdf`, `*.xlsx`, `*.xls`, `*.xlsm`, `*.csv` as a safety net, and added explicit exceptions only for synthetic fixtures under `tests/fixtures/`.
+- Added `tests/fixtures/README.md` documenting that directory: synthetic data only, never real or anonymised customer files, and no sub-directories named `data/` or `imports/` (ignored at any depth).
+- Added `!.env.example` and `!.env.*.example` so placeholder templates are not ignored; real `.env` and `.env.*` remain ignored.
+- Build output, local databases/backups, secrets and `customer-data/`, `real-data/`, `imports/` remain ignored.
+
+### Files changed
+- Modified: `.gitignore`, `docs/SESSION_LOG.md`.
+- Created: `tests/fixtures/README.md`.
+- No specification, decision log, `CLAUDE.md` or application code was touched.
+
+### Decisions newly approved
+- None. Choosing the "keep global rules plus fixtures exception" option was my implementation choice within the instruction; no audit decision (D1-D13) was made.
+
+### Unresolved questions / risks
+- `tests/fixtures/` currently contains only its README; no fixture files exist yet.
+- `.gitignore` cannot prove a committed fixture is synthetic; that relies on review.
+
+### Commands/tests actually run and results
+- `git check-ignore -v` on probe paths. Ignored (rule shown): `customer.pdf`, `docs/customer.pdf`, `real-data/x.xlsx`, `.env`, `.env.local`, `app.db`, `src/bin/a.dll`, `obj/x`, `tests/fixtures/data/x.csv`. Allowed (negated rule shown): `tests/fixtures/sample_import.xlsx`, `tests/fixtures/sub_request.pdf`, `tests/fixtures/rows.csv`, `.env.example`. Not matched: `docs/DECISION_LOG.md`.
+- `git status --short -uall` with the probe files present listed the three fixtures, `.env.example` and the README as trackable and none of the private examples.
+- All probe files were then deleted; none were staged or committed.
+
+### Recommended exact next action
+- Review and merge PR #2, then decide D1-D4 (audit section 5.1) before Milestone 1.

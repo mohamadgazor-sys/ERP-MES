@@ -27,6 +27,9 @@ data/
 # Secrets and local configuration
 .env
 .env.*
+# Templates with placeholder values only are allowed
+!.env.example
+!.env.*.example
 *.pfx
 *.key
 *.pem
@@ -35,7 +38,12 @@ appsettings.*.local.json
 appsettings.Local.json
 *.secrets.json
 
-# Real business / customer documents and exports (never commit)
+# Real business / customer documents and exports (never commit).
+# Documents and spreadsheets are ignored everywhere by extension, as a safety net.
+# The ONLY exception is synthetic test fixtures under tests/fixtures/ (see
+# tests/fixtures/README.md). Fixtures must contain invented data only.
+# Do not create a directory named data/ or imports/ inside tests/fixtures/;
+# those names are ignored at any depth by the rules in this file.
 *.pdf
 *.xlsx
 *.xls
@@ -44,6 +52,14 @@ appsettings.Local.json
 customer-data/
 real-data/
 imports/
+
+# Approved synthetic test fixtures (must stay below all rules above)
+!tests/fixtures/
+!tests/fixtures/**/*.pdf
+!tests/fixtures/**/*.xlsx
+!tests/fixtures/**/*.xls
+!tests/fixtures/**/*.xlsm
+!tests/fixtures/**/*.csv
 
 # Local Claude Code settings
 .claude/settings.local.json
