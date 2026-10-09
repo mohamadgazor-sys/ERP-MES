@@ -90,7 +90,8 @@ ERP-MES.sln
 │
 └── docs/
     ├── ERP_MES_CSharp_Master_Specification_Current_State.md
-    └── ERP_MES_CSharp_Architecture_Specification.md
+    ├── ERP_MES_CSharp_Architecture_Specification.md
+    └── ERP_MES_CSharp_Domain_and_Database_Specification.md
 ```
 
 ## 3.1 ERP.MES.Desktop
@@ -518,6 +519,8 @@ Waiting QC
    └── Rejected → External correction/rework route
 ```
 
+> **[Phase 0.1 annotation — superseded]** The "Rejected" branch above predates the SCRAP rule: permanently rejected quantity is SCRAP and only rework quantity returns (Decision Log #7; §39.1). Return-to-supplier handling for external stages is an open audit item (U17).
+
 ## 7.3 QC gate invariant
 
 For stage N where N > 1:
@@ -787,6 +790,8 @@ Request Items
 ```
 
 ## 12.2 Existing prototype mapping
+
+> **[Phase 0.1 annotation — superseded]** The positional table below is legacy reference only. The C# template maps by Persian header name in one mixed worksheet with an explicit Work Type column (Decision Log #16; Domain and Database Specification §21.2). See audit X28.
 
 The current prototype mapping is preserved as a reference:
 
