@@ -143,3 +143,40 @@ Append one dated entry after every substantial session. Do not replace prior ent
 
 ### Recommended exact next action
 - Review and merge the Phase 0.2 PR, then decide D5-D11 (audit section 5.2) so the Milestone 2 schema can be designed; Milestone 1 can start once this PR is merged.
+
+---
+
+### Date / session
+- Date: 2026-10-10
+- Claude Code session ID (if useful): session_01JCnmzjXbpMcTjwPcE9vsqQ (D1 amendment to PR #3)
+
+### Goal
+- Narrow update to D1: verify .NET 10 against the official Microsoft support policy and record it explicitly as the initial target.
+
+### Completed
+- Verified on 2026-10-10 from the official .NET support policy page: .NET 10 is LTS, original release 2025-11-11, end of support 2028-11-14, latest patch listed 10.0.12 (2026-09-08). The same page lists .NET 8 (LTS) and .NET 9 (STS) as ending support on 2026-11-10.
+- Replaced Decision Log #22 (previously "latest LTS at solution creation, no version named") with an explicit target: .NET 10; `net10.0-windows` for the WPF Desktop project, `net10.0` for platform-neutral class libraries and test projects as applicable. Recorded as initial, not a production lock.
+- Kept the minimum Windows edition/version and the production SQL Server version unresolved; reworded the "Exact .NET target/runtime and SQL Server..." unresolved bullet to cover only the SQL Server version/provider and to point to #22.
+- Checked Microsoft's .NET 10 supported-OS page: its Windows client row lists Windows 11 builds and only certain Windows 10 entries (21H2 marked "(E)" and "(IoT)", 1809 "(E)", 1607 "(E)"). The page did not expand "(E)"/"(IoT)" in the text retrieved, so this log does not interpret them; the Windows 10 baseline stays open and no blanket Windows 10 support is claimed.
+
+### Files changed
+- `docs/DECISION_LOG.md` (#22 rewritten; one unresolved bullet reworded)
+- `docs/SESSION_LOG.md` (this entry)
+- Not changed: D4 conventions (#23-#27), any other decision, specifications, `CLAUDE.md`, audit report.
+
+### Decisions newly approved
+- D1 amended by the owner: .NET 10 as the initial target with the target-framework split above. No new business decision.
+
+### Unresolved questions / risks
+- Minimum Windows edition/version, and production SQL Server version/provider: unresolved until the deployment environment is checked.
+- The factory's Windows 10 machines (if any are kept) must be matched against the supported-OS list; the (E)/(IoT) qualifiers need to be read from Microsoft's page directly before deciding.
+- `CLAUDE.md` still says "Exact .NET version and Windows 10 baseline must be verified before framework lock-in". That remains accurate for production and was not edited.
+- The earlier Phase 0.2 entry above (written 2026-10-09) says no concrete version was named; that was true then and is superseded by #22 as amended.
+
+### Commands/tests actually run and results
+- Fetched the official .NET support policy page and the .NET 10 supported-OS page; values quoted above are from those fetches (the page content was summarised by the fetch tool, not read as raw HTML).
+- `git diff` reviewed: only the intended lines in the two files changed.
+- No build or tests exist; none run.
+
+### Recommended exact next action
+- Review and merge PR #3, then decide D5-D11 (audit section 5.2). Before Milestone 1 acceptance, read the "(E)"/"(IoT)" notes on Microsoft's supported-OS page and inventory the factory machines.
