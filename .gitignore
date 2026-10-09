@@ -1,0 +1,53 @@
+# Build output and tooling
+bin/
+obj/
+out/
+publish/
+.vs/
+*.user
+*.suo
+*.userprefs
+TestResults/
+*.log
+*.nupkg
+packages/
+
+# Local development databases and backups (SQLite / SQL Server)
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+*.mdf
+*.ldf
+*.bak
+*.dump
+data/
+
+# Secrets and local configuration
+.env
+.env.*
+*.pfx
+*.key
+*.pem
+secrets.json
+appsettings.*.local.json
+appsettings.Local.json
+*.secrets.json
+
+# Real business / customer documents and exports (never commit)
+*.pdf
+*.xlsx
+*.xls
+*.xlsm
+*.csv
+customer-data/
+real-data/
+imports/
+
+# Local Claude Code settings
+.claude/settings.local.json
+
+# OS / editor
+.DS_Store
+Thumbs.db
