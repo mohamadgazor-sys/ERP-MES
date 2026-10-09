@@ -104,3 +104,79 @@ Append one dated entry after every substantial session. Do not replace prior ent
 
 ### Recommended exact next action
 - Review and merge PR #2, then decide D1-D4 (audit section 5.1) before Milestone 1.
+
+---
+
+### Date / session
+- Date: 2026-10-09
+- Claude Code session ID (if useful): session_01JCnmzjXbpMcTjwPcE9vsqQ (Phase 0.2: D1, D3, D4)
+
+### Goal
+- Record the owner's answers to audit decisions D1, D3 and D4 (D2 was completed by Phase 0.1) and apply the D3 documentation amendments.
+
+### Completed
+- D1: recorded a provisional development target (latest .NET LTS at solution-creation time; `-windows` TFM for Desktop only) as Decision Log #22. No concrete version was named because it was not verified in this session.
+- D4: owner reviewed each convention one by one and accepted all five: integer keys + app-managed version column (#23), UTC timestamps + date-only type (#24), provider conventions (#25), generic audit table (#26), PBKDF2 password hashing (#27).
+- D3: owner chose "annotate + fix errata". Added `[Phase 0.1 annotation]` / `[Phase 0.1 editorial note]` blockquotes to stale passages (MS §1.3, §13.1, §13.3, §12.5.1, §14.6, §28, §39.6 inline, App. C #10; AS §7.2, §12.2; DS §5.1, §5.3, §11.2, §4.1, §32.2). Corrected: MS duplicate heading (second "1.4" is now "1.4A"), section cross-references (§30.7 -> 19, §33.13 -> 28), stray "- - -" list markers; AS docs tree now lists the Domain spec; DS §4.1 RequestNo wording; DL #19 cross-reference; DL duplicate "progress" entry merged. Recorded the amendment approach as Decision Log #28.
+- Recording place: DECISION_LOG only (no ADR files), per owner's choice.
+
+### Files changed
+- `docs/DECISION_LOG.md` (new decisions #22-#28; #19 cross-reference; duplicate unresolved entry merged)
+- `docs/ERP_MES_CSharp_Master_Specification_Current_State.md`, `docs/ERP_MES_CSharp_Architecture_Specification.md`, `docs/ERP_MES_CSharp_Domain_and_Database_Specification.md` (annotations and errata only)
+- `docs/SESSION_LOG.md` (this entry)
+- Not changed: `CLAUDE.md`, `docs/PHASE0_SPECIFICATION_AUDIT.md`, any code.
+
+### Decisions newly approved
+- D1 (provisional), D3, D4-a to D4-e as above. Decision Log #22-#28.
+
+### Unresolved questions / risks
+- Not annotated because they are still open decisions, not stale text: X14 (QC-correction target), X17 (NeedsIncomingQC / supply-type flags), X7 (Jalali year field; only noted in DS §4.1), X5/X10 (document links; only noted), all of D5-D13.
+- Concrete .NET version is still to be verified and named in the Milestone 1 ADR; Windows 10 support-lifecycle claims in the audit remain "verify".
+- The MS §33.2 and §39.12 gaps were only flagged; missing content was not reconstructed.
+- The audit report still shows D1-D4 as open (historical); this log and the Decision Log are the current record.
+
+### Commands/tests actually run and results
+- Python string replacements asserted that each target passage occurred exactly once before editing (all succeeded).
+- `git diff -U0` review: every removed line is one of the intended mechanical corrections listed above; all other changes are additions.
+- `PHASE0_SPECIFICATION_AUDIT.md` and `CLAUDE.md` unchanged (empty diff).
+- No build or tests exist; none run.
+
+### Recommended exact next action
+- Review and merge the Phase 0.2 PR, then decide D5-D11 (audit section 5.2) so the Milestone 2 schema can be designed; Milestone 1 can start once this PR is merged.
+
+---
+
+### Date / session
+- Date: 2026-10-10
+- Claude Code session ID (if useful): session_01JCnmzjXbpMcTjwPcE9vsqQ (D1 amendment to PR #3)
+
+### Goal
+- Narrow update to D1: verify .NET 10 against the official Microsoft support policy and record it explicitly as the initial target.
+
+### Completed
+- Verified on 2026-10-10 from the official .NET support policy page: .NET 10 is LTS, original release 2025-11-11, end of support 2028-11-14, latest patch listed 10.0.12 (2026-09-08). The same page lists .NET 8 (LTS) and .NET 9 (STS) as ending support on 2026-11-10.
+- Replaced Decision Log #22 (previously "latest LTS at solution creation, no version named") with an explicit target: .NET 10; `net10.0-windows` for the WPF Desktop project, `net10.0` for platform-neutral class libraries and test projects as applicable. Recorded as initial, not a production lock.
+- Kept the minimum Windows edition/version and the production SQL Server version unresolved; reworded the "Exact .NET target/runtime and SQL Server..." unresolved bullet to cover only the SQL Server version/provider and to point to #22.
+- Checked Microsoft's .NET 10 supported-OS page: its Windows client row lists Windows 11 builds and only certain Windows 10 entries (21H2 marked "(E)" and "(IoT)", 1809 "(E)", 1607 "(E)"). The page did not expand "(E)"/"(IoT)" in the text retrieved, so this log does not interpret them; the Windows 10 baseline stays open and no blanket Windows 10 support is claimed.
+
+### Files changed
+- `docs/DECISION_LOG.md` (#22 rewritten; one unresolved bullet reworded)
+- `docs/SESSION_LOG.md` (this entry)
+- Not changed: D4 conventions (#23-#27), any other decision, specifications, `CLAUDE.md`, audit report.
+
+### Decisions newly approved
+- D1 amended by the owner: .NET 10 as the initial target with the target-framework split above. No new business decision.
+
+### Unresolved questions / risks
+- Minimum Windows edition/version, and production SQL Server version/provider: unresolved until the deployment environment is checked.
+- The factory's Windows 10 machines (if any are kept) must be matched against the supported-OS list; the (E)/(IoT) qualifiers need to be read from Microsoft's page directly before deciding.
+- `CLAUDE.md` still says "Exact .NET version and Windows 10 baseline must be verified before framework lock-in". That remains accurate for production and was not edited.
+- The earlier Phase 0.2 entry above (written 2026-10-09) says no concrete version was named; that was true then and is superseded by #22 as amended.
+
+### Commands/tests actually run and results
+- Fetched the official .NET support policy page and the .NET 10 supported-OS page; values quoted above are from those fetches (the page content was summarised by the fetch tool, not read as raw HTML).
+- `git diff` reviewed: only the intended lines in the two files changed.
+- No build or tests exist; none run.
+
+### Recommended exact next action
+- Review and merge PR #3, then decide D5-D11 (audit section 5.2). Before Milestone 1 acceptance, read the "(E)"/"(IoT)" notes on Microsoft's supported-OS page and inventory the factory machines.

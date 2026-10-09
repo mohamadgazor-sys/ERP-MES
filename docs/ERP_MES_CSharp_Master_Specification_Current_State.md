@@ -229,6 +229,8 @@ When a contract is required:
 
 The exact downstream action after a contract rejection is not invented here; the rejection must block the production gate and preserve the rejection reason when supplied until a later business decision defines a return/correction route.
 
+> **[Phase 0.1 annotation — superseded]** The return/correction route is now decided: a rejected contract returns to Planning for correction and resubmission, with the rejection retained as history (Decision Log #4; Domain and Database Specification §11.1). See `PHASE0_SPECIFICATION_AUDIT.md` X9.
+
 ### Contract document storage
 
 Unlike the Access prototype's path-only PDF storage, the C# application's canonical document model stores the contract PDF binary content in SQL Server in the production deployment. SQLite may store the same document content during development/testing. The UI should open/view the document without requiring users to manage filesystem paths.
@@ -257,7 +259,7 @@ Item 2 — Ring B
 
 The request number and item identity must remain visible in production queues so that two physically similar or identical parts can still be distinguished.
 
-## 1.4 QC gate between stages
+## 1.4A QC gate between stages
 
 The first stage may be released by Planning when it is an internal production stage. If the first stage is external supply, it waits for external arrival and QC before the next internal production stage can be released.
 
@@ -427,7 +429,7 @@ The common request header contains, as applicable:
 - RequestNo
 - RequestDate
 - RequestTypeID
-- BuyerID for CUSTOMER requests
+- BuyerID for CUSTOMER requests *(legacy name; the Domain and Database Specification uses `Customer`/`CustomerID` — audit X2)*
 - RequestTitle
 - RequestDescription
 - CurrentDepartmentID
@@ -559,7 +561,7 @@ General fields may include:
 - RequestItemID
 - ItemNo
 - ItemName / PartName
-- BuyerID where item-level buyer differs
+- BuyerID where item-level buyer differs *(historical; not carried into Domain and Database Specification §5.1. Whether an item-level customer is needed is an open audit item, X1)*
 - Quantity
 - ReceiveDate
 - ItemCode
@@ -1212,6 +1214,8 @@ At minimum the UI must show:
 
 The first C# implementation shall use a **transparent item-completion metric** (completed items divided by total request items) for the headline request percentage unless a later approved rule replaces it. Stage-level progress must remain visible separately so that the request percentage is not mistaken for a weighted production-time percentage.
 
+> **[Phase 0.1 annotation — superseded]** The headline percentage is a *proposed default only*; the closing "Canonical Business Decision Update — 2026-10-09" section and the Decision Log record the formula as not yet approved. Status counts and quantity information are required regardless.
+
 For very large requests, progress must be calculated using database-side aggregation or otherwise efficient queries; loading all historical work-session records into the WPF client merely to calculate a progress bar is not acceptable.
 
 
@@ -1237,6 +1241,8 @@ The system must support manual priority changes because production plans can cha
 Management is authorized to override the normal Planning queue order. Every such override must record the user, timestamp, previous order/priority, new order/priority, and reason. The override must be auditable and must not erase the underlying Planning priority/history.
 
 The exact priority scale (for example numeric levels or named levels) is not specified in the source and is therefore not invented here. The canonical requirement is that Planning owns the normal priority and Management owns explicit override authority.
+
+> **[Phase 0.1 annotation — superseded]** The priority scale is now decided: `عادی`, `فوری`, `خیلی فوری` (Decision Log #11; Domain and Database Specification §18). See audit X19.
 
 ## 13.2 Planned machining/work time
 
@@ -1279,6 +1285,8 @@ The system must preserve both **planned** and **actual** values:
 The planned end date must never overwrite or be confused with the actual completion date.
 
 The exact factory working-calendar algorithm (shift pattern, holidays, break handling, machine-capacity model, and whether parallel machines share a common capacity pool) is **not specified in the source document and must remain a deliberate later design decision rather than being guessed**.
+
+> **[Phase 0.1 annotation — superseded]** The calendar rules (Saturday–Thursday, Friday by supervisor approval, current and future shift patterns, holidays, downtime) are now decided (Decision Log #13, #14; section "Calendar and planning time" at the end of this document). Only the multi-machine capacity algorithm remains open. See audit X19.
 
 The C# data model should nevertheless reserve explicit fields for planned scheduling information separately from actual execution timestamps, such as:
 
@@ -1378,6 +1386,8 @@ When QC rejects/requires rework:
 - the relevant item/stage history is preserved;
 - the stage can be worked again;
 - completed rework returns to QC.
+
+> **[Phase 0.1 annotation — superseded]** The first bullet above predates the SCRAP rule. Settled rule: permanently rejected quantity is SCRAP; only the recorded rework quantity returns to production (Decision Log #7; Domain and Database Specification §9.3). See audit X13.
 
 ---
 
@@ -2324,6 +2334,8 @@ The exact timezone policy is an implementation/deployment decision and is not in
 
 # 28. Excel BOM Import
 
+> **[Phase 0.1 annotation — superseded]** The positional column mapping tables in this section describe the legacy Access template only. The C# template is one mixed worksheet with Persian headers, mapped by header name, with an explicit Work Type column that is never inferred (Decision Log #16; Domain and Database Specification §21). Changed existing rows are conflicts requiring manual choice, not silent skips. Exact header strings and conflict options remain open. See audit X28.
+
 Excel import is a **core C# v1 input method**, not merely a legacy prototype convenience. Some customer requests may contain hundreds of items and can reach approximately **1,000 items**, making manual entry impractical. The application must therefore allow item characteristics to be prepared/entered in Excel and imported into a selected customer request.
 
 The goal is to let Planning/Drawing populate large item lists efficiently while preserving the same item-level validation and downstream production workflow used for manually entered items.
@@ -2523,7 +2535,7 @@ Generic QC transaction for stage-based/relevant repair workflows.
 
 ## 30.7 CostCalculation
 
-Aggregate item costing transaction described in Section 18.
+Aggregate item costing transaction described in Section 19.
 
 ## 30.8 WarehouseTransaction
 
@@ -2686,6 +2698,8 @@ The old duplicated repair fields were removed from `tblRequestItems` in the prot
 
 - shared production release
 
+> **[Phase 0.1 editorial note]** The heading for §33.2 appears to be missing from the source; the content of that section was not reconstructed.
+
 ## 33.3 Make details
 
 The prototype contains focused Make-detail handling rather than putting every Make field into every form.
@@ -2764,7 +2778,7 @@ At the latest update, the warehouse receive form existed/opened but the complete
 
 ## 33.13 Excel BOM import
 
-The prototype includes Excel BOM import and duplicate-safe import behavior described in Section 27.
+The prototype includes Excel BOM import and duplicate-safe import behavior described in Section 28.
 
 ## 33.14 Production Sync & Release
 
@@ -3057,7 +3071,7 @@ Verify:
 
 - 90 advance;
 - 5 go to rework;
-- 5 remain rejected according to the defined QC outcome;
+- 5 remain rejected according to the defined QC outcome; *(superseded: the 5 rejected pieces are SCRAP — Decision Log #7; audit X13)*
 - total quantities remain consistent.
 
 ## 39.7 QC rejection/rework
@@ -3116,6 +3130,8 @@ For a non-contract Make item:
 - add raw-material cost;
 - route to Management approval;
 - release to Warehouse only after approval.
+
+> **[Phase 0.1 editorial note]** There is no §39.12 in the source; the numbering is left unchanged.
 
 ## 39.13 Contract gate
 
@@ -3447,6 +3463,7 @@ These are intentionally left as implementation decisions or future business-poli
 8. Exact long-term warehouse movement model beyond final receipt/history.
 9. Exact final .NET version and infrastructure libraries.
 10. Exact Excel workbook column/location used to identify `WorkTypeID` (`MAKE` vs `REPAIR`) for imports. The existing prototype mapping documents columns A:N but does not define a WorkType column; the C# system must support mixed Make/Repair items in one request, so this mapping must be explicitly defined before implementing the import template/validator.
+   > *Phase 0.1 annotation: partly superseded — an explicit Work Type column in a mixed worksheet is decided (Decision Log #16). The exact header string and accepted values remain open (audit U32).*
 
 No C# implementation should make a business decision from this appendix silently. Each item must be explicitly settled before the corresponding feature is implemented.
 
@@ -3484,6 +3501,8 @@ The correct C# model should be derived from the **business purpose** of these ob
 ---
 
 # End of C#-Ready Master Specification + Current State
+
+> **[Phase 0.1 editorial note]** Appendices E–G and the closing "Canonical Business Decision Update — 2026-10-09" sections follow this marker and are part of the document.
 
 # Appendix E — Current Access Prototype Object Registry (Migration Reference)
 
@@ -3527,7 +3546,7 @@ This appendix is retained so the C# implementation team can map the existing pro
 - frmRepairItemDetailsEntry
 - frmMakeItemDetails
 - frmItemProductionStages
-- - - frmUnitWorkQueue
+- frmUnitWorkQueue
 - frmProductionUnitDashboard
 - frmProductionUnitLauncher
 - frmProductionLiveOverview
@@ -3548,7 +3567,7 @@ This appendix is retained so the C# implementation team can map the existing pro
 ## E.3 Prototype queries of business importance
 
 - qryRequestItems
-- - qryRequestWorkflow_Current
+- qryRequestWorkflow_Current
 - qryRequestInbox_Management
 - qryRequestInbox_Planning
 - qryRequestInbox_Drawing

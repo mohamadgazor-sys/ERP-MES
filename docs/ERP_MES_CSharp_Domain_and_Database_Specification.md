@@ -165,7 +165,7 @@ The canonical Request should include at minimum:
 | Field | Meaning |
 |---|---|
 | RequestID | Primary key |
-| RequestNo | Customer-visible unique request number |
+| RequestNo | Customer-supplied request number (free-form text; not globally unique — see §4.2) |
 | RequestDate | Request date |
 | CustomerID | Customer reference |
 | RequestTitle | Short title |
@@ -177,6 +177,8 @@ The canonical Request should include at minimum:
 | CreatedAt | Creation timestamp |
 | UpdatedAt | Last update timestamp |
 | Notes | General notes |
+
+> **[Phase 0.1 editorial note]** §4.2 and §26 refer to a Jalali request year as part of the business key, but no such field is listed in the table above. It is not added here because its source date is still undecided (audit X7, U7).
 
 Request-level emergency fields are excluded from the canonical C# model.
 
@@ -274,6 +276,8 @@ The canonical RequestItem should include at minimum:
 
 The exact distinction between item-level priority and stage-level priority remains subject to Section 18.
 
+> **[Phase 0.1 editorial note]** `DrawingDocumentID` above is retained as a legacy single-reference field. The decided document model links one stored binary to many records through link tables (§20; Decision Log #18). Final treatment is an open audit item (X5, D11).
+
 ## 5.2 Item number uniqueness
 
 The existing design treats `ItemNo` as Short Text and evaluates duplicates in the scope of the current RequestID during Excel import.
@@ -323,6 +327,8 @@ Recommended canonical fields:
 | UpdatedAt | Last update |
 
 **Correction:** `IsEmergency` must be omitted from the actual C# entity because Emergency was explicitly removed from scope. It is retained in this table only to identify the legacy source field that must not be carried forward.
+
+> **[Phase 0.1 editorial note]** `DrawingDocumentID` in the table above is subject to the same note as in §5.1 (document link tables, §20).
 
 ---
 
@@ -617,6 +623,8 @@ After approval:
 | UpdatedAt | Last update |
 
 The contract customer is always derived by joining `Contract.RequestID` to `Request.CustomerID`; do not store a redundant `Contract.CustomerID`. Contract calculation/value logic is separate from this document unless later explicitly reinstated.
+
+> **[Phase 0.1 editorial note]** `DocumentID` above is a single reference; contract resubmission with a corrected PDF and the decided document-link model (§20) may require link rows instead (audit X5, X10, D11).
 
 ## 11.3 Contract navigation indexes
 
@@ -1538,7 +1546,7 @@ This register distinguishes confirmed business rules from decisions still needin
 
 ## 32.2 Priority and queue override — RESOLVED
 
-Priority values are exactly `عادی`, `فوری`, and `خیلی فوری`, mapped to stable codes and ordered from lowest to highest. Planning owns normal priority/order and may update it; the live queue must respond. Multiple stages/items may share a priority. Management may override multiple stages/items in one queue operation. Every override batch and affected stage position must be audited with user, timestamp, old/new order and reason; preserve the underlying Planning priority.
+Priority values are exactly `عادی`, `فوری`, and `خیلی فوری`, mapped to stable codes and ordered from lowest to highest *(see §18 for the authoritative table: `SortOrder` 1 = highest urgency, `VERY_URGENT`; audit X20)*. Planning owns normal priority/order and may update it; the live queue must respond. Multiple stages/items may share a priority. Management may override multiple stages/items in one queue operation. Every override batch and affected stage position must be audited with user, timestamp, old/new order and reason; preserve the underlying Planning priority.
 
 Still pending within this area: (a) whether the normal Planning priority belongs to the RequestItem or each ItemStage; and (b) how a later Planning priority edit interacts with an active Management override.
 
