@@ -180,3 +180,36 @@ Append one dated entry after every substantial session. Do not replace prior ent
 
 ### Recommended exact next action
 - Review and merge PR #3, then decide D5-D11 (audit section 5.2). Before Milestone 1 acceptance, read the "(E)"/"(IoT)" notes on Microsoft's supported-OS page and inventory the factory machines.
+
+---
+
+### Date / session
+- Date: 2026-10-10
+- Claude Code session ID (if useful): session_01JCnmzjXbpMcTjwPcE9vsqQ (Phase 0.3: D5-D11)
+
+### Goal
+- Record the owner's answers to audit decisions D5-D11 so the Milestone 2 schema can be designed.
+
+### Completed
+- Asked each decision with the audit's recommendation first, and recorded the answers as Decision Log #29-#35: D5 request statuses (rejected requests can be reopened by Planning or Management), D6 departments/roles seed, D7 RequestNo key details, D8 Customer (name only), D9 decimal fixed-scale quantities, D10 provisional permission map, D11 documents (link tables, PDF only, 10 MB).
+- Updated the Unresolved section: authorization-matrix and document bullets annotated; added two new open items (request-status transition table; role requirement for reopening).
+
+### Files changed
+- `docs/DECISION_LOG.md`, `docs/SESSION_LOG.md` only.
+- Not changed: specifications, `CLAUDE.md`, audit report, any code.
+
+### Decisions newly approved
+- D5-D11 as Decision Log #29-#35. Where an answer did not cover a detail (for example whether CANCELLED/CLOSED are terminal, content-hash de-duplication, the decimal scale), the detail was recorded as undecided or as a proposal, not as approved.
+
+### Unresolved questions / risks
+- The specifications still contain the older wording (for example `[DECISION REQUIRED]` markers in the Domain spec, the `Customer`/`JalaliRequestYear` fields not yet in DS §4.1). CLAUDE.md asks that specifications be updated when a decision is approved; that sync was not done in this change and should be a follow-up so the Domain spec matches #29-#35.
+- Request-status transition table still has to be written and reviewed before the Milestone 2 state machine.
+- D13 items (QC-correction target, quantity flow, contracts, scheduling, costing, progress formula) remain open and do not block Milestones 1-3.
+- Windows baseline and SQL Server version remain unresolved (see #22 and Unresolved).
+
+### Commands/tests actually run and results
+- `git diff` reviewed: 11 lines added and 2 lines edited in the Decision Log; the two edits only append clarifying text to existing Unresolved bullets.
+- No build or tests exist; none run.
+
+### Recommended exact next action
+- Review and merge this PR. Then (1) sync the Domain/Database specification with #29-#35 and draft the request-status transition table for review, and (2) start Milestone 1 (D1-D4 are decided) with a solution/projects plan for approval before any code is written.
