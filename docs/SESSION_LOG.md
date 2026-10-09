@@ -213,3 +213,40 @@ Append one dated entry after every substantial session. Do not replace prior ent
 
 ### Recommended exact next action
 - Review and merge this PR. Then (1) sync the Domain/Database specification with #29-#35 and draft the request-status transition table for review, and (2) start Milestone 1 (D1-D4 are decided) with a solution/projects plan for approval before any code is written.
+
+---
+
+### Date / session
+- Date: 2026-10-10
+- Claude Code session ID (if useful): session_01JCnmzjXbpMcTjwPcE9vsqQ (Phase 0.4: PR #4 merge, Domain sync, transition draft, Milestone 1 plan)
+
+### Goal
+- Merge PR #4 (owner request), synchronise the Domain and Database Specification with Decision Log #29-#35, draft the request-status transition table, and prepare the Milestone 1 solution and project plan for approval. No code.
+
+### Completed
+- PR #4 was a draft; marked it ready for review at the owner's request and merged it (merge commit a675df2).
+- Domain spec: added `JalaliRequestYear` to Request fields (§4.1); RequestNo rules (§4.2); status set and reopen rule (§4.3); Customer entity (§4.5); document references now link-table associations (§5.1, §5.3, §11.2); quantity precision note (§5.1); roles/departments seed (§15.3); provisional permission map (§15.4); reopen row in the matrix (§15.2, §32.8); document rules (§20); new §38 summarising the decisions. Earlier "Phase 0.1 editorial note" blocks about the document FKs and the missing year field were replaced because the decisions now exist.
+- New draft `docs/REQUEST_STATUS_TRANSITIONS_DRAFT.md`: 11 transitions, each marked as from-spec/decision or Proposed, with open questions and the tests it implies.
+- New `docs/MILESTONE_1_PLAN.md`: scope, solution layout, components, package candidates (none installed), work breakdown M1.1-M1.7, acceptance criteria, environment limits, risks, and ten approval items (A1-A10).
+
+### Files changed
+- Modified: `docs/ERP_MES_CSharp_Domain_and_Database_Specification.md`, `docs/SESSION_LOG.md`.
+- Created: `docs/REQUEST_STATUS_TRANSITIONS_DRAFT.md`, `docs/MILESTONE_1_PLAN.md`.
+- Not changed: Master and Architecture specifications, Decision Log, `CLAUDE.md`, audit report, any code.
+
+### Decisions newly approved
+- None new. The transition table and Milestone 1 plan are proposals awaiting approval.
+
+### Unresolved questions / risks
+- Transition-table questions (terminal statuses, role for reopen, item-edit statuses, extra cancellations): see the draft, section 4.
+- Milestone 1 approvals A1-A10 (layout, packages, Jalali approach, auth policy, font, CI, SDK install).
+- The Architecture Specification is not updated to mention the extra `Infrastructure.Sqlite` project; that edit waits for approval of the plan.
+- Master Specification wording not synced with #29-#35 beyond earlier annotations.
+
+### Commands/tests actually run and results
+- Python replacements asserted a single match before editing; `git diff` reviewed: removed lines are the replaced table rows and editorial notes only.
+- Rendering check of the Domain spec edit: found and fixed a paragraph directly above `---` that markdown would render as a heading.
+- No build or tests exist; none run. No .NET SDK is installed in this environment.
+
+### Recommended exact next action
+- Review the transition draft and the Milestone 1 plan, answer the open questions and approvals, then I record them in the Decision Log and start M1.1 only.

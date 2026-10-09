@@ -166,7 +166,8 @@ The canonical Request should include at minimum:
 |---|---|
 | RequestID | Primary key |
 | RequestNo | Customer-supplied request number (free-form text; not globally unique — see §4.2) |
-| RequestDate | Request date |
+| RequestDate | Request date (the customer's request date; source of `JalaliRequestYear`) |
+| JalaliRequestYear | Jalali year derived from `RequestDate`, persisted, part of the business key (§4.2; Decision Log #31) |
 | CustomerID | Customer reference |
 | RequestTitle | Short title |
 | RequestDescription | Main description |
@@ -178,7 +179,7 @@ The canonical Request should include at minimum:
 | UpdatedAt | Last update timestamp |
 | Notes | General notes |
 
-> **[Phase 0.1 editorial note]** §4.2 and §26 refer to a Jalali request year as part of the business key, but no such field is listed in the table above. It is not added here because its source date is still undecided (audit X7, U7).
+> **[Decision Log #31]** `JalaliRequestYear` was added to the table above. `ContractRequired` is not created in Milestone 2; its representation (including an "undetermined" state) is decided with the contract milestone (audit U10, Decision Log Unresolved).
 
 Request-level emergency fields are excluded from the canonical C# model.
 
@@ -207,11 +208,21 @@ For request lookup and business identification, the normal business combination 
 
 The same customer will not issue two distinct requests with the exact same `RequestNo` within the same Jalali year. Therefore the database/domain model should enforce the business-key uniqueness of **Customer + RequestNo + Jalali Request Year**, while retaining `RequestID` as the immutable internal primary key. A new customer order/request receives a new customer-supplied RequestNo even when it concerns the same physical item or repair case. The RequestNo comparison for this uniqueness rule is **case-sensitive**: `wsj-898` and `WSJ-898` are treated as different RequestNo values for the same customer and Jalali year.
 
+**Decided rules (Decision Log #31):**
+
+- `JalaliRequestYear` is derived from the customer's `RequestDate`, fixed at creation, and changeable only through an audited correction that re-checks uniqueness.
+- Leading or trailing whitespace in `RequestNo` is rejected with a validation error; it is never auto-trimmed.
+- No letter or digit normalisation is applied to `RequestNo`; it is stored and compared as exact text.
+- `RequestNo` uses a case-sensitive binary collation on both SQLite and SQL Server, verified by a test on both providers.
+- A non-blocking warning is shown when a case-insensitive near-duplicate exists for the same customer and Jalali year.
+
 ## 4.3 Request status
 
 `CurrentStatusID` points to a controlled RequestStatus record.
 
 The Request row holds the current state for fast retrieval. Every state-changing action also creates a `RequestWorkflowEntry`.
+
+**Initial status set (Decision Log #29):** `CREATED`, `SENT_TO_MANAGEMENT`, `MGMT_APPROVED_AT_PLANNING`, `MGMT_REJECTED_AT_PLANNING`, `UNDER_DRAWING_REVIEW`, `DRAWING_RETURNED_TO_PLANNING`, `CANCELLED`, `CLOSED`. Management rejection requires a reason. A Management-rejected request can be reopened for a new Management decision by the Planning or Management department, with a reason and an audit entry. Later statuses (contract, production, completion) are added with their milestones. The transition table is a draft pending approval: `docs/REQUEST_STATUS_TRANSITIONS_DRAFT.md`.
 
 ## 4.4 Request workflow history
 
@@ -239,6 +250,19 @@ The Request row holds the current state for fast retrieval. Every state-changing
 
 ---
 
+## 4.5 Customer (Decision Log #32)
+
+| Field | Meaning |
+|---|---|
+| CustomerID | Primary key |
+| Name | Customer name (Persian) |
+| IsActive | Active flag |
+| CreatedByUserID, CreatedAt, UpdatedAt | Audit fields |
+
+No customer code and no contact fields for now; they are added when a requirement exists. "Customer" is the canonical term ("Buyer" is legacy). There is no item-level customer; an item's customer is its request's customer.
+
+---
+
 # 5. Request Item Domain
 
 ## 5.1 RequestItem fields
@@ -256,7 +280,7 @@ The canonical RequestItem should include at minimum:
 | OrderUOMID | Unit in which the request/order is expressed |
 | TrackingUOMID | Unit in which production tracking is performed |
 | QtyConversionFactor | Derived/snapshot conversion where needed |
-| DrawingDocumentID | Drawing document reference where applicable |
+| (drawing document) | Linked through a document link table (§20); no single document foreign key (Decision Log #35) |
 | MaterialID | Material reference for Make items where applicable |
 | Dimensions | Dimension text/structured data as currently required |
 | Description | General item description |
@@ -276,7 +300,9 @@ The canonical RequestItem should include at minimum:
 
 The exact distinction between item-level priority and stage-level priority remains subject to Section 18.
 
-> **[Phase 0.1 editorial note]** `DrawingDocumentID` above is retained as a legacy single-reference field. The decided document model links one stored binary to many records through link tables (§20; Decision Log #18). Final treatment is an open audit item (X5, D11).
+**Quantities (Decision Log #33):** `RequestedQty`, UOM conversion factors/results and planned minutes per piece are decimals with a fixed scale, set in the Milestone 2 design (proposal: 4 decimal places).
+
+> **[Decision Log #35]** Document references on this entity are link-table associations, not single foreign keys; see §20.
 
 ## 5.2 Item number uniqueness
 
@@ -320,7 +346,7 @@ Recommended canonical fields:
 | HasReferenceSample | Reference-sample flag |
 | DrawingRequired | Drawing requirement |
 | DrawingProvided | Drawing availability |
-| DrawingDocumentID | Drawing document reference if applicable |
+| (drawing document) | Linked through a document link table (§20); no single document foreign key (Decision Log #35) |
 | CurrentRepairItemStatusID | Current repair-item status |
 | CreatedByUserID | Creator |
 | CreatedAt | Creation timestamp |
@@ -328,7 +354,7 @@ Recommended canonical fields:
 
 **Correction:** `IsEmergency` must be omitted from the actual C# entity because Emergency was explicitly removed from scope. It is retained in this table only to identify the legacy source field that must not be carried forward.
 
-> **[Phase 0.1 editorial note]** `DrawingDocumentID` in the table above is subject to the same note as in §5.1 (document link tables, §20).
+> **[Decision Log #35]** Document references on this entity are link-table associations, not single foreign keys; see §20.
 
 ---
 
@@ -611,7 +637,7 @@ After approval:
 | ContractDate | Contract date |
 | ContractTitle | Title |
 | ContractStatusID/Code | Current contract status |
-| DocumentID | Contract PDF document |
+| (contract document) | Linked through a document link table (§20); no single document foreign key (Decision Log #35) |
 | ManagementDecision | APPROVED / REJECTED |
 | ManagementDecisionNote | Optional explanation |
 | ManagementDecisionByUserID | Approver/rejector |
@@ -624,7 +650,7 @@ After approval:
 
 The contract customer is always derived by joining `Contract.RequestID` to `Request.CustomerID`; do not store a redundant `Contract.CustomerID`. Contract calculation/value logic is separate from this document unless later explicitly reinstated.
 
-> **[Phase 0.1 editorial note]** `DocumentID` above is a single reference; contract resubmission with a corrected PDF and the decided document-link model (§20) may require link rows instead (audit X5, X10, D11).
+> **[Decision Log #35]** Document references on this entity are link-table associations, not single foreign keys; see §20.
 
 ## 11.3 Contract navigation indexes
 
@@ -924,6 +950,24 @@ Other screens and actions require least-privilege access and must use this table
 ## 15.3 Role and Department reference values
 
 Canonical departments include Central, Management, Planning/Project Control, Drawing, Warehouse, Production Units, QC, and the maintenance/PM function for downtime reporting. The Internal Request workflow and Emergency subsystem are not part of C# v1.
+
+**Development seed (Decision Log #30):** Departments: Central, Management, Planning, Drawing, Warehouse, Production, QC, Maintenance/PM, and System (home of the Admin account). Roles: Admin, Manager, Staff. Final company names may replace these without a schema change. Authorization rows that name a role use these names; all other rows are department-based.
+
+## 15.4 Provisional development permission map (Decision Log #34)
+
+Used for development only; revisit before production. Every action not listed here or in §15.2 remains denied.
+
+| Action | Allowed department |
+|---|---|
+| Create a request and submit it to Management | Central |
+| Receive a request, record the hand-off to Drawing, edit request details | Planning |
+| Reopen a Management-rejected request for a new Management decision (reason and audit required) | Planning or Management |
+| Define MAKE items | Drawing |
+| Define REPAIR items; create/edit any item | Planning |
+| Import items from Excel | Planning or Drawing |
+
+Items are editable only until production release; afterwards only Planning may change them, through the controlled route-revision mechanism that is still to be specified (§6.2).
+
 ---
 
 # 16. Unit of Measure Domain
@@ -1098,6 +1142,8 @@ The canonical Document should support at least:
 | UploadedAt | Upload timestamp |
 | IsActive | Active |
 | Notes | Note |
+
+**Decided rules (Decision Log #35):** documents are linked through link tables only; a stored binary is shared by all its links. Request PDFs accept PDF only, with a maximum size of 10 MB held as a configuration value. Content-hash de-duplication on upload and retention/deletion rules are not decided.
 
 A single uploaded document may be logically attached to multiple records. Store the binary content once in `Document`, then represent each logical association through document-link rows. Prefer entity-specific link tables (for example RequestDocumentLink, RequestItemDocumentLink, ContractDocumentLink, QCInspectionDocumentLink, ItemStageDocumentLink) where required to retain database foreign-key integrity. Adding another supported owner type must not require duplicating the stored PDF bytes.
 
@@ -1598,6 +1644,7 @@ Permanently rejected quantity is **SCRAP**. Accepted quantity proceeds; only the
 | Record final warehouse receipt | Warehouse only |
 | Edit UOM/conversions | QC only |
 | Configure holidays/off-days | Planning |
+| Reopen a Management-rejected request | Planning or Management (reason and audit required; Decision Log #29) |
 | Administer users/roles | Admin user/ADMIN authorization only |
 
 Maintenance/PM reports downtime to Planning, which considers it in scheduling. Detailed permissions for less-sensitive/unlisted screens and the precise downtime-entry approval flow remain implementation details to review before rollout. Authorization must be enforced in application services, not just the UI.
@@ -1724,3 +1771,17 @@ This section summarizes newly confirmed decisions and supersedes older conflicti
 - Contract customer is derived through Request; no duplicate Contract.CustomerID.
 - Documents may link to multiple records while binary content is stored once.
 - Request progress formula remains pending confirmation; show statuses/counts regardless.
+
+---
+
+# 38. Confirmed Business Decisions — 2026-10-10
+
+Synchronised with `docs/DECISION_LOG.md` #29–#35. Where an older passage disagrees, this section and the Decision Log win.
+
+- Request statuses: initial set of eight; rejected requests can be reopened by Planning or Management with reason and audit (§4.3; #29). Transition table: draft in `docs/REQUEST_STATUS_TRANSITIONS_DRAFT.md`, not yet approved.
+- Departments and roles seed: §15.3 (#30). Provisional permission map: §15.4 (#34).
+- RequestNo business-key rules: §4.2 (#31). `JalaliRequestYear` is a persisted Request field (§4.1).
+- Customer master: name only plus active flag and audit fields (§4.5; #32).
+- Quantities and minutes per piece: decimals with a fixed scale (§5.1; #33).
+- Documents: link tables only; PDF only; 10 MB maximum configurable (§20; #35).
+- Technical conventions (#22–#27): .NET 10 target, integer keys with an application-managed version column, UTC timestamps and date-only types, provider-neutral subset with one migration set per provider, generic audit table, PBKDF2.
