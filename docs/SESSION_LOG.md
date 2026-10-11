@@ -338,11 +338,13 @@ Append one dated entry after every substantial session. Do not replace prior ent
 - None. Implementation choices made inside the approved plan, reported for review: exact SDK pin (`rollForward: disable`); hand-written classic `.sln`; placeholder entry points; no `TreatWarningsAsErrors` (not approved).
 
 ### Unresolved questions / risks
-- **Not built or tested here:** no .NET SDK is installed and none was installed; the build, `dotnet test` behaviour with zero test projects, and the SDK pin were not run locally. The first CI run is the authoritative check; the hand-written `.sln` and the WPF placeholder have not yet been compiled by anything.
+- **Not built or tested locally:** no .NET SDK is installed in the Claude environment and none was installed. Build and test results come from GitHub Actions only (see below).
+- **CI result for commit 7dc9419 (PR #6, run 38174776676, job 114574753659):** success. Windows Server 2025 runner; SDK 10.0.401 selected and equal to the `global.json` pin; restore OK; Debug build and Release build of all 9 projects (including the WPF `net10.0-windows` project): 0 warnings, 0 errors; `dotnet test` finished with no tests discovered or run (zero test projects with a test framework; the step succeeded); the artifact upload step found no TRX files and uploaded nothing, as expected; the three actions ran at the pinned SHAs; token permissions were `Contents: read` and `Metadata: read`. Not yet observed: NuGet audit output (no packages) and any test execution.
 - Package table (P8) and xUnit v2/v3 choice await approval; test projects are placeholders until then.
 - Production SQL Server version/provider, minimum Windows edition/version, Rial rounding, central authentication-policy storage, request-status transitions remain unresolved.
 
 ### Commands/tests actually run and results
+- GitHub Actions CI on PR #6: see the CI result above.
 - A Python verification script (kept outside the repository) checked: JSON/YAML/XML well-formedness; workflow permissions and SHA pinning, no secrets; exactly nine projects whose references equal the approved graph, no cycles, no package references, correct target frameworks, only Desktop uses WPF; the solution file lists exactly those projects with consistent GUIDs, configurations and nesting, CRLF endings; central package management has zero package versions; only two source files exist. Result: PASS.
 - `git check-ignore` / `git status` confirmed no new file is hidden by `.gitignore`.
 - No build or test was run locally.
