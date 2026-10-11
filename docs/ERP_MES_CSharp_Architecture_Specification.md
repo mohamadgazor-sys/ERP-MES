@@ -81,7 +81,9 @@ ERP-MES.sln
 │   ├── ERP.MES.Desktop/
 │   ├── ERP.MES.Application/
 │   ├── ERP.MES.Domain/
-│   └── ERP.MES.Infrastructure/
+│   ├── ERP.MES.Infrastructure/
+│   ├── ERP.MES.Infrastructure.Sqlite/
+│   └── ERP.MES.Provisioning/
 │
 ├── tests/
 │   ├── ERP.MES.Domain.Tests/
@@ -93,6 +95,8 @@ ERP-MES.sln
     ├── ERP_MES_CSharp_Architecture_Specification.md
     └── ERP_MES_CSharp_Domain_and_Database_Specification.md
 ```
+
+> **[Approved — Decision Log #37; details in `docs/MILESTONE_1_PLAN.md`]** `ERP.MES.Infrastructure.Sqlite` is added so that provider-specific configuration and migrations are structurally separate (Decision Log #25). A future `ERP.MES.Infrastructure.SqlServer` project would sit beside it with its own configuration and separate migrations, reusing the shared Infrastructure and the same business logic; it is not created now and the production SQL Server version/provider remains unresolved. A separate `ERP.MES.Provisioning` console project (not part of the factory-PC distribution) supports initial administrator setup and recovery (Decision Log #38, #39, #47). `docs/MILESTONE_1_PLAN.md` §2–3 defines the project responsibilities and dependency direction and prevails for details.
 
 ## 3.1 ERP.MES.Desktop
 
@@ -222,6 +226,8 @@ Responsibilities:
 - Secure password storage implementation.
 
 The Infrastructure layer must hide database-provider-specific details from the Domain layer and, as much as practical, from Application use cases.
+
+> **[Approved — Decision Log #37; details in `docs/MILESTONE_1_PLAN.md`]** The list above is split: provider-neutral code (model configuration, repositories, unit of work, password hashing, audit writing) stays in `ERP.MES.Infrastructure`; SQLite configuration and SQLite migrations go in `ERP.MES.Infrastructure.Sqlite`; SQL Server configuration and its separate migrations will go in a future `ERP.MES.Infrastructure.SqlServer`.
 
 ---
 
@@ -1632,26 +1638,35 @@ Such modules must be added through explicit requirement updates rather than sile
 
 ---
 
-# 38. Recommended First Implementation Milestone
+# 38. Recommended First Implementation Milestones
 
 Do **not** begin by implementing dashboards or every workflow.
 
-The recommended technical first milestone is:
+> **[Revised and approved — Decision Log #36; details in `docs/MILESTONE_1_PLAN.md`]** The earlier first-milestone list bundled the technical foundation with Request/RequestItem, the request workflow engine, Excel import and MAKE/REPAIR functionality. It is replaced by three narrower milestones. Milestone 1 is the technical foundation only. The earlier 12-item list is superseded.
+
+## 38.1 Milestone 1 — Technical foundation
 
 ```text
-1. Create solution and projects
-2. Configure WPF RTL/Persian foundation
-3. Configure Domain layer
-4. Configure Application layer
-5. Configure SQLite persistence
-6. Create initial canonical schema
-7. Implement User/Role/Department authentication
-8. Implement Request + RequestItem
-9. Implement Request workflow engine
-10. Implement basic Request UI
-11. Add Excel import preview/validation/commit
-12. Add item-level WorkType MAKE/REPAIR
+1. Create solution and projects (build and CI configuration)
+2. Configure WPF RTL/Persian shell (login and empty main window)
+3. Domain primitives (Jalali date service, Rial money formatting, result/error type)
+4. Application layer scaffolding (abstractions, authorization rule set)
+5. SQLite persistence base and initial schema for Department / Role / User / AuditLog / setup state
+6. Secure one-time Administrator initialization and the restricted Administrator recovery mechanism (Provisioning project)
+7. Authentication (password hashing, lockout) and default-deny authorization
 ```
+
+Milestone 1 must **not** implement: Customer, Request, RequestItem or any request workflow; Excel import; MAKE/REPAIR functionality; documents; stages, production, QC, contracts, costing or warehouse.
+
+## 38.2 Milestone 2 — Customers, requests and items
+
+Customer, UOM and conversions, Request with its business key, request workflow engine (after the status-transition table is approved), documents, MAKE/REPAIR items and basic request UI.
+
+## 38.3 Milestone 3 — Excel import
+
+Header-mapped template, preview/validation, conflict detection and resolution, transactional commit, import audit.
+
+## 38.4 After Milestone 3
 
 Only after this foundation is stable should the project move into:
 
