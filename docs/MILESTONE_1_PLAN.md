@@ -252,7 +252,36 @@ Action codes and a rule set mapping each to allowed department/role, built from 
 
 ### 8.1 Batch 1 results: dependency graph, restore and vulnerability checks
 
-*To be completed from the CI run of the commit that introduced batch 1; see the session log. Until then no result is claimed.* A preliminary check made before CI, outside the build, read NuGet's public vulnerability feed (updated 2026-10-11) for the 21 packages in an approximate resolution of the three direct packages and found **no advisories on record for any of them**. That is only a pre-check; the CI step `dotnet list package --vulnerable --include-transitive` is the check of record.
+Source: GitHub Actions run [38175638879](https://github.com/mohamadgazor-sys/ERP-MES/actions/runs/38175638879) on commit `cbb36da` (PR #6, base `main`), Windows runner, SDK 10.0.401. Everything below is copied from that run's log.
+
+- **Restore:** succeeded for all 9 projects.
+- **Resolved dependency graph** (`dotnet list package --include-transitive`; identical for the three test projects; the six `src` projects have no packages):
+
+  | Kind | Package | Resolved version |
+  |---|---|---|
+  | Direct | `Microsoft.NET.Test.Sdk` | 18.10.1 |
+  | Direct | `xunit.runner.visualstudio` | 4.0.1 |
+  | Direct | `xunit.v3.mtp-off` | 4.0.2 |
+  | Transitive | `Microsoft.Bcl.AsyncInterfaces` | 6.0.0 |
+  | Transitive | `Microsoft.CodeCoverage` | 18.10.1 |
+  | Transitive | `Microsoft.TestPlatform.ObjectModel` | 18.10.1 |
+  | Transitive | `Microsoft.TestPlatform.TestHost` | 18.10.1 |
+  | Transitive | `Microsoft.Win32.Registry` | 5.0.0 |
+  | Transitive | `System.Security.AccessControl` | 6.0.1 |
+  | Transitive | `xunit.analyzers` | 2.2.0 |
+  | Transitive | `xunit.v3.assert` | 4.0.2 |
+  | Transitive | `xunit.v3.common` | 4.0.2 |
+  | Transitive | `xunit.v3.core.mtp-off` | 4.0.2 |
+  | Transitive | `xunit.v3.extensibility.core` | 4.0.2 |
+  | Transitive | `xunit.v3.runner.common` | 4.0.2 |
+  | Transitive | `xunit.v3.runner.inproc.console` | 4.0.2 |
+
+  This is 3 direct and 13 transitive packages. My earlier pre-CI approximation listed 21 because it picked older dependency groups; the table above is the resolved graph of record.
+- **Vulnerability check** (`dotnet list package --vulnerable --include-transitive`, source `https://api.nuget.org/v3/index.json`): "has no vulnerable packages given the current sources" for all 9 projects, including transitive packages. No advisory needed to be addressed. A pre-CI read of NuGet's public vulnerability feed (updated 2026-10-11) agreed.
+- **Build:** Debug and Release, 0 warnings, 0 errors.
+- **Tests:** 11 discovered and 11 passed (Domain.Tests 3, Application.Tests 3, Infrastructure.Tests 5); the CI step fails when any project discovers zero tests or any test fails.
+- **Licences** are as declared in the NuGet package metadata read on 2026-10-11 (Microsoft packages MIT, xUnit packages Apache-2.0); the licences of the transitive packages were not individually reviewed beyond that metadata.
+- **Status:** batch 1 is checked and awaits your acceptance. The advisory feed changes over time, so CI re-runs the check on every build.
 
 ## 9. SDK pin (approved, Decision Log #46)
 

@@ -351,3 +351,41 @@ Append one dated entry after every substantial session. Do not replace prior ent
 
 ### Recommended exact next action
 - Review the M1.1 pull request and its CI run. Then answer the P8 package-table questions so M1.2 (`JalaliDateService`, `Money`) can start.
+
+---
+
+### Date / session
+- Date: 2026-10-11
+- Claude Code session ID (if useful): session_01JCnmzjXbpMcTjwPcE9vsqQ (M1.1 approval confirmations, PR sequence)
+
+### Goal
+- Act on the M1.1 approval: merge PR #5, retarget PR #6, introduce xUnit v3 with real tests, run restore and vulnerability checks, re-run CI on the retargeted branch. M1.2 not started.
+
+### Completed
+- Reviewed PR #5's complete diff before merging: 6 files, all under `docs/`; Master spec, `CLAUDE.md`, audit report untouched; Decision Log changes purely additive. Merged PR #5 (merge commit `b52def0`), pinned to the reviewed head SHA.
+- Retargeted PR #6 to `main`; merged `main` into the branch so it is current (`70dcdc5`).
+- Decision Log #51 (exact SDK pin; must be installed locally and in CI), #52 (xUnit v3), #53 (package acceptance gate).
+- xUnit v3 set up as in the official `xunit.v3` template 4.0.2, VSTest variant: shared settings in `tests/Directory.Build.props`, exact versions in `Directory.Packages.props`, `tests/xunit.runner.json`, three test projects kept. 11 real tests guard the approved project dependency direction (Domain 3, Application 3, Infrastructure 5); they read the project files, not business code.
+- CI additions: dependency listing, transitive vulnerability gate, a check that every test project discovered and passed tests (zero tests fails), per-project TRX files.
+- Plan sections 8, 8.1, 9, 11, 12, 13 updated; section 8.1 holds the batch 1 results.
+
+### Files changed
+- Created: `tests/Directory.Build.props`, `tests/xunit.runner.json`, `tests/Shared/SolutionLayout.cs`, three `*DependencyTests.cs` files.
+- Modified: `Directory.Packages.props`, `.github/workflows/ci.yml`, three test `.csproj` files, `docs/DECISION_LOG.md`, `docs/MILESTONE_1_PLAN.md`, `docs/SESSION_LOG.md`.
+- Not changed: request/item schema, workflows, Excel, production code (none exists), specifications other than the Decision Log and plan.
+
+### Decisions newly approved
+- None beyond the owner's confirmations recorded as #51-#53.
+
+### Unresolved questions / risks
+- Batch 1 awaits the owner's acceptance. Remaining package rows in plan section 8 stay conditional and add nothing.
+- The Microsoft.Testing.Platform runner was not adopted (Microsoft's documentation retrieved here did not state the global.json opt-in JSON and needs an extra TRX package); a later switch would be a separate reviewed change.
+- Licences of transitive packages were not reviewed individually beyond package metadata.
+- Production SQL Server version/provider, minimum Windows edition/version, Rial rounding, central authentication-policy storage and all request-status transition questions remain unresolved and unchanged.
+
+### Commands/tests actually run and results
+- Authoritative results are from GitHub Actions run 38175638879 (commit `cbb36da`, PR #6 with base `main`): SDK 10.0.401 selected and verified; restore succeeded; transitive vulnerability check: no vulnerable packages in any of the 9 projects; Debug and Release builds 0 warnings, 0 errors; tests 11 discovered, 11 passed, 0 failed; three TRX files uploaded.
+- Local, outside the build (no SDK installed): a Python structure check (XML, YAML and JSON validity, project graph, solution file, CI hygiene, test inventory) which also caught an illegal double hyphen inside an XML comment before it was pushed; a read of the official xUnit v3 template package; NuGet metadata and advisory-feed reads. A follow-up run for the documentation commit that adds this entry is reported in the pull request.
+
+### Recommended exact next action
+- Review PR #6 (CI is green on the retargeted branch), accept or amend batch 1 in plan section 8.1, then decide whether to start M1.2 (`JalaliDateService`, `Money`).
