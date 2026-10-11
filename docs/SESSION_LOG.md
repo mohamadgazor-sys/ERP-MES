@@ -421,3 +421,40 @@ Append one dated entry after every substantial session. Do not replace prior ent
 
 ### Recommended exact next action
 - Review the inventory, then merge PR #6; M1.2A (`JalaliDateService` only) starts after that on your instruction.
+
+---
+
+### Date / session
+- Date: 2026-10-11
+- Claude Code session ID (if useful): session_01JCnmzjXbpMcTjwPcE9vsqQ (M1.2A: JalaliDateService)
+
+### Goal
+- Implement `JalaliDateService` only (Decision Log #45) on a new branch from `main` after PR #6 was merged. No Money/Rial, no database, no request/item, Excel, workflow or production functionality.
+
+### Completed
+- `src/ERP.MES.Domain/Calendar/`: `IJalaliDateService`, `JalaliDateService` (built on `System.Globalization.PersianCalendar`, no package), `JalaliDate`, `DateRange`, `DigitStyle`, `JalaliDateError`. Conversion, year, leap-year and month-length queries, year/month/inclusive ranges as half-open Gregorian `DateRange`, formatting (`yyyy/MM/dd`, `yyyy/MM/dd HH:mm` 24-hour) and strict parsing (Latin and Persian digits), all in this one service. Storage conventions of Decision Log #24 are followed: `DateOnly` for dates, UTC `DateTime` for timestamps, no `DateTimeOffset`.
+- Invalid input returns a specific `JalaliDateError` and a default value; nothing is silently corrected. Digit shape and display time zone are required constructor arguments because neither is decided.
+- Tests in `tests/ERP.MES.Domain.Tests/Calendar/`: golden pairs in both directions, Nowruz and year boundaries, leap and common years, round trips for every day 1900-2100, month/year range tiling, output formats, Persian-digit and mixed-digit input, invalid-input tables, daylight-saving gap/overlap using a test-only time zone.
+- `docs/JALALI_DATE_SERVICE.md` documents the behaviour, error order, golden data for review and open questions Q1-Q6. Decision Log Unresolved list gained one bullet for those questions. Plan section 3.1/12/status updated; M1.2 split into M1.2A (in review) and M1.2B (not started).
+- Licence inventory retained; its status line and plan section 8.1 now state it is an engineering record and not a legal approval of the package terms.
+
+### Files changed
+- Created: six files in `src/ERP.MES.Domain/Calendar/`; six files in `tests/ERP.MES.Domain.Tests/Calendar/`; `docs/JALALI_DATE_SERVICE.md`.
+- Modified: `docs/DECISION_LOG.md` (one Unresolved bullet), `docs/MILESTONE_1_PLAN.md`, `docs/DEPENDENCY_LICENCE_INVENTORY.md` (status line), `docs/SESSION_LOG.md`.
+- Not changed: package versions, CI workflow, other projects.
+
+### Decisions newly approved
+- None. Presentation choices are documented as open questions, not decided.
+
+### Unresolved questions / risks
+- Q1-Q6 in `docs/JALALI_DATE_SERVICE.md` section 7 (digit shape on screen, display time zone, input leniency, display format, daylight-saving edge cases, acceptance of the golden-date source).
+- The golden dates are from general knowledge cross-checked for mutual consistency; they are not from a published table. Future-year rows (1406-1409) are least certain.
+- Rial rounding and storage, SQL Server version/provider, minimum Windows edition/version, authentication-policy storage and request-status transitions remain unresolved and unchanged.
+
+### Commands/tests actually run and results
+- Not compiled or run locally (no SDK installed in this environment). Local checks only: a Python structure check (XML, project graph, expected files, no out-of-scope terms, ASCII-only service source), and a line-for-line Python port of the parsing/validation logic run against every row of the invalid-input and valid-input test tables (0 mismatches over 96 rows). These check my expectations, not the compiled code.
+- A source-encoding slip was found and fixed before pushing: Persian digit characters had been written literally in the service; they are now `\u06F0`-style escapes.
+- Build and test results come from the Windows CI run of this branch; see the pull request.
+
+### Recommended exact next action
+- Review the pull request and its CI run, answer Q1-Q6 as you wish, and decide when M1.2B (`Money` formatting and result type; Rial rounding stays out unless you decide it) may start.

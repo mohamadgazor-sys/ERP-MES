@@ -74,3 +74,4 @@ This is a durable record of user-approved decisions. Update it only when the use
 - Permission to reopen is decided only at department level (#29); whether a role requirement applies is not stated.
 - Rial rounding rules and storage type (see #33).
 - Central (database) storage of the authentication policy for multi-PC deployment; in Milestone 1 the policy comes from configuration (#40).
+- `JalaliDateService` presentation details (see `docs/JALALI_DATE_SERVICE.md` section 7): on-screen digit shape (Persian or Latin); which time zone counts as local; whether input should accept more than Latin/Persian digits and `/` (Arabic-Indic digits, other separators, surrounding white space, seconds); whether the golden dates in that document are an accepted source. The service takes digit shape and time zone as required arguments and assumes neither.
