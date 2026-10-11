@@ -1,13 +1,17 @@
 <Project>
 
   <!-- Central package version management (Decision Log #44).
-       No package is approved yet (Decision Log #43), so no PackageVersion entries exist.
-       Entries are added only after the package table in docs/MILESTONE_1_PLAN.md section 8 is approved. -->
+       A package is listed here only after it appears in the package table in docs/MILESTONE_1_PLAN.md
+       section 8 with its dependency graph and vulnerability results (Decision Log #43, #53). -->
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
   </PropertyGroup>
 
+  <!-- Test framework: xUnit v3 with the VSTest runner combination from the official template 4.0.2 (Decision Log #52). -->
   <ItemGroup>
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.10.1" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="4.0.1" />
+    <PackageVersion Include="xunit.v3.mtp-off" Version="4.0.2" />
   </ItemGroup>
 
 </Project>

@@ -45,6 +45,21 @@ jobs:
       - name: Restore
         run: dotnet restore ERP-MES.sln
 
+      # Dependency graph and advisories, direct and transitive (Decision Log #43, #53).
+      # The full listing is kept in the log so it can be recorded in docs/MILESTONE_1_PLAN.md section 8.
+      - name: List packages (direct and transitive)
+        run: dotnet list ERP-MES.sln package --include-transitive --no-restore
+
+      - name: Check for vulnerable packages (direct and transitive)
+        shell: pwsh
+        run: |
+          $output = dotnet list ERP-MES.sln package --vulnerable --include-transitive --no-restore 2>&1 | Out-String
+          $exit = $LASTEXITCODE
+          Write-Host $output
+          if ($exit -ne 0) { throw "dotnet list package failed with exit code $exit" }
+          if ($output -match 'has the following vulnerable packages') { throw 'Vulnerable packages were found (direct or transitive).' }
+          if ($output -notmatch 'no vulnerable packages') { throw 'The vulnerability report did not complete (no "no vulnerable packages" statement found).' }
+
       - name: Build (Debug)
         run: dotnet build ERP-MES.sln --configuration Debug --no-restore
 
@@ -52,7 +67,24 @@ jobs:
         run: dotnet build ERP-MES.sln --configuration Release --no-restore
 
       - name: Test (Release)
-        run: dotnet test ERP-MES.sln --configuration Release --no-build --logger "trx;LogFileName=test-results.trx" --results-directory TestResults
+        run: dotnet test ERP-MES.sln --configuration Release --no-build --logger trx --results-directory TestResults
+
+      # A run that discovers no tests must not be reported as a pass.
+      - name: Verify tests were discovered and passed
+        shell: pwsh
+        run: |
+          $files = @(Get-ChildItem -Path TestResults -Filter *.trx -Recurse -ErrorAction SilentlyContinue)
+          if ($files.Count -eq 0) { throw 'No TRX result files were produced.' }
+          $total = 0; $passed = 0; $failed = 0
+          foreach ($f in $files) {
+            [xml]$x = Get-Content -LiteralPath $f.FullName
+            $c = $x.TestRun.ResultSummary.Counters
+            Write-Host ("{0}: total={1} executed={2} passed={3} failed={4}" -f $f.Name, $c.total, $c.executed, $c.passed, $c.failed)
+            if ([int]$c.total -eq 0) { throw ("Zero tests were discovered in {0}" -f $f.Name) }
+            $total += [int]$c.total; $passed += [int]$c.passed; $failed += [int]$c.failed
+          }
+          Write-Host "TOTAL: files=$($files.Count) total=$total passed=$passed failed=$failed"
+          if ($failed -ne 0 -or $passed -ne $total) { throw 'Not all discovered tests passed.' }
 
       - name: Upload test results
         if: ${{ always() }}

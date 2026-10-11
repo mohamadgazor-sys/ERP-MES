@@ -54,6 +54,9 @@ This is a durable record of user-approved decisions. Update it only when the use
 48. **UI font (P13, approved provisionally 2026-10-11):** Tahoma as the primary font with an appropriate system fallback. No font is bundled until licensing and deployment needs are established.
 49. **Continuous integration (P14, approved 2026-10-11):** Windows CI performs restore, build and test. GitHub Actions are pinned to full commit SHAs. Workflow permissions are least-privilege. No deployment workflow and no secrets for Milestone 1.
 50. **UI verification (P15, approved 2026-10-11):** A manual UI checklist verifies the initial shell; automated build and test requirements are retained.
+51. **Exact SDK pin confirmed (M1.1 approval, 2026-10-11):** .NET SDK 10.0.401 with `rollForward: disable` in `global.json`. The exact SDK must be installed on every developer machine and in CI. Future SDK changes require a reviewed update to `global.json`. (Confirms #46.)
+52. **Test framework (M1.1 approval, 2026-10-11):** xUnit v3 for this .NET 10 project, set up as in the official `xunit.v3` project template, using the VSTest runner combination (`Microsoft.NET.Test.Sdk`, `xunit.runner.visualstudio`, `xunit.v3.mtp-off`; exact versions in `Directory.Packages.props`). The three test projects are kept. Each test project has real, discoverable tests; a run that discovers zero tests is never reported as a passing behavioural test run, and CI fails on it.
+53. **Package acceptance gate (M1.1 approval, 2026-10-11):** P8 (#43) stays conditional. For every batch of packages added, restore and vulnerability checks, including transitive dependencies, are run and recorded in `docs/MILESTONE_1_PLAN.md` §8.1 and relevant advisories are addressed before acceptance. The production SQL Server provider stays undecided.
 
 ## Unresolved — do not guess
 
