@@ -1,0 +1,22 @@
+# Editor settings only (encoding, line endings, indentation). Code-style rules are not enforced here.
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+
+[*.{cs,csx}]
+indent_size = 4
+
+[*.{csproj,props,targets,xaml,json,yml,yaml}]
+indent_size = 2
+
+[*.sln]
+indent_style = tab
+end_of_line = crlf
+
+[*.md]
+trim_trailing_whitespace = false

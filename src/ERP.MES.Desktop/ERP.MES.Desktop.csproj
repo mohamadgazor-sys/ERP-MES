@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <OutputType>WinExe</OutputType>
+    <UseWPF>true</UseWPF>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\ERP.MES.Application\ERP.MES.Application.csproj" />
+    <ProjectReference Include="..\..\src\ERP.MES.Infrastructure\ERP.MES.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\ERP.MES.Infrastructure.Sqlite\ERP.MES.Infrastructure.Sqlite.csproj" />
+  </ItemGroup>
+
+</Project>

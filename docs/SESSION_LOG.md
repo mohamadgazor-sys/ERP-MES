@@ -314,3 +314,110 @@ Append one dated entry after every substantial session. Do not replace prior ent
 
 ### Recommended exact next action
 - Review M1.1 (next pull request) and answer the P8 table questions before M1.2.
+
+---
+
+### Date / session
+- Date: 2026-10-11
+- Claude Code session ID (if useful): session_01JCnmzjXbpMcTjwPcE9vsqQ (M1.1: solution skeleton)
+
+### Goal
+- Implement Milestone 1 step M1.1 only, according to the approved plan.
+
+### Completed
+- Added `ERP-MES.sln` (9 projects in `src` and `tests` solution folders), `global.json` (SDK 10.0.401, exact pin), `Directory.Build.props`, `Directory.Packages.props` (central package management on, no package versions), `.editorconfig`, six `src` projects and three `tests` projects with the approved project references and **no package references**, and `.github/workflows/ci.yml`.
+- `Desktop` (`net10.0-windows`, WPF) and `Provisioning` contain only a placeholder entry point; the libraries and test projects contain no source files.
+- CI: Windows runner; actions pinned to full SHAs (checkout v7.0.1, setup-dotnet v6.0.0, upload-artifact v7.0.2); `contents: read` permissions; no secrets or deployment; verifies the SDK in use equals the `global.json` pin; restore, Debug and Release builds, test with TRX upload.
+- Plan section 9 updated to the exact pin implemented.
+
+### Files changed
+- Created: `ERP-MES.sln`, `global.json`, `Directory.Build.props`, `Directory.Packages.props`, `.editorconfig`, `.github/workflows/ci.yml`, nine `.csproj` files, `src/ERP.MES.Desktop/Program.cs`, `src/ERP.MES.Provisioning/Program.cs`.
+- Modified: `docs/MILESTONE_1_PLAN.md` (section 9, section 13 wording), `docs/SESSION_LOG.md`.
+
+### Decisions newly approved
+- None. Implementation choices made inside the approved plan, reported for review: exact SDK pin (`rollForward: disable`); hand-written classic `.sln`; placeholder entry points; no `TreatWarningsAsErrors` (not approved).
+
+### Unresolved questions / risks
+- **Not built or tested locally:** no .NET SDK is installed in the Claude environment and none was installed. Build and test results come from GitHub Actions only (see below).
+- **CI result for commit 7dc9419 (PR #6, run 38174776676, job 114574753659):** success. Windows Server 2025 runner; SDK 10.0.401 selected and equal to the `global.json` pin; restore OK; Debug build and Release build of all 9 projects (including the WPF `net10.0-windows` project): 0 warnings, 0 errors; `dotnet test` finished with no tests discovered or run (zero test projects with a test framework; the step succeeded); the artifact upload step found no TRX files and uploaded nothing, as expected; the three actions ran at the pinned SHAs; token permissions were `Contents: read` and `Metadata: read`. Not yet observed: NuGet audit output (no packages) and any test execution.
+- Package table (P8) and xUnit v2/v3 choice await approval; test projects are placeholders until then.
+- Production SQL Server version/provider, minimum Windows edition/version, Rial rounding, central authentication-policy storage, request-status transitions remain unresolved.
+
+### Commands/tests actually run and results
+- GitHub Actions CI on PR #6: see the CI result above.
+- A Python verification script (kept outside the repository) checked: JSON/YAML/XML well-formedness; workflow permissions and SHA pinning, no secrets; exactly nine projects whose references equal the approved graph, no cycles, no package references, correct target frameworks, only Desktop uses WPF; the solution file lists exactly those projects with consistent GUIDs, configurations and nesting, CRLF endings; central package management has zero package versions; only two source files exist. Result: PASS.
+- `git check-ignore` / `git status` confirmed no new file is hidden by `.gitignore`.
+- No build or test was run locally.
+
+### Recommended exact next action
+- Review the M1.1 pull request and its CI run. Then answer the P8 package-table questions so M1.2 (`JalaliDateService`, `Money`) can start.
+
+---
+
+### Date / session
+- Date: 2026-10-11
+- Claude Code session ID (if useful): session_01JCnmzjXbpMcTjwPcE9vsqQ (M1.1 approval confirmations, PR sequence)
+
+### Goal
+- Act on the M1.1 approval: merge PR #5, retarget PR #6, introduce xUnit v3 with real tests, run restore and vulnerability checks, re-run CI on the retargeted branch. M1.2 not started.
+
+### Completed
+- Reviewed PR #5's complete diff before merging: 6 files, all under `docs/`; Master spec, `CLAUDE.md`, audit report untouched; Decision Log changes purely additive. Merged PR #5 (merge commit `b52def0`), pinned to the reviewed head SHA.
+- Retargeted PR #6 to `main`; merged `main` into the branch so it is current (`70dcdc5`).
+- Decision Log #51 (exact SDK pin; must be installed locally and in CI), #52 (xUnit v3), #53 (package acceptance gate).
+- xUnit v3 set up as in the official `xunit.v3` template 4.0.2, VSTest variant: shared settings in `tests/Directory.Build.props`, exact versions in `Directory.Packages.props`, `tests/xunit.runner.json`, three test projects kept. 11 real tests guard the approved project dependency direction (Domain 3, Application 3, Infrastructure 5); they read the project files, not business code.
+- CI additions: dependency listing, transitive vulnerability gate, a check that every test project discovered and passed tests (zero tests fails), per-project TRX files.
+- Plan sections 8, 8.1, 9, 11, 12, 13 updated; section 8.1 holds the batch 1 results.
+
+### Files changed
+- Created: `tests/Directory.Build.props`, `tests/xunit.runner.json`, `tests/Shared/SolutionLayout.cs`, three `*DependencyTests.cs` files.
+- Modified: `Directory.Packages.props`, `.github/workflows/ci.yml`, three test `.csproj` files, `docs/DECISION_LOG.md`, `docs/MILESTONE_1_PLAN.md`, `docs/SESSION_LOG.md`.
+- Not changed: request/item schema, workflows, Excel, production code (none exists), specifications other than the Decision Log and plan.
+
+### Decisions newly approved
+- None beyond the owner's confirmations recorded as #51-#53.
+
+### Unresolved questions / risks
+- Batch 1 awaits the owner's acceptance. Remaining package rows in plan section 8 stay conditional and add nothing.
+- The Microsoft.Testing.Platform runner was not adopted (Microsoft's documentation retrieved here did not state the global.json opt-in JSON and needs an extra TRX package); a later switch would be a separate reviewed change.
+- Licences of transitive packages were not reviewed individually beyond package metadata.
+- Production SQL Server version/provider, minimum Windows edition/version, Rial rounding, central authentication-policy storage and all request-status transition questions remain unresolved and unchanged.
+
+### Commands/tests actually run and results
+- Authoritative results are from GitHub Actions run 38175638879 (commit `cbb36da`, PR #6 with base `main`): SDK 10.0.401 selected and verified; restore succeeded; transitive vulnerability check: no vulnerable packages in any of the 9 projects; Debug and Release builds 0 warnings, 0 errors; tests 11 discovered, 11 passed, 0 failed; three TRX files uploaded.
+- Local, outside the build (no SDK installed): a Python structure check (XML, YAML and JSON validity, project graph, solution file, CI hygiene, test inventory) which also caught an illegal double hyphen inside an XML comment before it was pushed; a read of the official xUnit v3 template package; NuGet metadata and advisory-feed reads. A follow-up run for the documentation commit that adds this entry is reported in the pull request.
+
+### Recommended exact next action
+- Review PR #6 (CI is green on the retargeted branch), accept or amend batch 1 in plan section 8.1, then decide whether to start M1.2 (`JalaliDateService`, `Money`).
+
+---
+
+### Date / session
+- Date: 2026-10-11
+- Claude Code session ID (if useful): session_01JCnmzjXbpMcTjwPcE9vsqQ (final M1.1 review: licence inventory)
+
+### Goal
+- Before merging PR #6: add a licence inventory for all direct and transitive packages used by the test projects, flag missing or unclear licences without guessing, recheck the PR scope, report CI status. M1.2A not started.
+
+### Completed
+- Added `docs/DEPENDENCY_LICENCE_INVENTORY.md`: 16 packages (3 direct, 13 transitive) at the exact resolved versions. Licences read from each package's `.nuspec` SPDX expression: 7 MIT, 9 Apache-2.0; none missing, unclear, copyleft or proprietary. Flags: four Microsoft packages declare `requireLicenseAcceptance=true`; five packages bundle third-party notices (Mono.Cecil MIT, Newtonsoft.Json MIT, NuGet.Client Apache-2.0, and the standard .NET runtime notices). All packages are used by test projects only.
+- The inventory table was cross-checked against the machine-collected manifest data (16 of 16 rows match). No package version was changed.
+- Plan section 8.1 now points to the inventory.
+
+### Files changed
+- Created: `docs/DEPENDENCY_LICENCE_INVENTORY.md`. Modified: `docs/MILESTONE_1_PLAN.md` (one bullet), `docs/SESSION_LOG.md`.
+
+### Decisions newly approved
+- None.
+
+### Unresolved questions / risks
+- Owner review of the inventory and acceptance of the MIT terms flagged in F1.
+- Limits stated in the inventory: declared licences taken as stated; the long .NET third-party notice file was read by headings and licence families only; no legal review; repository-signature presence checked, not validated.
+- Production SQL Server version/provider, minimum Windows edition/version, Rial rounding, central authentication-policy storage and request-status transitions remain unresolved and unchanged.
+
+### Commands/tests actually run and results
+- Downloaded and read the 16 `.nupkg` archives from api.nuget.org into an isolated scratch directory (nothing executed); read the bundled notice files for the five packages that have them; verified the markdown table against the collected data (16/16); recounted licences (7 MIT, 9 Apache-2.0).
+- CI result for the commit that adds this entry is reported in PR #6.
+
+### Recommended exact next action
+- Review the inventory, then merge PR #6; M1.2A (`JalaliDateService` only) starts after that on your instruction.

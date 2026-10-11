@@ -1,6 +1,6 @@
 # Milestone 1 — Technical Foundation: Solution and Project Plan (revision 3)
 
-**Status:** **Approved with conditions on 2026-10-11** (P1–P15 recorded as Decision Log #36–#50). **Only step M1.1 is authorized.** Steps M1.2 and later start only on your instruction. Package choices (P8) are **not yet approved**: §8 contains the actual package table for your review. No package is added in M1.1.
+**Status:** **Approved with conditions on 2026-10-11** (P1–P15 recorded as Decision Log #36–#50). The M1.1 skeleton was approved on 2026-10-11 subject to the confirmations in Decision Log #51–#53 (exact SDK pin, xUnit v3, package checks). **Only step M1.1 is authorized.** Steps M1.2 and later start only on your instruction. P8 (packages) stays conditional: each batch of packages is added only after its dependency graph, restore and transitive vulnerability results are recorded in §8.1 and addressed.
 
 Basis: audit `PHASE0_SPECIFICATION_AUDIT.md` §6.2; Decision Log #22–#27 and #36–#50 (technical conventions and Milestone 1 approvals), #30 (roles seed), #34 (permission map); Architecture Specification §3, §5, §17, §31, §38.
 
@@ -220,7 +220,7 @@ Action codes and a rule set mapping each to allowed department/role, built from 
 
 ## 8. Packages and tools
 
-**Approval status: not yet approved (Decision Log #43).** Packages are added only after you review this table. **M1.1 adds no package.** The first packages are needed in M1.2 (test packages) and M1.3 (EF Core).
+**Approval status: conditional (Decision Log #43, #53).** A package batch is added only after its dependency graph has been checked and restore plus vulnerability checks (including transitive dependencies) are recorded in §8.1 and any relevant advisory is addressed. **Batch 1 (the xUnit v3 test packages, rows marked "batch 1")** is in M1.1; its results are in §8.1. All other rows are **not yet approved** and add nothing until their own batch is checked and you accept it.
 
 **Rules:** versions are managed centrally in `Directory.Packages.props` (`ManagePackageVersionsCentrally`, Decision Log #44); related EF Core components use the same version; only stable (non-preview) releases; exact versions pinned; the SDK's NuGet audit is enabled to flag vulnerable packages at restore; no package is added that is not in the approved table.
 
@@ -238,17 +238,50 @@ Action codes and a rule set mapping each to allowed department/role, built from 
 | `Microsoft.Extensions.Options.ConfigurationExtensions` | 10.0.12 | Infrastructure, Desktop, Provisioning | M1.4 | Binds `appsettings.json` sections to the options classes | `net10.0` (and earlier) | MIT |
 | `Microsoft.Extensions.Configuration.Json` | 10.0.12 | Desktop, Provisioning | M1.4 | Reads `appsettings.json` / `appsettings.Local.json` | `net10.0` (and earlier) | MIT |
 | `Microsoft.Extensions.Logging.Abstractions` | 10.0.12 | Application, Infrastructure | M1.4 | Logging calls in authentication/bootstrap code without choosing a sink (tokens and passwords are never logged) | `net10.0` (and earlier) | MIT |
-| `Microsoft.NET.Test.Sdk` | 18.10.1 | all test projects | M1.2 | Test host required to run tests with `dotnet test` | `net8.0`, `net462` (the `net8.0` asset is used on `net10.0`) | MIT |
-| `xunit` | 2.9.3 | all test projects | M1.2 | Test framework (brings `xunit.core`, `xunit.assert`, `xunit.analyzers`) | .NET Standard-based; works on `net10.0` | Apache-2.0 |
-| `xunit.runner.visualstudio` | 4.0.1 | all test projects | M1.2 | Lets `dotnet test` and Visual Studio discover xUnit tests | `net8.0`, `net472` (the `net8.0` asset is used on `net10.0`) | Apache-2.0 |
+| `Microsoft.NET.Test.Sdk` | 18.10.1 | all test projects (via `tests/Directory.Build.props`) | **batch 1 (M1.1)** | Test host required by `dotnet test` in the VSTest runner combination of the official xUnit v3 template | `net8.0`, `net462` (the `net8.0` asset is used on `net10.0`) | MIT |
+| `xunit.runner.visualstudio` | 4.0.1 | all test projects | **batch 1 (M1.1)** | Lets `dotnet test` and Visual Studio discover and run xUnit tests | `net8.0`, `net472` (the `net8.0` asset is used on `net10.0`) | Apache-2.0 |
+| `xunit.v3.mtp-off` | 4.0.2 | all test projects | **batch 1 (M1.1)** | xUnit v3 framework (test attributes, assertions, analyzers) configured for the VSTest runner, as the official template does for `TestRunner=vstest` | `net8.0` and later; test projects are executables (`OutputType=Exe`) | Apache-2.0 |
 
-**Choice for you in this table:** xUnit v2 (`xunit` 2.9.3, above) versus xUnit v3 (`xunit.v3` 4.0.2, Apache-2.0, `net8.0`). v3 uses a different runner model (Microsoft Testing Platform); I recommend v2 for Milestone 1 because it works with the standard `dotnet test` flow with fewer moving parts. Please confirm or choose v3.
+**Test framework (Decision Log #52):** xUnit v3, set up as in the official `xunit.v3` project template 4.0.2 (read from the `xunit.v3.templates` package on NuGet). For a `net10.0` project the template's default is the Microsoft.Testing.Platform runner (one package, `xunit.v3.mtp-v2`). I used the template's **VSTest** variant (the three packages above) because it keeps the standard `dotnet test` command and `--logger trx` working unchanged; Microsoft's `dotnet test` documentation (MTP mode) shows `--solution` and an additional TRX extension package are needed instead, and says the opt-in must be made in `global.json`, but it did not state the exact JSON. Moving to MTP later is possible as a separate, reviewed change. The three test projects are kept; the settings are shared in `tests/Directory.Build.props`.
 
 **Version alignment:** the EF Core and `Microsoft.Extensions.*` packages share the 10.0.12 servicing line, which matches the current .NET 10 runtime patch (Decision Log #22).
 
 **Deliberately not added** (to keep dependencies minimal): `CommunityToolkit.Mvvm` (a few lines of hand-written `ObservableObject`/`RelayCommand` suffice for one login window; revisit in Milestone 2), assertion libraries, mocking libraries (hand-written fakes), a Jalali library (`PersianCalendar` is used), a logging sink, any hashing package (built into .NET), the Hosting meta-package, a font package.
 
 **Not verified in this session:** transitive dependency licences beyond the packages' own metadata, and vulnerability advisories (see above).
+
+### 8.1 Batch 1 results: dependency graph, restore and vulnerability checks
+
+Source: GitHub Actions run [38175638879](https://github.com/mohamadgazor-sys/ERP-MES/actions/runs/38175638879) on commit `cbb36da` (PR #6, base `main`), Windows runner, SDK 10.0.401. Everything below is copied from that run's log.
+
+- **Restore:** succeeded for all 9 projects.
+- **Resolved dependency graph** (`dotnet list package --include-transitive`; identical for the three test projects; the six `src` projects have no packages):
+
+  | Kind | Package | Resolved version |
+  |---|---|---|
+  | Direct | `Microsoft.NET.Test.Sdk` | 18.10.1 |
+  | Direct | `xunit.runner.visualstudio` | 4.0.1 |
+  | Direct | `xunit.v3.mtp-off` | 4.0.2 |
+  | Transitive | `Microsoft.Bcl.AsyncInterfaces` | 6.0.0 |
+  | Transitive | `Microsoft.CodeCoverage` | 18.10.1 |
+  | Transitive | `Microsoft.TestPlatform.ObjectModel` | 18.10.1 |
+  | Transitive | `Microsoft.TestPlatform.TestHost` | 18.10.1 |
+  | Transitive | `Microsoft.Win32.Registry` | 5.0.0 |
+  | Transitive | `System.Security.AccessControl` | 6.0.1 |
+  | Transitive | `xunit.analyzers` | 2.2.0 |
+  | Transitive | `xunit.v3.assert` | 4.0.2 |
+  | Transitive | `xunit.v3.common` | 4.0.2 |
+  | Transitive | `xunit.v3.core.mtp-off` | 4.0.2 |
+  | Transitive | `xunit.v3.extensibility.core` | 4.0.2 |
+  | Transitive | `xunit.v3.runner.common` | 4.0.2 |
+  | Transitive | `xunit.v3.runner.inproc.console` | 4.0.2 |
+
+  This is 3 direct and 13 transitive packages. My earlier pre-CI approximation listed 21 because it picked older dependency groups; the table above is the resolved graph of record.
+- **Vulnerability check** (`dotnet list package --vulnerable --include-transitive`, source `https://api.nuget.org/v3/index.json`): "has no vulnerable packages given the current sources" for all 9 projects, including transitive packages. No advisory needed to be addressed. A pre-CI read of NuGet's public vulnerability feed (updated 2026-10-11) agreed.
+- **Build:** Debug and Release, 0 warnings, 0 errors.
+- **Tests:** 11 discovered and 11 passed (Domain.Tests 3, Application.Tests 3, Infrastructure.Tests 5); the CI step fails when any project discovers zero tests or any test fails.
+- **Licences:** all 16 packages declare an SPDX licence expression (7 MIT, 9 Apache-2.0); none is missing, unclear, copyleft or proprietary. Per-package inventory, flags (including `requireLicenseAcceptance=true` on four Microsoft packages and bundled third-party notices on five) and method are in [`DEPENDENCY_LICENCE_INVENTORY.md`](DEPENDENCY_LICENCE_INVENTORY.md). The packages are used by the test projects only.
+- **Status:** batch 1 is checked and awaits your acceptance. The advisory feed changes over time, so CI re-runs the check on every build.
 
 ## 9. SDK pin (approved, Decision Log #46)
 
@@ -258,15 +291,16 @@ Action codes and a rule set mapping each to allowed department/role, built from 
 {
   "sdk": {
     "version": "10.0.401",
-    "rollForward": "latestPatch",
+    "rollForward": "disable",
     "allowPrerelease": false
   }
 }
 ```
 
 - Source of the version: Microsoft's .NET 10.0 download page, checked 2026-10-11, shows SDK **10.0.401** with runtime 10.0.12 (security patch, released 2026-09-08) as the latest .NET 10 (LTS) release. I read only the first part of that long page (the latest-release block).
-- `rollForward: latestPatch` permits only later patches of the pinned feature band on a developer machine; CI installs exactly the version in `global.json`. If you prefer an exact pin with no roll-forward (`disable`), say so.
-- No SDK is installed in the Claude environment; the first confirmation that the pinned SDK installs and builds is the CI run of M1.1.
+- `rollForward: disable` makes the pin exact: a machine without SDK 10.0.401 cannot build the solution until that SDK (or a reviewed change to `global.json`) is installed. The earlier proposal used `latestPatch`; I implemented the exact pin because the approval says future SDK updates require a reviewed change. If you prefer `latestPatch`, say so; it is a one-word change.
+- **The exact SDK 10.0.401 must be installed on every developer machine and in CI** (Decision Log #51). `global.json` disables roll-forward, so a machine with a different .NET 10 SDK, or none, cannot build until 10.0.401 is installed. CI installs it with `actions/setup-dotnet` from `global.json` and fails if `dotnet --version` differs. Changing the SDK is a reviewed update to `global.json` (and the matching note here), never an automatic one.
+- No SDK is installed in the Claude environment; build and test results come from GitHub Actions. CI run for commit `7dc9419` confirmed SDK 10.0.401 was selected.
 
 ## 10. Persian UI font (approved provisionally, Decision Log #48)
 
@@ -294,7 +328,7 @@ Action codes and a rule set mapping each to allowed department/role, built from 
 
 | Step | Content | Verified by |
 |---|---|---|
-| M1.1 | **Authorized.** Solution (`ERP-MES.sln`), six `src` projects and three test projects with the §2 project references and **no package references**, `global.json` (10.0.401), `Directory.Build.props`, `Directory.Packages.props` (central management enabled, no versions yet), `.editorconfig`, CI workflow. Test projects are plain placeholders until the test packages are approved (M1.2). `Desktop` and `Provisioning` contain only a placeholder entry point. | Solution/project-graph checks; CI run: restore, build Release, `dotnet test` (zero tests); pinned SDK confirmed |
+| M1.1 | **Authorized.** Solution (`ERP-MES.sln`), six `src` projects and three test projects with the §2 project references, `global.json` (10.0.401, exact pin), `Directory.Build.props`, `Directory.Packages.props` (central management; xUnit v3 batch 1 only), `tests/Directory.Build.props` (shared xUnit v3 setup), `.editorconfig`, CI workflow. `Desktop` and `Provisioning` contain only a placeholder entry point. Each test project has real, discoverable tests that guard the approved dependency direction (11 tests); a run that discovers no tests fails CI. | Local structure checks; CI: pinned SDK, restore, dependency listing, transitive vulnerability gate, Debug/Release build, tests run and counted |
 | M1.2 | `JalaliDateService` + golden tests, `Money` formatting, result type | Unit tests |
 | M1.3 | Persistence base, entities, seed, `SystemSetup`, initial SQLite migration, version column, audit log, provider-neutral-subset note | Provider-agnostic integration tests on SQLite (migration from empty, FK enforcement, concurrency conflict, append-only audit) |
 | M1.4 | Password hasher, authentication service, lockout, policy options and validation | Unit + integration tests |
@@ -330,7 +364,7 @@ All of P1–P15 were answered by you on 2026-10-11 and are recorded in the Decis
 | P5 | Password length 12, 5 attempts, 5-minute lockout, configurable, audited | Approved provisionally | #40 |
 | P6 | PBKDF2-HMAC-SHA256, 600,000, per-password salt, stored parameters, upgrade on verify | Approved | #41 |
 | P7 | Benchmark on lowest-spec supported PC, ≈500 ms, never auto-reduce | Approved | #42 |
-| P8 | Package list | **Conditional — awaiting your approval of the §8 table** | #43 |
+| P8 | Package list | **Conditional** — batch 1 (xUnit v3) checked in §8.1; remaining rows await their own batch | #43, #53 |
 | P9 | Central package version management | Approved | #44 |
 | P10 | `PersianCalendar` behind `JalaliDateService`, with boundary, leap-year and Persian-digit tests | Approved | #45 |
 | P11 | SDK 10.0.401 in `global.json`, same SDK in CI | Approved | #46 |
@@ -339,6 +373,6 @@ All of P1–P15 were answered by you on 2026-10-11 and are recorded in the Decis
 | P14 | Windows CI, SHA-pinned actions, least privilege, no secrets or deployment | Approved | #49 |
 | P15 | Manual UI checklist for the initial shell | Approved | #50 |
 
-**Waiting for you (needed before M1.2):** (a) approve or amend the §8 package table, including the xUnit v2 versus v3 choice; (b) confirm `rollForward: latestPatch` in `global.json` (§9) or choose an exact pin.
+**Confirmed by you for M1.1:** exact SDK pin with `rollForward: disable` (#51); xUnit v3 (#52); package batches checked before acceptance (#53). **Waiting for you (needed before M1.2):** acceptance of the batch 1 results in §8.1, and of the remaining rows of the §8 table batch by batch as each is needed.
 
 **Still unresolved (not decided here):** production SQL Server version/provider; minimum supported Windows edition/version; Rial rounding rules and storage type; central storage of the authentication policy; every request-status transition question (see `REQUEST_STATUS_TRANSITIONS_DRAFT.md`, deferred until before the request-workflow milestone).
