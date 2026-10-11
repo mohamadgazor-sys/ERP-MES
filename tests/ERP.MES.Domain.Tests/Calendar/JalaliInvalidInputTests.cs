@@ -137,14 +137,23 @@ public class JalaliInvalidInputTests
     }
 
     [Fact]
-    public void The_day_after_the_last_supported_day_is_rejected()
+    public void Nothing_after_the_last_supported_day_is_accepted_or_rolled_over()
     {
         var last = _service.ToJalali(DateOnly.MaxValue);
-
         Assert.True(_service.TryCreateDate(last.Year, last.Month, last.Day, out _, out _));
-        Assert.True(last.Day < _service.GetDaysInMonth(last.Year, last.Month));
-        Assert.False(_service.TryCreateDate(last.Year, last.Month, last.Day + 1, out _, out var error));
-        Assert.Equal(JalaliDateError.YearOutOfRange, error);
+
+        // The day after: PersianCalendar may report the last month as ending at the last supported day, so the
+        // reason can be DayOutOfRange or YearOutOfRange; what matters is that it is rejected and nothing is returned.
+        Assert.False(_service.TryCreateDate(last.Year, last.Month, last.Day + 1, out var dayAfter, out var dayAfterError));
+        Assert.True(dayAfterError is JalaliDateError.DayOutOfRange or JalaliDateError.YearOutOfRange, $"unexpected error {dayAfterError}");
+        Assert.True(dayAfter.IsDefault);
+
+        // The first day of the next month (or of the next year after month 12) is beyond the calendar.
+        var nextMonthYear = last.Month < 12 ? last.Year : last.Year + 1;
+        var nextMonth = last.Month < 12 ? last.Month + 1 : 1;
+        Assert.False(_service.TryCreateDate(nextMonthYear, nextMonth, 1, out _, out var nextMonthError));
+        Assert.Equal(JalaliDateError.YearOutOfRange, nextMonthError);
+
         Assert.False(_service.TryCreateDate(last.Year + 1, 1, 1, out _, out var nextYearError));
         Assert.Equal(JalaliDateError.YearOutOfRange, nextYearError);
     }

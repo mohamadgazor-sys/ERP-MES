@@ -58,7 +58,7 @@ Parsing and creation never throw for bad user text. They return `false`, set a `
 1. `Empty` — `null`, empty or white-space only.
 2. `InvalidCharacter` — any character other than Latin or Persian digits and `/` (for date-times also one space and `:`). Includes `-`, `.`, `\`, letters, `T`, surrounding spaces in a date-only text, line breaks, and Arabic-Indic digits.
 3. `InvalidFormat` — allowed characters, wrong structure: wrong number of parts, empty part, a year that is not 4 digits, a month or day of more than 2 digits, a time that is not `H:mm`/`HH:mm` (for example `10:5` or `10:30:15`), a missing or doubled space.
-4. `YearOutOfRange` — year 0, or beyond the last supported year (the year that contains Gregorian 9999-12-31, where `DateTime` ends; the tests derive this limit from the calendar and do not hard-code it); also the day after the last supported day.
+4. `YearOutOfRange` — year 0, or beyond the last supported year (the year that contains Gregorian 9999-12-31, where `DateTime` ends; the tests derive this limit from the calendar and do not hard-code it); also any date in a later month of that last year. A day after the last supported day *within its own month* is reported as `DayOutOfRange`, because `PersianCalendar` itself treats that month as ending at the last supported day (found by the first CI run of the tests, which had assumed otherwise).
 5. `MonthOutOfRange` — month 0 or above 12.
 6. `DayOutOfRange` — day 0 or a day the month does not have (31 in months 7 to 12, 30 Esfand in a common year).
 7. `HourOutOfRange` (above 23) and `MinuteOutOfRange` (above 59) — reported after the date has been accepted.
