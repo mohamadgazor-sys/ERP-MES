@@ -250,3 +250,36 @@ Append one dated entry after every substantial session. Do not replace prior ent
 
 ### Recommended exact next action
 - Review the transition draft and the Milestone 1 plan, answer the open questions and approvals, then I record them in the Decision Log and start M1.1 only.
+
+---
+
+### Date / session
+- Date: 2026-10-11
+- Claude Code session ID (if useful): session_01JCnmzjXbpMcTjwPcE9vsqQ (Phase 0.5: Milestone 1 plan revision 2, PR #5 still draft)
+
+### Goal
+- Revise the Milestone 1 plan and affected documents before approval: narrow Milestone 1 to the technical foundation, document project responsibilities, define a secure one-time Administrator bootstrap, and set technical defaults. No code.
+
+### Completed
+- Architecture Specification: §38 rewritten into Milestones 1-3 (the earlier first-milestone list that included Request/RequestItem, workflow engine, Excel import and MAKE/REPAIR is superseded); §3 solution tree and §3.4 updated with `Infrastructure.Sqlite` and a future `Infrastructure.SqlServer`, marked "Proposed - pending approval".
+- `docs/MILESTONE_1_PLAN.md` rewritten (revision 2): scope and explicit exclusions; project structure, dependency direction and per-project responsibilities; provider-independence explanation; `JalaliDateService` on `PersianCalendar`; bootstrap mechanism (one-time token, `SystemSetup` state machine, atomic conditional claim, concurrent initialization, residual risks, tests); configurable authentication defaults (12 characters, 5 attempts, 5 minutes); PBKDF2-HMAC-SHA256 at 600,000 with stored algorithm/version/work factor and a benchmark on the lowest-spec PC; minimal package list with justifications and exclusions; central package management; SDK pin proposal; font chain; Windows CI; work breakdown, acceptance criteria, risks; 15 proposed decisions (P1-P15).
+- Transition draft and Domain spec §4.3 now state that the status-transition table is not approved, must not be implemented, and its review is deferred until before the request-workflow milestone; its open questions are unchanged and visible.
+
+### Files changed
+- Modified: `docs/ERP_MES_CSharp_Architecture_Specification.md`, `docs/ERP_MES_CSharp_Domain_and_Database_Specification.md` (one sentence), `docs/REQUEST_STATUS_TRANSITIONS_DRAFT.md` (status header), `docs/MILESTONE_1_PLAN.md`, `docs/SESSION_LOG.md`.
+- Not changed: Master Specification, Decision Log, `CLAUDE.md`, audit report, any code, `.gitignore`.
+
+### Decisions newly approved
+- None. All items in the plan are proposals (P1-P15). The Decision Log was not changed.
+
+### Unresolved questions / risks
+- Verified from the web in this session: .NET 10 SDK 10.0.401 / runtime 10.0.12 (Microsoft .NET 10 download page; only the first part of the long page was read) and OWASP's 600,000 iterations for PBKDF2-HMAC-SHA256. Two other hosts (builds.dotnet.microsoft.com, cheatsheetseries.owasp.org) were unreachable from this environment; equivalent pages on dotnet.microsoft.com and github.com were used instead.
+- Not verified in this session: NuGet licences/compatibility of each package (listed as "expected; verify"), availability of fonts on factory machines, hash timing on any PC.
+- Break-glass recovery for a lost Administrator is not designed (P12).
+- Production SQL Server version/provider, minimum Windows edition/version, Rial rounding, request-status transitions remain unresolved.
+
+### Commands/tests actually run and results
+- Web fetches listed above. `git diff` reviewed (see PR). Searched the documents for stale terms (`IJalaliCalendar`, old approval numbering). No build or tests exist; no SDK was installed; none run.
+
+### Recommended exact next action
+- Review `docs/MILESTONE_1_PLAN.md` §13 (P1-P15) and reply with approvals or changes; then I record the approved items in the Decision Log and start step M1.1 only.

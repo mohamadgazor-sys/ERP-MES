@@ -222,7 +222,7 @@ The same customer will not issue two distinct requests with the exact same `Requ
 
 The Request row holds the current state for fast retrieval. Every state-changing action also creates a `RequestWorkflowEntry`.
 
-**Initial status set (Decision Log #29):** `CREATED`, `SENT_TO_MANAGEMENT`, `MGMT_APPROVED_AT_PLANNING`, `MGMT_REJECTED_AT_PLANNING`, `UNDER_DRAWING_REVIEW`, `DRAWING_RETURNED_TO_PLANNING`, `CANCELLED`, `CLOSED`. Management rejection requires a reason. A Management-rejected request can be reopened for a new Management decision by the Planning or Management department, with a reason and an audit entry. Later statuses (contract, production, completion) are added with their milestones. The transition table is a draft pending approval: `docs/REQUEST_STATUS_TRANSITIONS_DRAFT.md`.
+**Initial status set (Decision Log #29):** `CREATED`, `SENT_TO_MANAGEMENT`, `MGMT_APPROVED_AT_PLANNING`, `MGMT_REJECTED_AT_PLANNING`, `UNDER_DRAWING_REVIEW`, `DRAWING_RETURNED_TO_PLANNING`, `CANCELLED`, `CLOSED`. Management rejection requires a reason. A Management-rejected request can be reopened for a new Management decision by the Planning or Management department, with a reason and an audit entry. Later statuses (contract, production, completion) are added with their milestones. The transition table is a draft that is **not approved**; its review is deferred until before the request-workflow milestone: `docs/REQUEST_STATUS_TRANSITIONS_DRAFT.md`.
 
 ## 4.4 Request workflow history
 

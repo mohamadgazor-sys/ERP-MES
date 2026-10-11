@@ -1,6 +1,6 @@
 # Request Status Transitions — DRAFT for approval
 
-**Status:** Draft. **Nothing here is approved.** It was prepared from Master Specification §3, §5.2 and §6.1, Decision Log #29, #30 and #34, and Domain and Database Specification §4.3, §15.2 and §15.4. The "Basis" column says where each row comes from. Rows marked **Proposed** are my suggestions and need your confirmation before the Milestone 2 state machine is built.
+**Status:** Draft. **Nothing here is approved, and nothing here may be implemented.** Review of this table and of the questions in §4 is **deferred until before the request-workflow milestone** (Milestone 2); Milestone 1 does not touch requests, statuses or workflows (see `MILESTONE_1_PLAN.md` §1). It was prepared from Master Specification §3, §5.2 and §6.1, Decision Log #29, #30 and #34, and Domain and Database Specification §4.3, §15.2 and §15.4. The "Basis" column says where each row comes from. Rows marked **Proposed** are my suggestions and need your confirmation before the Milestone 2 state machine is built.
 
 Scope: Milestone 2 only (creation, Management decision, hand-off to Planning and Drawing). Statuses for contracts, production and completion are added with their milestones, so `CLOSED` has no transition into it yet.
 
