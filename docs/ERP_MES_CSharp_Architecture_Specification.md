@@ -82,7 +82,8 @@ ERP-MES.sln
 │   ├── ERP.MES.Application/
 │   ├── ERP.MES.Domain/
 │   ├── ERP.MES.Infrastructure/
-│   └── ERP.MES.Infrastructure.Sqlite/
+│   ├── ERP.MES.Infrastructure.Sqlite/
+│   └── ERP.MES.Provisioning/
 │
 ├── tests/
 │   ├── ERP.MES.Domain.Tests/
@@ -95,7 +96,7 @@ ERP-MES.sln
     └── ERP_MES_CSharp_Domain_and_Database_Specification.md
 ```
 
-> **[Proposed — pending approval of `docs/MILESTONE_1_PLAN.md`]** `ERP.MES.Infrastructure.Sqlite` is added so that provider-specific configuration and migrations are structurally separate (Decision Log #25). A future `ERP.MES.Infrastructure.SqlServer` project would sit beside it; it is not created now and the production SQL Server version/provider remains unresolved. `docs/MILESTONE_1_PLAN.md` §2–3 defines the project responsibilities and dependency direction and prevails for details.
+> **[Approved — Decision Log #37; details in `docs/MILESTONE_1_PLAN.md`]** `ERP.MES.Infrastructure.Sqlite` is added so that provider-specific configuration and migrations are structurally separate (Decision Log #25). A future `ERP.MES.Infrastructure.SqlServer` project would sit beside it with its own configuration and separate migrations, reusing the shared Infrastructure and the same business logic; it is not created now and the production SQL Server version/provider remains unresolved. A separate `ERP.MES.Provisioning` console project (not part of the factory-PC distribution) supports initial administrator setup and recovery (Decision Log #38, #39, #47). `docs/MILESTONE_1_PLAN.md` §2–3 defines the project responsibilities and dependency direction and prevails for details.
 
 ## 3.1 ERP.MES.Desktop
 
@@ -226,7 +227,7 @@ Responsibilities:
 
 The Infrastructure layer must hide database-provider-specific details from the Domain layer and, as much as practical, from Application use cases.
 
-> **[Proposed — pending approval of `docs/MILESTONE_1_PLAN.md`]** The list above is split: provider-neutral code (model configuration, repositories, unit of work, password hashing, audit writing) stays in `ERP.MES.Infrastructure`; SQLite configuration and SQLite migrations go in `ERP.MES.Infrastructure.Sqlite`; SQL Server configuration and its separate migrations will go in a future `ERP.MES.Infrastructure.SqlServer`.
+> **[Approved — Decision Log #37; details in `docs/MILESTONE_1_PLAN.md`]** The list above is split: provider-neutral code (model configuration, repositories, unit of work, password hashing, audit writing) stays in `ERP.MES.Infrastructure`; SQLite configuration and SQLite migrations go in `ERP.MES.Infrastructure.Sqlite`; SQL Server configuration and its separate migrations will go in a future `ERP.MES.Infrastructure.SqlServer`.
 
 ---
 
@@ -1641,7 +1642,7 @@ Such modules must be added through explicit requirement updates rather than sile
 
 Do **not** begin by implementing dashboards or every workflow.
 
-> **[Revised — pending approval of `docs/MILESTONE_1_PLAN.md`]** The earlier first-milestone list bundled the technical foundation with Request/RequestItem, the request workflow engine, Excel import and MAKE/REPAIR functionality. It is replaced by three narrower milestones. Milestone 1 is the technical foundation only. The earlier 12-item list is superseded.
+> **[Revised and approved — Decision Log #36; details in `docs/MILESTONE_1_PLAN.md`]** The earlier first-milestone list bundled the technical foundation with Request/RequestItem, the request workflow engine, Excel import and MAKE/REPAIR functionality. It is replaced by three narrower milestones. Milestone 1 is the technical foundation only. The earlier 12-item list is superseded.
 
 ## 38.1 Milestone 1 — Technical foundation
 
@@ -1651,7 +1652,7 @@ Do **not** begin by implementing dashboards or every workflow.
 3. Domain primitives (Jalali date service, Rial money formatting, result/error type)
 4. Application layer scaffolding (abstractions, authorization rule set)
 5. SQLite persistence base and initial schema for Department / Role / User / AuditLog / setup state
-6. Secure one-time Administrator initialization
+6. Secure one-time Administrator initialization and the restricted Administrator recovery mechanism (Provisioning project)
 7. Authentication (password hashing, lockout) and default-deny authorization
 ```
 

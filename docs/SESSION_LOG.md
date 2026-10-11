@@ -283,3 +283,34 @@ Append one dated entry after every substantial session. Do not replace prior ent
 
 ### Recommended exact next action
 - Review `docs/MILESTONE_1_PLAN.md` §13 (P1-P15) and reply with approvals or changes; then I record the approved items in the Decision Log and start step M1.1 only.
+
+---
+
+### Date / session
+- Date: 2026-10-11
+- Claude Code session ID (if useful): session_01JCnmzjXbpMcTjwPcE9vsqQ (Phase 0.6: P1-P15 approvals recorded)
+
+### Goal
+- Record the owner's P1-P15 decisions, update the Milestone 1 plan and Architecture documentation, then authorize M1.1 only.
+
+### Completed
+- Decision Log #36-#50 (P1-P15) added; two Unresolved bullets added (Rial rounding/storage; central authentication-policy storage).
+- `docs/MILESTONE_1_PLAN.md` revised to revision 3: approval status; Provisioning without embedded credentials; token safeguards (digest only, re-issue invalidates, central attempt limit); new section 5.7 Administrator recovery (last-Administrator protection with a concurrency stamp, restricted Provisioning recovery token, forced new password, no backdoor, provider-neutral SQL Server process); real package table (versions, licence and target frameworks read from NuGet metadata on 2026-10-11) marked **not yet approved**; Tahoma-first font chain; CI action SHAs resolved; SDK pin text; section 13 turned into an approval-status table.
+- Architecture Specification: "pending approval" notes changed to "approved" with Decision Log references; Provisioning project added to the tree and to Milestone 1 item 6.
+
+### Files changed
+- `docs/DECISION_LOG.md`, `docs/MILESTONE_1_PLAN.md`, `docs/ERP_MES_CSharp_Architecture_Specification.md`, `docs/SESSION_LOG.md`.
+
+### Decisions newly approved
+- P1-P15 (Decision Log #36-#50). P8 is conditional: the package table awaits approval.
+
+### Unresolved questions / risks
+- P8 package table (including xUnit v2 versus v3) and the `rollForward` setting await the owner's answer.
+- NuGet vulnerability advisories for the listed versions not yet checked; first CI restore will report.
+- Production SQL Server version/provider, minimum Windows edition/version, Rial rounding, central authentication-policy storage and all request-status transition questions remain unresolved.
+
+### Commands/tests actually run and results
+- NuGet metadata reads (api.nuget.org) and `git ls-remote` for action tag SHAs; `git diff` reviewed. No build or tests; no SDK installed.
+
+### Recommended exact next action
+- Review M1.1 (next pull request) and answer the P8 table questions before M1.2.
