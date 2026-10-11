@@ -314,3 +314,38 @@ Append one dated entry after every substantial session. Do not replace prior ent
 
 ### Recommended exact next action
 - Review M1.1 (next pull request) and answer the P8 table questions before M1.2.
+
+---
+
+### Date / session
+- Date: 2026-10-11
+- Claude Code session ID (if useful): session_01JCnmzjXbpMcTjwPcE9vsqQ (M1.1: solution skeleton)
+
+### Goal
+- Implement Milestone 1 step M1.1 only, according to the approved plan.
+
+### Completed
+- Added `ERP-MES.sln` (9 projects in `src` and `tests` solution folders), `global.json` (SDK 10.0.401, exact pin), `Directory.Build.props`, `Directory.Packages.props` (central package management on, no package versions), `.editorconfig`, six `src` projects and three `tests` projects with the approved project references and **no package references**, and `.github/workflows/ci.yml`.
+- `Desktop` (`net10.0-windows`, WPF) and `Provisioning` contain only a placeholder entry point; the libraries and test projects contain no source files.
+- CI: Windows runner; actions pinned to full SHAs (checkout v7.0.1, setup-dotnet v6.0.0, upload-artifact v7.0.2); `contents: read` permissions; no secrets or deployment; verifies the SDK in use equals the `global.json` pin; restore, Debug and Release builds, test with TRX upload.
+- Plan section 9 updated to the exact pin implemented.
+
+### Files changed
+- Created: `ERP-MES.sln`, `global.json`, `Directory.Build.props`, `Directory.Packages.props`, `.editorconfig`, `.github/workflows/ci.yml`, nine `.csproj` files, `src/ERP.MES.Desktop/Program.cs`, `src/ERP.MES.Provisioning/Program.cs`.
+- Modified: `docs/MILESTONE_1_PLAN.md` (section 9, section 13 wording), `docs/SESSION_LOG.md`.
+
+### Decisions newly approved
+- None. Implementation choices made inside the approved plan, reported for review: exact SDK pin (`rollForward: disable`); hand-written classic `.sln`; placeholder entry points; no `TreatWarningsAsErrors` (not approved).
+
+### Unresolved questions / risks
+- **Not built or tested here:** no .NET SDK is installed and none was installed; the build, `dotnet test` behaviour with zero test projects, and the SDK pin were not run locally. The first CI run is the authoritative check; the hand-written `.sln` and the WPF placeholder have not yet been compiled by anything.
+- Package table (P8) and xUnit v2/v3 choice await approval; test projects are placeholders until then.
+- Production SQL Server version/provider, minimum Windows edition/version, Rial rounding, central authentication-policy storage, request-status transitions remain unresolved.
+
+### Commands/tests actually run and results
+- A Python verification script (kept outside the repository) checked: JSON/YAML/XML well-formedness; workflow permissions and SHA pinning, no secrets; exactly nine projects whose references equal the approved graph, no cycles, no package references, correct target frameworks, only Desktop uses WPF; the solution file lists exactly those projects with consistent GUIDs, configurations and nesting, CRLF endings; central package management has zero package versions; only two source files exist. Result: PASS.
+- `git check-ignore` / `git status` confirmed no new file is hidden by `.gitignore`.
+- No build or test was run locally.
+
+### Recommended exact next action
+- Review the M1.1 pull request and its CI run. Then answer the P8 package-table questions so M1.2 (`JalaliDateService`, `Money`) can start.

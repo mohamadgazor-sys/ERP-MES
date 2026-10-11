@@ -1,0 +1,13 @@
+<Project>
+
+  <!-- Central package version management (Decision Log #44).
+       No package is approved yet (Decision Log #43), so no PackageVersion entries exist.
+       Entries are added only after the package table in docs/MILESTONE_1_PLAN.md section 8 is approved. -->
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+
+  <ItemGroup>
+  </ItemGroup>
+
+</Project>

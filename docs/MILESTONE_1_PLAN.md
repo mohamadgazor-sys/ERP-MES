@@ -258,14 +258,14 @@ Action codes and a rule set mapping each to allowed department/role, built from 
 {
   "sdk": {
     "version": "10.0.401",
-    "rollForward": "latestPatch",
+    "rollForward": "disable",
     "allowPrerelease": false
   }
 }
 ```
 
 - Source of the version: Microsoft's .NET 10.0 download page, checked 2026-10-11, shows SDK **10.0.401** with runtime 10.0.12 (security patch, released 2026-09-08) as the latest .NET 10 (LTS) release. I read only the first part of that long page (the latest-release block).
-- `rollForward: latestPatch` permits only later patches of the pinned feature band on a developer machine; CI installs exactly the version in `global.json`. If you prefer an exact pin with no roll-forward (`disable`), say so.
+- `rollForward: disable` makes the pin exact: a machine without SDK 10.0.401 cannot build the solution until that SDK (or a reviewed change to `global.json`) is installed. The earlier proposal used `latestPatch`; I implemented the exact pin because the approval says future SDK updates require a reviewed change. If you prefer `latestPatch`, say so; it is a one-word change.
 - No SDK is installed in the Claude environment; the first confirmation that the pinned SDK installs and builds is the CI run of M1.1.
 
 ## 10. Persian UI font (approved provisionally, Decision Log #48)
@@ -339,6 +339,6 @@ All of P1–P15 were answered by you on 2026-10-11 and are recorded in the Decis
 | P14 | Windows CI, SHA-pinned actions, least privilege, no secrets or deployment | Approved | #49 |
 | P15 | Manual UI checklist for the initial shell | Approved | #50 |
 
-**Waiting for you (needed before M1.2):** (a) approve or amend the §8 package table, including the xUnit v2 versus v3 choice; (b) confirm `rollForward: latestPatch` in `global.json` (§9) or choose an exact pin.
+**Waiting for you (needed before M1.2):** (a) approve or amend the §8 package table, including the xUnit v2 versus v3 choice; (b) confirm the exact SDK pin (`rollForward: disable`) implemented in M1.1 (§9), or ask for `latestPatch`.
 
 **Still unresolved (not decided here):** production SQL Server version/provider; minimum supported Windows edition/version; Rial rounding rules and storage type; central storage of the authentication policy; every request-status transition question (see `REQUEST_STATUS_TRANSITIONS_DRAFT.md`, deferred until before the request-workflow milestone).

@@ -1,0 +1,63 @@
+name: CI
+
+# Restore, build and test on Windows (Decision Log #49). No secrets, no deployment, no publishing.
+# Third-party actions are pinned to full commit SHAs; the comment names the release.
+# Updating a pinned SHA or the SDK in global.json is a reviewed change.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-test:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up .NET SDK from global.json
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: global.json
+
+      - name: Verify the pinned SDK is the one in use
+        shell: pwsh
+        run: |
+          $expected = (Get-Content global.json -Raw | ConvertFrom-Json).sdk.version
+          $actual = (dotnet --version).Trim()
+          Write-Host "Expected SDK: $expected; actual SDK: $actual"
+          if ($actual -ne $expected) { throw "SDK mismatch: expected $expected but dotnet --version reports $actual" }
+
+      - name: Show SDK and runtime information
+        run: dotnet --info
+
+      - name: Restore
+        run: dotnet restore ERP-MES.sln
+
+      - name: Build (Debug)
+        run: dotnet build ERP-MES.sln --configuration Debug --no-restore
+
+      - name: Build (Release)
+        run: dotnet build ERP-MES.sln --configuration Release --no-restore
+
+      - name: Test (Release)
+        run: dotnet test ERP-MES.sln --configuration Release --no-build --logger "trx;LogFileName=test-results.trx" --results-directory TestResults
+
+      - name: Upload test results
+        if: ${{ always() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: test-results
+          path: TestResults
+          if-no-files-found: ignore
