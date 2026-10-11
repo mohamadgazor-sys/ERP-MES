@@ -76,6 +76,11 @@ public sealed class JalaliDateService : IJalaliDateService
             throw new ArgumentOutOfRangeException(nameof(jalaliMonth), jalaliMonth, "The month must be between 1 and 12.");
         }
 
+        if (IsAfterLastSupportedMonth(jalaliYear, jalaliMonth))
+        {
+            throw new ArgumentOutOfRangeException(nameof(jalaliMonth), jalaliMonth, "The calendar ends before this month of the last supported year.");
+        }
+
         return _calendar.GetDaysInMonth(jalaliYear, jalaliMonth);
     }
 
@@ -92,6 +97,13 @@ public sealed class JalaliDateService : IJalaliDateService
         if (month < 1 || month > 12)
         {
             error = JalaliDateError.MonthOutOfRange;
+            return false;
+        }
+
+        if (IsAfterLastSupportedMonth(year, month))
+        {
+            // PersianCalendar throws if asked about these months, so they must be rejected before the day check.
+            error = JalaliDateError.YearOutOfRange;
             return false;
         }
 
@@ -382,6 +394,10 @@ public sealed class JalaliDateService : IJalaliDateService
 
         return date;
     }
+
+    /// <summary>The calendar's last year is only partly supported: it ends at the month that contains DateTime.MaxValue.</summary>
+    private bool IsAfterLastSupportedMonth(int year, int month) =>
+        year == _maxJalali.Year && month > _maxJalali.Month;
 
     private void RequireSupportedYear(int year, string parameterName)
     {

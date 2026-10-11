@@ -154,6 +154,19 @@ public class JalaliInvalidInputTests
         Assert.False(_service.TryCreateDate(nextMonthYear, nextMonth, 1, out _, out var nextMonthError));
         Assert.Equal(JalaliDateError.YearOutOfRange, nextMonthError);
 
+        // Every later month of the last year is rejected with an error and never makes the calendar throw.
+        for (var month = last.Month + 1; month <= 12; month++)
+        {
+            Assert.False(_service.TryCreateDate(last.Year, month, 1, out _, out var laterMonthError));
+            Assert.Equal(JalaliDateError.YearOutOfRange, laterMonthError);
+
+            Assert.False(_service.TryParseDate($"{last.Year}/{month}/1", out var parsed, out var parseError));
+            Assert.Equal(JalaliDateError.YearOutOfRange, parseError);
+            Assert.True(parsed.IsDefault);
+
+            Assert.Throws<ArgumentOutOfRangeException>(() => _service.GetDaysInMonth(last.Year, month));
+        }
+
         Assert.False(_service.TryCreateDate(last.Year + 1, 1, 1, out _, out var nextYearError));
         Assert.Equal(JalaliDateError.YearOutOfRange, nextYearError);
     }
