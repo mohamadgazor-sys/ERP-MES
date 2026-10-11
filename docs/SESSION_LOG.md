@@ -389,3 +389,35 @@ Append one dated entry after every substantial session. Do not replace prior ent
 
 ### Recommended exact next action
 - Review PR #6 (CI is green on the retargeted branch), accept or amend batch 1 in plan section 8.1, then decide whether to start M1.2 (`JalaliDateService`, `Money`).
+
+---
+
+### Date / session
+- Date: 2026-10-11
+- Claude Code session ID (if useful): session_01JCnmzjXbpMcTjwPcE9vsqQ (final M1.1 review: licence inventory)
+
+### Goal
+- Before merging PR #6: add a licence inventory for all direct and transitive packages used by the test projects, flag missing or unclear licences without guessing, recheck the PR scope, report CI status. M1.2A not started.
+
+### Completed
+- Added `docs/DEPENDENCY_LICENCE_INVENTORY.md`: 16 packages (3 direct, 13 transitive) at the exact resolved versions. Licences read from each package's `.nuspec` SPDX expression: 7 MIT, 9 Apache-2.0; none missing, unclear, copyleft or proprietary. Flags: four Microsoft packages declare `requireLicenseAcceptance=true`; five packages bundle third-party notices (Mono.Cecil MIT, Newtonsoft.Json MIT, NuGet.Client Apache-2.0, and the standard .NET runtime notices). All packages are used by test projects only.
+- The inventory table was cross-checked against the machine-collected manifest data (16 of 16 rows match). No package version was changed.
+- Plan section 8.1 now points to the inventory.
+
+### Files changed
+- Created: `docs/DEPENDENCY_LICENCE_INVENTORY.md`. Modified: `docs/MILESTONE_1_PLAN.md` (one bullet), `docs/SESSION_LOG.md`.
+
+### Decisions newly approved
+- None.
+
+### Unresolved questions / risks
+- Owner review of the inventory and acceptance of the MIT terms flagged in F1.
+- Limits stated in the inventory: declared licences taken as stated; the long .NET third-party notice file was read by headings and licence families only; no legal review; repository-signature presence checked, not validated.
+- Production SQL Server version/provider, minimum Windows edition/version, Rial rounding, central authentication-policy storage and request-status transitions remain unresolved and unchanged.
+
+### Commands/tests actually run and results
+- Downloaded and read the 16 `.nupkg` archives from api.nuget.org into an isolated scratch directory (nothing executed); read the bundled notice files for the five packages that have them; verified the markdown table against the collected data (16/16); recounted licences (7 MIT, 9 Apache-2.0).
+- CI result for the commit that adds this entry is reported in PR #6.
+
+### Recommended exact next action
+- Review the inventory, then merge PR #6; M1.2A (`JalaliDateService` only) starts after that on your instruction.

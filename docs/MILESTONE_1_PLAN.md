@@ -280,7 +280,7 @@ Source: GitHub Actions run [38175638879](https://github.com/mohamadgazor-sys/ERP
 - **Vulnerability check** (`dotnet list package --vulnerable --include-transitive`, source `https://api.nuget.org/v3/index.json`): "has no vulnerable packages given the current sources" for all 9 projects, including transitive packages. No advisory needed to be addressed. A pre-CI read of NuGet's public vulnerability feed (updated 2026-10-11) agreed.
 - **Build:** Debug and Release, 0 warnings, 0 errors.
 - **Tests:** 11 discovered and 11 passed (Domain.Tests 3, Application.Tests 3, Infrastructure.Tests 5); the CI step fails when any project discovers zero tests or any test fails.
-- **Licences** are as declared in the NuGet package metadata read on 2026-10-11 (Microsoft packages MIT, xUnit packages Apache-2.0); the licences of the transitive packages were not individually reviewed beyond that metadata.
+- **Licences:** all 16 packages declare an SPDX licence expression (7 MIT, 9 Apache-2.0); none is missing, unclear, copyleft or proprietary. Per-package inventory, flags (including `requireLicenseAcceptance=true` on four Microsoft packages and bundled third-party notices on five) and method are in [`DEPENDENCY_LICENCE_INVENTORY.md`](DEPENDENCY_LICENCE_INVENTORY.md). The packages are used by the test projects only.
 - **Status:** batch 1 is checked and awaits your acceptance. The advisory feed changes over time, so CI re-runs the check on every build.
 
 ## 9. SDK pin (approved, Decision Log #46)
