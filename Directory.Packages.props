@@ -14,4 +14,11 @@
     <PackageVersion Include="xunit.v3.mtp-off" Version="4.0.2" />
   </ItemGroup>
 
+  <!-- Entity Framework Core for the local demonstration database, approved 2026-10-14 (batch 2, Decision Log #53).
+       Related EF Core components keep the same version. Only stable releases. No SQL Server provider here. -->
+  <ItemGroup>
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.13" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.13" />
+  </ItemGroup>
+
 </Project>

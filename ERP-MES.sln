@@ -25,6 +25,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ERP.MES.Application.Tests",
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ERP.MES.Infrastructure.Tests", "tests\ERP.MES.Infrastructure.Tests\ERP.MES.Infrastructure.Tests.csproj", "{80DB2966-B16C-5250-BFAE-7A92AA38FB36}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ERP.MES.Desktop.Tests", "tests\ERP.MES.Desktop.Tests\ERP.MES.Desktop.Tests.csproj", "{5C1D7E42-3A6B-5F18-9D24-7B0E6A91C3F5}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -67,6 +69,10 @@ Global
 		{80DB2966-B16C-5250-BFAE-7A92AA38FB36}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{80DB2966-B16C-5250-BFAE-7A92AA38FB36}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{80DB2966-B16C-5250-BFAE-7A92AA38FB36}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5C1D7E42-3A6B-5F18-9D24-7B0E6A91C3F5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5C1D7E42-3A6B-5F18-9D24-7B0E6A91C3F5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5C1D7E42-3A6B-5F18-9D24-7B0E6A91C3F5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5C1D7E42-3A6B-5F18-9D24-7B0E6A91C3F5}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -81,5 +87,6 @@ Global
 		{E0161ABF-72EC-56B9-B54A-03A5F1C985BD} = {CF0A34B2-CF28-5724-96AF-94220917D3ED}
 		{2A6F8881-DE97-53E4-A86D-70E9284BAE26} = {CF0A34B2-CF28-5724-96AF-94220917D3ED}
 		{80DB2966-B16C-5250-BFAE-7A92AA38FB36} = {CF0A34B2-CF28-5724-96AF-94220917D3ED}
+		{5C1D7E42-3A6B-5F18-9D24-7B0E6A91C3F5} = {CF0A34B2-CF28-5724-96AF-94220917D3ED}
 	EndGlobalSection
 EndGlobal

@@ -1,0 +1,25 @@
+<UserControl x:Class="ERP.MES.Desktop.Views.LimitationsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <Border Padding="24" CornerRadius="6" Background="{StaticResource CardBrush}"
+                BorderBrush="{StaticResource BorderBrushSoft}" BorderThickness="1" VerticalAlignment="Top">
+            <StackPanel>
+                <TextBlock Text="آنچه در این نسخه نمایشی نیست" FontSize="18" FontWeight="SemiBold"
+                           Foreground="{StaticResource PrimaryBrush}" />
+                <TextBlock Margin="0,12,0,0" TextWrapping="Wrap" LineHeight="26"
+                           Foreground="{StaticResource MutedTextBrush}">
+                    <Run Text="• استقرار روی SQL Server یا هر استقرار تولیدی" /><LineBreak />
+                    <Run Text="• ماتریس کامل نقش‌ها و مجوزها (فقط مجوزهای تأییدشده، و بقیه ممنوع)" /><LineBreak />
+                    <Run Text="• درون‌ریزی کامل از اکسل" /><LineBreak />
+                    <Run Text="• زمان‌بندی و بهینه‌سازی تولید، تقویم کاری و توقف ماشین‌آلات" /><LineBreak />
+                    <Run Text="• قرارداد، نقشه‌کشی، انبار و بارگذاری PDF" /><LineBreak />
+                    <Run Text="• محاسبات مالی و ریالی" /><LineBreak />
+                    <Run Text="• ماشین حالت کامل درخواست‌ها؛ فقط انتقال‌های ساده‌شدهٔ نمایشی" />
+                </TextBlock>
+                <TextBlock Margin="0,16,0,0" TextWrapping="Wrap" Foreground="{StaticResource MutedTextBrush}"
+                           Text="همهٔ مشتریان، درخواست‌ها و کاربران در این نسخه فرضی هستند." />
+            </StackPanel>
+        </Border>
+    </ScrollViewer>
+</UserControl>

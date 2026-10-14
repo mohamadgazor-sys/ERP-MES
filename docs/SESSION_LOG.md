@@ -494,6 +494,33 @@ Append one dated entry after every substantial session. Do not replace prior ent
 
 ### Date / session
 - Date: 2026-10-14
+- Claude Code session ID (if useful): session_01JCnmzjXbpMcTjwPcE9vsqQ (CI artifact for the demonstration build)
+
+### Goal
+- D1.4 of the demo plan: let the owner download and run the CI-built application.
+
+### Completed
+- `.github/workflows/ci.yml`: after all checks and tests pass, and **only on a push to `main`**, a self-contained win-x64 publish of the Desktop project, a `BUILD-INFO.txt` with the commit SHA and run id, and an upload as artifact `demo-build-win-x64-<sha>` (14 days). Pull-request runs do not publish (owner condition, 2026-10-14). Same pinned `upload-artifact` action, same permissions. `docs/MILESTONE_1_PLAN.md` section 11 records the narrow exception and the runtime-pack limitation.
+
+### Files changed
+- `.github/workflows/ci.yml`, `docs/MILESTONE_1_PLAN.md`, `docs/SESSION_LOG.md`.
+
+### Decisions newly approved
+- The owner approved the goal and conditions for this narrow exception to the "no publishing step" rule on 2026-10-14; the PR is for the owner's review and merge.
+
+### Unresolved questions / risks
+- The RID-specific restore fetches runtime packs that the vulnerability gate does not cover. The published folder is large (self-contained WPF).
+
+### Commands/tests actually run and results
+- Not run locally. On pull-request runs the new steps are skipped by design, so the publish steps themselves are first exercised by the push to `main` after the merge; an earlier pull-request run of the first version of this change did publish successfully (run 38640168245, artifact about 65 MB).
+
+### Recommended exact next action
+- Review and, if you approve the amendment, merge; then download the artifact from the run and work through `docs/MANUAL_UI_CHECKLIST.md`.
+
+---
+
+### Date / session
+- Date: 2026-10-14
 - Claude Code session ID (if useful): session_01JCnmzjXbpMcTjwPcE9vsqQ (domain model for the demonstration)
 
 ### Goal
