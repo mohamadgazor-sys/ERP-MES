@@ -488,3 +488,60 @@ Append one dated entry after every substantial session. Do not replace prior ent
 
 ### Recommended exact next action
 - Review the plan and answer section 7; merge in order: PDF-size PR, then this PR (resolve the SESSION_LOG overlap by merging `main` first), then the Q1-Q6 follow-up starts.
+
+---
+
+### Date / session
+- Date: 2026-10-14
+- Claude Code session ID (if useful): session_01JCnmzjXbpMcTjwPcE9vsqQ (PDF size limit, documentation only)
+
+### Goal
+- Change the maximum request-PDF size from 10 MB to 20 MiB everywhere it is stated. Documentation only; no upload code.
+
+### Completed
+- PR #8 (a revert of PR #7) was closed without merging at the owner's instruction; the JalaliDateService on `main` is kept.
+- Decision Log #54 records 20 MiB (20,971,520 bytes), displayed as "20 MB", configurable, PDF only; #35 and the Unresolved bullet point to it.
+- Domain and Database Specification (Documents rule and the summary list) updated.
+
+### Files changed
+- `docs/DECISION_LOG.md`, `docs/ERP_MES_CSharp_Domain_and_Database_Specification.md`, `docs/SESSION_LOG.md`.
+- Searched all of `docs/`, `CLAUDE.md` and the repository for other size references: the Master and Architecture specifications state no PDF size, so they are unchanged. The historical audit (D11) and earlier session-log entries still say 10 MB because they record what was true then.
+
+### Decisions newly approved
+- #54 (above).
+
+### Unresolved questions / risks
+- Nothing new. When upload is implemented, tests must cover exactly 20,971,520 bytes (accepted) and 20,971,521 bytes (rejected).
+
+### Commands/tests actually run and results
+- Documentation only; no build or test run locally. Windows CI result is reported in the PR.
+
+### Recommended exact next action
+- Review and merge this PR, then the Q1-Q6 JalaliDateService PR is started from the updated `main`.
+
+---
+
+### Date / session
+- Date: 2026-10-14
+- Claude Code session ID (if useful): session_01JCnmzjXbpMcTjwPcE9vsqQ (demo plan updated from `main`)
+
+### Goal
+- Bring PR #10 up to date with `main` after the PDF-size PR merged, record the owner's demo decisions and the migrations-only rule.
+
+### Completed
+- Merged `main` into the plan branch (one `SESSION_LOG.md` conflict resolved by keeping both entries). Plan: dependency table, D1.3 split into tooling and persistence PRs, demo acceptance criteria (section 4.4), protected credential file. Decision Log #57 records T1-T6 and the migrations rule.
+
+### Files changed
+- `docs/FOUR_DAY_DEMO_PLAN.md`, `docs/DECISION_LOG.md`, `docs/SESSION_LOG.md`.
+
+### Decisions newly approved
+- #57 (owner decisions of 2026-10-14). Numbers #55 and #56 belong to the package PR and the migration-tooling PR.
+
+### Unresolved questions / risks
+- Decision Log numbering has a temporary gap on `main` until PR #11 and the tooling PR merge. Request-status transitions, full permissions, scheduling, Rial rounding, SQL Server version and the Windows baseline stay unresolved.
+
+### Commands/tests actually run and results
+- Documentation only; Windows CI result is reported in the PR.
+
+### Recommended exact next action
+- Review and merge PR #11, then #10 and #12 in the order you prefer; the tooling PR then starts.

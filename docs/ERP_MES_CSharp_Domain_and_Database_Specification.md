@@ -1143,7 +1143,7 @@ The canonical Document should support at least:
 | IsActive | Active |
 | Notes | Note |
 
-**Decided rules (Decision Log #35):** documents are linked through link tables only; a stored binary is shared by all its links. Request PDFs accept PDF only, with a maximum size of 10 MB held as a configuration value. Content-hash de-duplication on upload and retention/deletion rules are not decided.
+**Decided rules (Decision Log #35):** documents are linked through link tables only; a stored binary is shared by all its links. Request PDFs accept PDF only, with a maximum size held as a configuration value; the limit is 20 MiB (20,971,520 bytes), displayed to users as "20 MB" (Decision Log #54, which supersedes the 10 MB in #35). Content-hash de-duplication on upload and retention/deletion rules are not decided.
 
 A single uploaded document may be logically attached to multiple records. Store the binary content once in `Document`, then represent each logical association through document-link rows. Prefer entity-specific link tables (for example RequestDocumentLink, RequestItemDocumentLink, ContractDocumentLink, QCInspectionDocumentLink, ItemStageDocumentLink) where required to retain database foreign-key integrity. Adding another supported owner type must not require duplicating the stored PDF bytes.
 
@@ -1783,5 +1783,5 @@ Synchronised with `docs/DECISION_LOG.md` #29–#35. Where an older passage disag
 - RequestNo business-key rules: §4.2 (#31). `JalaliRequestYear` is a persisted Request field (§4.1).
 - Customer master: name only plus active flag and audit fields (§4.5; #32).
 - Quantities and minutes per piece: decimals with a fixed scale (§5.1; #33).
-- Documents: link tables only; PDF only; 10 MB maximum configurable (§20; #35).
+- Documents: link tables only; PDF only; 20 MiB (20,971,520 bytes, shown as "20 MB") maximum, configurable (§20; #35, #54).
 - Technical conventions (#22–#27): .NET 10 target, integer keys with an application-managed version column, UTC timestamps and date-only types, provider-neutral subset with one migration set per provider, generic audit table, PBKDF2.
