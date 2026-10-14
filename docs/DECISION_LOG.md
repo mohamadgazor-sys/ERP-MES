@@ -72,6 +72,7 @@ This is a durable record of user-approved decisions. Update it only when the use
 - PDF storage retention policy and rules for deleting old documents. (Request PDF format is decided in #35 and its size limit in #54; limits for other document types are not.)
 - Exact database migration/testing and backup/restore operating procedure.
 - Request-status transition table (which transitions are allowed from each status, and whether `CANCELLED` and `CLOSED` are terminal), to be drafted from Master Specification §3 and audit Appendix A and reviewed at the start of Milestone 2.
+- Domain model gaps found while implementing Customer, Request, Item, Stage and Priority (details G1-G11 in `docs/DOMAIN_MODEL_DEMO_SCOPE.md` section 3): case sensitivity of `ItemNo`, whether new items default to `NORMAL`, item-versus-stage priority (already listed under queue ordering), provisional stage transitions, quantity and minutes lower bounds.
 - Permission to reopen is decided only at department level (#29); whether a role requirement applies is not stated.
 - Rial rounding rules and storage type (see #33).
 - Central (database) storage of the authentication policy for multi-PC deployment; in Milestone 1 the policy comes from configuration (#40).

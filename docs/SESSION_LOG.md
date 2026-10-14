@@ -489,3 +489,31 @@ Append one dated entry after every substantial session. Do not replace prior ent
 
 ### Recommended exact next action
 - Review and merge this PR, then the Q1-Q6 JalaliDateService PR is started from the updated `main`.
+
+---
+
+### Date / session
+- Date: 2026-10-14
+- Claude Code session ID (if useful): session_01JCnmzjXbpMcTjwPcE9vsqQ (domain model for the demonstration)
+
+### Goal
+- Model Customer, Request, mixed MAKE/REPAIR items, seeded stages and priority in the Domain project, strictly from the Domain and Database Specification and the Decision Log. No persistence, EF Core or migrations.
+
+### Completed
+- `src/ERP.MES.Domain/Requests/`: `Customer`, `RequestNo`, `RequestKey`, `Request`, `RequestStatus`, `RequestItem`, `WorkType`, `Priority`, `ItemStage`, `ItemStageStatus`, `QcApproval`. QC gate and first-stage release per DS 9.2. `docs/DOMAIN_MODEL_DEMO_SCOPE.md` lists every rule with its source and the guards the specification does not state (G1-G11).
+- Tests in `tests/ERP.MES.Domain.Tests/Requests/` (request number, customer, priority, request/key/items, item route).
+
+### Files changed
+- New: the Domain types above, six test files, `docs/DOMAIN_MODEL_DEMO_SCOPE.md`. Modified: `docs/DECISION_LOG.md` (one Unresolved bullet), `docs/SESSION_LOG.md`.
+
+### Decisions newly approved
+- None. No existing decision was changed.
+
+### Unresolved questions / risks
+- G1-G11 in `docs/DOMAIN_MODEL_DEMO_SCOPE.md`. Request status transitions, route revision, QC rejection/partial quantities, item-versus-stage priority and `ItemNo` case sensitivity stay open.
+
+### Commands/tests actually run and results
+- Not built locally (no SDK). Windows CI result is reported in the PR.
+
+### Recommended exact next action
+- Review the PR and answer G1-G11 (or accept them as provisional); then persistence mapping follows the migration work.
