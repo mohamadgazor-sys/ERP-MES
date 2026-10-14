@@ -332,7 +332,7 @@ Source: GitHub Actions run [38634656702](https://github.com/mohamadgazor-sys/ERP
     - `actions/upload-artifact` v7.0.2 → `cf430e030ddbb5b0abf93d22962f4752f3646cd9`
   - Least-privilege token: `permissions: contents: read` for the whole workflow; `persist-credentials: false` on checkout.
   - Triggers: `pull_request` and `push` to `main`. Not `pull_request_target`.
-  - No secrets, no deployment, no publishing step, no self-hosted runner. A job timeout is set.
+  - No secrets, no deployment, no self-hosted runner. A job timeout is set. **Narrow exception approved in principle by the owner on 2026-10-14 (conditions below; takes effect when the PR is merged):** after the vulnerability check, both builds and all tests have passed, a push to `main` (never a pull request) publishes the desktop application self-contained for win-x64 and uploads it as a temporary CI artifact named with the commit SHA, with the existing 14-day retention. The folder contains `BUILD-INFO.txt` with the commit SHA and run id, so a downloaded build can be matched to the merged code. No release, no deployment, no secrets, no extra permissions, the same pinned `upload-artifact` action. **Limitation:** the NuGet vulnerability check does not cover the bundled .NET runtime packs fetched by the runtime-specific publish.
   - Updating a pinned SHA is a reviewed change.
 - Optional later: a Linux job for the non-WPF test projects, to keep Domain/Application/Infrastructure portable.
 - **Manual UI checklist** (approved) verifies the initial shell until a UI-automation approach is chosen: RTL alignment, Persian typing, tab order, resize, mixed LTR/RTL text, high-DPI, first-run screen states. Automated build and test remain required.
