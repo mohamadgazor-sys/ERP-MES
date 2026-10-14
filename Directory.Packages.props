@@ -21,4 +21,10 @@
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.13" />
   </ItemGroup>
 
+  <!-- Migration tooling, approved 2026-10-14 (batch 3, Decision Log #56): design-time only, never shipped. Same version as EF Core
+       and as the dotnet-ef tool pinned in .config/dotnet-tools.json. -->
+  <ItemGroup>
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.13" />
+  </ItemGroup>
+
 </Project>
