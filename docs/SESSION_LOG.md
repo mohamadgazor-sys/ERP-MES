@@ -489,3 +489,33 @@ Append one dated entry after every substantial session. Do not replace prior ent
 
 ### Recommended exact next action
 - Review and merge this PR, then the Q1-Q6 JalaliDateService PR is started from the updated `main`.
+
+---
+
+### Date / session
+- Date: 2026-10-14
+- Claude Code session ID (if useful): session_01JCnmzjXbpMcTjwPcE9vsqQ (demo shell and navigation)
+
+### Goal
+- Day 1 of the demo plan: a Persian right-to-left WPF shell with navigation and a dashboard, without waiting for the migration tooling.
+
+### Completed
+- `ERP.MES.Application/Shell`: `ObservableObject`, `NavigationItem`, `DashboardTile`, `ShellViewModel` (base-library types only, so it is unit tested on any runner). Dates in the status bar come from `JalaliDateService` (Persian digits, Iran Standard Time).
+- `ERP.MES.Desktop`: `App` (composition root), `MainWindow` (RTL, Tahoma first, demo banner, navigation on the right, status bar), `PageFactory`, dashboard, placeholder and limitations views. The placeholder `Program.cs` was removed because WPF generates the entry point.
+- 11 tests for the shell state; `docs/MANUAL_UI_CHECKLIST.md`.
+
+### Files changed
+- New: `src/ERP.MES.Application/Shell/*` (4 files), `src/ERP.MES.Desktop/{App.xaml, App.xaml.cs, MainWindow.xaml, MainWindow.xaml.cs, PageFactory.cs, Views/*}`, `tests/ERP.MES.Application.Tests/Shell/ShellViewModelTests.cs`, `docs/MANUAL_UI_CHECKLIST.md`. Deleted: `src/ERP.MES.Desktop/Program.cs`. Modified: `docs/SESSION_LOG.md`.
+
+### Decisions newly approved
+- None. Placing presentation models in the Application project (rather than a Windows-only test project) is a testability choice for review; they contain no WPF types.
+
+### Unresolved questions / risks
+- I cannot run WPF here; layout, fonts and the RTL look are unverified until the owner runs the manual checklist on a built application (a CI artifact step is a separate small PR).
+- The site time zone is a constant in `App.xaml.cs` until the Q1-Q6 follow-up makes it configurable.
+
+### Commands/tests actually run and results
+- Not built locally (no SDK). Windows CI result is reported in the PR.
+
+### Recommended exact next action
+- Review the PR and its CI run; then the CI artifact PR so the shell can be run on your machine.
