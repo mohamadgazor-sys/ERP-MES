@@ -489,3 +489,30 @@ Append one dated entry after every substantial session. Do not replace prior ent
 
 ### Recommended exact next action
 - Review and merge this PR, then the Q1-Q6 JalaliDateService PR is started from the updated `main`.
+
+---
+
+### Date / session
+- Date: 2026-10-14
+- Claude Code session ID (if useful): session_01JCnmzjXbpMcTjwPcE9vsqQ (CI artifact for the demonstration build)
+
+### Goal
+- D1.4 of the demo plan: let the owner download and run the CI-built application.
+
+### Completed
+- `.github/workflows/ci.yml`: after the tests, a self-contained win-x64 publish of the Desktop project and an upload of `publish/desktop` as the `demo-build-win-x64` artifact (14 days). Same pinned `upload-artifact` action. `docs/MILESTONE_1_PLAN.md` section 11 notes the amendment.
+
+### Files changed
+- `.github/workflows/ci.yml`, `docs/MILESTONE_1_PLAN.md`, `docs/SESSION_LOG.md`.
+
+### Decisions newly approved
+- None. The approved workflow hygiene said "no publishing step"; this amendment is proposed and needs the owner's approval before merge.
+
+### Unresolved questions / risks
+- The RID-specific restore fetches runtime packs that the vulnerability gate does not cover. The published folder is large (self-contained WPF).
+
+### Commands/tests actually run and results
+- Not run locally. Windows CI result is reported in the PR.
+
+### Recommended exact next action
+- Review and, if you approve the amendment, merge; then download the artifact from the run and work through `docs/MANUAL_UI_CHECKLIST.md`.

@@ -1,6 +1,7 @@
 name: CI
 
-# Restore, build and test on Windows (Decision Log #49). No secrets, no deployment, no publishing.
+# Restore, build and test on Windows (Decision Log #49). No secrets and no deployment. For the demonstration build the
+# desktop application is also published self-contained and kept as a downloadable artifact (download only; nothing is deployed).
 # Third-party actions are pinned to full commit SHAs; the comment names the release.
 # Updating a pinned SHA or the SDK in global.json is a reviewed change.
 
@@ -93,3 +94,17 @@ jobs:
           name: test-results
           path: TestResults
           if-no-files-found: ignore
+
+      # Demonstration build (docs/FOUR_DAY_DEMO_PLAN.md, D1.4): lets the owner download and run the application, since
+      # CI cannot show how the screens look. Self-contained so the machine needs no separate .NET install. This restore
+      # also fetches the runtime packs, which the vulnerability gate above does not cover (they are not package references).
+      - name: Publish demonstration build (self-contained, win-x64)
+        run: dotnet publish src/ERP.MES.Desktop/ERP.MES.Desktop.csproj --configuration Release --runtime win-x64 --self-contained true --output publish/desktop
+
+      - name: Upload demonstration build
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: demo-build-win-x64
+          path: publish/desktop
+          if-no-files-found: error
+          retention-days: 14

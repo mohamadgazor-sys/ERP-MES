@@ -318,7 +318,7 @@ Source: GitHub Actions run [38175638879](https://github.com/mohamadgazor-sys/ERP
     - `actions/upload-artifact` v7.0.2 → `cf430e030ddbb5b0abf93d22962f4752f3646cd9`
   - Least-privilege token: `permissions: contents: read` for the whole workflow; `persist-credentials: false` on checkout.
   - Triggers: `pull_request` and `push` to `main`. Not `pull_request_target`.
-  - No secrets, no deployment, no publishing step, no self-hosted runner. A job timeout is set.
+  - No secrets, no deployment, no self-hosted runner. A job timeout is set. **Amendment proposed 2026-10-14 (awaiting the owner's approval):** a final step publishes the desktop application self-contained for win-x64 and uploads it as a 14-day artifact for download, so the owner can run each demonstration build. Nothing is deployed; the same pinned `upload-artifact` action is used.
   - Updating a pinned SHA is a reviewed change.
 - Optional later: a Linux job for the non-WPF test projects, to keep Domain/Application/Infrastructure portable.
 - **Manual UI checklist** (approved) verifies the initial shell until a UI-automation approach is chosen: RTL alignment, Persian typing, tab order, resize, mixed LTR/RTL text, high-DPI, first-run screen states. Automated build and test remain required.
