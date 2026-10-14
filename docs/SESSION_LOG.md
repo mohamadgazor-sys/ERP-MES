@@ -489,3 +489,31 @@ Append one dated entry after every substantial session. Do not replace prior ent
 
 ### Recommended exact next action
 - Review and merge this PR, then the Q1-Q6 JalaliDateService PR is started from the updated `main`.
+
+---
+
+### Date / session
+- Date: 2026-10-14
+- Claude Code session ID (if useful): session_01JCnmzjXbpMcTjwPcE9vsqQ (package batch 2: EF Core and SQLite)
+
+### Goal
+- Add the approved EF Core and SQLite packages (10.0.13) for the local demonstration database, with restore, build, licence and vulnerability checks. No SQL Server provider, no schema.
+
+### Completed
+- `Microsoft.EntityFrameworkCore.Relational` in Infrastructure and `Microsoft.EntityFrameworkCore.Sqlite` in Infrastructure.Sqlite, versions managed centrally; four new tests; plan section 8.2, licence inventory section 6 and Decision Log #55.
+
+### Files changed
+- `Directory.Packages.props`, the two project files, `tests/ERP.MES.Infrastructure.Tests/EfCoreSqliteSmokeTests.cs`, `docs/MILESTONE_1_PLAN.md`, `docs/DEPENDENCY_LICENCE_INVENTORY.md`, `docs/DECISION_LOG.md`, `docs/SESSION_LOG.md`.
+
+### Decisions newly approved
+- #55 (owner approval of the packages, 2026-10-14).
+
+### Unresolved questions / risks
+- Migrations need `Microsoft.EntityFrameworkCore.Design` and `dotnet-ef`, not approved in this batch; I cannot run `dotnet-ef` in this environment.
+- Licence inventory open points: notice files of the `Microsoft.Extensions.*` packages not read; the embedded native SQLite binary not examined.
+
+### Commands/tests actually run and results
+- Not built locally (no SDK). CI run 38634656702 on commit `da0bd73`: SDK 10.0.401, restore OK, no vulnerable packages (direct or transitive), Debug and Release 0 warnings / 0 errors, 219 of 219 tests passed (Domain 207, Application 3, Infrastructure 9). The documentation commit that follows is checked by its own CI run, reported in the PR.
+
+### Recommended exact next action
+- Review and merge the package PR; decide how migrations are produced (section "Decisions" in the PR); then the shell and navigation PR starts.
