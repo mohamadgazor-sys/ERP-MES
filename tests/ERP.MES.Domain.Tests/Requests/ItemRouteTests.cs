@@ -234,9 +234,9 @@ public class ItemRouteTests
     public void The_demo_qc_record_does_not_claim_to_represent_accepted_rework_or_scrap_quantities()
     {
         // Partial QC dispositions (DS 9.3) are a future production requirement; the demo record has one approved quantity.
-        var properties = typeof(QcApproval).GetProperties().Select(p => p.Name).ToArray();
+        var properties = typeof(QcApproval).GetProperties().Select(p => p.Name).OrderBy(n => n, StringComparer.Ordinal).ToArray();
 
-        Assert.Equal(new[] { "StageNo", "ApprovedQuantity", "ApprovedByUserId", "ApprovedAtUtc" }, properties);
+        Assert.Equal(new[] { "ApprovedAtUtc", "ApprovedByUserId", "ApprovedQuantity", "StageNo" }, properties);
     }
 
     [Fact]
