@@ -459,3 +459,33 @@ Append one dated entry after every substantial session. Do not replace prior ent
 
 ### Recommended exact next action
 - Review the pull request and its CI run, answer Q1-Q6 as you wish, and decide when M1.2B (`Money` formatting and result type; Rial rounding stays out unless you decide it) may start.
+
+---
+
+### Date / session
+- Date: 2026-10-14
+- Claude Code session ID (if useful): session_01JCnmzjXbpMcTjwPcE9vsqQ (PDF size limit, documentation only)
+
+### Goal
+- Change the maximum request-PDF size from 10 MB to 20 MiB everywhere it is stated. Documentation only; no upload code.
+
+### Completed
+- PR #8 (a revert of PR #7) was closed without merging at the owner's instruction; the JalaliDateService on `main` is kept.
+- Decision Log #54 records 20 MiB (20,971,520 bytes), displayed as "20 MB", configurable, PDF only; #35 and the Unresolved bullet point to it.
+- Domain and Database Specification (Documents rule and the summary list) updated.
+
+### Files changed
+- `docs/DECISION_LOG.md`, `docs/ERP_MES_CSharp_Domain_and_Database_Specification.md`, `docs/SESSION_LOG.md`.
+- Searched all of `docs/`, `CLAUDE.md` and the repository for other size references: the Master and Architecture specifications state no PDF size, so they are unchanged. The historical audit (D11) and earlier session-log entries still say 10 MB because they record what was true then.
+
+### Decisions newly approved
+- #54 (above).
+
+### Unresolved questions / risks
+- Nothing new. When upload is implemented, tests must cover exactly 20,971,520 bytes (accepted) and 20,971,521 bytes (rejected).
+
+### Commands/tests actually run and results
+- Documentation only; no build or test run locally. Windows CI result is reported in the PR.
+
+### Recommended exact next action
+- Review and merge this PR, then the Q1-Q6 JalaliDateService PR is started from the updated `main`.
