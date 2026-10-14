@@ -229,8 +229,8 @@ Action codes and a rule set mapping each to allowed department/role, built from 
 
 | Package | Version | Project(s) | First needed | Purpose and why it is needed | Compatibility (declared target frameworks) | Licence |
 |---|---|---|---|---|---|---|
-| `Microsoft.EntityFrameworkCore.Relational` | 10.0.12 | Infrastructure | M1.3 | ORM and relational model configuration; the persistence approach in Architecture Specification §4.2 | `net10.0` | MIT |
-| `Microsoft.EntityFrameworkCore.Sqlite` | 10.0.12 | Infrastructure.Sqlite | M1.3 | SQLite provider for the development database | `net10.0` | MIT |
+| `Microsoft.EntityFrameworkCore.Relational` | 10.0.13 | Infrastructure | **batch 2 (PR #11, approved 2026-10-14)** | ORM and relational model configuration; the persistence approach in Architecture Specification §4.2 | `net10.0` | MIT |
+| `Microsoft.EntityFrameworkCore.Sqlite` | 10.0.13 | Infrastructure.Sqlite | **batch 2 (PR #11, approved 2026-10-14)** | SQLite provider for the development database | `net10.0` | MIT |
 | `Microsoft.EntityFrameworkCore.Design` | 10.0.12 | Infrastructure.Sqlite (`PrivateAssets=all`, build-time only) | M1.3 | Required by the EF command-line tool to create migrations; not shipped | `net10.0` | MIT |
 | `dotnet-ef` (local .NET tool, `.config/dotnet-tools.json`) | 10.0.12 | repository tooling | M1.3 | Generates migrations; pinned in a tool manifest so CI and developers use the same version | Tool package (no target framework listed); runs on the .NET 10 runtime | MIT |
 | `Microsoft.Extensions.DependencyInjection.Abstractions` | 10.0.12 | Application, Infrastructure | M1.3 | Registration extension methods without depending on a container | `net10.0` (also net8.0, net9.0, netstandard2.0/2.1) | MIT |
@@ -284,6 +284,20 @@ Source: GitHub Actions run [38175638879](https://github.com/mohamadgazor-sys/ERP
 - **Licences:** all 16 packages declare an SPDX licence expression (7 MIT, 9 Apache-2.0); none is missing, unclear, copyleft or proprietary. Per-package inventory, flags (including `requireLicenseAcceptance=true` on four Microsoft packages and bundled third-party notices on five) and method are in [`DEPENDENCY_LICENCE_INVENTORY.md`](DEPENDENCY_LICENCE_INVENTORY.md). The packages are used by the test projects only. The inventory is an engineering record, not a legal approval of the package terms.
 - **Status:** batch 1 is checked and awaits your acceptance. The advisory feed changes over time, so CI re-runs the check on every build.
 
+### 8.2 Batch 2 results: EF Core and SQLite 10.0.13 (PR #11)
+
+The owner approved EF Core and SQLite for the local demonstration database on 2026-10-14 and asked for the aligned stable 10.0.13 versions (Decision Log #55). Only `Microsoft.EntityFrameworkCore.Relational` (Infrastructure) and `Microsoft.EntityFrameworkCore.Sqlite` (Infrastructure.Sqlite) are added. `Microsoft.EntityFrameworkCore.Design` and the `dotnet-ef` tool (rows above, still at 10.0.12 and **not approved yet**) and all `Microsoft.Extensions.*` rows are **not** part of this batch, and no SQL Server provider is added.
+
+Source: GitHub Actions run [38634656702](https://github.com/mohamadgazor-sys/ERP-MES/actions/runs/38634656702) on commit `da0bd73` (PR #11, base `main`), Windows runner, SDK 10.0.401. Copied from that run's log.
+
+- **Restore:** succeeded for all 9 projects with no downgrade or version conflict.
+- **Resolved graph:** `Microsoft.EntityFrameworkCore.Relational` 10.0.13 brings 11 transitive packages (`Microsoft.EntityFrameworkCore`, `.Abstractions`, `.Analyzers` and the `Microsoft.Extensions.Caching.Abstractions`, `Caching.Memory`, `Configuration.Abstractions`, `DependencyInjection`, `DependencyInjection.Abstractions`, `Logging`, `Logging.Abstractions`, `Options`, `Primitives` packages, all 10.0.13). `Microsoft.EntityFrameworkCore.Sqlite` 10.0.13 adds `Microsoft.EntityFrameworkCore.Sqlite.Core`, `Microsoft.Data.Sqlite.Core`, `Microsoft.Extensions.DependencyModel` (10.0.13) and `SQLitePCLRaw.bundle_e_sqlite3`, `.core`, `.lib.e_sqlite3`, `.provider.e_sqlite3` (2.1.13). In all, 21 new packages (2 direct, 19 transitive). Desktop, Provisioning and the test project that references Infrastructure.Sqlite receive them transitively; Domain and Application have none.
+- **Vulnerability check** (`dotnet list package --vulnerable --include-transitive`): "has no vulnerable packages given the current sources" for all 9 projects.
+- **Build:** Debug and Release, 0 warnings, 0 errors.
+- **Tests:** 219 discovered and 219 passed (Domain 207, Application 3, Infrastructure 9). The four new Infrastructure tests round-trip a row through EF Core and the SQLite provider in memory (proving the native library loads on the Windows runner), check version alignment, provider placement, and that no SQL Server package is referenced.
+- **Licences:** see `DEPENDENCY_LICENCE_INVENTORY.md` section 6 (17 MIT, 4 Apache-2.0; open points: notice files not read, embedded SQLite binary not examined). Engineering record, not a legal approval.
+- **Not yet done / decisions for the owner:** migrations need `Microsoft.EntityFrameworkCore.Design` and `dotnet-ef`, which this batch does not include; see the PR description.
+
 ## 9. SDK pin (approved, Decision Log #46)
 
 `global.json` pins SDK **10.0.401**, and CI uses the same SDK through `actions/setup-dotnet` with `global-json-file`. A future SDK update is a reviewed change (a pull request that edits `global.json` and states the reason).
@@ -318,7 +332,7 @@ Source: GitHub Actions run [38175638879](https://github.com/mohamadgazor-sys/ERP
     - `actions/upload-artifact` v7.0.2 → `cf430e030ddbb5b0abf93d22962f4752f3646cd9`
   - Least-privilege token: `permissions: contents: read` for the whole workflow; `persist-credentials: false` on checkout.
   - Triggers: `pull_request` and `push` to `main`. Not `pull_request_target`.
-  - No secrets, no deployment, no publishing step, no self-hosted runner. A job timeout is set.
+  - No secrets, no deployment, no self-hosted runner. A job timeout is set. **Narrow exception approved in principle by the owner on 2026-10-14 (conditions below; takes effect when the PR is merged):** after the vulnerability check, both builds and all tests have passed, a push to `main` (never a pull request) publishes the desktop application self-contained for win-x64 and uploads it as a temporary CI artifact named with the commit SHA, with the existing 14-day retention. The folder contains `BUILD-INFO.txt` with the commit SHA and run id, so a downloaded build can be matched to the merged code. No release, no deployment, no secrets, no extra permissions, the same pinned `upload-artifact` action. **Limitation:** the NuGet vulnerability check does not cover the bundled .NET runtime packs fetched by the runtime-specific publish.
   - Updating a pinned SHA is a reviewed change.
 - Optional later: a Linux job for the non-WPF test projects, to keep Domain/Application/Infrastructure portable.
 - **Manual UI checklist** (approved) verifies the initial shell until a UI-automation approach is chosen: RTL alignment, Persian typing, tab order, resize, mixed LTR/RTL text, high-DPI, first-run screen states. Automated build and test remain required.

@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | Owner decisions of 2026-10-14 are applied (section 5, section 6, section 7). Nothing is implemented yet. The decisions are recorded as Decision Log #57; #55 (EF Core/SQLite packages, PR #11) and #56 (migration tooling, a later PR) are allocated to those changes, so numbers are sequential across PRs. |
+| **Status** | Owner decisions of 2026-10-14 are applied (section 5, section 6, section 7). Nothing is implemented yet. The decisions are recorded as Decision Log #57; #55 (EF Core/SQLite packages) is on `main` and #56 (migration tooling) is in PR #15, so the numbers stay sequential across PRs. #58 (domain-model decisions) is in PR #14. |
 | **Date** | 2026-10-14 |
 | **Goal** | A working, presentable desktop demonstration of the core workflow for a meeting, **not** a production-ready ERP/MES. |
 | **Source of truth** | The Master, Architecture and Domain/Database specifications and `DECISION_LOG.md`. This plan adds no business rules. Where a rule is unresolved the operation is either left out or labelled **temporary demonstration assumption** (TDA) on screen and in this document. |
@@ -44,8 +44,8 @@
 | Item | Why | Status |
 |---|---|---|
 | PDF-size documentation PR (PR #9, Decision Log #54) | Keeps documents consistent | **Merged** |
-| EF Core and SQLite packages (PR #11, Decision Log #55) | Needed for the local demo database | **Approved**; code and documentation CI passed; awaiting the owner's review and merge |
-| Migration tooling (`Design` 10.0.13, `dotnet-ef` 10.0.13, Decision Log #56) | Needed to create and apply the initial SQLite migration | **Approved** 2026-10-14 (option a); separate PR, starts after PR #11 is merged because it builds on its package versions |
+| EF Core and SQLite packages (PR #11, Decision Log #55) | Needed for the local demo database | **Merged** |
+| Migration tooling (`Design` 10.0.13, `dotnet-ef` 10.0.13, Decision Log #56) | Needed to create and apply the initial SQLite migration | **Approved** 2026-10-14 (option a); PR #15 (tooling only), then a separate PR with the generated initial migration and model snapshot; migrations only, never `EnsureCreated` |
 | JalaliDateService follow-up (Q1-Q6) | Updated date-input and time-zone behaviour | Runs in parallel; the demo uses the existing service and does **not** rely on the updated input/time-zone behaviour until the follow-up is merged |
 
 The demo shell, navigation, local persistence setup and fictional seed data start after PR #9 is merged and do not wait for the Q1-Q6 follow-up. They use `JalaliDateService` as it exists on `main` (constructor arguments: Persian digits, Iran Standard Time) and add **no** date conversion or formatting of their own. Overlapping PRs merge one at a time, each branched from the latest `main`.
@@ -58,11 +58,11 @@ Each numbered item is its own small PR with Windows CI and meaningful tests, rev
 
 | PR | Content | Tests / evidence |
 |---|---|---|
-| D1.1 | (PR #12) Persian RTL shell: main window, navigation list, dashboard with placeholder tiles, Tahoma font chain (#48), global RTL flow direction, hand-written MVVM base (no extra MVVM package) | ViewModel unit tests; manual UI checklist (#50) |
+| D1.1 | (PR #12, merged) Persian RTL shell: main window, navigation list, dashboard with placeholder tiles, Tahoma font chain (#48), global RTL flow direction, hand-written MVVM base (no extra MVVM package) | ViewModel unit tests; manual UI checklist (#50) |
 | D1.2 | Application and Domain types for Customer, Request, Item (MAKE/REPAIR), Stage, Priority; RequestNo rule (Customer + RequestNo + Jalali year, case-sensitive, no silent trim) | Unit tests for the key rules and boundary cases |
 | D1.3a | Migration tooling PR: `Microsoft.EntityFrameworkCore.Design` 10.0.13 (`PrivateAssets="all"`) and `dotnet-ef` 10.0.13 in a committed local tool manifest; licence inventory and vulnerability check updated. Separate from the persistence PR | CI restore of the tool, vulnerability check |
 | D1.3b | Persistence PR: demo schema for the subset, repository abstractions in `Infrastructure`, the **initial migration generated and committed** (migration files and model snapshot reviewed in the PR), one migration set per provider. **`EnsureCreated` is not used**, including for the demo database | Fresh database through migrations; startup with an existing database; data persists across a restart; repeatable reset |
-| D1.4 | CI additionally publishes the Windows application as a build artifact so the owner can download and run each day's build | CI run shows artifact |
+| D1.4 | (PR #13, merged) CI publishes the Windows application as a temporary, commit-named artifact on pushes to `main`, so the owner can download and run it | First artifact: run 38646433104 (`demo-build-win-x64-<sha>`) |
 
 End of day 1: the app opens on the dashboard and stores a customer.
 

@@ -464,35 +464,6 @@ Append one dated entry after every substantial session. Do not replace prior ent
 
 ### Date / session
 - Date: 2026-10-14
-- Claude Code session ID (if useful): session_01JCnmzjXbpMcTjwPcE9vsqQ (four-day demo plan, documentation only)
-
-### Goal
-- Write `docs/FOUR_DAY_DEMO_PLAN.md`: a realistic plan for a working demonstration within four days. No code.
-
-### Completed
-- Plan with scope, exclusions, four-day PR schedule, must/should/cut list, temporary demonstration assumptions (T1-T6), package and CI notes, decisions requested, meeting walkthrough and risks.
-
-### Files changed
-- Created `docs/FOUR_DAY_DEMO_PLAN.md`; modified `docs/SESSION_LOG.md`.
-
-### Decisions newly approved
-- None. Every assumption in the plan is a proposal awaiting the owner.
-
-### Unresolved questions / risks
-- Owner decisions listed in plan section 7 (assumptions, sign-in approach, EF Core/SQLite approval, ordering against the date follow-up).
-- I cannot run WPF here, so screen quality depends on the owner running CI-built artifacts.
-- Status transitions, permissions matrix, scheduling details, Rial rounding, SQL Server version, Windows baseline remain unresolved and unchanged.
-
-### Commands/tests actually run and results
-- Documentation only; nothing built or run locally. Windows CI result is reported in the PR.
-
-### Recommended exact next action
-- Review the plan and answer section 7; merge in order: PDF-size PR, then this PR (resolve the SESSION_LOG overlap by merging `main` first), then the Q1-Q6 follow-up starts.
-
----
-
-### Date / session
-- Date: 2026-10-14
 - Claude Code session ID (if useful): session_01JCnmzjXbpMcTjwPcE9vsqQ (PDF size limit, documentation only)
 
 ### Goal
@@ -523,6 +494,62 @@ Append one dated entry after every substantial session. Do not replace prior ent
 
 ### Date / session
 - Date: 2026-10-14
+- Claude Code session ID (if useful): session_01JCnmzjXbpMcTjwPcE9vsqQ (CI artifact for the demonstration build)
+
+### Goal
+- D1.4 of the demo plan: let the owner download and run the CI-built application.
+
+### Completed
+- `.github/workflows/ci.yml`: after all checks and tests pass, and **only on a push to `main`**, a self-contained win-x64 publish of the Desktop project, a `BUILD-INFO.txt` with the commit SHA and run id, and an upload as artifact `demo-build-win-x64-<sha>` (14 days). Pull-request runs do not publish (owner condition, 2026-10-14). Same pinned `upload-artifact` action, same permissions. `docs/MILESTONE_1_PLAN.md` section 11 records the narrow exception and the runtime-pack limitation.
+
+### Files changed
+- `.github/workflows/ci.yml`, `docs/MILESTONE_1_PLAN.md`, `docs/SESSION_LOG.md`.
+
+### Decisions newly approved
+- The owner approved the goal and conditions for this narrow exception to the "no publishing step" rule on 2026-10-14; the PR is for the owner's review and merge.
+
+### Unresolved questions / risks
+- The RID-specific restore fetches runtime packs that the vulnerability gate does not cover. The published folder is large (self-contained WPF).
+
+### Commands/tests actually run and results
+- Not run locally. On pull-request runs the new steps are skipped by design, so the publish steps themselves are first exercised by the push to `main` after the merge; an earlier pull-request run of the first version of this change did publish successfully (run 38640168245, artifact about 65 MB).
+
+### Recommended exact next action
+- Review and, if you approve the amendment, merge; then download the artifact from the run and work through `docs/MANUAL_UI_CHECKLIST.md`.
+
+---
+
+### Date / session
+- Date: 2026-10-14
+- Claude Code session ID (if useful): session_01JCnmzjXbpMcTjwPcE9vsqQ (four-day demo plan, documentation only)
+
+### Goal
+- Write `docs/FOUR_DAY_DEMO_PLAN.md`: a realistic plan for a working demonstration within four days. No code.
+
+### Completed
+- Plan with scope, exclusions, four-day PR schedule, must/should/cut list, temporary demonstration assumptions (T1-T6), package and CI notes, decisions requested, meeting walkthrough and risks.
+
+### Files changed
+- Created `docs/FOUR_DAY_DEMO_PLAN.md`; modified `docs/SESSION_LOG.md`.
+
+### Decisions newly approved
+- None. Every assumption in the plan is a proposal awaiting the owner.
+
+### Unresolved questions / risks
+- Owner decisions listed in plan section 7 (assumptions, sign-in approach, EF Core/SQLite approval, ordering against the date follow-up).
+- I cannot run WPF here, so screen quality depends on the owner running CI-built artifacts.
+- Status transitions, permissions matrix, scheduling details, Rial rounding, SQL Server version, Windows baseline remain unresolved and unchanged.
+
+### Commands/tests actually run and results
+- Documentation only; nothing built or run locally. Windows CI result is reported in the PR.
+
+### Recommended exact next action
+- Review the plan and answer section 7; merge in order: PDF-size PR, then this PR (resolve the SESSION_LOG overlap by merging `main` first), then the Q1-Q6 follow-up starts.
+
+---
+
+### Date / session
+- Date: 2026-10-14
 - Claude Code session ID (if useful): session_01JCnmzjXbpMcTjwPcE9vsqQ (demo plan updated from `main`)
 
 ### Goal
@@ -545,3 +572,30 @@ Append one dated entry after every substantial session. Do not replace prior ent
 
 ### Recommended exact next action
 - Review and merge PR #11, then #10 and #12 in the order you prefer; the tooling PR then starts.
+
+---
+
+### Date / session
+- Date: 2026-10-14
+- Claude Code session ID (if useful): session_01JCnmzjXbpMcTjwPcE9vsqQ (demo plan refreshed after #11-#13 merged)
+
+### Goal
+- Bring PR #10 up to date with `main` after the packages, shell and artifact PRs merged.
+
+### Completed
+- Merged `main`; resolved `DECISION_LOG.md` (#55 from main, #57 kept) and `SESSION_LOG.md` by keeping main's entries and re-appending this branch's. Plan status lines updated: packages, shell and artifact merged; migration tooling in PR #15; domain model in PR #14.
+
+### Files changed
+- `docs/FOUR_DAY_DEMO_PLAN.md`, `docs/DECISION_LOG.md`, `docs/SESSION_LOG.md`.
+
+### Decisions newly approved
+- None.
+
+### Unresolved questions / risks
+- #57 stays unrecorded in sequence until #56 (PR #15) and #58 (PR #14) are merged; merge #10 after #56 is recorded.
+
+### Commands/tests actually run and results
+- Documentation only; Windows CI result is reported in the PR.
+
+### Recommended exact next action
+- Merge PR #15 (records #56), then this PR.
