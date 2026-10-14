@@ -5,6 +5,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\src\ERP.MES.Application\ERP.MES.Application.csproj" />
     <ProjectReference Include="..\..\src\ERP.MES.Domain\ERP.MES.Domain.csproj" />
   </ItemGroup>

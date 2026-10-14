@@ -1,0 +1,18 @@
+<Application x:Class="ERP.MES.Desktop.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!-- No StartupUri: the main window is created in App.OnStartup (the composition root of the demonstration build). -->
+    <Application.Resources>
+        <!-- Persian UI font: Tahoma first, with the system fallbacks (Decision Log #48). No font is bundled. -->
+        <FontFamily x:Key="UiFont">Tahoma, Segoe UI, Arial</FontFamily>
+
+        <SolidColorBrush x:Key="PrimaryBrush" Color="#1F4E79" />
+        <SolidColorBrush x:Key="PrimaryTextBrush" Color="#FFFFFF" />
+        <SolidColorBrush x:Key="SurfaceBrush" Color="#F4F6F8" />
+        <SolidColorBrush x:Key="CardBrush" Color="#FFFFFF" />
+        <SolidColorBrush x:Key="BorderBrushSoft" Color="#D5DBE1" />
+        <SolidColorBrush x:Key="MutedTextBrush" Color="#5B6670" />
+        <SolidColorBrush x:Key="DemoBannerBrush" Color="#FFF3CD" />
+        <SolidColorBrush x:Key="DemoBannerTextBrush" Color="#664D03" />
+    </Application.Resources>
+</Application>
