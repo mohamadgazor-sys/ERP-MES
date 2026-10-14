@@ -1,6 +1,6 @@
 # Milestone 1 — Technical Foundation: Solution and Project Plan (revision 3)
 
-**Status:** **Approved with conditions on 2026-10-11** (P1–P15 recorded as Decision Log #36–#50). The M1.1 skeleton was approved on 2026-10-11 subject to the confirmations in Decision Log #51–#53 (exact SDK pin, xUnit v3, package checks). M1.1 is merged. **M1.2A (`JalaliDateService` only) is authorized and in review; M1.2B and later steps start only on your instruction.** P8 (packages) stays conditional: each batch of packages is added only after its dependency graph, restore and transitive vulnerability results are recorded in §8.1 and addressed.
+**Status:** **Approved with conditions on 2026-10-11** (P1–P15 recorded as Decision Log #36–#50). The M1.1 skeleton was approved on 2026-10-11 subject to the confirmations in Decision Log #51–#53 (exact SDK pin, xUnit v3, package checks). **Only step M1.1 is authorized.** Steps M1.2 and later start only on your instruction. P8 (packages) stays conditional: each batch of packages is added only after its dependency graph, restore and transitive vulnerability results are recorded in §8.1 and addressed.
 
 Basis: audit `PHASE0_SPECIFICATION_AUDIT.md` §6.2; Decision Log #22–#27 and #36–#50 (technical conventions and Milestone 1 approvals), #30 (roles seed), #34 (permission map); Architecture Specification §3, §5, §17, §31, §38.
 
@@ -101,7 +101,6 @@ A future `ERP.MES.Infrastructure.SqlServer` project is **not** created in Milest
 - Interface `IJalaliDateService` and implementation `JalaliDateService` live in Domain (the implementation uses only `System.Globalization.PersianCalendar`; no package is added). The Request business key will need the Jalali year in Domain code (Milestone 2).
 - Operations: Gregorian ↔ Jalali date; Jalali year of a date; Jalali date-range → half-open Gregorian range; format/parse for display and input (24-hour time). Input parsing accepts Persian digits (۰–۹) as well as Latin digits.
 - Required tests (Decision Log #45): Nowruz and year-boundary dates (last day of Esfand to 1 Farvardin, including leap years), leap-year handling across several years, month ends, and Persian-digit input.
-- **Status (M1.2A):** implemented in `src/ERP.MES.Domain/Calendar/` with tests; behaviour, invalid-input rules, golden data and open questions are in [`JALALI_DATE_SERVICE.md`](JALALI_DATE_SERVICE.md).
 - Decision: **use `PersianCalendar` unless a demonstrated requirement appears.** A requirement counts as demonstrated only if a golden test (known Jalali ↔ Gregorian pairs across several leap years and the end/start of years, supplied by you or taken from a source you accept) fails against it. If that happens, a library is proposed to you, behind the same interface.
 
 **3.2 `Money`**
@@ -281,7 +280,7 @@ Source: GitHub Actions run [38175638879](https://github.com/mohamadgazor-sys/ERP
 - **Vulnerability check** (`dotnet list package --vulnerable --include-transitive`, source `https://api.nuget.org/v3/index.json`): "has no vulnerable packages given the current sources" for all 9 projects, including transitive packages. No advisory needed to be addressed. A pre-CI read of NuGet's public vulnerability feed (updated 2026-10-11) agreed.
 - **Build:** Debug and Release, 0 warnings, 0 errors.
 - **Tests:** 11 discovered and 11 passed (Domain.Tests 3, Application.Tests 3, Infrastructure.Tests 5); the CI step fails when any project discovers zero tests or any test fails.
-- **Licences:** all 16 packages declare an SPDX licence expression (7 MIT, 9 Apache-2.0); none is missing, unclear, copyleft or proprietary. Per-package inventory, flags (including `requireLicenseAcceptance=true` on four Microsoft packages and bundled third-party notices on five) and method are in [`DEPENDENCY_LICENCE_INVENTORY.md`](DEPENDENCY_LICENCE_INVENTORY.md). The packages are used by the test projects only. The inventory is an engineering record, not a legal approval of the package terms.
+- **Licences:** all 16 packages declare an SPDX licence expression (7 MIT, 9 Apache-2.0); none is missing, unclear, copyleft or proprietary. Per-package inventory, flags (including `requireLicenseAcceptance=true` on four Microsoft packages and bundled third-party notices on five) and method are in [`DEPENDENCY_LICENCE_INVENTORY.md`](DEPENDENCY_LICENCE_INVENTORY.md). The packages are used by the test projects only.
 - **Status:** batch 1 is checked and awaits your acceptance. The advisory feed changes over time, so CI re-runs the check on every build.
 
 ## 9. SDK pin (approved, Decision Log #46)
@@ -330,8 +329,7 @@ Source: GitHub Actions run [38175638879](https://github.com/mohamadgazor-sys/ERP
 | Step | Content | Verified by |
 |---|---|---|
 | M1.1 | **Authorized.** Solution (`ERP-MES.sln`), six `src` projects and three test projects with the §2 project references, `global.json` (10.0.401, exact pin), `Directory.Build.props`, `Directory.Packages.props` (central management; xUnit v3 batch 1 only), `tests/Directory.Build.props` (shared xUnit v3 setup), `.editorconfig`, CI workflow. `Desktop` and `Provisioning` contain only a placeholder entry point. Each test project has real, discoverable tests that guard the approved dependency direction (11 tests); a run that discovers no tests fails CI. | Local structure checks; CI: pinned SDK, restore, dependency listing, transitive vulnerability gate, Debug/Release build, tests run and counted |
-| M1.2A | `JalaliDateService` + golden tests (**in review**; no `Money`, no Rial rules) | Unit tests; Windows CI |
-| M1.2B | `Money` formatting and result type (**not started**; Rial rounding and storage stay unresolved) | Unit tests |
+| M1.2 | `JalaliDateService` + golden tests, `Money` formatting, result type | Unit tests |
 | M1.3 | Persistence base, entities, seed, `SystemSetup`, initial SQLite migration, version column, audit log, provider-neutral-subset note | Provider-agnostic integration tests on SQLite (migration from empty, FK enforcement, concurrency conflict, append-only audit) |
 | M1.4 | Password hasher, authentication service, lockout, policy options and validation | Unit + integration tests |
 | M1.5 | Provisioning tool: `issue-admin-token`, `issue-recovery-token`, `benchmark-hash`; bootstrap and recovery use cases; last-Administrator protection; first-run screen logic | Bootstrap and recovery tests (§5.8), including the parallel-claim test |
