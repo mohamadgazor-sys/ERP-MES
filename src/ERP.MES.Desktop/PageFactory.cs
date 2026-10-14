@@ -1,5 +1,5 @@
 using System.Windows;
-using ERP.MES.Application.Shell;
+using ERP.MES.Desktop.ViewModels;
 using ERP.MES.Desktop.Views;
 
 namespace ERP.MES.Desktop;

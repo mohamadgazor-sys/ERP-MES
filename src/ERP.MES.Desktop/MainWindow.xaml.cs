@@ -1,7 +1,7 @@
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Threading;
-using ERP.MES.Application.Shell;
+using ERP.MES.Desktop.ViewModels;
 
 namespace ERP.MES.Desktop;
 

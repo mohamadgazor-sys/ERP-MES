@@ -1,7 +1,7 @@
-using ERP.MES.Application.Shell;
+using ERP.MES.Desktop.ViewModels;
 using ERP.MES.Domain.Calendar;
 
-namespace ERP.MES.Application.Tests.Shell;
+namespace ERP.MES.Desktop.Tests;
 
 public class ShellViewModelTests
 {

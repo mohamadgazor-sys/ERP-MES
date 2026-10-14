@@ -1,6 +1,6 @@
 using ERP.MES.Domain.Calendar;
 
-namespace ERP.MES.Application.Shell;
+namespace ERP.MES.Desktop.ViewModels;
 
 /// <summary>
 /// State of the main window of the demonstration build: the navigation list, the selected page, the demonstration

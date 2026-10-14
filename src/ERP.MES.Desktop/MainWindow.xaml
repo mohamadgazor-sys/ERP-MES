@@ -1,7 +1,7 @@
 <Window x:Class="ERP.MES.Desktop.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:shell="clr-namespace:ERP.MES.Application.Shell;assembly=ERP.MES.Application"
+        xmlns:shell="clr-namespace:ERP.MES.Desktop.ViewModels"
         xml:lang="fa-IR"
         FlowDirection="RightToLeft"
         FontFamily="{StaticResource UiFont}"

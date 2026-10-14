@@ -1,11 +1,11 @@
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 
-namespace ERP.MES.Application.Shell;
+namespace ERP.MES.Desktop.ViewModels;
 
 /// <summary>
-/// Minimal change-notification base for presentation models. It uses only base-library types so the shell logic
-/// can be unit tested on any runner; the WPF project binds to these models but they know nothing about WPF.
+/// Minimal change-notification base for view models in the Desktop (presentation) project. It uses only
+/// base-library types, so view models can be unit tested without opening a window.
 /// </summary>
 public abstract class ObservableObject : INotifyPropertyChanged
 {

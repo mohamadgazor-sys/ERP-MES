@@ -500,15 +500,15 @@ Append one dated entry after every substantial session. Do not replace prior ent
 - Day 1 of the demo plan: a Persian right-to-left WPF shell with navigation and a dashboard, without waiting for the migration tooling.
 
 ### Completed
-- `ERP.MES.Application/Shell`: `ObservableObject`, `NavigationItem`, `DashboardTile`, `ShellViewModel` (base-library types only, so it is unit tested on any runner). Dates in the status bar come from `JalaliDateService` (Persian digits, Iran Standard Time).
+- `ERP.MES.Desktop/ViewModels`: `ObservableObject`, `NavigationItem`, `DashboardTile`, `ShellViewModel` (presentation layer per the Architecture Specification; base-library types only). Dates in the status bar come from `JalaliDateService` (Persian digits, Iran Standard Time). **Correction after review:** the first version of this PR put these classes in `ERP.MES.Application`; the owner asked for them to be in Desktop, so they were moved and their tests now live in the new `tests/ERP.MES.Desktop.Tests` project (`net10.0-windows`, run by the Windows CI). Application stays free of presentation code.
 - `ERP.MES.Desktop`: `App` (composition root), `MainWindow` (RTL, Tahoma first, demo banner, navigation on the right, status bar), `PageFactory`, dashboard, placeholder and limitations views. The placeholder `Program.cs` was removed because WPF generates the entry point.
 - 11 tests for the shell state; `docs/MANUAL_UI_CHECKLIST.md`.
 
 ### Files changed
-- New: `src/ERP.MES.Application/Shell/*` (4 files), `src/ERP.MES.Desktop/{App.xaml, App.xaml.cs, MainWindow.xaml, MainWindow.xaml.cs, PageFactory.cs, Views/*}`, `tests/ERP.MES.Application.Tests/Shell/ShellViewModelTests.cs`, `docs/MANUAL_UI_CHECKLIST.md`. Deleted: `src/ERP.MES.Desktop/Program.cs`. Modified: `docs/SESSION_LOG.md`.
+- New: `src/ERP.MES.Desktop/{App.xaml, App.xaml.cs, MainWindow.xaml, MainWindow.xaml.cs, PageFactory.cs, ViewModels/*, Views/*}`, `tests/ERP.MES.Desktop.Tests/` (project file and `ShellViewModelTests.cs`), `docs/MANUAL_UI_CHECKLIST.md`. Modified: `ERP-MES.sln` (adds the test project). Deleted: `src/ERP.MES.Desktop/Program.cs`. Modified: `docs/SESSION_LOG.md`.
 
 ### Decisions newly approved
-- None. Placing presentation models in the Application project (rather than a Windows-only test project) is a testability choice for review; they contain no WPF types.
+- None.
 
 ### Unresolved questions / risks
 - I cannot run WPF here; layout, fonts and the RTL look are unverified until the owner runs the manual checklist on a built application (a CI artifact step is a separate small PR).
