@@ -70,8 +70,9 @@ public sealed class ItemStage
 }
 
 /// <summary>
-/// A recorded QC approval of a stage (append-only history, section 2.5). It carries the approved quantity so the
-/// production model can later record accepted, rework and scrap quantities (section 9.3). In the demonstration the
-/// approved quantity is always the stage's whole planned quantity; that is demo-only, not a production rule.
+/// DEMONSTRATION-ONLY record of a QC approval of a stage (append-only history, section 2.5). It holds a single approved
+/// quantity, which the demonstration always sets to the stage's whole planned quantity. It does NOT represent the
+/// separate accepted, rework and scrap quantities that section 9.3 requires; modelling those dispositions (and the
+/// QC rejection and rework flow) is future production work and will need a richer QC inspection record.
 /// </summary>
 public sealed record QcApproval(int StageNo, decimal ApprovedQuantity, long ApprovedByUserId, DateTime ApprovedAtUtc);

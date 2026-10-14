@@ -27,7 +27,7 @@ public class ItemRouteTests
         Assert.Equal(new[] { 50m, 30m, 15m }, item.Stages.Select(s => s.PlannedTotalMinutes).ToArray());
 
         var fraction = RequestFixtures.NewRequest().AddMake("9", quantity: 3m);
-        var stage = fraction.AddStage("Odd", 0.3333m);
+        var stage = fraction.DefineInitialStage("Odd", 0.3333m);
         Assert.Equal(0.9999m, stage.PlannedTotalMinutes);
     }
 
@@ -36,8 +36,8 @@ public class ItemRouteTests
     {
         var item = RequestFixtures.NewRequest().AddMake("1.10", quantity: 12);
 
-        var defaulted = item.AddStage("Turning", 2m);
-        var explicitQuantity = item.AddStage("Grinding", 2m, plannedQuantity: 10m);
+        var defaulted = item.DefineInitialStage("Turning", 2m);
+        var explicitQuantity = item.DefineInitialStage("Grinding", 2m, plannedQuantity: 10m);
 
         Assert.Equal(12m, defaulted.PlannedQuantity);
         Assert.Equal(10m, explicitQuantity.PlannedQuantity);
@@ -49,10 +49,10 @@ public class ItemRouteTests
     {
         var item = RequestFixtures.NewRequest().AddMake();
 
-        Assert.Throws<ArgumentException>(() => item.AddStage(" ", 1m));
-        Assert.Throws<ArgumentOutOfRangeException>(() => item.AddStage("Turning", 0m));
-        Assert.Throws<ArgumentOutOfRangeException>(() => item.AddStage("Turning", -1m));
-        Assert.Throws<ArgumentOutOfRangeException>(() => item.AddStage("Turning", 1m, plannedQuantity: 0m));
+        Assert.Throws<ArgumentException>(() => item.DefineInitialStage(" ", 1m));
+        Assert.Throws<ArgumentOutOfRangeException>(() => item.DefineInitialStage("Turning", 0m));
+        Assert.Throws<ArgumentOutOfRangeException>(() => item.DefineInitialStage("Turning", -1m));
+        Assert.Throws<ArgumentOutOfRangeException>(() => item.DefineInitialStage("Turning", 1m, plannedQuantity: 0m));
         Assert.Empty(item.Stages);
     }
 
@@ -103,7 +103,7 @@ public class ItemRouteTests
     }
 
     [Fact]
-    public void Qc_approval_is_recorded_for_the_whole_planned_quantity()
+    public void Demo_only_whole_quantity_qc_approval_is_recorded_for_the_planned_quantity()
     {
         var item = RequestFixtures.ItemWithThreeStages(quantity: 10);
         item.ReleaseFirstStage();
@@ -176,48 +176,67 @@ public class ItemRouteTests
     }
 
     [Fact]
-    public void The_domain_does_not_forbid_appending_a_stage_after_release()
+    public void The_initial_route_can_be_defined_stage_by_stage_before_release()
     {
-        // Controlled route revision after production starts is approved (DS 6.2). The domain therefore keeps no
-        // "no changes after release" invariant; the audited revision process and the downstream-stage handling are later work.
-        var item = RequestFixtures.ItemWithThreeStages();
-        item.ReleaseFirstStage();
+        var item = RequestFixtures.NewRequest().AddMake("1.10", quantity: 2);
 
-        var appended = item.AddStage("Late stage", 1m);
+        item.DefineInitialStage("Turning", 1m);
+        item.DefineInitialStage("Grinding", 1m);
+        item.DefineInitialStage("Polishing", 1m);
 
-        Assert.Equal(4, item.Stages.Count);
-        Assert.Equal(4, appended.StageNo);
-        Assert.Equal(ItemStageStatus.WaitingPreviousQc, appended.Status);
-        Assert.Equal(ItemStageStatus.Waiting, item.Stages[0].Status);
+        Assert.Equal(new[] { 1, 2, 3 }, item.Stages.Select(s => s.StageNo).ToArray());
     }
 
     [Fact]
-    public void A_stage_appended_behind_an_approved_stage_follows_the_qc_gate()
+    public void Initial_definition_is_not_route_revision_and_is_refused_once_a_stage_is_released()
+    {
+        // Initial construction only. The approved controlled, audited route revision after work has started does not
+        // exist yet; this refusal must not be read as a ban on that future operation, and relaxing it would turn an
+        // unaudited append into a fake revision.
+        var item = RequestFixtures.ItemWithThreeStages();
+        item.ReleaseFirstStage();
+
+        var exception = Assert.Throws<InvalidOperationException>(() => item.DefineInitialStage("Late stage", 1m));
+
+        Assert.Contains("controlled", exception.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("audited", exception.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(3, item.Stages.Count);
+    }
+
+    [Fact]
+    public void Initial_definition_is_also_refused_after_the_route_was_completed()
     {
         var item = RequestFixtures.NewRequest().AddMake("1.10", quantity: 2);
-        item.AddStage("Turning", 1m);
+        item.DefineInitialStage("Turning", 1m);
         item.ReleaseFirstStage();
         item.StartStage(1);
         item.SubmitStageForQc(1);
         item.ApproveStageWholeQuantity(1, 9, T1);
+
         Assert.True(item.IsRouteCompleted);
-
-        var appended = item.AddStage("Added later", 1m);
-
-        Assert.Equal(ItemStageStatus.Waiting, appended.Status);
-        Assert.False(item.IsRouteCompleted);
-        Assert.Equal(new[] { 1 }, item.QcApprovals.Select(a => a.StageNo).ToArray());
+        Assert.Throws<InvalidOperationException>(() => item.DefineInitialStage("Added later", 1m));
+        Assert.Single(item.Stages);
+        Assert.True(item.IsRouteCompleted);
     }
 
     [Fact]
-    public void A_late_stage_still_cannot_skip_the_qc_gate()
+    public void The_domain_offers_no_unaudited_post_release_route_change()
     {
-        var item = RequestFixtures.ItemWithThreeStages();
-        item.ReleaseFirstStage();
-        item.StartStage(1);
-        var appended = item.AddStage("Late stage", 1m);
+        // There is deliberately no public operation that changes a released route: it will be added as the audited
+        // controlled revision. This guards against reintroducing a method with a revision-like name that skips the audit.
+        var names = typeof(RequestItem).GetMethods().Select(m => m.Name).ToArray();
 
-        Assert.Throws<InvalidOperationException>(() => item.StartStage(appended.StageNo));
+        Assert.DoesNotContain(names, n => n.Contains("Insert", StringComparison.Ordinal) || n.Contains("Revise", StringComparison.Ordinal) || n.Contains("Remove", StringComparison.Ordinal));
+        Assert.Contains("DefineInitialStage", names);
+    }
+
+    [Fact]
+    public void The_demo_qc_record_does_not_claim_to_represent_accepted_rework_or_scrap_quantities()
+    {
+        // Partial QC dispositions (DS 9.3) are a future production requirement; the demo record has one approved quantity.
+        var properties = typeof(QcApproval).GetProperties().Select(p => p.Name).ToArray();
+
+        Assert.Equal(new[] { "StageNo", "ApprovedQuantity", "ApprovedByUserId", "ApprovedAtUtc" }, properties);
     }
 
     [Fact]
@@ -242,9 +261,9 @@ public class ItemRouteTests
         var make = request.AddMake("1.10");
         var repair = request.AddRepair("2.10");
 
-        make.AddStage("Turning", 2m);
-        make.AddStage("Grinding", 2m);
-        repair.AddStage("Repair welding", 3m);
+        make.DefineInitialStage("Turning", 2m);
+        make.DefineInitialStage("Grinding", 2m);
+        repair.DefineInitialStage("Repair welding", 3m);
         make.ReleaseFirstStage();
 
         Assert.Equal(2, make.Stages.Count);

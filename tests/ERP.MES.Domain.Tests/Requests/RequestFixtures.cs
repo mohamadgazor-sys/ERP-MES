@@ -38,9 +38,9 @@ internal static class RequestFixtures
     public static RequestItem ItemWithThreeStages(decimal quantity = 10)
     {
         var item = NewRequest().AddMake(quantity: quantity);
-        item.AddStage("Turning", 5m);
-        item.AddStage("Grinding", 3m);
-        item.AddStage("Inspection prep", 1.5m);
+        item.DefineInitialStage("Turning", 5m);
+        item.DefineInitialStage("Grinding", 3m);
+        item.DefineInitialStage("Inspection prep", 1.5m);
         return item;
     }
 }

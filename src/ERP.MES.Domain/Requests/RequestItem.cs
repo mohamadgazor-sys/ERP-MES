@@ -112,14 +112,15 @@ public sealed class RequestItem
     }
 
     /// <summary>
-    /// Appends an internal stage to the end of the route. The domain does not forbid this after production has started:
-    /// the approved specification allows controlled route revision (section 6.2) with an auditable history, which
-    /// must wrap this operation later; the demonstration exposes no route editor and uses fixed seeded routes. Inserting
-    /// before or between stages, the revision history, and the handling of downstream stages after a revision (still
-    /// an open decision) are not implemented. The new stage follows the QC gate: it is executable only when the stage
-    /// before it is QC approved.
+    /// INITIAL ROUTE CONSTRUCTION: appends an internal stage while the item's route is first being defined (seeded
+    /// routes, Planning's initial route). Allowed only while no stage has been released. This is deliberately NOT route
+    /// revision and must not be used as one: the approved controlled revision of a route after production has started
+    /// (section 6.2) needs an authorized Planning actor, a reason, a timestamp, the before/after sequence and an audit
+    /// record, plus rules for downstream stages that are still undecided. That operation does not exist yet; it is
+    /// outside the demonstration (fixed seeded routes, no route editor) and is neither implemented nor prohibited by
+    /// this method. Do not add a post-release change by relaxing the check below.
     /// </summary>
-    public ItemStage AddStage(string stageTitle, decimal plannedMinutesPerPiece, decimal? plannedQuantity = null)
+    public ItemStage DefineInitialStage(string stageTitle, decimal plannedMinutesPerPiece, decimal? plannedQuantity = null)
     {
         if (string.IsNullOrWhiteSpace(stageTitle))
         {
@@ -137,9 +138,13 @@ public sealed class RequestItem
             throw new ArgumentOutOfRangeException(nameof(plannedQuantity), quantity, "The planned quantity must be greater than zero.");
         }
 
-        var status = _stages.Count == 0
-            ? ItemStageStatus.Planned
-            : _stages[^1].Status == ItemStageStatus.QcApproved ? ItemStageStatus.Waiting : ItemStageStatus.WaitingPreviousQc;
+        if (_stages.Any(s => s.Status is not (ItemStageStatus.Planned or ItemStageStatus.WaitingPreviousQc)))
+        {
+            throw new InvalidOperationException(
+                "The initial route can only be defined before the first stage is released. Changing a route after work has started needs the controlled, audited route revision, which is not implemented yet.");
+        }
+
+        var status = _stages.Count == 0 ? ItemStageStatus.Planned : ItemStageStatus.WaitingPreviousQc;
         var stage = new ItemStage(_stages.Count + 1, stageTitle, plannedMinutesPerPiece, quantity, status);
         _stages.Add(stage);
         return stage;
@@ -173,7 +178,7 @@ public sealed class RequestItem
     /// <summary>
     /// DEMONSTRATION-ONLY: QC approves a stage for its whole planned quantity and the next stage becomes executable.
     /// This is not the production rule: the approved requirements (section 9.3) split a QC result into accepted,
-    /// rework and scrap quantities, which this method does not model. The caller (the application layer) must check
+    /// rework and scrap quantities, which this method and <see cref="QcApproval"/> do not represent (future work). The caller (the application layer) must check
     /// that the actor belongs to QC.
     /// </summary>
     public QcApproval ApproveStageWholeQuantity(int stageNo, long approvedByUserId, DateTime approvedAtUtc)

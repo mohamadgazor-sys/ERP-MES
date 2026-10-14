@@ -546,3 +546,32 @@ Append one dated entry after every substantial session. Do not replace prior ent
 
 ### Recommended exact next action
 - Review PR #14; after #11, #12, #13 merge I update the branch from `main` and rerun CI.
+
+---
+
+### Date / session
+- Date: 2026-10-14
+- Claude Code session ID (if useful): session_01JCnmzjXbpMcTjwPcE9vsqQ (domain model, second owner review)
+
+### Goal
+- Three targeted corrections to PR #14: route-revision safety, Decision Log cleanup, QC-model wording.
+
+### Completed
+- `AddStage` became `DefineInitialStage`: initial route construction only, refused once a stage is released, documented as not route revision; the audited controlled revision remains unimplemented and unprohibited. Tests replaced (no unaudited post-release change, no revision-like method).
+- Decision Log: duplicated ordering entries merged into one "Queue ordering" bullet (priority ties and Management-override precedence kept as open); stale priority-location wording removed; #58 G9/G10 reworded; #11 points to #58.
+- `QcApproval` and `ApproveStageWholeQuantity` documented as demo-only and as not representing accepted/rework/scrap quantities; a test pins that.
+
+### Files changed
+- `src/ERP.MES.Domain/Requests/{RequestItem,ItemStage}.cs`, `tests/ERP.MES.Domain.Tests/Requests/*`, `docs/DOMAIN_MODEL_DEMO_SCOPE.md`, `docs/DECISION_LOG.md`, `docs/SESSION_LOG.md`.
+
+### Decisions newly approved
+- None beyond the owner's corrections to the wording of #58.
+
+### Unresolved questions / risks
+- Controlled route revision and its downstream handling; production stage state machine; request-status table; override precedence; partial QC dispositions as production work.
+
+### Commands/tests actually run and results
+- Not built locally (no SDK). Windows CI result is reported in the PR.
+
+### Recommended exact next action
+- Review PR #14; after #11-#13 merge I refresh the branch from `main` and rerun CI.
