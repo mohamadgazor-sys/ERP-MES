@@ -69,5 +69,9 @@ public sealed class ItemStage
     public ItemStageStatus Status { get; internal set; }
 }
 
-/// <summary>A recorded QC approval of a stage (append-only history, section 2.5). Partial quantities are not modelled: an approval covers the stage's whole planned quantity.</summary>
+/// <summary>
+/// A recorded QC approval of a stage (append-only history, section 2.5). It carries the approved quantity so the
+/// production model can later record accepted, rework and scrap quantities (section 9.3). In the demonstration the
+/// approved quantity is always the stage's whole planned quantity; that is demo-only, not a production rule.
+/// </summary>
 public sealed record QcApproval(int StageNo, decimal ApprovedQuantity, long ApprovedByUserId, DateTime ApprovedAtUtc);

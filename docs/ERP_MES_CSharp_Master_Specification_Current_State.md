@@ -3865,7 +3865,7 @@ This section is authoritative and supersedes any conflicting older draft/backlog
 
 ## Remaining clarifications after the 2026-10-09 review
 - Request-progress headline percentage is not yet approved. Show status counts and quantity information in any case.
-- Queue priority storage granularity (RequestItem vs ItemStage) and precedence of an active Management override after a subsequent Planning change remain open.
+- Queue priority storage granularity is resolved (Decision Log #58): the Planning priority belongs to the `RequestItem` and its stages inherit it. The precedence of an active Management override after a subsequent Planning change remains open.
 - Exact scheduling allocation over several machines and the machine-assignment timing remain open; confirmed calendar hours/holidays/downtime rules above are not open.
 - Route revision must preserve history; downstream stage-state treatment after insertion remains open.
 - Excel re-import changed-row conflicts require manual choice. Exact options are pending, especially for already released/started items.

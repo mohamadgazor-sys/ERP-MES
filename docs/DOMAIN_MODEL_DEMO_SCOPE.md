@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | Implemented in `src/ERP.MES.Domain/Requests/` with tests in `tests/ERP.MES.Domain.Tests/Requests/`, for review. Pure domain types: no persistence, no EF Core configuration, no migrations, no UI. |
+| **Status** | Implemented in `src/ERP.MES.Domain/Requests/` with tests in `tests/ERP.MES.Domain.Tests/Requests/`, for review; the owner's decisions on G1 to G11 are applied (section 3). Pure domain types: no persistence, no EF Core configuration, no migrations, no UI. |
 | **Basis** | Domain and Database Specification sections 2, 4, 5, 6, 7, 9.2, 18, 19; Decision Log #29, #31, #32, #33, #24, #34; Master Specification priority labels. |
 | **Principle** | Only decided rules are modelled as rules. Anything the specification does not say is listed in section 3 and left as simple as possible; none of it changes an existing decision. |
 
@@ -15,33 +15,35 @@
 | `Request` | Customer + RequestNo + Jalali Request Year is the business key (`RequestKey`, exact comparison); the Jalali year is derived from `RequestDate` through `IJalaliDateService` at creation and then fixed; starts as `CREATED` | DS 4.1, 4.2; #29, #31 |
 | `RequestStatus` | The approved eight statuses and their codes. **No transitions**: the table is an unapproved draft | DS 4.3; #29 |
 | `RequestItem` | Item number, part name, `WorkType` MAKE or REPAIR per item, requested quantity; one request may mix both; `(Request, ItemNo)` unique | DS 2.3, 5.1, 5.2 |
-| `Priority` | `VERY_URGENT` (1, highest), `URGENT` (2), `NORMAL` (3) with the exact labels "خیلی فوری", "فوری", "عادی"; several items may share a priority; Planning can change it | DS 18; Master Spec |
+| `Priority` | `VERY_URGENT` (1, highest), `URGENT` (2), `NORMAL` (3) with the exact labels "خیلی فوری", "فوری", "عادی"; several items may share a priority; stored on the item and inherited by its stages; new items default to `NORMAL`; Planning can change it | DS 18; Master Spec; #58 |
 | `ItemStage` | Item-specific ordered stages; planned minutes per piece, planned quantity; `PlannedTotalMinutes` = minutes per piece x quantity, without rounding | DS 6.1, 19 |
-| QC gate | Stage N + 1 cannot become executable (or be started or approved) until QC has approved stage N; Planning releases the first internal stage; approval opens the next stage; approvals are kept as append-only records | DS 9.2, 2.5 |
+| QC gate | Stage N + 1 cannot become executable (or be started or approved) until QC has approved stage N; Planning releases the first internal stage; approval opens the next stage; approvals are kept as append-only records. The release/start/submit transitions and whole-quantity approval are demonstration-only | DS 9.2, 2.5; #58 |
 | Timestamps | UTC `DateTime`; calendar dates `DateOnly` | #24 |
 
 ## 2. Not modelled (outside this change)
 
-Request status transitions and workflow history; contracts; documents; persistence, keys beyond plain `long` ids, version columns, EF Core mapping, migrations; authorization (the application layer checks, for example, that only QC approves); QC rejection, rework, scrap and partial quantities; external-supply stages and lead times; controlled route revision; work sessions; scheduling dates, calendar and capacity; Management queue override; UOMs and conversions; materials, repair details, costing and anything monetary.
+Request status transitions and workflow history; contracts; documents; persistence, keys beyond plain `long` ids, version columns, EF Core mapping, migrations; authorization (the application layer checks, for example, that only QC approves); QC rejection, rework, scrap and partial quantities (a production requirement, not excluded by the model); external-supply stages and lead times; the audited controlled route revision; work sessions; scheduling dates, calendar and capacity; Management queue override; UOMs and conversions; materials, repair details, costing and anything monetary.
 
-## 3. Guards and choices the specification does not state (for the owner to confirm)
+## 3. Guards and choices, and the owner's decisions (2026-10-14)
 
-These are the smallest choices needed to write the types. None changes an existing decision; each can be replaced by a decision without touching callers much.
+The specification did not state these; the owner reviewed G1 to G11 and decided them (Decision Log #58). "Demo-only" means labelled for the demonstration and not a production rule.
 
-| # | Choice | Why it was needed | Question |
-|---|---|---|---|
-| G1 | `RequestNo` must not be empty | The business key cannot be empty text | Confirm that an empty customer request number is never valid |
-| G2 | `Customer.Name` must not be null or white space; kept exactly as given | "Name" is a minimum field | Any further name rules? |
-| G3 | Requested quantity and planned quantity must be greater than zero | A zero or negative quantity has no meaning | Confirm; also the decimal scale is still undecided (#33) so no rounding is applied |
-| G4 | Planned minutes per piece must be greater than zero | Same | Confirm (zero minutes for a stage may be legitimate) |
-| G5 | `ItemNo` is required and compared exactly (ordinal): `1.1` differs from `1.10`, `A-01` differs from `a-01` | DS 5.2 requires uniqueness but does not say whether item numbers are case-sensitive | Decide case sensitivity of `ItemNo` |
-| G6 | Priority is stored on `RequestItem` (the field of DS 5.1), stages carry none | DS 18 says item versus stage is still pending and forbids two independent fields | Decide the granularity |
-| G7 | Priority has no default; the caller must give one | No default is specified | Is `NORMAL` the default for new items? |
-| G8 | Provisional stage transitions: release (`PLANNED` to `WAITING`), start (`WAITING` to `IN_PROGRESS`), submit for QC (`IN_PROGRESS` to `WAITING_QC`) | DS 7 names the states but defines no transitions; the QC gate needs a minimal path | Confirm or replace when work sessions and QC are specified |
-| G9 | Stages can be added only before the first stage is released | Route revision after start is a blocking, unresolved decision (DS 6.2) | Decide the controlled-revision rules |
-| G10 | QC approval covers the stage's whole planned quantity | Partial quantity rules (DS 9.3) are not modelled | Part of the QC rejection / partial quantity work |
-| G11 | No status check when adding items to a request | Which statuses allow item edits is an open proposal (#34 says only "until production release") | Decide with the status transitions |
+| # | Choice in the code | Decision |
+|---|---|---|
+| G1 | `RequestNo` rejects empty, white-space-only and leading/trailing white space; never trimmed or normalised | Confirmed |
+| G2 | `Customer.Name` non-null, non-empty, not white space; no other formatting, case or uniqueness rule; stored as given | Confirmed |
+| G3 | Requested and planned quantities greater than zero; exact decimals kept, no rounding; the scale stays open for Milestone 2 | Confirmed |
+| G4 | Planned minutes per piece of an internal stage greater than zero; zero never means "no estimate"; external lead time is a separate concept (not modelled yet) | Confirmed |
+| G5 | `ItemNo` exact, case-sensitive ordinal comparison; never parsed numerically | Confirmed |
+| G6 | Planning priority is stored on `RequestItem`; stages and queue entries inherit it; no stage-priority field; Management overrides stay separate (not modelled here) | **Decided, recorded in the specification and Decision Log #58** |
+| G7 | New items default to `NORMAL`; Planning may change it | Confirmed |
+| G8 | Release, start and submit-for-QC transitions | Approved for the labelled demonstration only; does not approve the production stage state machine or the request-status table |
+| G9 | The domain has **no** "no changes after release" restriction: stages can be appended at any time and follow the QC gate. The approved auditable controlled route revision (insertion, history, downstream handling) is not implemented and must be able to wrap this later; the demo has no route editor | Corrected |
+| G10 | `ApproveStageWholeQuantity` approves the whole planned quantity | **Demo-only.** Partial accepted/rework/scrap quantities (DS 9.3) remain the production requirement and are not excluded by the model: `QcApproval` carries a quantity |
+| G11 | Cancelled and closed requests accept no new items | Corrected. "Ordinary item definition belongs before production release; later changes follow the controlled Planning process" is **not enforced**: no request-level production-release state exists yet, and the status transitions and permissions that govern it are deferred to the workflow and authorization work. `AddItem` must not be read as "items may be added in every other state" |
+
+Remaining open (not decided by this change): downstream-stage handling after a route revision; the production stage state machine; the request-status transition table; precedence of an active Management override after a later Planning priority change; enforcement of the release limit for item edits.
 
 ## 4. Testing
 
-Focused unit tests cover: request-number acceptance and rejection, case sensitivity and near duplicates; customer data; Jalali-year derivation at Nowruz and Esfand boundaries; the business key across customers and years; mixed MAKE/REPAIR items; item-number uniqueness; priority labels, codes, ordering, shared priorities and changes; stage numbering and initial statuses; the planned total minutes formula; the QC gate (blocked until approval, unlocked after, no out-of-order approval, no double approval); whole-route completion; and the route-extension guard.
+Focused unit tests cover: request-number acceptance and rejection, case sensitivity and near duplicates; customer data; Jalali-year derivation at Nowruz and Esfand boundaries; the business key across customers and years; mixed MAKE/REPAIR items; item-number uniqueness; priority labels, codes, ordering, shared priorities and changes; stage numbering and initial statuses; the planned total minutes formula; the QC gate (blocked until approval, unlocked after, no out-of-order approval, no double approval); whole-route completion; appending a stage after release without a freeze invariant (and still obeying the gate); stages inheriting the item's priority; the default priority; cancelled and closed requests rejecting new items; and exact, non-numeric item numbers.

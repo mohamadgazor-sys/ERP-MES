@@ -4,12 +4,15 @@ namespace ERP.MES.Domain.Requests;
 /// One distinguishable item of a request (section 5): item number, part name, work type (MAKE or REPAIR), requested
 /// quantity, priority and its ordered stages.
 ///
-/// The route operations (<see cref="ReleaseFirstStage"/>, <see cref="StartStage"/>, <see cref="SubmitStageForQc"/>,
-/// <see cref="ApproveStage"/>) enforce the decided QC gate (section 9.2): stage N + 1 cannot become executable until QC has
-/// approved stage N. The in-between transitions (release, start, submit for QC) are provisional: the specification
-/// names the states but does not define these transitions, so they are the minimum needed to walk an item through
-/// its stages and will be refined with the work-session and QC milestones. QC rejection, rework, scrap, partial
-/// quantities, external-supply stages and controlled route revision are not modelled.
+/// The route operations enforce the decided QC gate (section 9.2): stage N + 1 cannot become executable until QC has
+/// approved stage N. The planning priority is stored here and inherited by every stage and queue entry of the item
+/// (Decision Log #58); stages have no priority of their own.
+///
+/// DEMONSTRATION-ONLY (Decision Log #58): <see cref="ReleaseFirstStage"/>, <see cref="StartStage"/>,
+/// <see cref="SubmitStageForQc"/> and <see cref="ApproveStageWholeQuantity"/> are the minimal provisional path
+/// PLANNED -> WAITING -> IN_PROGRESS -> WAITING_QC -> QC_APPROVED. They do not approve the production stage state
+/// machine. QC rejection, rework, scrap and partial quantities (section 9.3, a production requirement), external-supply
+/// stages and the audited controlled route revision are not modelled here and must remain possible to add.
 /// </summary>
 public sealed class RequestItem
 {
@@ -109,8 +112,12 @@ public sealed class RequestItem
     }
 
     /// <summary>
-    /// Appends an internal stage to the route. Allowed only while no stage has been released, because the handling of a
-    /// route change after production has started (controlled route revision) is still an open decision.
+    /// Appends an internal stage to the end of the route. The domain does not forbid this after production has started:
+    /// the approved specification allows controlled route revision (section 6.2) with an auditable history, which
+    /// must wrap this operation later; the demonstration exposes no route editor and uses fixed seeded routes. Inserting
+    /// before or between stages, the revision history, and the handling of downstream stages after a revision (still
+    /// an open decision) are not implemented. The new stage follows the QC gate: it is executable only when the stage
+    /// before it is QC approved.
     /// </summary>
     public ItemStage AddStage(string stageTitle, decimal plannedMinutesPerPiece, decimal? plannedQuantity = null)
     {
@@ -130,18 +137,15 @@ public sealed class RequestItem
             throw new ArgumentOutOfRangeException(nameof(plannedQuantity), quantity, "The planned quantity must be greater than zero.");
         }
 
-        if (_stages.Any(s => s.Status is not (ItemStageStatus.Planned or ItemStageStatus.WaitingPreviousQc)))
-        {
-            throw new InvalidOperationException("The route cannot be extended after a stage has been released: controlled route revision is not implemented.");
-        }
-
-        var status = _stages.Count == 0 ? ItemStageStatus.Planned : ItemStageStatus.WaitingPreviousQc;
+        var status = _stages.Count == 0
+            ? ItemStageStatus.Planned
+            : _stages[^1].Status == ItemStageStatus.QcApproved ? ItemStageStatus.Waiting : ItemStageStatus.WaitingPreviousQc;
         var stage = new ItemStage(_stages.Count + 1, stageTitle, plannedMinutesPerPiece, quantity, status);
         _stages.Add(stage);
         return stage;
     }
 
-    /// <summary>Planning releases the first (internal) stage, which makes it executable (section 9.2).</summary>
+    /// <summary>Planning releases the first (internal) stage, which makes it executable (section 9.2). Demonstration-only transition PLANNED -> WAITING.</summary>
     public void ReleaseFirstStage()
     {
         var first = _stages.FirstOrDefault() ?? throw new InvalidOperationException("The item has no stages.");
@@ -149,6 +153,7 @@ public sealed class RequestItem
         first.Status = ItemStageStatus.Waiting;
     }
 
+    /// <summary>Demonstration-only transition WAITING -> IN_PROGRESS.</summary>
     public void StartStage(int stageNo)
     {
         var stage = GetStage(stageNo);
@@ -157,6 +162,7 @@ public sealed class RequestItem
         stage.Status = ItemStageStatus.InProgress;
     }
 
+    /// <summary>Demonstration-only transition IN_PROGRESS -> WAITING_QC.</summary>
     public void SubmitStageForQc(int stageNo)
     {
         var stage = GetStage(stageNo);
@@ -165,10 +171,12 @@ public sealed class RequestItem
     }
 
     /// <summary>
-    /// QC approves a stage for its whole planned quantity and the next stage becomes executable. The caller (the
-    /// application layer) is responsible for checking that the actor belongs to QC.
+    /// DEMONSTRATION-ONLY: QC approves a stage for its whole planned quantity and the next stage becomes executable.
+    /// This is not the production rule: the approved requirements (section 9.3) split a QC result into accepted,
+    /// rework and scrap quantities, which this method does not model. The caller (the application layer) must check
+    /// that the actor belongs to QC.
     /// </summary>
-    public QcApproval ApproveStage(int stageNo, long approvedByUserId, DateTime approvedAtUtc)
+    public QcApproval ApproveStageWholeQuantity(int stageNo, long approvedByUserId, DateTime approvedAtUtc)
     {
         var stage = GetStage(stageNo);
         var utc = Customer.RequireUtc(approvedAtUtc, nameof(approvedAtUtc));

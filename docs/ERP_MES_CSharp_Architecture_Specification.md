@@ -1829,7 +1829,7 @@ These decisions supersede older conflicting statements in the architecture docum
 
 ## Remaining clarifications after the 2026-10-09 review
 - Request-progress headline percentage is not yet approved. Show status counts and quantity information regardless.
-- Queue priority storage granularity (RequestItem vs ItemStage) and precedence of an active Management override after a subsequent Planning change remain open.
+- Queue priority storage granularity is resolved (Decision Log #58): the Planning priority belongs to the `RequestItem` and its stages inherit it. The precedence of an active Management override after a subsequent Planning change remains open.
 - Exact scheduling capacity allocation over multiple machines remains open; calendar/week/shift/holiday/downtime requirements are confirmed.
 - Downstream stage-state treatment after inserting a new route stage remains open.
 - Excel conflict options are pending for already released/started items.

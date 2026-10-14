@@ -93,7 +93,7 @@ public class ItemRouteTests
         Assert.Throws<InvalidOperationException>(() => item.StartStage(2));
         Assert.Equal(ItemStageStatus.WaitingPreviousQc, item.Stages[1].Status);
 
-        item.ApproveStage(1, approvedByUserId: 9, T1);
+        item.ApproveStageWholeQuantity(1, approvedByUserId: 9, T1);
 
         Assert.Equal(ItemStageStatus.QcApproved, item.Stages[0].Status);
         Assert.Equal(ItemStageStatus.Waiting, item.Stages[1].Status);
@@ -110,7 +110,7 @@ public class ItemRouteTests
         item.StartStage(1);
         item.SubmitStageForQc(1);
 
-        var approval = item.ApproveStage(1, approvedByUserId: 9, T1);
+        var approval = item.ApproveStageWholeQuantity(1, approvedByUserId: 9, T1);
 
         Assert.Equal(new QcApproval(1, 10m, 9, T1), approval);
         Assert.Equal(new[] { approval }, item.QcApprovals.ToArray());
@@ -124,12 +124,12 @@ public class ItemRouteTests
         item.ReleaseFirstStage();
         item.StartStage(1);
 
-        Assert.Throws<InvalidOperationException>(() => item.ApproveStage(1, 9, T1));
+        Assert.Throws<InvalidOperationException>(() => item.ApproveStageWholeQuantity(1, 9, T1));
 
         item.SubmitStageForQc(1);
-        item.ApproveStage(1, 9, T1);
+        item.ApproveStageWholeQuantity(1, 9, T1);
 
-        Assert.Throws<InvalidOperationException>(() => item.ApproveStage(1, 9, T1));
+        Assert.Throws<InvalidOperationException>(() => item.ApproveStageWholeQuantity(1, 9, T1));
         Assert.Single(item.QcApprovals);
     }
 
@@ -138,7 +138,7 @@ public class ItemRouteTests
     {
         var item = RequestFixtures.ItemWithThreeStages();
 
-        Assert.Throws<InvalidOperationException>(() => item.ApproveStage(2, 9, T1));
+        Assert.Throws<InvalidOperationException>(() => item.ApproveStageWholeQuantity(2, 9, T1));
         Assert.Throws<InvalidOperationException>(() => item.SubmitStageForQc(2));
         Assert.Throws<ArgumentOutOfRangeException>(() => item.StartStage(4));
         Assert.Throws<ArgumentOutOfRangeException>(() => item.StartStage(0));
@@ -153,7 +153,7 @@ public class ItemRouteTests
         item.StartStage(1);
         item.SubmitStageForQc(1);
 
-        Assert.Throws<ArgumentException>(() => item.ApproveStage(1, 9, new DateTime(2026, 10, 14, 10, 0, 0, DateTimeKind.Local)));
+        Assert.Throws<ArgumentException>(() => item.ApproveStageWholeQuantity(1, 9, new DateTime(2026, 10, 14, 10, 0, 0, DateTimeKind.Local)));
         Assert.Equal(ItemStageStatus.WaitingQc, item.Stages[0].Status);
     }
 
@@ -167,7 +167,7 @@ public class ItemRouteTests
         {
             item.StartStage(stageNo);
             item.SubmitStageForQc(stageNo);
-            item.ApproveStage(stageNo, approvedByUserId: 9, T1.AddMinutes(stageNo));
+            item.ApproveStageWholeQuantity(stageNo, approvedByUserId: 9, T1.AddMinutes(stageNo));
         }
 
         Assert.True(item.IsRouteCompleted);
@@ -176,15 +176,55 @@ public class ItemRouteTests
     }
 
     [Fact]
-    public void The_route_cannot_be_extended_after_release()
+    public void The_domain_does_not_forbid_appending_a_stage_after_release()
     {
+        // Controlled route revision after production starts is approved (DS 6.2). The domain therefore keeps no
+        // "no changes after release" invariant; the audited revision process and the downstream-stage handling are later work.
         var item = RequestFixtures.ItemWithThreeStages();
-        item.AddStage("Extra before release", 1m);
-
         item.ReleaseFirstStage();
 
-        Assert.Throws<InvalidOperationException>(() => item.AddStage("Late stage", 1m));
+        var appended = item.AddStage("Late stage", 1m);
+
         Assert.Equal(4, item.Stages.Count);
+        Assert.Equal(4, appended.StageNo);
+        Assert.Equal(ItemStageStatus.WaitingPreviousQc, appended.Status);
+        Assert.Equal(ItemStageStatus.Waiting, item.Stages[0].Status);
+    }
+
+    [Fact]
+    public void A_stage_appended_behind_an_approved_stage_follows_the_qc_gate()
+    {
+        var item = RequestFixtures.NewRequest().AddMake("1.10", quantity: 2);
+        item.AddStage("Turning", 1m);
+        item.ReleaseFirstStage();
+        item.StartStage(1);
+        item.SubmitStageForQc(1);
+        item.ApproveStageWholeQuantity(1, 9, T1);
+        Assert.True(item.IsRouteCompleted);
+
+        var appended = item.AddStage("Added later", 1m);
+
+        Assert.Equal(ItemStageStatus.Waiting, appended.Status);
+        Assert.False(item.IsRouteCompleted);
+        Assert.Equal(new[] { 1 }, item.QcApprovals.Select(a => a.StageNo).ToArray());
+    }
+
+    [Fact]
+    public void A_late_stage_still_cannot_skip_the_qc_gate()
+    {
+        var item = RequestFixtures.ItemWithThreeStages();
+        item.ReleaseFirstStage();
+        item.StartStage(1);
+        var appended = item.AddStage("Late stage", 1m);
+
+        Assert.Throws<InvalidOperationException>(() => item.StartStage(appended.StageNo));
+    }
+
+    [Fact]
+    public void Stages_have_no_priority_of_their_own_they_inherit_the_items()
+    {
+        Assert.Null(typeof(ItemStage).GetProperty("Priority"));
+        Assert.NotNull(typeof(RequestItem).GetProperty("Priority"));
     }
 
     [Fact]

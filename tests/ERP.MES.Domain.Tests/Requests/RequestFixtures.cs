@@ -29,10 +29,10 @@ internal static class RequestFixtures
             Dates);
 
     public static RequestItem AddMake(this Request request, string itemNo = "1.10", decimal quantity = 10, Priority priority = Priority.Normal, long itemId = 0) =>
-        request.AddItem(itemId, itemNo, "Ring A", WorkType.Make, quantity, priority, createdByUserId: 1, Now);
+        request.AddItem(itemId, itemNo, "Ring A", WorkType.Make, quantity, 1, Now, priority);
 
     public static RequestItem AddRepair(this Request request, string itemNo = "2.10", decimal quantity = 4, Priority priority = Priority.Urgent, long itemId = 0) =>
-        request.AddItem(itemId, itemNo, "Shaft B", WorkType.Repair, quantity, priority, createdByUserId: 1, Now);
+        request.AddItem(itemId, itemNo, "Shaft B", WorkType.Repair, quantity, 1, Now, priority);
 
     /// <summary>An item with a seeded route of three internal stages.</summary>
     public static RequestItem ItemWithThreeStages(decimal quantity = 10)

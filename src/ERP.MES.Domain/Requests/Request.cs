@@ -87,21 +87,49 @@ public sealed class Request
         return new Request(id, customer.Id, requestNo, requestDate, year, title, description, createdByUserId, utc);
     }
 
+    /// <summary>
+    /// Sets the status without checking a transition. Request status transitions are not approved yet (the table is a
+    /// draft), so no public transition method exists; this internal member serves tests and the later workflow work.
+    /// </summary>
+    internal void SetStatus(RequestStatus status)
+    {
+        if (!Enum.IsDefined(status))
+        {
+            throw new ArgumentOutOfRangeException(nameof(status), status, "Unknown request status.");
+        }
+
+        Status = status;
+    }
+
     /// <summary>True when an item with exactly this number already exists in the request. The comparison is exact (ordinal, no trimming); the spec does not say whether item numbers are case-sensitive, so the exact comparison is used until it is decided.</summary>
     public bool HasItemNo(string itemNo) =>
         _items.Any(i => string.Equals(i.ItemNo, itemNo, StringComparison.Ordinal));
 
-    /// <summary>Adds an item. (RequestID, ItemNo) must be unique (section 5.2). A request may mix MAKE and REPAIR items.</summary>
+    /// <summary>
+    /// Adds an item. (RequestID, ItemNo) must be unique (section 5.2). A request may mix MAKE and REPAIR items. New
+    /// items default to <see cref="Priority.Normal"/> (Decision Log #58).
+    ///
+    /// Cancelled and closed requests accept no new items. Ordinary item definition belongs before production release,
+    /// and later changes follow the controlled Planning process (Decision Log #34); that limit is NOT enforced here
+    /// because no production-release state exists yet, and the status transitions and permissions that would govern
+    /// it are deferred to the workflow and authorization work. Callers must not treat this method as a rule that items
+    /// may be added in every other state.
+    /// </summary>
     public RequestItem AddItem(
         long itemId,
         string itemNo,
         string partName,
         WorkType workType,
         decimal requestedQuantity,
-        Priority priority,
         long createdByUserId,
-        DateTime createdAtUtc)
+        DateTime createdAtUtc,
+        Priority priority = Priority.Normal)
     {
+        if (Status is RequestStatus.Cancelled or RequestStatus.Closed)
+        {
+            throw new InvalidOperationException("A " + Status.Code() + " request accepts no new items.");
+        }
+
         if (itemNo is not null && HasItemNo(itemNo))
         {
             throw new InvalidOperationException("The request already contains an item with number '" + itemNo + "'.");
