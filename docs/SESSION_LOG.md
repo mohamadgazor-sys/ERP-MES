@@ -459,3 +459,32 @@ Append one dated entry after every substantial session. Do not replace prior ent
 
 ### Recommended exact next action
 - Review the pull request and its CI run, answer Q1-Q6 as you wish, and decide when M1.2B (`Money` formatting and result type; Rial rounding stays out unless you decide it) may start.
+
+---
+
+### Date / session
+- Date: 2026-10-14
+- Claude Code session ID (if useful): session_01JCnmzjXbpMcTjwPcE9vsqQ (four-day demo plan, documentation only)
+
+### Goal
+- Write `docs/FOUR_DAY_DEMO_PLAN.md`: a realistic plan for a working demonstration within four days. No code.
+
+### Completed
+- Plan with scope, exclusions, four-day PR schedule, must/should/cut list, temporary demonstration assumptions (T1-T6), package and CI notes, decisions requested, meeting walkthrough and risks.
+
+### Files changed
+- Created `docs/FOUR_DAY_DEMO_PLAN.md`; modified `docs/SESSION_LOG.md`.
+
+### Decisions newly approved
+- None. Every assumption in the plan is a proposal awaiting the owner.
+
+### Unresolved questions / risks
+- Owner decisions listed in plan section 7 (assumptions, sign-in approach, EF Core/SQLite approval, ordering against the date follow-up).
+- I cannot run WPF here, so screen quality depends on the owner running CI-built artifacts.
+- Status transitions, permissions matrix, scheduling details, Rial rounding, SQL Server version, Windows baseline remain unresolved and unchanged.
+
+### Commands/tests actually run and results
+- Documentation only; nothing built or run locally. Windows CI result is reported in the PR.
+
+### Recommended exact next action
+- Review the plan and answer section 7; merge in order: PDF-size PR, then this PR (resolve the SESSION_LOG overlap by merging `main` first), then the Q1-Q6 follow-up starts.
