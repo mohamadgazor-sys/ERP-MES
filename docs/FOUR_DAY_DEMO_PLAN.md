@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | Proposal for owner review. Nothing here is implemented or approved until the owner says so. |
+| **Status** | Owner decisions of 2026-10-14 are applied (section 5, section 6, section 7). Nothing is implemented yet. The decisions are to be recorded in `DECISION_LOG.md` once the PDF-size PR has merged, so the numbering does not collide. |
 | **Date** | 2026-10-14 |
 | **Goal** | A working, presentable desktop demonstration of the core workflow for a meeting, **not** a production-ready ERP/MES. |
 | **Source of truth** | The Master, Architecture and Domain/Database specifications and `DECISION_LOG.md`. This plan adds no business rules. Where a rule is unresolved the operation is either left out or labelled **temporary demonstration assumption** (TDA) on screen and in this document. |
@@ -15,7 +15,7 @@
 1. A Persian right-to-left WPF shell with navigation and a dashboard.
 2. A customer list and basic customer-request entry, including one request with both MAKE and REPAIR items.
 3. A management production queue: sample requests, stage statuses, priority labels (`عادی`, `فوری`, `خیلی فوری`), and estimated processing time where the specification supports it.
-4. A limited stage and QC flow: an item moves through stages, and each next stage waits for QC approval of the previous one.
+4. A limited stage and QC flow: an item moves through stages, and each next stage waits for QC approval of the previous one. The demo shows **QC approval only**; there is no rejection action (section 5, T3).
 5. Local SQLite persistence: changes survive moving between screens and restarting the application.
 6. A repeatable fictional seed and reset, and a scripted walkthrough for the meeting room.
 
@@ -32,7 +32,7 @@
 ## 2. Ground rules specific to the demo
 
 - **No real data.** Customers, requests, items and users are invented. The seed never reads real files. Nothing demo-related is committed that looks like real customer data.
-- **No universal password and no hidden bypass.** Login uses the approved PBKDF2-HMAC-SHA256 hashing (#27, #41). The first administrator is created through the first-run flow; the seed creates fictional users with **randomly generated passwords shown once to the person running the seed** and never stored in Git. The full one-time token bootstrap and recovery policy of Milestone 1 section 5 is **not** complete in the demo and the demo says so. (Decision requested in section 7, item 2.)
+- **No universal password and no hidden bypass.** Login uses the approved PBKDF2-HMAC-SHA256 hashing (#27, #41). The seed creates fictional users with **random, one-time passwords generated locally** on the machine that runs the seed (section 5, T6). The full one-time token bootstrap and recovery policy of Milestone 1 section 5 is **not** part of the demo, is not weakened or replaced, and the demo says so.
 - **Dates** are Jalali with Persian digits, **24-hour time**, through `JalaliDateService` only. Stored timestamps UTC, date-only values `DateOnly` (#24).
 - **Quantities** use the decimal fixed-scale approach of #33 (D9). No money anywhere.
 - **Provider independence.** Business logic stays out of the SQLite project; only provider-specific wiring lives in `Infrastructure.Sqlite`. The demo database is a **demonstration database** at its own path and is not a migration target for production.
@@ -43,11 +43,11 @@
 
 | Item | Why | Status |
 |---|---|---|
-| PDF-size documentation PR (#54) | Keeps documents consistent | Open, awaiting review |
-| JalaliDateService follow-up (Q1-Q6) | Persian-digit, Iran-time display used on every screen | Not started; starts after the PDF PR is merged, per instructions |
-| Package approvals (section 6) | EF Core and SQLite are not yet approved packages | To be approved by the owner before Day 1 coding that uses them |
+| PDF-size documentation PR (PR #9, Decision Log #54) | Keeps documents consistent; the demo work starts after it is reviewed and merged | Open, awaiting review |
+| EF Core and SQLite packages | Needed for the local demo database | **Approved** by the owner on 2026-10-14 (section 6); the package PR still has to pass restore and the vulnerability check |
+| JalaliDateService follow-up (Q1-Q6) | Updated date-input and time-zone behaviour | Runs in parallel; the demo uses the existing service and does **not** rely on the updated input/time-zone behaviour until the follow-up is merged |
 
-The first shell work (Day 1 morning) can proceed without the date follow-up by using the service already on `main` with explicit constructor arguments (Persian digits, Iran Standard Time); the follow-up then lands its behaviour changes underneath.
+The demo shell, navigation, local persistence setup and fictional seed data start after PR #9 is merged and do not wait for the Q1-Q6 follow-up. They use `JalaliDateService` as it exists on `main` (constructor arguments: Persian digits, Iran Standard Time) and add **no** date conversion or formatting of their own. Overlapping PRs merge one at a time, each branched from the latest `main`.
 
 ## 4. Four-day schedule
 
@@ -59,7 +59,7 @@ Each numbered item is its own small PR with Windows CI and meaningful tests, rev
 |---|---|---|
 | D1.1 | Persian RTL shell: main window, navigation list, dashboard with placeholder tiles, Tahoma font chain (#48), global RTL flow direction, hand-written MVVM base (no extra MVVM package) | ViewModel unit tests; manual UI checklist (#50) |
 | D1.2 | Application and Domain types for Customer, Request, Item (MAKE/REPAIR), Stage, Priority; RequestNo rule (Customer + RequestNo + Jalali year, case-sensitive, no silent trim) | Unit tests for the key rules and boundary cases |
-| D1.3 | SQLite persistence in `Infrastructure.Sqlite` (EF Core, after package approval), schema for the demo subset, repository abstractions in `Infrastructure`, one migration set per provider (approved convention) | Round-trip and uniqueness tests against SQLite |
+| D1.3 | SQLite persistence in `Infrastructure.Sqlite` (EF Core 10.0.13, first as the package PR of section 6), schema for the demo subset, repository abstractions in `Infrastructure`, one migration set per provider (approved convention) | Round-trip and uniqueness tests against SQLite |
 | D1.4 | CI additionally publishes the Windows application as a build artifact so the owner can download and run each day's build | CI run shows artifact |
 
 End of day 1: the app opens on the dashboard and stores a customer.
@@ -81,7 +81,7 @@ End of day 2: enter a customer and a mixed MAKE/REPAIR request, restart, and see
 |---|---|---|
 | D3.1 | Management production queue: rows from sample requests, stage status, priority label indicators (`عادی`, `فوری`, `خیلی فوری`), estimated processing duration = minutes per piece x planned quantity | Ordering and calculation tests |
 | D3.2 | Planning can change priority; Management override preserves Planning's underlying priority and logs who, when, old/new order and reason (decided in the specification) | Audit-record tests |
-| D3.3 | Limited stage/QC flow: release first internal stage, QC approve/reject on a stage, next stage unlocks only after QC approval of the preceding one (decided rule); history kept | State and history tests |
+| D3.3 | Limited stage/QC flow: release first internal stage, **QC approval** of a stage, next stage unlocks only after QC approval of the preceding one (decided rule); history kept. **No rejection action** | State and history tests |
 | D3.4 | Dashboard tiles populated from the same data (counts by status, urgent items) | Query tests |
 
 End of day 3: the queue shows live data and an item can be walked through two stages with QC.
@@ -98,33 +98,34 @@ End of day 3: the queue shows live data and an item can be walked through two st
 
 - **Must:** shell and dashboard, persistence with restart, customer and mixed request entry, queue with priority indicators, one stage-then-QC cycle, seed/reset, walkthrough.
 - **Should:** Management override with audit trail, dashboard tiles from data, sign-in with several fictional users.
-- **Cut first if time runs out:** indicative end dates, override audit screen, QC rejection/rework branches, dashboard polish.
+- **Cut first if time runs out:** override audit screen, dashboard polish. Indicative end dates and QC rejection are **not planned** (T3, T4).
 
-## 5. Temporary demonstration assumptions (TDA)
+## 5. Demonstration assumptions (owner decisions of 2026-10-14)
 
-These are used only if the owner accepts them for the demo. Each is labelled in the UI. None is a production decision and none is recorded in the Decision Log as approved.
+Each is labelled in the UI and in this document as demo-only. None replaces a production requirement or is recorded as a production decision.
 
-| # | Area | Assumption | Why it is needed | Real status |
-|---|---|---|---|---|
-| T1 | Request status | The demo moves a sample request from creation straight to "ready for production" with a simple status field, **without** the Management/Planning/Drawing transitions | The transition table is a draft awaiting approval (`REQUEST_STATUS_TRANSITIONS_DRAFT.md`) | Unresolved |
-| T2 | Stages | Each demo item has a short fixed list of 2-3 internal stages chosen in the seed | Routing/stage-revision semantics are unresolved | Unresolved |
-| T3 | QC rejection | A rejected stage returns to its own stage in the demo; no scrap/rework quantities | Partial quantity, scrap and rework detail are unresolved | Unresolved |
-| T4 | Estimated end | Shown as an estimated duration (minutes per piece x quantity), not a calendar date | The calendar, shifts, capacity and downtime are configurable and unresolved | Duration formula is decided; calendar-aware end is not implemented |
-| T5 | Permissions | Only a few fictional users, with the decided permissions (for example QC alone approves QC, Planning and Management edit priorities); everything else default-deny | The full matrix is unresolved | Partly decided |
-| T6 | Sign-in | Fictional users with random one-time passwords; no recovery flow | Milestone 1 bootstrap/recovery are not built | Approved design, not implemented |
+| # | Area | Decision | What it means in the demo |
+|---|---|---|---|
+| T1 | Simplified request status | **Approved conditionally** | Only the already-approved statuses of Decision Log #29 are used (`CREATED`, `SENT_TO_MANAGEMENT`, `MGMT_APPROVED_AT_PLANNING`, `MGMT_REJECTED_AT_PLANNING`, `UNDER_DRAWING_REVIEW`, `DRAWING_RETURNED_TO_PLANNING`, `CANCELLED`, `CLOSED`); no new status is added. The seed places sample requests directly in a suitable status and the demo offers only a few simplified transitions, labelled as demo shortcuts. Production state of an item is held on the item and its stages, not as a new request status. The demo **does not claim** the request state machine is implemented; the transition table stays an unapproved draft. |
+| T2 | Fixed stage routes | **Approved** | Fictional seeded routes of two or three stages per item. No route editor. |
+| T3 | QC rejection | **Rejected as proposed** | The demo shows **QC approval only** and exposes **no rejection action**. Rejection is implemented only if it follows the established accepted / rework / scrap rules (Master Specification and Decision Log #5, #6); because partial-quantity, scrap and rework details are still unresolved, it is out of the four-day scope unless the owner decides otherwise. |
+| T4 | Estimated duration | **Approved** | The queue shows a clearly labelled **estimate** (minutes per piece x planned quantity, with the label "تخمین" and a note that it ignores calendar, capacity and downtime). No calculated completion date while scheduling is not implemented. |
+| T5 | Permissions | **Approved** | Only already-approved permissions are enforced (Decision Log #34 and Domain and Database Specification section 15.2); everything else is denied by default. |
+| T6 | Demo accounts | **Approved with conditions** | Real PBKDF2 hashing and fictional accounts with **random, one-time passwords generated locally**. The credentials are never committed, never hard-coded, never a universal password, and never printed to CI logs: CI does not run the seed command in a mode that outputs them, and tests use in-memory values that are not logged. They are shown once to the person running the seed or written to a file outside the repository. A resettable local demo database stands in for the production recovery flow; the approved production authentication and recovery design (#40, #41, #47) is neither weakened nor replaced. |
 
 ## 6. Packages and CI
 
-- **Likely new packages (need owner approval and the #53 gate, including a refreshed licence inventory and vulnerability check):** Microsoft.EntityFrameworkCore, Microsoft.EntityFrameworkCore.Sqlite (versions to be verified current and supported on .NET 10 at the time), and, only if the owner prefers it, an MVVM helper. The plan assumes **no MVVM package** (hand-written base) to keep the dependency list short.
+- **Approved by the owner (2026-10-14) for the local demo database:** `Microsoft.EntityFrameworkCore` and `Microsoft.EntityFrameworkCore.Sqlite` (plus the packages they bring in). Use the aligned stable **10.0.13** versions where applicable. This happens in its own package PR, which must: verify restore and compatibility on .NET 10 and SDK 10.0.401; update `docs/DEPENDENCY_LICENCE_INVENTORY.md` for every new direct and transitive package; run the existing direct and transitive vulnerability check; and record the results in `docs/MILESTONE_1_PLAN.md` section 8.1 (#53). If 10.0.13 brings a blocking issue, it is **reported, not silently downgraded**.
+- **Not part of this:** the production SQL Server provider and any production database version decision. No MVVM package is planned (hand-written base).
 - **CI:** existing job unchanged except D1.4, which uploads the published application as an artifact using the already pinned `upload-artifact` action.
-- **Limit of my verification:** I cannot run WPF in my environment. Windows CI proves the application builds and the unit tests pass; it does **not** prove the screens look right. Visual and interaction checks therefore depend on the owner running each day's CI-built artifact and reporting what they see. This is the main schedule risk.
+- **Limit of my verification:** I cannot run WPF in my environment. Windows CI proves the application builds and the unit tests pass; it does **not** prove the screens look right. Visual and interaction checks depend on the owner running each day's CI-built artifact and reporting what they see. This is the main schedule risk.
 
-## 7. Decisions requested from the owner
+## 7. Decisions recorded
 
-1. Approve the section 5 temporary assumptions (or name any to drop).
-2. Sign-in approach for the demo (section 2): real hashing and fictional users with random one-time passwords, with the full bootstrap flow explicitly not part of the demo. Alternative: build the bootstrap now, which costs about half a day.
-3. Package approval for EF Core and SQLite, as described in section 6.
-4. Whether the Q1-Q6 follow-up must be merged before Day 1 starts, or may land in parallel.
+1. Assumptions T1-T6: decided as shown in section 5.
+2. Demo sign-in: real hashing and fictional accounts with local, random, one-time passwords (T6); the production bootstrap/recovery design is unchanged.
+3. EF Core and SQLite approved for the local demo database (section 6).
+4. The demo shell, navigation, persistence setup and seed data start after the PDF-size PR is merged and do not wait for the Q1-Q6 follow-up; the updated date-input and time-zone behaviour is relied on only after that follow-up is merged.
 
 ## 8. Meeting-room walkthrough (draft, about 10 minutes)
 
@@ -133,8 +134,8 @@ These are used only if the owner accepts them for the demo. Each is labelled in 
 3. Open Customers, add a fictional customer.
 4. Create a request with a free-form RequestNo and two items, one MAKE and one REPAIR.
 5. Close and reopen the application; show the data is still there.
-6. Switch to the Management queue; point out priority labels and estimated duration; change a priority as Planning, then show a Management override and its log entry.
-7. Switch to QC: approve the first stage; show the next stage unlock; show the stage history.
+6. Switch to the Management queue; point out priority labels and the labelled estimate; change a priority as Planning, then show a Management override and its log entry.
+7. Switch to QC: approve the first stage (approval only; there is no rejection action in the demo); show the next stage unlock; show the stage history.
 8. Show the "Not in this demo" screen and say plainly what is simulated or missing.
 
 **Fallbacks:** a second pre-seeded database copy; the previous day's artifact kept as a backup build; the walkthrough works offline.
@@ -146,5 +147,5 @@ These are used only if the owner accepts them for the demo. Each is labelled in 
 | Visual defects I cannot see | Daily CI artifact and the owner's report; Day 4 reserved for fixes |
 | Review latency across about 15 small PRs | Must/should/cut list; PRs sized for quick review; merge strictly in order |
 | Scope pressure to fake unfinished features | The "Not in this demo" screen and TDA labels; nothing simulated is shown as complete |
-| Package approval delay blocks persistence | Ask for approval on Day 0; fall back to in-memory only is **not** acceptable because persistence is a stated goal, so the schedule slips instead |
+| A blocking issue in the 10.0.13 packages | Report it; do not silently downgrade; the schedule slips instead of dropping persistence |
 | Q1-Q6 follow-up changes date behaviour mid-demo-build | Dates only through `JalaliDateService`; tests catch any change |
