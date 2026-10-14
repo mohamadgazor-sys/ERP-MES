@@ -5,7 +5,7 @@
 | **Date** | 2026-10-11 |
 | **Scope** | Every direct and transitive NuGet package currently used by the three test projects (commit `45f54ec`, PR #6) |
 | **Package set** | The resolved graph reported by `dotnet list package --include-transitive` in CI run [38175858405](https://github.com/mohamadgazor-sys/ERP-MES/actions/runs/38175858405) (identical to run 38175638879): 3 direct and 13 transitive packages. Versions are exactly those resolved; **no version was changed to produce this inventory.** |
-| **Status** | For owner review. This is an engineering record of what the packages declare, **not legal advice**. |
+| **Status** | For owner review. This is an engineering record of what the packages declare. It is **not legal advice and not a legal approval of any package's terms**; whether the company needs a separate legal acceptance of these terms is its own decision. |
 
 ## 1. Where these packages are used
 
