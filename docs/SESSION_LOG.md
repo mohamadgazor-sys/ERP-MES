@@ -494,26 +494,28 @@ Append one dated entry after every substantial session. Do not replace prior ent
 
 ### Date / session
 - Date: 2026-10-14
-- Claude Code session ID (if useful): session_01JCnmzjXbpMcTjwPcE9vsqQ (package batch 2: EF Core and SQLite)
+- Claude Code session ID (if useful): session_01JCnmzjXbpMcTjwPcE9vsqQ (demo shell and navigation)
 
 ### Goal
-- Add the approved EF Core and SQLite packages (10.0.13) for the local demonstration database, with restore, build, licence and vulnerability checks. No SQL Server provider, no schema.
+- Day 1 of the demo plan: a Persian right-to-left WPF shell with navigation and a dashboard, without waiting for the migration tooling.
 
 ### Completed
-- `Microsoft.EntityFrameworkCore.Relational` in Infrastructure and `Microsoft.EntityFrameworkCore.Sqlite` in Infrastructure.Sqlite, versions managed centrally; four new tests; plan section 8.2, licence inventory section 6 and Decision Log #55.
+- `ERP.MES.Desktop/ViewModels`: `ObservableObject`, `NavigationItem`, `DashboardTile`, `ShellViewModel` (presentation layer per the Architecture Specification; base-library types only). Dates in the status bar come from `JalaliDateService` (Persian digits, Iran Standard Time). **Correction after review:** the first version of this PR put these classes in `ERP.MES.Application`; the owner asked for them to be in Desktop, so they were moved and their tests now live in the new `tests/ERP.MES.Desktop.Tests` project (`net10.0-windows`, run by the Windows CI). Application stays free of presentation code.
+- `ERP.MES.Desktop`: `App` (composition root), `MainWindow` (RTL, Tahoma first, demo banner, navigation on the right, status bar), `PageFactory`, dashboard, placeholder and limitations views. The placeholder `Program.cs` was removed because WPF generates the entry point.
+- 11 tests for the shell state; `docs/MANUAL_UI_CHECKLIST.md`.
 
 ### Files changed
-- `Directory.Packages.props`, the two project files, `tests/ERP.MES.Infrastructure.Tests/EfCoreSqliteSmokeTests.cs`, `docs/MILESTONE_1_PLAN.md`, `docs/DEPENDENCY_LICENCE_INVENTORY.md`, `docs/DECISION_LOG.md`, `docs/SESSION_LOG.md`.
+- New: `src/ERP.MES.Desktop/{App.xaml, App.xaml.cs, MainWindow.xaml, MainWindow.xaml.cs, PageFactory.cs, ViewModels/*, Views/*}`, `tests/ERP.MES.Desktop.Tests/` (project file and `ShellViewModelTests.cs`), `docs/MANUAL_UI_CHECKLIST.md`. Modified: `ERP-MES.sln` (adds the test project). Deleted: `src/ERP.MES.Desktop/Program.cs`. Modified: `docs/SESSION_LOG.md`.
 
 ### Decisions newly approved
-- #55 (owner approval of the packages, 2026-10-14).
+- None.
 
 ### Unresolved questions / risks
-- Migrations need `Microsoft.EntityFrameworkCore.Design` and `dotnet-ef`, not approved in this batch; I cannot run `dotnet-ef` in this environment.
-- Licence inventory open points: notice files of the `Microsoft.Extensions.*` packages not read; the embedded native SQLite binary not examined.
+- I cannot run WPF here; layout, fonts and the RTL look are unverified until the owner runs the manual checklist on a built application (a CI artifact step is a separate small PR).
+- The site time zone is a constant in `App.xaml.cs` until the Q1-Q6 follow-up makes it configurable.
 
 ### Commands/tests actually run and results
-- Not built locally (no SDK). CI run 38634656702 on commit `da0bd73`: SDK 10.0.401, restore OK, no vulnerable packages (direct or transitive), Debug and Release 0 warnings / 0 errors, 219 of 219 tests passed (Domain 207, Application 3, Infrastructure 9). The documentation commit that follows is checked by its own CI run, reported in the PR.
+- Not built locally (no SDK). Windows CI result is reported in the PR.
 
 ### Recommended exact next action
-- Review and merge the package PR; decide how migrations are produced (section "Decisions" in the PR); then the shell and navigation PR starts.
+- Review the PR and its CI run; then the CI artifact PR so the shell can be run on your machine.
