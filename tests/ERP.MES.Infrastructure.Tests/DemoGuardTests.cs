@@ -1,3 +1,4 @@
+using ERP.MES.Domain.Requests;
 using ERP.MES.Tests.Shared;
 
 namespace ERP.MES.Infrastructure.Tests;
@@ -36,19 +37,90 @@ public class DemoGuardTests
             file => File.ReadAllText(file).Contains("DemoDataSeeder", StringComparison.Ordinal));
     }
 
+    private const string StatusPlacement = "PlaceInStatusForDemonstration";
+
+    private static string[] InfrastructureSources() =>
+        SourceFiles("ERP.MES.Infrastructure").Select(file => File.ReadAllText(file)).ToArray();
+
     [Fact]
-    public void The_demonstration_only_status_placement_is_used_only_by_the_seed()
+    public void The_demonstration_only_status_placement_has_exactly_one_production_call_site_the_seed()
     {
-        var users = Directory.EnumerateDirectories(Path.Combine(SolutionLayout.Root, "src"))
+        var mentions = Directory.EnumerateDirectories(Path.Combine(SolutionLayout.Root, "src"))
             .SelectMany(project => SourceFiles(Path.GetFileName(project)))
-            .Where(file => File.ReadAllText(file).Contains("PlaceInStatusForDemonstration", StringComparison.Ordinal))
+            .Where(file => File.ReadAllText(file).Contains(StatusPlacement, StringComparison.Ordinal))
             .Select(Relative)
             .OrderBy(f => f, StringComparer.Ordinal)
             .ToArray();
 
         Assert.Equal(
             new[] { "src/ERP.MES.Domain/Requests/Request.cs", "src/ERP.MES.Infrastructure/Demo/DemoDataSeeder.cs" },
-            users);
+            mentions);
+
+        // Exactly one call in the seed, and the Domain only declares it (internal, never public).
+        var seeder = File.ReadAllText(Path.Combine(SolutionLayout.Root, "src", "ERP.MES.Infrastructure", "Demo", "DemoDataSeeder.cs"));
+        Assert.Equal(1, System.Text.RegularExpressions.Regex.Matches(seeder, StatusPlacement + @"\(").Count);
+
+        var request = File.ReadAllText(Path.Combine(SolutionLayout.Root, "src", "ERP.MES.Domain", "Requests", "Request.cs"));
+        Assert.Equal(1, System.Text.RegularExpressions.Regex.Matches(request, @"\binternal void " + StatusPlacement + @"\(").Count);
+        Assert.Equal(1, System.Text.RegularExpressions.Regex.Matches(request, StatusPlacement + @"\(").Count);
+    }
+
+    [Fact]
+    public void The_domain_shares_its_internals_with_exactly_the_domain_tests_and_the_infrastructure_assembly()
+    {
+        var friends = typeof(Request).Assembly
+            .GetCustomAttributes(typeof(System.Runtime.CompilerServices.InternalsVisibleToAttribute), inherit: false)
+            .Cast<System.Runtime.CompilerServices.InternalsVisibleToAttribute>()
+            .Select(a => a.AssemblyName)
+            .OrderBy(n => n, StringComparer.Ordinal)
+            .ToArray();
+
+        Assert.Equal(new[] { "ERP.MES.Domain.Tests", "ERP.MES.Infrastructure" }, friends);
+    }
+
+    // The Infrastructure assembly can see the Domain's internals (needed for the status placement). This keeps it from using any other internal
+    // method, constructor or property setter of the Domain.
+    [Fact]
+    public void Infrastructure_uses_no_internal_domain_member_other_than_the_status_placement()
+    {
+        const System.Reflection.BindingFlags all = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Static
+            | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.DeclaredOnly;
+        var types = typeof(Request).Assembly.GetTypes()
+            .Where(t => !t.IsDefined(typeof(System.Runtime.CompilerServices.CompilerGeneratedAttribute), inherit: false) && !t.Name.StartsWith('<'))
+            .ToArray();
+
+        var internalMethods = types.SelectMany(t => t.GetMethods(all))
+            .Where(m => (m.IsAssembly || m.IsFamilyOrAssembly) && !m.Name.StartsWith('<') && !m.Name.Contains('$', StringComparison.Ordinal))
+            .ToArray();
+        var internalConstructors = types.SelectMany(t => t.GetConstructors(all)).Where(c => c.IsAssembly || c.IsFamilyOrAssembly).ToArray();
+
+        // Guard the guard: the members that exist today are found.
+        Assert.Contains(internalMethods, m => m.Name == StatusPlacement);
+        Assert.Contains(internalMethods, m => m.Name == "SetStatus");
+        Assert.NotEmpty(internalConstructors);
+
+        var sources = InfrastructureSources();
+        var usedMethods = new List<string>();
+        foreach (var method in internalMethods.Where(m => m.Name != StatusPlacement))
+        {
+            var name = method.IsSpecialName && method.Name.StartsWith("set_", StringComparison.Ordinal) ? method.Name[4..] : method.Name;
+            var pattern = method.IsSpecialName
+                ? @"\." + System.Text.RegularExpressions.Regex.Escape(name) + @"\s*=(?!=)"
+                : @"\b" + System.Text.RegularExpressions.Regex.Escape(name) + @"\s*\(";
+            if (sources.Any(text => System.Text.RegularExpressions.Regex.IsMatch(text, pattern)))
+            {
+                usedMethods.Add(method.DeclaringType!.Name + "." + method.Name);
+            }
+        }
+
+        var usedConstructors = internalConstructors
+            .Select(c => c.DeclaringType!.Name)
+            .Distinct()
+            .Where(type => sources.Any(text => System.Text.RegularExpressions.Regex.IsMatch(text, @"\bnew " + type + @"\s*\(")))
+            .ToList();
+
+        Assert.Empty(usedMethods);
+        Assert.Empty(usedConstructors);
     }
 
     [Fact]

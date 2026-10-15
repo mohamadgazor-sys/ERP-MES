@@ -104,9 +104,10 @@ public sealed class Request
     /// <summary>
     /// DEMONSTRATION-ONLY (Decision Log #57, T1): places a request directly in one of the approved statuses without checking a
     /// transition, so fictional sample data can show requests at different points. It is NOT a status transition and does not approve the
-    /// transition table, which stays an unapproved draft. Only the demonstration seed may call it; a repository test guards that.
+    /// transition table, which stays an unapproved draft (Decision Log #60). It is deliberately <c>internal</c>: only the Infrastructure assembly (the demonstration seed) and the Domain tests can see
+    /// it, and a repository test allows exactly one production call site.
     /// </summary>
-    public void PlaceInStatusForDemonstration(RequestStatus status, DateTime changedAtUtc)
+    internal void PlaceInStatusForDemonstration(RequestStatus status, DateTime changedAtUtc)
     {
         var utc = Customer.RequireUtc(changedAtUtc, nameof(changedAtUtc));
         SetStatus(status);

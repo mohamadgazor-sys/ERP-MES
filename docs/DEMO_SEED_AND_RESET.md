@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | Implemented for review in the seed-and-reset pull request. |
+| **Status** | Implemented; the marker (Decision Log #59) and the restricted status placement (#60) are owner-approved. |
 | **Scope** | A fictional dataset for the demonstration walkthrough, an explicit reset, and the guard that keeps both away from any database that is not a marked demonstration database. |
 | **Basis** | `docs/FOUR_DAY_DEMO_PLAN.md` (D1.3b, D2.4, T1, T2, T6), Decision Log #55-#58, `docs/PERSISTENCE_MAPPING.md`, `docs/DOMAIN_MODEL_DEMO_SCOPE.md`. |
 | **Not included** | Sign-in, user accounts, passwords or any credential (the next, separate PR), screens, a SQL Server provider, any new production rule. |
@@ -35,7 +35,7 @@ A database is a demonstration database only if the SQLite file header field `app
 - **Reset builds the replacement first.** It migrates, marks and seeds a temporary file next to the target and moves it over the old file only when that succeeded; a failure leaves the previous database as it was. Journal files of the replaced demonstration database are removed so they cannot be applied to the new file.
 - **Reset is explicit.** There is no start-up hook; the command needs `--yes`.
 
-**Why a header field and not a marker table.** A marker table would need a new migration, and the accepted initial migration is not to be touched without reporting an issue. The header field leaves the schema and the migration unchanged and cannot be mistaken for business data. The cost: the marker is SQLite-specific, which is acceptable because the demonstration database and the reset are SQLite-only (Decision Log #55, #57) and the code lives in the provider project. If the owner prefers a marker table (for example a future `SystemSetup` row), that is a small follow-up with its own migration. *This choice is a proposal for review, not a recorded decision.*
+**Approved design (Decision Log #59).** **Why a header field and not a marker table.** A marker table would need a new migration, and the accepted initial migration is not to be touched without reporting an issue. The header field leaves the schema and the migration unchanged and cannot be mistaken for business data. The cost: the marker is SQLite-specific, which is acceptable because the demonstration database and the reset are SQLite-only (Decision Log #55, #57) and the code lives in the provider project. No marker table and no migration are added for this purpose.
 
 ## 3. The sample data
 
@@ -56,7 +56,7 @@ Totals: 3 customers, 6 requests, 12 items (6 MAKE, 6 REPAIR), 27 stages, 9 QC ap
 
 Honest limits of the sample, all inherited from the Domain model (Decision Log #57, #58):
 
-- **Request status is placed directly** by `Request.PlaceInStatusForDemonstration`, a new Domain method that is labelled demonstration-only, checks no transition and does not approve the transition table (T1). A test restricts its use to the seed. *This is the one change to the Domain in this PR and is flagged for review.*
+- **Request status is placed directly** by `Request.PlaceInStatusForDemonstration` (Decision Log #60), which checks no transition and does not approve the transition table (T1). It is **`internal`** to the Domain assembly, visible only to `ERP.MES.Infrastructure` (where `DemoDataSeeder` lives) and the Domain tests via `InternalsVisibleTo`; there is no public status setter. `InternalsVisibleTo` is assembly-wide, so a test also proves that Infrastructure uses no other internal Domain method, constructor or property setter. Tests prove the method is not public, the Domain shares internals only with those two assemblies, and the seed is the single production call site.
 - Stage progress uses only the Domain's demonstration transitions (release, start, submit for QC, whole-quantity QC approval), so the QC gate runs while the data is built. There are no rejected, rework, scrap, partial or external-supply stages (G10); those are not modelled yet.
 - Routes are fixed seeded routes of two or three stages (T2). The estimated minutes per piece are invented.
 - No machine rates, queue positions or Management overrides exist yet.
@@ -69,6 +69,6 @@ This PR changes **no persistence contract**. Per-row versioning (M8) is as docum
 
 ## 5. Verification
 
-Tests (`tests/ERP.MES.Infrastructure.Tests/DemoDatabaseTests.cs`, `DemoGuardTests.cs`; `RequestTests` in the Domain tests) run on real SQLite files and cover: creation with marker and migrations; zero-length file; repeated initialise and repeated seeding adding nothing; reset refusing an unmarked database, a non-database file, a folder and a missing path with the file bytes unchanged; initialise refusing an unmarked database without marking it; reset removing extra data and reproducing a row-identical snapshot of every table, also twice in a row; expected counts, mixed MAKE/REPAIR, statuses, priorities, stage states, the QC gate and approval consistency in the stored data; Persian text, Jalali year and UTC kinds after reopening with new repositories; no temporary files left; source guards (entry points only in Provisioning, the Desktop project does not seed or reset, the demonstration-only Domain method used only by the seed, no credential code).
+Tests (`tests/ERP.MES.Infrastructure.Tests/DemoDatabaseTests.cs`, `DemoGuardTests.cs`; `RequestTests` in the Domain tests) run on real SQLite files and cover: creation with marker and migrations; zero-length file; repeated initialise and repeated seeding adding nothing; reset refusing an unmarked database, a non-database file, a folder and a missing path with the file bytes unchanged; initialise refusing an unmarked database without marking it; reset removing extra data and reproducing a row-identical snapshot of every table, also twice in a row; expected counts, mixed MAKE/REPAIR, statuses, priorities, stage states, the QC gate and approval consistency in the stored data; Persian text, Jalali year and UTC kinds after reopening with new repositories; no temporary files left; source guards (entry points only in Provisioning, the Desktop project does not seed or reset, the internal Domain method with exactly one call site in the seed and no other internal Domain member used by Infrastructure, no credential code).
 
 The CI workflow additionally runs the real `Provisioning` commands on a temporary file: init, a repeated init, status, reset without `--yes` (exit 2), reset with `--yes`, and reset on an unrecognised file (exit 1, file unchanged). Nothing in it is a credential.

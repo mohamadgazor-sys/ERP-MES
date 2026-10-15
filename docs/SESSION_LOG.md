@@ -863,3 +863,33 @@ Append one dated entry after every substantial session. Do not replace prior ent
 
 ### Recommended exact next action
 - Review the seed, the guard and the tests; then sign-in in a separate PR (approved authentication, PBKDF2, demo credential, bootstrap and recovery requirements, none simplified).
+
+---
+
+### Date / session
+- Date: 2026-10-15
+- Claude Code session ID (if useful): session_01UwqjPjBXLd2apjZb2urjds (owner decisions on the seed-and-reset PR)
+
+### Goal
+- Apply the owner's two decisions on PR #18: approve the SQLite marker; make the demonstration status placement non-public.
+
+### Completed
+- `Request.PlaceInStatusForDemonstration` is now `internal`; the Domain project grants `InternalsVisibleTo` to `ERP.MES.Infrastructure` (besides the existing Domain tests). Assembly-wide access is the narrowest mechanism .NET offers; a source/reflection guard limits Infrastructure to this one internal member.
+- Tests: method not public and Request has no public status member (Domain tests); Domain shares internals with exactly two assemblies; exactly one production call site (the seed); Infrastructure uses no other internal Domain method, constructor or setter.
+- Decision Log #59 (marker) and #60 (status placement) recorded; the proposal removed from Unresolved; `docs/DEMO_SEED_AND_RESET.md` updated.
+- Dataset, reset behaviour, migrations, persistence contracts and packages unchanged; M8 stays documented.
+
+### Files changed
+- See the pull request.
+
+### Decisions newly approved
+- #59 and #60 (above).
+
+### Unresolved questions / risks
+- M8 (item/stage expected versions before queue or QC actions); Q1-Q6 `JalaliDateService` follow-up and its Decision Log record.
+
+### Commands/tests actually run and results
+- Not built locally (no SDK). Windows CI results are reported in the pull request.
+
+### Recommended exact next action
+- Review and merge; then sign-in in a separate PR using the approved authentication, PBKDF2, demo credential, bootstrap and recovery requirements.

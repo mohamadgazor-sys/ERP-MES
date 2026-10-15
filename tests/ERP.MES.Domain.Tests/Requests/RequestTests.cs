@@ -181,6 +181,24 @@ public class RequestTests
     }
 
     [Fact]
+    public void The_demonstration_status_placement_is_internal_and_the_request_has_no_public_status_setter()
+    {
+        const System.Reflection.BindingFlags instance = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic;
+
+        var placement = typeof(Request).GetMethod("PlaceInStatusForDemonstration", instance);
+        Assert.NotNull(placement);
+        Assert.False(placement.IsPublic);
+        Assert.True(placement.IsAssembly);
+
+        // No public member can change the status: it has a private setter and no public method is named like a status change.
+        Assert.False(typeof(Request).GetProperty(nameof(Request.Status))!.SetMethod!.IsPublic);
+        var publicNames = typeof(Request).GetMethods(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.DeclaredOnly)
+            .Select(m => m.Name)
+            .ToArray();
+        Assert.DoesNotContain(publicNames, n => n.Contains("Status", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void A_newly_created_request_accepts_items()
     {
         var request = RequestFixtures.NewRequest();

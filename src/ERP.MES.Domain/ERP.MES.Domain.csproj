@@ -6,6 +6,9 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="ERP.MES.Domain.Tests" />
+    <!-- Decision Log #60: the demonstration seed (DemoDataSeeder, in this assembly) calls Request.PlaceInStatusForDemonstration. Assembly-wide by nature;
+         DemoGuardTests limits what Infrastructure may use of the Domain's internals. -->
+    <InternalsVisibleTo Include="ERP.MES.Infrastructure" />
   </ItemGroup>
 
 </Project>
