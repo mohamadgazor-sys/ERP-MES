@@ -40,7 +40,7 @@ public class SecuritySchemaTests
         using var db = new TempDatabase();
         await db.MigrateAsync();
 
-        var columns = db.Query("SELECT name FROM pragma_table_info('Users') WHERE name LIKE '%assword%' OR name LIKE '%ecret%' OR name LIKE '%oken%' ORDER BY name");
+        var columns = db.Query("SELECT name FROM pragma_table_info('Users') WHERE (name LIKE '%assword%' OR name LIKE '%ecret%' OR name LIKE '%oken%') AND name <> 'MustChangePassword' ORDER BY name");
 
         Assert.Equal(new[] { "PasswordAlgorithm", "PasswordHash", "PasswordHashVersion", "PasswordSalt", "PasswordWorkFactor" }, columns);
     }

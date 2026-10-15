@@ -76,7 +76,7 @@ public partial class BootstrapTests
         Assert.Equal(BootstrapStatus.Succeeded, result.Status);
         Assert.Equal("Initialized", State(fixture));
         Assert.Equal(SetupState.Initialized, await fixture.Services.Bootstrap.GetStateAsync(Token));
-        Assert.Equal(new[] { "NULL" }, fixture.Db.Query("SELECT COALESCE(hex(BootstrapTokenHash), 'NULL') FROM SystemSetup"));
+        Assert.Equal(new[] { "1" }, fixture.Db.Query("SELECT BootstrapTokenHash IS NULL FROM SystemSetup"));
         Assert.Equal(new[] { "admin.one|SYSTEM|ADMIN|1" },
             fixture.Db.Query("SELECT u.Username || '|' || d.Code || '|' || r.Code || '|' || u.IsActive FROM Users u JOIN Departments d ON d.Id = u.DepartmentId JOIN Roles r ON r.Id = u.RoleId"));
 
@@ -144,7 +144,7 @@ public partial class BootstrapTests
 
         Assert.Equal(BootstrapStatus.TokenExpiredOrLocked, (await Complete(fixture, "wrong token 5")).Status);
         Assert.Equal("NotProvisioned", State(fixture));
-        Assert.Equal(new[] { "NULL" }, fixture.Db.Query("SELECT COALESCE(hex(BootstrapTokenHash), 'NULL') FROM SystemSetup"));
+        Assert.Equal(new[] { "1" }, fixture.Db.Query("SELECT BootstrapTokenHash IS NULL FROM SystemSetup"));
 
         Assert.Equal(BootstrapStatus.NotAwaitingBootstrap, (await Complete(fixture, issued.Token)).Status);
         Assert.Empty(fixture.Db.Query("SELECT Id FROM Users"));

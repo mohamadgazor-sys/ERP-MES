@@ -88,7 +88,7 @@ public class RecoveryTests
         Assert.Equal(RecoveryStatus.Succeeded, result.Status);
         Assert.Equal("admin.alpha|1|ADMIN|0|NULL",
             Row(fixture, "SELECT u.Username || '|' || u.IsActive || '|' || r.Code || '|' || u.FailedLoginCount || '|' || COALESCE(u.LockoutEndUtc, 'NULL') FROM Users u JOIN Roles r ON r.Id = u.RoleId WHERE u.Username = 'admin.alpha'"));
-        Assert.Equal(new[] { "NULL" }, fixture.Db.Query("SELECT COALESCE(hex(RecoveryTokenHash), 'NULL') FROM SystemSetup"));
+        Assert.Equal(new[] { "1" }, fixture.Db.Query("SELECT RecoveryTokenHash IS NULL FROM SystemSetup"));
         Assert.NotEqual(stampBefore, Row(fixture, "SELECT AdminChangeStamp FROM SystemSetup"));
         Assert.False(await fixture.Services.Recovery.IsRecoveryPendingAsync(Token));
 
