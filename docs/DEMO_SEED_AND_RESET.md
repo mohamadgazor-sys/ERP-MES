@@ -5,7 +5,7 @@
 | **Status** | Implemented; the marker (Decision Log #59) and the restricted status placement (#60) are owner-approved. |
 | **Scope** | A fictional dataset for the demonstration walkthrough, an explicit reset, and the guard that keeps both away from any database that is not a marked demonstration database. |
 | **Basis** | `docs/FOUR_DAY_DEMO_PLAN.md` (D1.3b, D2.4, T1, T2, T6), Decision Log #55-#58, `docs/PERSISTENCE_MAPPING.md`, `docs/DOMAIN_MODEL_DEMO_SCOPE.md`. |
-| **Not included** | Sign-in, user accounts, passwords or any credential (the next, separate PR), screens, a SQL Server provider, any new production rule. |
+| **Not included** | Screens, a SQL Server provider, any new production rule. (Sign-in and the demonstration accounts were added by the sign-in PR; see `docs/AUTHENTICATION.md`.) |
 
 ## 1. Pieces
 
@@ -41,7 +41,7 @@ A database is a demonstration database only if the SQLite file header field `app
 
 Fixed (no clock, no randomness, no machine setting), so a reset followed by a seed always yields the same rows and ids. Dates are given as Jalali dates and converted with `JalaliDateService`; timestamps are 05:00 UTC on the Jalali day.
 
-Demonstration-only data is recognisable: customer names end with `(نمونه آزمایشی)`, request numbers start with `DEMO-`, request titles start with `[نمونه] `, and every "created by" value is `1`, a label only: **no user exists** (accounts arrive with sign-in).
+Demonstration-only data is recognisable: customer names end with `(نمونه آزمایشی)`, request numbers start with `DEMO-` and request titles start with `[نمونه] `. **Created-by and approved-by values are real users since the sign-in PR**: the seed takes two user ids, the `demo.central` account (creator of customers, requests and items) and the `demo.qc` account (approver of the stages), which `DemoAccountProvisioner` creates before the seed runs. The earlier placeholder `1` is gone (`docs/AUTHENTICATION.md` section 9).
 
 | Request (customer) | Jalali date | Status | Items (type, priority) and route state |
 |---|---|---|---|
@@ -60,6 +60,10 @@ Honest limits of the sample, all inherited from the Domain model (Decision Log #
 - Stage progress uses only the Domain's demonstration transitions (release, start, submit for QC, whole-quantity QC approval), so the QC gate runs while the data is built. There are no rejected, rework, scrap, partial or external-supply stages (G10); those are not modelled yet.
 - Routes are fixed seeded routes of two or three stages (T2). The estimated minutes per piece are invented.
 - No machine rates, queue positions or Management overrides exist yet.
+
+## 3a. Demonstration accounts and credentials
+
+A new or reset demonstration database also gets seven fictional accounts, created through the production bootstrap and account use cases, each with a random one-time password written only to a protected credential file outside the repository (`--credentials <file>`, or a default under the user's local application data). `demo-init` on an initialised database creates none; `demo-reset` creates new accounts with new passwords. The commands never print a password. Details, the file protection and the checks: `docs/AUTHENTICATION.md` section 9.
 
 ## 4. Concurrency (M8) - unchanged, and what the next PRs must do
 

@@ -44,7 +44,7 @@ public class SecurityHygieneTests
     [Fact]
     public void No_credential_file_is_in_the_repository_and_the_patterns_are_ignored_by_git()
     {
-        Assert.Empty(RepositoryFiles().Where(f => f.EndsWith(".credentials.txt", StringComparison.OrdinalIgnoreCase)));
+        Assert.DoesNotContain(RepositoryFiles(), f => f.EndsWith(".credentials.txt", StringComparison.OrdinalIgnoreCase));
 
         var ignore = File.ReadAllText(Path.Combine(SolutionLayout.Root, ".gitignore"));
         Assert.Contains("*.credentials.txt", ignore, StringComparison.Ordinal);

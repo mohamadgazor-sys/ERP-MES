@@ -209,7 +209,7 @@ public class DemoAccountsTests
         Assert.Contains("Reset it", refusal.Message, StringComparison.Ordinal);
         Assert.Equal(rows, db.Query("SELECT Id, Name FROM Customers"));
         Assert.Empty(db.Query("SELECT Id FROM Users"));
-        Assert.Empty(db.CredentialFiles.Where(File.Exists));
+        Assert.DoesNotContain(db.CredentialFiles, f => File.Exists(f));
     }
 
     [Fact]

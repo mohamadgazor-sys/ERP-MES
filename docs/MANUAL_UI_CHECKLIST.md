@@ -24,3 +24,21 @@ Approved in Decision Log #50 as the check for the shell until a UI-automation ap
 ## B. Added by later changes (not yet applicable)
 
 Sign-in, customers, request entry, queue, QC approval, persistence across restarts and the reset command are added to this list by the PRs that build them.
+
+## B. Sign-in (sign-in pull request)
+
+Prepare a fictional database with the Provisioning tool (`dotnet run --project src/ERP.MES.Provisioning -- demo-init <file>`); its one-time passwords are in the credential file it names (not on screen). Point the application at it with the environment variable `ERPMES_DATABASE`. The application never creates a database.
+
+| # | Check | Expected | Result |
+|---|---|---|---|
+| B1 | Start without a database file | A message names the missing file and asks to run Provisioning; the application exits | |
+| B2 | Start with the prepared database | A small sign-in window (RTL, Tahoma, yellow demonstration banner) with user name and password; no first-run fields | |
+| B3 | Wrong password / unknown user | The same Persian message for both; the window stays | |
+| B4 | Five wrong passwords for one user | A message that the account is temporarily locked; the correct password is refused for about five minutes | |
+| B5 | Sign in as `demo.qc` with its one-time password | The "change password" step appears (current, new, repeat); a wrong current password, a short new password or a different repeat is refused with a message | |
+| B6 | Choose your own password (12+ characters) | The main window opens; the status bar shows the user name; signing in again needs the new password | |
+| B7 | A database made with `migrate` only (no administrator) | The window says the system has not been set up; no input fields | |
+| B8 | `issue-admin-token`, then start | The first-run screen (token, administrator name, display name, password twice); a wrong token is refused; the right one creates the administrator and returns to sign-in; the first-run screen never appears again | |
+| B9 | `issue-recovery-token` for an administrator, then start | "Use recovery token" appears on the sign-in window only now; a new password different from the old one is required | |
+| B10 | Passwords on screen | No password is ever shown in clear; the fields are cleared after each action | |
+

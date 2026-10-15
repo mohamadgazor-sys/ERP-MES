@@ -97,7 +97,12 @@ public sealed class AccountService(
         {
             // A simultaneous creation of the same name is stopped by the unique index.
             var taken = await Runner.RunAsync(async unit => await unit.FindUserByUsernameAsync(username!, cancellationToken) is not null, cancellationToken);
-            return taken ? new AccountResult(AccountStatus.UsernameTaken) : throw exception;
+            if (!taken)
+            {
+                throw;
+            }
+
+            return new AccountResult(AccountStatus.UsernameTaken);
         }
     }
 

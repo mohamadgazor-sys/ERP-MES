@@ -101,33 +101,87 @@ jobs:
           Write-Host "TOTAL: files=$($files.Count) total=$total passed=$passed failed=$failed"
           if ($failed -ne 0 -or $passed -ne $total) { throw 'Not all discovered tests passed.' }
 
-      # Runs the real provisioning commands on a temporary FICTIONAL demonstration database (docs/DEMO_SEED_AND_RESET.md). No account,
-      # password or credential exists in it, and nothing is printed except the command summaries.
-      - name: Smoke-test the demo seed and reset commands
+      # Runs the real provisioning commands on temporary files (docs/DEMO_SEED_AND_RESET.md, docs/AUTHENTICATION.md). The demonstration accounts' one-time
+      # passwords go only to credential files in the runner's temp folder; every password and token read here is registered as a masked value FIRST, and the
+      # step fails if any command output contained one. Tokens are captured, never printed.
+      - name: Smoke-test the Provisioning commands
         shell: pwsh
         run: |
           $cli = @('run', '--project', 'src/ERP.MES.Provisioning/ERP.MES.Provisioning.csproj', '--configuration', 'Release', '--no-build', '--')
           $demo = Join-Path $env:RUNNER_TEMP 'ci-smoke.demo.db'
+          $credentialsOne = Join-Path $env:RUNNER_TEMP 'ci-smoke-1.credentials.txt'
+          $credentialsTwo = Join-Path $env:RUNNER_TEMP 'ci-smoke-2.credentials.txt'
           $other = Join-Path $env:RUNNER_TEMP 'ci-smoke-unmarked.txt'
+          $production = Join-Path $env:RUNNER_TEMP 'ci-smoke-production.db'
 
-          & dotnet @cli demo-init $demo
+          function Read-Passwords([string] $file) {
+            $passwords = @(Get-Content -LiteralPath $file | Where-Object { $_ -like "*`t*" } | ForEach-Object { ($_ -split "`t")[1] })
+            foreach ($p in $passwords) { Write-Host "::add-mask::$p" }
+            return $passwords
+          }
+          function Assert-NoSecret([string] $output, [string[]] $secrets) {
+            foreach ($s in $secrets) { if ($output.Contains($s)) { throw 'A command printed a secret.' } }
+          }
+
+          # Demonstration database: create (credentials only in the protected file), repeat, status.
+          $out = & dotnet @cli demo-init $demo --credentials $credentialsOne 2>&1 | Out-String
           if ($LASTEXITCODE -ne 0) { throw "demo-init failed with exit code $LASTEXITCODE" }
-          & dotnet @cli demo-init $demo
+          $first = Read-Passwords $credentialsOne
+          if ($first.Count -ne 7 -or ($first | Where-Object { $_.Length -ne 20 })) { throw 'Expected seven 20-character one-time passwords.' }
+          if (($first | Select-Object -Unique).Count -ne 7) { throw 'The one-time passwords are not distinct.' }
+          Assert-NoSecret $out $first
+          Write-Host $out
+
+          $out = & dotnet @cli demo-init $demo --credentials (Join-Path $env:RUNNER_TEMP 'ci-smoke-unused.credentials.txt') 2>&1 | Out-String
           if ($LASTEXITCODE -ne 0) { throw "a repeated demo-init failed with exit code $LASTEXITCODE" }
+          if (Test-Path (Join-Path $env:RUNNER_TEMP 'ci-smoke-unused.credentials.txt')) { throw 'A repeated demo-init must not create a credential file.' }
+          Assert-NoSecret $out $first
           $status = (& dotnet @cli demo-status $demo | Out-String).Trim()
           if ($status -ne 'Demo') { throw "demo-status reported '$status' instead of 'Demo'" }
 
-          & dotnet @cli demo-reset $demo
-          if ($LASTEXITCODE -ne 2) { throw "demo-reset without --yes must exit with code 2 but exited with $LASTEXITCODE" }
-          & dotnet @cli demo-reset $demo --yes
-          if ($LASTEXITCODE -ne 0) { throw "demo-reset --yes failed with exit code $LASTEXITCODE" }
+          # A credential file inside the repository is refused before anything is changed.
+          $inside = Join-Path (Get-Location) 'ci-smoke-inside.credentials.txt'
+          & dotnet @cli demo-init (Join-Path $env:RUNNER_TEMP 'ci-smoke-never.demo.db') --credentials $inside 2>&1 | Out-Null
+          if ($LASTEXITCODE -ne 1) { throw "A credential file inside the repository must be refused with exit code 1 but exited with $LASTEXITCODE" }
+          if ((Test-Path $inside) -or (Test-Path (Join-Path $env:RUNNER_TEMP 'ci-smoke-never.demo.db'))) { throw 'Nothing may be created when the credential file location is refused.' }
 
+          # Reset: needs --yes; gives new accounts with new passwords.
+          & dotnet @cli demo-reset $demo --credentials $credentialsTwo 2>&1 | Out-Null
+          if ($LASTEXITCODE -ne 2) { throw "demo-reset without --yes must exit with code 2 but exited with $LASTEXITCODE" }
+          $out = & dotnet @cli demo-reset $demo --yes --credentials $credentialsTwo 2>&1 | Out-String
+          if ($LASTEXITCODE -ne 0) { throw "demo-reset --yes failed with exit code $LASTEXITCODE" }
+          $second = Read-Passwords $credentialsTwo
+          if ($second.Count -ne 7) { throw 'Expected seven new one-time passwords after the reset.' }
+          if (@($second | Where-Object { $first -contains $_ }).Count -ne 0) { throw 'The reset must create new passwords.' }
+          Assert-NoSecret $out ($first + $second)
+          Write-Host $out
+
+          # Safe refusal: an unrecognised file is not changed.
           Set-Content -LiteralPath $other -Value 'this is not a demonstration database' -Encoding utf8
-          & dotnet @cli demo-reset $other --yes
+          $out = & dotnet @cli demo-reset $other --yes --credentials (Join-Path $env:RUNNER_TEMP 'ci-smoke-refused.credentials.txt') 2>&1 | Out-String
           if ($LASTEXITCODE -ne 1) { throw "demo-reset on an unrecognized file must be refused with exit code 1 but exited with $LASTEXITCODE" }
           if ((Get-Content -LiteralPath $other -Raw).Trim() -ne 'this is not a demonstration database') { throw 'The refused file was changed.' }
+          if (Test-Path (Join-Path $env:RUNNER_TEMP 'ci-smoke-refused.credentials.txt')) { throw 'A refused reset must not create a credential file.' }
+          Write-Host $out
 
-          # Every check above passed; the last native command (the refused reset) intentionally exited with 1, which must not become the step's result.
+          # Production commands: migrate, bootstrap token (captured and masked, never printed), recovery refused before initialisation.
+          & dotnet @cli migrate --database $production
+          if ($LASTEXITCODE -ne 0) { throw "migrate failed with exit code $LASTEXITCODE" }
+          $tokenOutput = & dotnet @cli issue-admin-token --database $production 2>&1 | Out-String
+          if ($LASTEXITCODE -ne 0) { throw "issue-admin-token failed with exit code $LASTEXITCODE" }
+          $match = [regex]::Match($tokenOutput, '[0-9a-f]{8}(-[0-9a-f]{8}){7}')
+          if (-not $match.Success) { throw 'issue-admin-token did not print a token of the expected shape.' }
+          Write-Host "::add-mask::$($match.Value)"
+          Write-Host 'A bootstrap token of the expected shape was issued (not printed).'
+          $recovery = & dotnet @cli issue-recovery-token --database $production --username nobody --reason 'smoke test' 2>&1 | Out-String
+          if ($LASTEXITCODE -ne 1) { throw "issue-recovery-token before initialisation must be refused with exit code 1 but exited with $LASTEXITCODE" }
+          Write-Host $recovery
+          $bench = & dotnet @cli benchmark-hash --iterations 310000 2>&1 | Out-String
+          if ($LASTEXITCODE -ne 0) { throw "benchmark-hash failed with exit code $LASTEXITCODE" }
+          Write-Host $bench
+
+          Remove-Item -LiteralPath $credentialsOne, $credentialsTwo -Force
+          # The last native command above may have exited with a non-zero code on purpose (a refusal); every check has passed.
           exit 0
 
       - name: Upload test results

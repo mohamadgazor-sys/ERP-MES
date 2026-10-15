@@ -17,6 +17,308 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.13");
 
+            modelBuilder.Entity("ERP.MES.Application.Security.AuditLogEntry", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ActionCode")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DatabaseLogin")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("MachineName")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("OccurredAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("OsUserName")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Summary")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TargetId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TargetType")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<long?>("UserId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("AuditLog", (string)null);
+                });
+
+            modelBuilder.Entity("ERP.MES.Application.Security.Department", b =>
+                {
+                    b.Property<long>("Id")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .UseCollation("BINARY");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.ToTable("Departments", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1L,
+                            Code = "CENTRAL",
+                            Name = "مرکزی"
+                        },
+                        new
+                        {
+                            Id = 2L,
+                            Code = "MANAGEMENT",
+                            Name = "مدیریت"
+                        },
+                        new
+                        {
+                            Id = 3L,
+                            Code = "PLANNING",
+                            Name = "برنامه‌ریزی"
+                        },
+                        new
+                        {
+                            Id = 4L,
+                            Code = "DRAWING",
+                            Name = "نقشه‌کشی"
+                        },
+                        new
+                        {
+                            Id = 5L,
+                            Code = "WAREHOUSE",
+                            Name = "انبار"
+                        },
+                        new
+                        {
+                            Id = 6L,
+                            Code = "PRODUCTION",
+                            Name = "تولید"
+                        },
+                        new
+                        {
+                            Id = 7L,
+                            Code = "QC",
+                            Name = "کنترل کیفیت"
+                        },
+                        new
+                        {
+                            Id = 8L,
+                            Code = "MAINTENANCE_PM",
+                            Name = "نگهداری و تعمیرات"
+                        },
+                        new
+                        {
+                            Id = 9L,
+                            Code = "SYSTEM",
+                            Name = "سیستم"
+                        });
+                });
+
+            modelBuilder.Entity("ERP.MES.Application.Security.Role", b =>
+                {
+                    b.Property<long>("Id")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .UseCollation("BINARY");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.ToTable("Roles", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1L,
+                            Code = "ADMIN",
+                            Name = "مدیر سیستم"
+                        },
+                        new
+                        {
+                            Id = 2L,
+                            Code = "MANAGER",
+                            Name = "مدیر"
+                        },
+                        new
+                        {
+                            Id = 3L,
+                            Code = "STAFF",
+                            Name = "کارمند"
+                        });
+                });
+
+            modelBuilder.Entity("ERP.MES.Application.Security.SystemSetup", b =>
+                {
+                    b.Property<long>("Id")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("AdminChangeStamp")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("BootstrapFailedAttempts")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("BootstrapTokenExpiresAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<byte[]>("BootstrapTokenHash")
+                        .HasColumnType("BLOB");
+
+                    b.Property<DateTime?>("InitializedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("RecoveryFailedAttempts")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long?>("RecoveryTargetUserId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("RecoveryTokenExpiresAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<byte[]>("RecoveryTokenHash")
+                        .HasColumnType("BLOB");
+
+                    b.Property<string>("State")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RecoveryTargetUserId");
+
+                    b.ToTable("SystemSetup", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_SystemSetup_SingleRow", "Id = 1");
+                        });
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1L,
+                            AdminChangeStamp = 0L,
+                            BootstrapFailedAttempts = 0,
+                            RecoveryFailedAttempts = 0,
+                            State = "NotProvisioned",
+                            Version = 1L
+                        });
+                });
+
+            modelBuilder.Entity("ERP.MES.Application.Security.UserAccount", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("DepartmentId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("FailedLoginCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("LastLoginAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("LockoutEndUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("MustChangePassword")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("PasswordAlgorithm")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<byte[]>("PasswordHash")
+                        .IsRequired()
+                        .HasColumnType("BLOB");
+
+                    b.Property<int>("PasswordHashVersion")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<byte[]>("PasswordSalt")
+                        .IsRequired()
+                        .HasColumnType("BLOB");
+
+                    b.Property<int>("PasswordWorkFactor")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("RoleId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Username")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .UseCollation("BINARY");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DepartmentId");
+
+                    b.HasIndex("RoleId");
+
+                    b.HasIndex("Username")
+                        .IsUnique();
+
+                    b.ToTable("Users", (string)null);
+                });
+
             modelBuilder.Entity("ERP.MES.Domain.Requests.Customer", b =>
                 {
                     b.Property<long>("Id")
@@ -206,6 +508,41 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
                         .IsUnique();
 
                     b.ToTable("RequestItems", (string)null);
+                });
+
+            modelBuilder.Entity("ERP.MES.Application.Security.AuditLogEntry", b =>
+                {
+                    b.HasOne("ERP.MES.Application.Security.UserAccount", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("ERP.MES.Application.Security.SystemSetup", b =>
+                {
+                    b.HasOne("ERP.MES.Application.Security.UserAccount", null)
+                        .WithMany()
+                        .HasForeignKey("RecoveryTargetUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("ERP.MES.Application.Security.UserAccount", b =>
+                {
+                    b.HasOne("ERP.MES.Application.Security.Department", "Department")
+                        .WithMany()
+                        .HasForeignKey("DepartmentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ERP.MES.Application.Security.Role", "Role")
+                        .WithMany()
+                        .HasForeignKey("RoleId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Department");
+
+                    b.Navigation("Role");
                 });
 
             modelBuilder.Entity("ERP.MES.Domain.Requests.ItemStage", b =>
