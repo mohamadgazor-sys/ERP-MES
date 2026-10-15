@@ -155,6 +155,31 @@ public class RequestTests
         Assert.Single(request.Items);
     }
 
+    [Theory]
+    [InlineData(RequestStatus.SentToManagement)]
+    [InlineData(RequestStatus.MgmtApprovedAtPlanning)]
+    [InlineData(RequestStatus.Closed)]
+    public void A_request_can_be_placed_directly_in_an_approved_status_for_the_demonstration(RequestStatus status)
+    {
+        var request = RequestFixtures.NewRequest();
+        var changedAt = RequestFixtures.Now.AddHours(3);
+
+        request.PlaceInStatusForDemonstration(status, changedAt);
+
+        Assert.Equal(status, request.Status);
+        Assert.Equal(changedAt, request.UpdatedAtUtc);
+    }
+
+    [Fact]
+    public void Placing_a_request_in_a_status_rejects_unknown_statuses_and_non_utc_times()
+    {
+        var request = RequestFixtures.NewRequest();
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => request.PlaceInStatusForDemonstration((RequestStatus)99, RequestFixtures.Now));
+        Assert.Throws<ArgumentException>(() => request.PlaceInStatusForDemonstration(RequestStatus.Closed, DateTime.SpecifyKind(RequestFixtures.Now, DateTimeKind.Unspecified)));
+        Assert.Equal(RequestStatus.Created, request.Status);
+    }
+
     [Fact]
     public void A_newly_created_request_accepts_items()
     {

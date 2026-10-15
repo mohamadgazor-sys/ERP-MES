@@ -830,3 +830,36 @@ Append one dated entry after every substantial session. Do not replace prior ent
 
 ### Recommended exact next action
 - Review the contracts, implementations and tests; then fictional seed data and reset in a separate PR.
+
+---
+
+### Date / session
+- Date: 2026-10-15
+- Claude Code session ID (if useful): session_01UwqjPjBXLd2apjZb2urjds (fictional demo seed data and safe reset)
+
+### Goal
+- Add repeatable fictional demonstration data and an explicit, guarded reset on the accepted persistence services. No sign-in, accounts, passwords, contract change or screens.
+
+### Completed
+- `DemoDataSeeder` (Infrastructure/Demo, provider-neutral): 3 customers, 6 requests, 12 items (6 MAKE, 6 REPAIR), 27 stages, 9 QC approvals, built only through the repositories and Domain methods; fixed data, repeatable (found by exact customer name / request business key).
+- `DemoDatabase` (Infrastructure.Sqlite/Demo): `Inspect`, `InitializeAsync`, `ResetAsync`. Demonstration marker = SQLite header `application_id`; reset only on a marked database, everything else refused with the reason; replacement built in a temporary file and moved into place on success.
+- Provisioning commands `demo-status`, `demo-init`, `demo-reset --yes`; a CI smoke step runs them on a temporary file.
+- `Request.PlaceInStatusForDemonstration` (Domain, labelled demonstration-only) because the Domain has no public status setter and the transition table is unapproved.
+- Tests (Domain, Infrastructure) and source guards; `docs/DEMO_SEED_AND_RESET.md`; `PERSISTENCE_MAPPING.md` and Decision Log Unresolved updated.
+
+### Files changed
+- See the pull request. No package was added; the licence inventory and the accepted migration are unchanged; no persistence contract changed (M8 stays documented).
+
+### Decisions newly approved
+- None. Two proposals await confirmation (Decision Log, Unresolved): the `application_id` marker instead of a marker table, and the demonstration-only status placement method.
+
+### Unresolved questions / risks
+- M8: before queue stage changes or QC actions, decide how the UI passes the expected version of the specific item or stage and add stale-update tests.
+- The marker is SQLite-specific by design (demo database only).
+- The Q1-Q6 `JalaliDateService` follow-up and its Decision Log record are still owed.
+
+### Commands/tests actually run and results
+- Not built locally (no .NET SDK in this environment, download blocked). Windows CI results are reported in the pull request.
+
+### Recommended exact next action
+- Review the seed, the guard and the tests; then sign-in in a separate PR (approved authentication, PBKDF2, demo credential, bootstrap and recovery requirements, none simplified).

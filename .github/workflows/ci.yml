@@ -101,6 +101,32 @@ jobs:
           Write-Host "TOTAL: files=$($files.Count) total=$total passed=$passed failed=$failed"
           if ($failed -ne 0 -or $passed -ne $total) { throw 'Not all discovered tests passed.' }
 
+      # Runs the real provisioning commands on a temporary FICTIONAL demonstration database (docs/DEMO_SEED_AND_RESET.md). No account,
+      # password or credential exists in it, and nothing is printed except the command summaries.
+      - name: Smoke-test the demo seed and reset commands
+        shell: pwsh
+        run: |
+          $cli = @('run', '--project', 'src/ERP.MES.Provisioning/ERP.MES.Provisioning.csproj', '--configuration', 'Release', '--no-build', '--')
+          $demo = Join-Path $env:RUNNER_TEMP 'ci-smoke.demo.db'
+          $other = Join-Path $env:RUNNER_TEMP 'ci-smoke-unmarked.txt'
+
+          & dotnet @cli demo-init $demo
+          if ($LASTEXITCODE -ne 0) { throw "demo-init failed with exit code $LASTEXITCODE" }
+          & dotnet @cli demo-init $demo
+          if ($LASTEXITCODE -ne 0) { throw "a repeated demo-init failed with exit code $LASTEXITCODE" }
+          $status = (& dotnet @cli demo-status $demo | Out-String).Trim()
+          if ($status -ne 'Demo') { throw "demo-status reported '$status' instead of 'Demo'" }
+
+          & dotnet @cli demo-reset $demo
+          if ($LASTEXITCODE -ne 2) { throw "demo-reset without --yes must exit with code 2 but exited with $LASTEXITCODE" }
+          & dotnet @cli demo-reset $demo --yes
+          if ($LASTEXITCODE -ne 0) { throw "demo-reset --yes failed with exit code $LASTEXITCODE" }
+
+          Set-Content -LiteralPath $other -Value 'this is not a demonstration database' -Encoding utf8
+          & dotnet @cli demo-reset $other --yes
+          if ($LASTEXITCODE -ne 1) { throw "demo-reset on an unrecognized file must be refused with exit code 1 but exited with $LASTEXITCODE" }
+          if ((Get-Content -LiteralPath $other -Raw).Trim() -ne 'this is not a demonstration database') { throw 'The refused file was changed.' }
+
       - name: Upload test results
         if: ${{ always() }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
