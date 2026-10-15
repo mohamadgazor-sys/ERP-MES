@@ -653,3 +653,89 @@ Append one dated entry after every substantial session. Do not replace prior ent
 
 ### Recommended exact next action
 - Review and merge this PR; then PR #14 is refreshed from `main`.
+
+---
+
+### Date / session
+- Date: 2026-10-14
+- Claude Code session ID (if useful): session_01JCnmzjXbpMcTjwPcE9vsqQ (domain model for the demonstration)
+
+### Goal
+- Model Customer, Request, mixed MAKE/REPAIR items, seeded stages and priority in the Domain project, strictly from the Domain and Database Specification and the Decision Log. No persistence, EF Core or migrations.
+
+### Completed
+- `src/ERP.MES.Domain/Requests/`: `Customer`, `RequestNo`, `RequestKey`, `Request`, `RequestStatus`, `RequestItem`, `WorkType`, `Priority`, `ItemStage`, `ItemStageStatus`, `QcApproval`. QC gate and first-stage release per DS 9.2. `docs/DOMAIN_MODEL_DEMO_SCOPE.md` lists every rule with its source and the guards the specification does not state (G1-G11).
+- Tests in `tests/ERP.MES.Domain.Tests/Requests/` (request number, customer, priority, request/key/items, item route).
+
+### Files changed
+- New: the Domain types above, six test files, `docs/DOMAIN_MODEL_DEMO_SCOPE.md`. Modified: `docs/DECISION_LOG.md` (one Unresolved bullet), `docs/SESSION_LOG.md`.
+
+### Decisions newly approved
+- None. No existing decision was changed.
+
+### Unresolved questions / risks
+- G1-G11 in `docs/DOMAIN_MODEL_DEMO_SCOPE.md`. Request status transitions, route revision, QC rejection/partial quantities, item-versus-stage priority and `ItemNo` case sensitivity stay open.
+
+### Commands/tests actually run and results
+- Not built locally (no SDK). Windows CI result is reported in the PR.
+
+### Recommended exact next action
+- Review the PR and answer G1-G11 (or accept them as provisional); then persistence mapping follows the migration work.
+
+---
+
+### Date / session
+- Date: 2026-10-14
+- Claude Code session ID (if useful): session_01JCnmzjXbpMcTjwPcE9vsqQ (domain model, owner decisions G1-G11)
+
+### Goal
+- Apply the owner's review of PR #14: corrections for G9, G10, G11 and the G6 priority decision in the specifications and Decision Log.
+
+### Completed
+- Decision Log #58 (G6 priority on `RequestItem`, G7 default `NORMAL`, and the other approved guards); Domain and Database Specification (sections 5.1, 18, 20 list and 32.2), Master and Architecture "remaining clarifications" updated.
+- Code: removed the "no stage added after release" restriction (G9); `ApproveStage` renamed `ApproveStageWholeQuantity` and documented demo-only (G10); `AddItem` rejects cancelled and closed requests only, defaults to `NORMAL`, release limit documented as not enforceable yet (G11); `InternalsVisibleTo` for the domain tests and an internal `Request.SetStatus`.
+- Tests revised and added; `docs/DOMAIN_MODEL_DEMO_SCOPE.md` section 3 now records the decisions.
+
+### Files changed
+- `src/ERP.MES.Domain/Requests/{Request,RequestItem,ItemStage}.cs`, `src/ERP.MES.Domain/ERP.MES.Domain.csproj`, `tests/ERP.MES.Domain.Tests/Requests/*`, `docs/DOMAIN_MODEL_DEMO_SCOPE.md`, `docs/DECISION_LOG.md`, the three specifications, `docs/SESSION_LOG.md`.
+
+### Decisions newly approved
+- #58 (numbering: #55 is in PR #11, #56 is reserved for the migration-tooling PR, #57 is in PR #10).
+
+### Unresolved questions / risks
+- Downstream-stage handling after a route revision, the production stage state machine, the request-status table, override-versus-priority-change precedence, enforcement of the release limit for items.
+
+### Commands/tests actually run and results
+- Not built locally (no SDK). Windows CI result is reported in the PR.
+
+### Recommended exact next action
+- Review PR #14; after #11, #12, #13 merge I update the branch from `main` and rerun CI.
+
+---
+
+### Date / session
+- Date: 2026-10-14
+- Claude Code session ID (if useful): session_01JCnmzjXbpMcTjwPcE9vsqQ (domain model, second owner review)
+
+### Goal
+- Three targeted corrections to PR #14: route-revision safety, Decision Log cleanup, QC-model wording.
+
+### Completed
+- `AddStage` became `DefineInitialStage`: initial route construction only, refused once a stage is released, documented as not route revision; the audited controlled revision remains unimplemented and unprohibited. Tests replaced (no unaudited post-release change, no revision-like method).
+- Decision Log: duplicated ordering entries merged into one "Queue ordering" bullet (priority ties and Management-override precedence kept as open); stale priority-location wording removed; #58 G9/G10 reworded; #11 points to #58.
+- `QcApproval` and `ApproveStageWholeQuantity` documented as demo-only and as not representing accepted/rework/scrap quantities; a test pins that.
+
+### Files changed
+- `src/ERP.MES.Domain/Requests/{RequestItem,ItemStage}.cs`, `tests/ERP.MES.Domain.Tests/Requests/*`, `docs/DOMAIN_MODEL_DEMO_SCOPE.md`, `docs/DECISION_LOG.md`, `docs/SESSION_LOG.md`.
+
+### Decisions newly approved
+- None beyond the owner's corrections to the wording of #58.
+
+### Unresolved questions / risks
+- Controlled route revision and its downstream handling; production stage state machine; request-status table; override precedence; partial QC dispositions as production work.
+
+### Commands/tests actually run and results
+- Not built locally (no SDK). Windows CI result is reported in the PR.
+
+### Recommended exact next action
+- Review PR #14; after #11-#13 merge I refresh the branch from `main` and rerun CI.

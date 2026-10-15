@@ -298,7 +298,7 @@ The canonical RequestItem should include at minimum:
 | CreatedAt | Creation timestamp |
 | UpdatedAt | Last update timestamp |
 
-The exact distinction between item-level priority and stage-level priority remains subject to Section 18.
+> **[Decision Log #58]** The Planning `Priority` belongs to the `RequestItem` (this row). Every stage and queue entry of the item inherits it; no separate, independent stage-priority field exists. New items default to `NORMAL`.
 
 **Quantities (Decision Log #33):** `RequestedQty`, UOM conversion factors/results and planned minutes per piece are decimals with a fixed scale, set in the Milestone 2 design (proposal: 4 decimal places).
 
@@ -1054,7 +1054,7 @@ Planning owns normal production priority and queue order. The allowed priority v
 | `URGENT` | فوری | 2 |
 | `NORMAL` | عادی | 3 (lowest) |
 
-Multiple stages/items may share the same priority. Planning can change priority and normal queue order after items have entered the queue; the live queue must reflect those changes. The precise storage granularity of Planning priority (RequestItem versus ItemStage) remains pending confirmation; the schema must not duplicate independent priority fields without an explicit rule. The model must keep the Planning priority/order separate from any Management override.
+Multiple stages/items may share the same priority. Planning can change priority and normal queue order after items have entered the queue; the live queue must reflect those changes. **Granularity (resolved, Decision Log #58):** Planning priority is stored on the `RequestItem`; every stage and queue entry of that item inherits it, and the schema must not add an independent stage-priority field. New items default to `NORMAL`. The model must keep the Planning priority/order separate from any Management override, which never overwrites the underlying Planning priority.
 
 ## 18.1 Management queue-order override
 
@@ -1388,7 +1388,7 @@ Initial index candidates:
 - Request.ContractRequired
 - RequestItem `(RequestID, ItemNo)` unique/validated
 - RequestItem.WorkTypeID
-- Planning priority/queue order at the selected queue-entry granularity (whether RequestItem or ItemStage is still pending)
+- Planning priority on `RequestItem` (stages inherit it; Decision Log #58) and the planning queue order
 - ItemStage `(RequestItemID, StageNo)`
 - ItemStage.StageStatusID
 - ItemStage.ProductionUnitID
@@ -1594,7 +1594,7 @@ This register distinguishes confirmed business rules from decisions still needin
 
 Priority values are exactly `عادی`, `فوری`, and `خیلی فوری`, mapped to stable codes and ordered from lowest to highest *(see §18 for the authoritative table: `SortOrder` 1 = highest urgency, `VERY_URGENT`; audit X20)*. Planning owns normal priority/order and may update it; the live queue must respond. Multiple stages/items may share a priority. Management may override multiple stages/items in one queue operation. Every override batch and affected stage position must be audited with user, timestamp, old/new order and reason; preserve the underlying Planning priority.
 
-Still pending within this area: (a) whether the normal Planning priority belongs to the RequestItem or each ItemStage; and (b) how a later Planning priority edit interacts with an active Management override.
+Resolved (Decision Log #58): (a) the normal Planning priority belongs to the `RequestItem`; stages and queue entries inherit it. Still pending within this area: (b) how a later Planning priority edit interacts with an active Management override.
 
 ## 32.3 Scheduling calendar — BASE RULES RESOLVED; capacity algorithm pending
 
