@@ -924,6 +924,8 @@ Minimum fields:
 
 Passwords must never be stored plaintext.
 
+> **[Approved — Decision Log #61, #62]** The Domain `User` holds the fields above except the password: `PasswordHash` (with its salt, algorithm, version, work factor, the lockout counters and the one-time flag) is credential data kept in a separate `UserCredentials` record owned by Application and stored by Infrastructure, never a Domain field. `Username` is stored as typed and made unique, case-insensitively, through one canonical key (`UsernameKey`). `CreatedByUserId` / `ApprovedByUserId` columns of customers, requests, items and QC approvals are foreign keys to `Users` (#70).
+
 ## 15.2 Canonical authorization matrix
 
 Every user has exactly one Department and one Role. Authorization for sensitive actions must enforce both the specified department and, where stated, the role. Do not rely only on hiding or disabling UI buttons; validate authorization in application services as well.

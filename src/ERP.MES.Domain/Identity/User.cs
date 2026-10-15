@@ -1,3 +1,5 @@
+using ERP.MES.Domain.Requests;
+
 namespace ERP.MES.Domain.Identity;
 
 /// <summary>

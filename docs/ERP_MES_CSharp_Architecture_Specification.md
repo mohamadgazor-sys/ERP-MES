@@ -211,6 +211,8 @@ MachineHourlyRate
 MaterialPriceRate
 ```
 
+> **[Approved — Decision Log #61]** `User`, `Role` and `Department` are Domain entities: they hold the identity and organisation data and invariants only (exactly one department and one role per user, stable codes, the login-name rule of #62, users deactivated and never deleted). Everything about proving identity - the password hash and its parameters, lockout counters, one-time flags, bootstrap and recovery tokens - is not Domain: the credential record and the use cases (sign-in, bootstrap, recovery, account administration, authorization) are in Application, hashing, token handling, storage and EF Core mappings in Infrastructure. The Domain contains no password, hash, token, cryptographic code, EF Core or UI type. See `docs/AUTHENTICATION.md`.
+
 ## 3.4 ERP.MES.Infrastructure
 
 Responsibilities:
@@ -1056,6 +1058,8 @@ Authenticated User
 Passwords must never be stored as plaintext.
 
 The concrete password-hashing algorithm/library is an implementation/security decision to be validated during implementation.
+
+> **[Approved — Decision Log #27, #41, #65]** PBKDF2-HMAC-SHA256 from the .NET base library (initially 600,000 iterations, a fresh salt per password, parameters stored with each hash). Sign-in gives one generic failure for unknown, wrong, inactive and locked accounts. Implementation notes: `docs/AUTHENTICATION.md`.
 
 ## 17.2 Authorization enforcement
 
