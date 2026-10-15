@@ -76,6 +76,7 @@ This is a durable record of user-approved decisions. Update it only when the use
 - PDF storage retention policy and rules for deleting old documents. (Request PDF format is decided in #35 and its size limit in #54; limits for other document types are not.)
 - Exact database migration/testing and backup/restore operating procedure.
 - Request-status transition table (which transitions are allowed from each status, and whether `CANCELLED` and `CLOSED` are terminal), to be drafted from Master Specification §3 and audit Appendix A and reviewed at the start of Milestone 2.
+- Persistence mapping details of the initial subset (docs/PERSISTENCE_MAPPING.md section 4): reference tables for controlled codes versus enum integers, decimal storage and scale, shadow keys for stage and QC approval, aggregate-level (request-wide) concurrency versus the per-row version of #23, extra indexes, and verification on SQL Server.
 - Production stage state machine (the three transitions of #58 are demonstration-only) and enforcement of "items editable only until production release" once a request-level release state exists. Partial QC dispositions (accepted/rework/scrap) are a production requirement that the domain model does not implement yet. Details in `docs/DOMAIN_MODEL_DEMO_SCOPE.md`.
 - Permission to reopen is decided only at department level (#29); whether a role requirement applies is not stated.
 - Rial rounding rules and storage type (see #33).
