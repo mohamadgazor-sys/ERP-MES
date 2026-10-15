@@ -1,4 +1,7 @@
 using System.Text;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using ERP.MES.Application.Security;
 using ERP.MES.Domain.Identity;
 using ERP.MES.Domain.Calendar;
@@ -200,19 +203,21 @@ public class DemoAccountsTests
     public async Task A_marked_database_with_sample_data_from_before_the_accounts_existed_is_refused_and_must_be_reset()
     {
         using var db = new TempDatabase();
-        await db.MigrateWithActorsAsync();
-        db.Execute("PRAGMA application_id = " + DemoDatabase.ApplicationId.ToString(System.Globalization.CultureInfo.InvariantCulture));
-        await db.Customers().AddAsync(PersistenceTestData.NewCustomer("Older sample customer"), Token);
 
-        // Recreate the pre-authentication state: the creator id 1 is stored but no such user exists (foreign keys off for this one statement).
-        db.Execute("PRAGMA foreign_keys = OFF; DELETE FROM Users;");
-        var rows = db.Query("SELECT Id, Name FROM Customers");
+        // The state before sign-in existed: only the initial migration is applied and a sample record names a creator that was never a user.
+        await using (var context = db.NewContext())
+        {
+            await context.GetService<IMigrator>().MigrateAsync(context.Database.GetMigrations().First(), Token);
+        }
+
+        db.Execute("PRAGMA application_id = " + DemoDatabase.ApplicationId.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        db.Execute("INSERT INTO Customers (Name, IsActive, CreatedByUserId, CreatedAtUtc, UpdatedAtUtc, Version) VALUES ('Older sample customer', 1, 1, '2026-10-15 09:30:15', '2026-10-15 09:30:15', 1)");
+        var bytesBefore = await File.ReadAllBytesAsync(db.Path, Token);
 
         var refusal = await Assert.ThrowsAsync<DemoDatabaseRefusedException>(() => Init(db));
 
-        Assert.Contains("Reset it", refusal.Message, StringComparison.Ordinal);
-        Assert.Equal(rows, db.Query("SELECT Id, Name FROM Customers"));
-        Assert.Empty(db.Query("SELECT Id FROM Users"));
+        Assert.Contains("demo-reset", refusal.Message, StringComparison.Ordinal);
+        Assert.Equal(bytesBefore, await File.ReadAllBytesAsync(db.Path, Token));
         Assert.DoesNotContain(db.CredentialFiles, f => File.Exists(f));
     }
 
