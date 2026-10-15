@@ -6,7 +6,7 @@ namespace ERP.MES.Infrastructure.Sqlite;
 
 /// <summary>
 /// SQLite wiring for <see cref="ErpMesDbContext"/>: connection options and the startup path that applies migrations. The schema is
-/// only ever created by EF Core migrations (never by EnsureCreated), and opening an up-to-date database applies nothing.
+/// only ever created by EF Core migrations (never by the create-from-model shortcut), and opening an up-to-date database applies nothing.
 /// </summary>
 public static class SqliteDatabase
 {
