@@ -1,4 +1,5 @@
 using ERP.MES.Domain.Requests;
+using ERP.MES.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
 namespace ERP.MES.Infrastructure.Tests;
