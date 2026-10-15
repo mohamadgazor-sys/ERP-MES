@@ -58,11 +58,11 @@ public class DemoGuardTests
 
         // Exactly one call in the seed, and the Domain only declares it (internal, never public).
         var seeder = File.ReadAllText(Path.Combine(SolutionLayout.Root, "src", "ERP.MES.Infrastructure", "Demo", "DemoDataSeeder.cs"));
-        Assert.Equal(1, System.Text.RegularExpressions.Regex.Matches(seeder, StatusPlacement + @"\(").Count);
+        Assert.Single(System.Text.RegularExpressions.Regex.Matches(seeder, StatusPlacement + @"\("));
 
         var request = File.ReadAllText(Path.Combine(SolutionLayout.Root, "src", "ERP.MES.Domain", "Requests", "Request.cs"));
-        Assert.Equal(1, System.Text.RegularExpressions.Regex.Matches(request, @"\binternal void " + StatusPlacement + @"\(").Count);
-        Assert.Equal(1, System.Text.RegularExpressions.Regex.Matches(request, StatusPlacement + @"\(").Count);
+        Assert.Single(System.Text.RegularExpressions.Regex.Matches(request, @"\binternal void " + StatusPlacement + @"\("));
+        Assert.Single(System.Text.RegularExpressions.Regex.Matches(request, StatusPlacement + @"\("));
     }
 
     [Fact]

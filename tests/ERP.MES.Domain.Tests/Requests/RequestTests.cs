@@ -193,6 +193,7 @@ public class RequestTests
         // No public member can change the status: it has a private setter and no public method is named like a status change.
         Assert.False(typeof(Request).GetProperty(nameof(Request.Status))!.SetMethod!.IsPublic);
         var publicNames = typeof(Request).GetMethods(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.DeclaredOnly)
+            .Where(m => !m.IsSpecialName)
             .Select(m => m.Name)
             .ToArray();
         Assert.DoesNotContain(publicNames, n => n.Contains("Status", StringComparison.Ordinal));
