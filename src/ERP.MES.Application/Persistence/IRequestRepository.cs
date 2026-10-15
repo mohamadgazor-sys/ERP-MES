@@ -1,0 +1,38 @@
+using ERP.MES.Domain.Requests;
+
+namespace ERP.MES.Application.Persistence;
+
+/// <summary>
+/// Saves and loads a request together with its items, stages and QC approvals (the request is the aggregate root). Every method is one
+/// transaction; loaded objects are detached and changed through <see cref="UpdateAsync"/>. No database type appears in this contract.
+/// </summary>
+public interface IRequestRepository
+{
+    /// <summary>
+    /// Saves a new request (id 0) with whatever items, stages and approvals it already holds. Fails with <see cref="RecordNotFoundException"/> if the
+    /// customer does not exist and with <see cref="DuplicateRequestException"/> if the business key is taken (exact, case-sensitive comparison).
+    /// </summary>
+    Task<Stored<Request>> AddAsync(Request request, CancellationToken cancellationToken = default);
+
+    /// <summary>Loads a request with its items, stages and approvals, or null.</summary>
+    Task<Stored<Request>?> FindAsync(long requestId, CancellationToken cancellationToken = default);
+
+    Task<bool> ExistsAsync(RequestKey key, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Request numbers of the same customer and Jalali year that differ from <paramref name="requestNo"/> only by letter case. Decision Log #31 asks for a
+    /// non-blocking warning in that case; such a request number is still a different, valid number.
+    /// </summary>
+    Task<IReadOnlyList<RequestNo>> FindCaseInsensitiveNearDuplicatesAsync(long customerId, int jalaliRequestYear, RequestNo requestNo, CancellationToken cancellationToken = default);
+
+    /// <summary>Request list rows, newest request date first; optionally for one customer.</summary>
+    Task<IReadOnlyList<RequestSummary>> ListAsync(long? customerId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Loads the request with its items, stages and approvals, runs <paramref name="change"/> (Domain methods such as adding an item, releasing or
+    /// approving a stage, changing a priority), and saves the result: new items, stages and approvals are inserted, changed rows updated. Concurrency
+    /// is per row (Decision Log #23): <paramref name="expectedVersion"/> checks the request row, and any row changed by someone else during the
+    /// operation raises <see cref="ConcurrencyConflictException"/>. An exception thrown by <paramref name="change"/> propagates and nothing is saved.
+    /// </summary>
+    Task<Stored<Request>> UpdateAsync(long requestId, long? expectedVersion, Action<Request> change, CancellationToken cancellationToken = default);
+}

@@ -62,3 +62,26 @@ The schema is created only by applying this migration (`SqliteDatabase.MigrateAs
 | M7 | Behaviour on SQL Server (collation, decimal precision, `DateOnly`) is not verified. | The model is provider-neutral, but only SQLite is tested. |
 | M8 | Concurrency is per row, not per aggregate: changes to different rows of one request do not conflict with each other. | Row-level versions only; an aggregate version is a separate decision. |
 | M9 | The concurrency and the stage-reference behaviour are verified on SQLite only; the same model should work on the future provider, but that is not tested. | SQLite-only, as labelled. |
+
+## 5. Persistence services (application-facing contracts)
+
+The next workflow (customer and request entry, then queue and QC) reaches the database only through two small contracts in `ERP.MES.Application/Persistence/`. They contain only Domain types and base-library types (a test checks that no EF Core or `Microsoft.Data` type appears in a public signature, and that the Application source never mentions EF Core). This follows the approved dependency direction (Application references the Domain only; Infrastructure implements Application abstractions; Decision Log #37, Milestone 1 plan section 2). There is **no generic repository**: the contracts are specific to the customer and to the request aggregate.
+
+| Contract | Implementation (provider-neutral, `ERP.MES.Infrastructure/Persistence/`) | Operations |
+|---|---|---|
+| `ICustomerRepository` | `EfCustomerRepository` | `AddAsync`, `FindAsync`, `ListAsync(activeOnly)`, `UpdateAsync(id, expectedVersion, change)` |
+| `IRequestRepository` | `EfRequestRepository` | `AddAsync`, `FindAsync`, `ExistsAsync(key)`, `FindCaseInsensitiveNearDuplicatesAsync`, `ListAsync(customerId)` (summaries), `UpdateAsync(id, expectedVersion, change)` |
+
+The SQLite project supplies the context factory (`SqliteDatabase.CreateContextFactory(path)`); the composition root creates the repositories from it. No new package and no change to the migration were needed.
+
+**How it works**
+- **One call, one transaction, one short-lived context.** There is no unit-of-work object and no tracked entity outlives a call. Loaded objects are detached Domain objects.
+- **Changes go through the Domain.** `UpdateAsync` loads the record, runs the caller's `change` delegate (which calls Domain methods such as `Rename`, `AddItem`, `ReleaseFirstStage`, `ApproveStageWholeQuantity`, `ChangePriority`), and saves. A Domain rule violation propagates unchanged and **nothing is saved**, including earlier successful steps of the same delegate. The persistence layer repeats no rule and normalises no value.
+- **Reads return `Stored<T>`** (the object and the row version it was loaded at). Passing that version as `expectedVersion` to `UpdateAsync` rejects an update based on a stale view with `ConcurrencyConflictException`; a change that someone else saves between the load and the save is reported the same way (EF Core's concurrency token). Nothing is overwritten.
+- **Business key.** `AddAsync` checks the customer exists (`RecordNotFoundException`) and the key Customer + RequestNo + Jalali year is free (`DuplicateRequestException`; exact, case-sensitive); the database's unique index remains the final guard, and a race is also reported as `DuplicateRequestException`. Case-only near duplicates are reported by `FindCaseInsensitiveNearDuplicatesAsync` using the Domain's own comparison (Decision Log #31: a non-blocking warning).
+- **Aggregate loading** returns items, stages and approvals in a stable order (stages by `StageNo`), because the Domain addresses stages by position.
+
+**Concurrency scope (unchanged, M8).** Versions are per row. Adding an item changes the request's update time, so it raises the request row's version; stage, priority and QC changes alone change only the item or stage rows, so an `expectedVersion` for the request does not detect them. Item-level and stage-level expected versions are not exposed yet; they are added when the queue screen needs them.
+
+**Not included:** seed data and reset, authentication, screens, queue read models, audit, a status-transition workflow, SQL Server.
+
