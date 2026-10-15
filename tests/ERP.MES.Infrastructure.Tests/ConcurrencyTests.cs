@@ -150,7 +150,8 @@ public class ConcurrencyTests
             Assert.Equal(1L, context.GetRowVersion(other));
         }
 
-        Assert.Equal(new[] { "1", "2" }, db.Query("SELECT Version FROM Customers ORDER BY Id").ToArray());
+        // The first customer (id 1) was renamed once, so it is at version 2; the customer added afterwards (id 2) is still at version 1.
+        Assert.Equal(new[] { "2", "1" }, db.Query("SELECT Version FROM Customers ORDER BY Id").ToArray());
         Assert.True(requestId > 0);
     }
 
