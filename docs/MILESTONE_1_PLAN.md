@@ -298,6 +298,19 @@ Source: GitHub Actions run [38634656702](https://github.com/mohamadgazor-sys/ERP
 - **Licences:** see `DEPENDENCY_LICENCE_INVENTORY.md` section 6 (17 MIT, 4 Apache-2.0; open points: notice files not read, embedded SQLite binary not examined). Engineering record, not a legal approval.
 - **Not yet done / decisions for the owner:** migrations need `Microsoft.EntityFrameworkCore.Design` and `dotnet-ef`, which this batch does not include; see the PR description.
 
+### 8.3 Batch 3 results: EF Core migration tooling (PR #15)
+
+Approved by the owner on 2026-10-14 (Decision Log #56): `Microsoft.EntityFrameworkCore.Design` 10.0.13 with `PrivateAssets="all"` and the local tool `dotnet-ef` 10.0.13 pinned in `.config/dotnet-tools.json`. The table row for `Microsoft.EntityFrameworkCore.Design` and `dotnet-ef` in section 8 (10.0.12 there) is superseded by 10.0.13 to stay aligned with EF Core. No DbContext, migration or schema is added by this batch, and the production SQL Server provider and version stay undecided.
+
+Source: GitHub Actions run [38647090975](https://github.com/mohamadgazor-sys/ERP-MES/actions/runs/38647090975) on commit `e624d39` (PR #15, base `main`), Windows runner, SDK 10.0.401, copied from its log.
+
+- **Restore:** succeeded for all 10 projects; **tool restore** from the manifest succeeded and `dotnet ef --version` reported 10.0.13 (CI fails if it differs from the manifest).
+- **Resolved graph:** `Microsoft.EntityFrameworkCore.Design` 10.0.13 (direct in `ERP.MES.Infrastructure.Sqlite` and `ERP.MES.Provisioning`) brings 18 further packages: `Humanizer.Core` 2.14.1, `Microsoft.Build.Framework` 18.0.2, `Microsoft.CodeAnalysis.Analyzers` 3.11.0, `Microsoft.CodeAnalysis.Common`/`CSharp`/`CSharp.Workspaces`/`Workspaces.Common`/`Workspaces.MSBuild` 5.0.0, `Microsoft.VisualStudio.SolutionPersistence` 1.0.52, `Mono.TextTemplating` 3.0.0, `Newtonsoft.Json` 13.0.4, `System.CodeDom` 6.0.0 and `System.Composition`, `.AttributedModel`, `.Convention`, `.Hosting`, `.Runtime`, `.TypedParts` 9.0.0.
+- **Vulnerability check** (`dotnet list package --vulnerable --include-transitive`): no vulnerable packages in any project. Note that the vulnerability check covers NuGet package references, **not the local tool** `dotnet-ef`.
+- **Build:** Debug and Release, 0 warnings, 0 errors.
+- **Tests:** 233 discovered and 233 passed (Domain 207, Application 3, Infrastructure 12, Desktop 11); three new tests guard the tooling (Design is private, only in the migrations and startup projects, manifest pinned to the EF Core version).
+- **Licences:** `DEPENDENCY_LICENCE_INVENTORY.md` section 7 (all 20 entries MIT). Open points: notice files not read; carried-forward items from batch 2.
+
 ## 9. SDK pin (approved, Decision Log #46)
 
 `global.json` pins SDK **10.0.401**, and CI uses the same SDK through `actions/setup-dotnet` with `global-json-file`. A future SDK update is a reviewed change (a pull request that edits `global.json` and states the reason).

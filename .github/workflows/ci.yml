@@ -47,6 +47,19 @@ jobs:
       - name: Restore
         run: dotnet restore ERP-MES.sln
 
+      # The pinned EF Core command-line tool (.config/dotnet-tools.json, Decision Log #56). Restored from the manifest only.
+      - name: Restore local .NET tools
+        run: dotnet tool restore
+
+      - name: Verify dotnet-ef is the pinned version
+        shell: pwsh
+        run: |
+          $expected = (Get-Content .config/dotnet-tools.json -Raw | ConvertFrom-Json).tools.'dotnet-ef'.version
+          $output = dotnet ef --version | Out-String
+          Write-Host $output
+          if ($LASTEXITCODE -ne 0) { throw "dotnet ef failed with exit code $LASTEXITCODE" }
+          if ($output -notmatch [regex]::Escape($expected)) { throw "dotnet-ef is not the pinned version $expected" }
+
       # Dependency graph and advisories, direct and transitive (Decision Log #43, #53).
       # The full listing is kept in the log so it can be recorded in docs/MILESTONE_1_PLAN.md section 8.
       - name: List packages (direct and transitive)

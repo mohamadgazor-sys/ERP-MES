@@ -521,6 +521,33 @@ Append one dated entry after every substantial session. Do not replace prior ent
 
 ### Date / session
 - Date: 2026-10-14
+- Claude Code session ID (if useful): session_01JCnmzjXbpMcTjwPcE9vsqQ (package batch 3: EF Core Design and dotnet-ef)
+
+### Goal
+- Add the approved migration tooling (Design 10.0.13 private, `dotnet-ef` 10.0.13 pinned), with restore, vulnerability and licence checks. No DbContext, migration, schema or `EnsureCreated`.
+
+### Completed
+- `Microsoft.EntityFrameworkCore.Design` in `ERP.MES.Infrastructure.Sqlite` and `ERP.MES.Provisioning` (`PrivateAssets="all"`), `.config/dotnet-tools.json`, CI tool restore and version check, three tests, plan section 8.3, licence inventory section 7, Decision Log #56.
+
+### Files changed
+- `Directory.Packages.props`, the two project files, `.config/dotnet-tools.json`, `.github/workflows/ci.yml`, `tests/ERP.MES.Infrastructure.Tests/EfToolingTests.cs`, `docs/MILESTONE_1_PLAN.md`, `docs/DEPENDENCY_LICENCE_INVENTORY.md`, `docs/DECISION_LOG.md`, `docs/SESSION_LOG.md`.
+
+### Decisions newly approved
+- #56.
+
+### Unresolved questions / risks
+- Notice files and the embedded SQLite binary are not examined (inventory sections 6 and 7); to be investigated before broader deployment or redistribution. The vulnerability check does not cover the `dotnet-ef` tool. Whether the migrations project can serve as its own startup project is not needed: Provisioning is the executable startup project.
+
+### Commands/tests actually run and results
+- Not built locally (no SDK). CI run 38647090975 on `e624d39`: restore, tool restore, `dotnet ef --version` = 10.0.13, no vulnerable packages, 0 warnings / 0 errors, 233 of 233 tests. The documentation commit has its own CI run, reported in the PR.
+
+### Recommended exact next action
+- Review and merge; then the migration PR (DbContext for the approved subset, generated initial migration and snapshot).
+
+---
+
+### Date / session
+- Date: 2026-10-14
 - Claude Code session ID (if useful): session_01JCnmzjXbpMcTjwPcE9vsqQ (four-day demo plan, documentation only)
 
 ### Goal
@@ -599,3 +626,30 @@ Append one dated entry after every substantial session. Do not replace prior ent
 
 ### Recommended exact next action
 - Merge PR #15 (records #56), then this PR.
+
+---
+
+### Date / session
+- Date: 2026-10-15
+- Claude Code session ID (if useful): session_01JCnmzjXbpMcTjwPcE9vsqQ (demo plan refreshed after #15 merged)
+
+### Goal
+- Bring PR #10 up to date with `main` after the migration-tooling PR (#15) merged.
+
+### Completed
+- Merged `main`; `DECISION_LOG.md` is sequential (#54, #55, #56 from main, then #57 kept) and `SESSION_LOG.md` keeps main's entries plus this branch's. Plan status lines updated (tooling merged; migration PR next).
+
+### Files changed
+- `docs/FOUR_DAY_DEMO_PLAN.md`, `docs/DECISION_LOG.md`, `docs/SESSION_LOG.md`.
+
+### Decisions newly approved
+- None.
+
+### Unresolved questions / risks
+- None new. #58 is in PR #14 and follows #57 once both are merged.
+
+### Commands/tests actually run and results
+- Documentation only; Windows CI result is reported in the PR.
+
+### Recommended exact next action
+- Review and merge this PR; then PR #14 is refreshed from `main`.

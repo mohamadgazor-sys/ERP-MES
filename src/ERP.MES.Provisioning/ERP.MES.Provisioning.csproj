@@ -6,6 +6,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- Startup project for the dotnet-ef tool (the migrations project is a library). Design-time only. -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\src\ERP.MES.Application\ERP.MES.Application.csproj" />
     <ProjectReference Include="..\..\src\ERP.MES.Infrastructure\ERP.MES.Infrastructure.csproj" />
     <ProjectReference Include="..\..\src\ERP.MES.Infrastructure.Sqlite\ERP.MES.Infrastructure.Sqlite.csproj" />

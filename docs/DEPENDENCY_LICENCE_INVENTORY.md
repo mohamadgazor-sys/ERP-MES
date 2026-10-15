@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Date** | 2026-10-11 |
-| **Scope** | **Batch 1:** every direct and transitive NuGet package used by the three test projects (commit `45f54ec`, PR #6), sections 1 to 5. **Batch 2:** the EF Core / SQLite packages added for the local demonstration database (PR #11), section 6. |
+| **Scope** | **Batch 1:** every direct and transitive NuGet package used by the three test projects (commit `45f54ec`, PR #6), sections 1 to 5. **Batch 2:** the EF Core / SQLite packages added for the local demonstration database (PR #11), section 6. **Batch 3:** the EF Core design-time package and the `dotnet-ef` tool for migrations (PR #15), section 7. |
 | **Package set** | The resolved graph reported by `dotnet list package --include-transitive` in CI run [38175858405](https://github.com/mohamadgazor-sys/ERP-MES/actions/runs/38175858405) (identical to run 38175638879): 3 direct and 13 transitive packages. Versions are exactly those resolved; **no version was changed to produce this inventory.** |
 | **Status** | For owner review. This is an engineering record of what the packages declare. It is **not legal advice and not a legal approval of any package's terms**; whether the company needs a separate legal acceptance of these terms is its own decision. |
 
@@ -106,3 +106,40 @@ No copyleft or proprietary component was seen in any of the notice files read.
 **Resolved by CI, not by my pre-check.** My pre-CI reading of the metadata also listed older `System.*` compatibility packages (for example `System.Memory` 4.5.3, whose licence is a bare URL). CI shows they are not in the resolved graph for `net10.0`, so they are not part of this inventory.
 
 **Conclusion for batch 2.** All 21 packages state a permissive SPDX licence (MIT or Apache-2.0); none is missing, unclear, copyleft or proprietary. Open points are F2 (notice files listed but not read) and F5 (embedded SQLite binary not independently examined). This is an engineering record, **not legal advice and not a legal approval** of any package terms. A later version change needs a new inventory (Decision Log #53).
+
+## 7. Batch 3: EF Core migration tooling (PR #15, approved by the owner on 2026-10-14)
+
+**Scope.** `Microsoft.EntityFrameworkCore.Design` 10.0.13 (`PrivateAssets="all"`, in `ERP.MES.Infrastructure.Sqlite` and `ERP.MES.Provisioning`) and the local tool `dotnet-ef` 10.0.13 (`.config/dotnet-tools.json`). The package set is the resolved graph of `dotnet list package --include-transitive` in CI run [38647090975](https://github.com/mohamadgazor-sys/ERP-MES/actions/runs/38647090975) (commit `e624d39`): the Design package plus **18 further packages**, of which none was in batch 2; the batch-2 packages are not repeated. No version was changed to produce this inventory. Together with `dotnet-ef` this adds 20 entries, and the inventory covers 57 entries in total.
+
+**Where used.** `PrivateAssets="all"` keeps these packages from flowing to projects that reference the two projects above, and they are build-time only; in the published application folder no assemblies of this batch are expected, but I have **not** inspected the published output to confirm it. The `dotnet-ef` tool is developer/CI tooling and is not part of any shipped output.
+
+**Method and limits** as in sections 5 and 6: the `.nuspec` of each package was read from `api.nuget.org`; nothing was executed. Notice files are listed, not read.
+
+| # | Package | Version | Kind | Declared licence (SPDX) | Copyright / authors (from manifest) | Bundled notice files | Flags |
+|---|---|---|---|---|---|---|---|
+| 38 | `Microsoft.EntityFrameworkCore.Design` | 10.0.13 | direct | MIT | (c) Microsoft Corporation | none | F1 |
+| 39 | `Humanizer.Core` | 2.14.1 | transitive | MIT | Copyright (c) .NET Foundation and Contributors | none | — |
+| 40 | `Microsoft.Build.Framework` | 18.0.2 | transitive | MIT | (c) Microsoft Corporation | `notices/THIRDPARTYNOTICES.txt` | F1, F2 |
+| 41 | `Microsoft.CodeAnalysis.Analyzers` | 3.11.0 | transitive | MIT | (c) Microsoft Corporation | `ThirdPartyNotices.txt` | F1, F2 |
+| 42 | `Microsoft.CodeAnalysis.Common` | 5.0.0 | transitive | MIT | (c) Microsoft Corporation | `ThirdPartyNotices.rtf` | F1, F2 |
+| 43 | `Microsoft.CodeAnalysis.CSharp` | 5.0.0 | transitive | MIT | (c) Microsoft Corporation | `ThirdPartyNotices.rtf` | F1, F2 |
+| 44 | `Microsoft.CodeAnalysis.CSharp.Workspaces` | 5.0.0 | transitive | MIT | (c) Microsoft Corporation | `ThirdPartyNotices.rtf` | F1, F2 |
+| 45 | `Microsoft.CodeAnalysis.Workspaces.Common` | 5.0.0 | transitive | MIT | (c) Microsoft Corporation | `ThirdPartyNotices.rtf` | F1, F2 |
+| 46 | `Microsoft.CodeAnalysis.Workspaces.MSBuild` | 5.0.0 | transitive | MIT | (c) Microsoft Corporation | `ThirdPartyNotices.rtf` | F1, F2 |
+| 47 | `Microsoft.VisualStudio.SolutionPersistence` | 1.0.52 | transitive | MIT | (c) Microsoft Corporation | `NOTICE` | F2 |
+| 48 | `Mono.TextTemplating` | 3.0.0 | transitive | MIT | Mikayla Hutchinson (author; no copyright text in the manifest) | `LICENSE.txt/LICENSE` | — |
+| 49 | `Newtonsoft.Json` | 13.0.4 | transitive | MIT | Copyright (c) James Newton-King 2008 | `LICENSE.md` | — |
+| 50 | `System.CodeDom` | 6.0.0 | transitive | MIT | (c) Microsoft Corporation | `LICENSE.TXT`, `THIRD-PARTY-NOTICES.TXT` | F2 |
+| 51 | `System.Composition` | 9.0.0 | transitive | MIT | (c) Microsoft Corporation | `LICENSE.TXT`, `THIRD-PARTY-NOTICES.TXT` | F2 |
+| 52 | `System.Composition.AttributedModel` | 9.0.0 | transitive | MIT | (c) Microsoft Corporation | `LICENSE.TXT`, `THIRD-PARTY-NOTICES.TXT` | F2 |
+| 53 | `System.Composition.Convention` | 9.0.0 | transitive | MIT | (c) Microsoft Corporation | `LICENSE.TXT`, `THIRD-PARTY-NOTICES.TXT` | F2 |
+| 54 | `System.Composition.Hosting` | 9.0.0 | transitive | MIT | (c) Microsoft Corporation | `LICENSE.TXT`, `THIRD-PARTY-NOTICES.TXT` | F2 |
+| 55 | `System.Composition.Runtime` | 9.0.0 | transitive | MIT | (c) Microsoft Corporation | `LICENSE.TXT`, `THIRD-PARTY-NOTICES.TXT` | F2 |
+| 56 | `System.Composition.TypedParts` | 9.0.0 | transitive | MIT | (c) Microsoft Corporation | `LICENSE.TXT`, `THIRD-PARTY-NOTICES.TXT` | F2 |
+| 57 | `dotnet-ef (local tool)` | 10.0.13 | tool, not in the project graph | MIT | (c) Microsoft Corporation | none | F1 |
+
+**Totals for batch 3:** 20 entries, **all MIT** (declared as SPDX expression `MIT`). Missing licence: **0**. Unclear or non-SPDX licence: **0**. Copyleft: **0**. Proprietary or EULA-only: **0**.
+
+**Flags.** F1: `requireLicenseAcceptance` is `true` on `Microsoft.EntityFrameworkCore.Design`, `Microsoft.Build.Framework`, the `Microsoft.CodeAnalysis.*` packages and `dotnet-ef`; the licence is MIT and restore and tool restore did not prompt. F2: notice files are listed (`THIRDPARTYNOTICES`/`ThirdPartyNotices`/`NOTICE`/`LICENSE`) but their content was **not read**; some are in RTF form. They are not reviewed.
+
+**Open points carried forward** (from section 6 and this batch): the `Microsoft.Extensions.*` notice files and the embedded native SQLite binary (section 6, F2 and F5) and the notice files above (F2) must be investigated **before any broader deployment or redistribution**. This is an engineering record, **not legal advice and not a legal approval**. A later version change needs a new inventory (Decision Log #53).
