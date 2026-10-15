@@ -800,3 +800,33 @@ Append one dated entry after every substantial session. Do not replace prior ent
 
 ### Recommended exact next action
 - Review the corrected DbContext, migration, snapshot and tests.
+
+---
+
+### Date / session
+- Date: 2026-10-15
+- Claude Code session ID (if useful): session_01JCnmzjXbpMcTjwPcE9vsqQ (persistence services)
+
+### Goal
+- Implement the smallest application-facing persistence layer for the customer/request workflow, on the accepted DbContext, migration and SQLite configuration. No seed data, reset, authentication or screens.
+
+### Completed
+- `ERP.MES.Application/Persistence/`: `ICustomerRepository`, `IRequestRepository`, `Stored<T>`, `RequestSummary` and the persistence exceptions (no EF Core types).
+- `ERP.MES.Infrastructure/Persistence/`: `EfCustomerRepository`, `EfRequestRepository` and the shared save/translation helper (provider-neutral); `SqliteDatabase.CreateContextFactory`.
+- Tests on real SQLite files, new repositories per step: customer and request round trips, updates through Domain methods, Domain failures propagate and save nothing, duplicate business keys, missing customer/record, near-duplicate warning, request list, stale-version and in-operation concurrency conflicts; Application guards (no EF Core in source or in public signatures).
+- `docs/PERSISTENCE_MAPPING.md` section 5 documents the design and its scope.
+
+### Files changed
+- See the pull request. No package was added; the licence inventory and the migration are unchanged.
+
+### Decisions newly approved
+- None.
+
+### Unresolved questions / risks
+- Per-row concurrency (M8): item-level and stage-level expected versions are not exposed yet. `UpdateAsync` takes a delegate (Action) so the Domain rules stay in the Domain; callers must not capture tracked state.
+
+### Commands/tests actually run and results
+- Not built locally (no SDK). Windows CI results are reported in the pull request.
+
+### Recommended exact next action
+- Review the contracts, implementations and tests; then fictional seed data and reset in a separate PR.

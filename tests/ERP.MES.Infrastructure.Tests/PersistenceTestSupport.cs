@@ -1,6 +1,7 @@
 using ERP.MES.Infrastructure.Persistence;
 using ERP.MES.Infrastructure.Sqlite;
 using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
 
 namespace ERP.MES.Infrastructure.Tests;
 
@@ -14,6 +15,13 @@ internal sealed class TempDatabase : IDisposable
     public ErpMesDbContext NewContext() => new(SqliteDatabase.CreateOptions(Path));
 
     public Task MigrateAsync() => SqliteDatabase.MigrateAsync(Path);
+
+    public IDbContextFactory<ErpMesDbContext> ContextFactory => SqliteDatabase.CreateContextFactory(Path);
+
+    /// <summary>A new repository instance (and so new contexts) on every call, as after a restart.</summary>
+    public EfCustomerRepository Customers() => new(ContextFactory);
+
+    public EfRequestRepository Requests() => new(ContextFactory);
 
     public SqliteConnection OpenRaw()
     {

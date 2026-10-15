@@ -32,10 +32,19 @@ public static class SqliteDatabase
                 sqlite => sqlite.MigrationsAssembly(typeof(SqliteDatabase).Assembly.GetName().Name))
             .Options;
 
+    /// <summary>A factory that creates a new context on the SQLite file for each operation; the repositories use it, one context per call.</summary>
+    public static IDbContextFactory<ErpMesDbContext> CreateContextFactory(string databasePath) =>
+        new SqliteContextFactory(CreateOptions(databasePath));
+
     /// <summary>Applies pending migrations. On a database that is already up to date this changes nothing.</summary>
     public static async Task MigrateAsync(string databasePath, CancellationToken cancellationToken = default)
     {
         await using var context = new ErpMesDbContext(CreateOptions(databasePath));
         await context.Database.MigrateAsync(cancellationToken);
+    }
+
+    private sealed class SqliteContextFactory(DbContextOptions<ErpMesDbContext> options) : IDbContextFactory<ErpMesDbContext>
+    {
+        public ErpMesDbContext CreateDbContext() => new(options);
     }
 }
