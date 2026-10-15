@@ -16,11 +16,11 @@ public class PersistenceRoundTripTests
         await using var context = db.NewContext();
         var customer = PersistenceTestData.NewCustomer();
         context.Customers.Add(customer);
-        await context.SaveChangesAsync();
+        await context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var request = PersistenceTestData.NewMixedRequest(customer);
         context.Requests.Add(request);
-        await context.SaveChangesAsync();
+        await context.SaveChangesAsync(TestContext.Current.CancellationToken);
         return request.Id;
     }
 
@@ -28,7 +28,7 @@ public class PersistenceRoundTripTests
         context.Requests
             .Include(r => r.Items).ThenInclude(i => i.Stages)
             .Include(r => r.Items).ThenInclude(i => i.QcApprovals)
-            .SingleAsync(r => r.Id == requestId);
+            .SingleAsync(r => r.Id == requestId, TestContext.Current.CancellationToken);
 
     [Fact]
     public async Task Keys_are_generated_and_assigned_to_the_domain_objects()
@@ -55,11 +55,11 @@ public class PersistenceRoundTripTests
             var customer = PersistenceTestData.NewCustomer("  Fictional Customer with spaces  ");
             customer.SetActive(false, Now.AddMinutes(5));
             context.Customers.Add(customer);
-            await context.SaveChangesAsync();
+            await context.SaveChangesAsync(TestContext.Current.CancellationToken);
         }
 
         await using var reopened = db.NewContext();
-        var loaded = await reopened.Customers.SingleAsync();
+        var loaded = await reopened.Customers.SingleAsync(TestContext.Current.CancellationToken);
 
         Assert.True(loaded.Id > 0);
         Assert.Equal("  Fictional Customer with spaces  ", loaded.Name);
@@ -141,7 +141,7 @@ public class PersistenceRoundTripTests
             make.SubmitStageForQc(2);
             make.ApproveStageWholeQuantity(2, 9, Now.AddHours(3));
             Assert.True(make.ChangePriority(Priority.VeryUrgent, Now.AddHours(3)));
-            await context.SaveChangesAsync();
+            await context.SaveChangesAsync(TestContext.Current.CancellationToken);
         }
 
         // Session 3: everything is still there, and the QC gate still holds on the reloaded data.
@@ -160,7 +160,7 @@ public class PersistenceRoundTripTests
             // Stage 3 is now executable; the repair item's stage was never released, so it cannot start.
             make.StartStage(3);
             Assert.Throws<InvalidOperationException>(() => request.Items.Single(i => i.ItemNo == "2.10").StartStage(1));
-            await context.SaveChangesAsync();
+            await context.SaveChangesAsync(TestContext.Current.CancellationToken);
         }
 
         await using (var context = db.NewContext())
@@ -182,7 +182,7 @@ public class PersistenceRoundTripTests
         {
             var customer = PersistenceTestData.NewCustomer();
             context.Customers.Add(customer);
-            await context.SaveChangesAsync();
+            await context.SaveChangesAsync(TestContext.Current.CancellationToken);
             foreach (var number in numbers)
             {
                 var request = PersistenceTestData.NewRequest(customer, number);
@@ -190,11 +190,11 @@ public class PersistenceRoundTripTests
                 context.Requests.Add(request);
             }
 
-            await context.SaveChangesAsync();
+            await context.SaveChangesAsync(TestContext.Current.CancellationToken);
         }
 
         await using var reopened = db.NewContext();
-        var loaded = await reopened.Requests.Include(r => r.Items).ToListAsync();
+        var loaded = await reopened.Requests.Include(r => r.Items).ToListAsync(TestContext.Current.CancellationToken);
         Assert.Equal(
             numbers.OrderBy(n => n, StringComparer.Ordinal).ToArray(),
             loaded.Select(r => r.RequestNo.Value).OrderBy(n => n, StringComparer.Ordinal).ToArray());
@@ -212,12 +212,12 @@ public class PersistenceRoundTripTests
 
         await using (var reader = db.NewContext())
         {
-            Assert.Empty(await reader.Customers.ToListAsync());
+            Assert.Empty(await reader.Customers.ToListAsync(TestContext.Current.CancellationToken));
         }
 
-        await writer.SaveChangesAsync();
+        await writer.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         await using var after = db.NewContext();
-        Assert.Single(await after.Customers.ToListAsync());
+        Assert.Single(await after.Customers.ToListAsync(TestContext.Current.CancellationToken));
     }
 }

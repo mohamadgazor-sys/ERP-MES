@@ -17,13 +17,18 @@ public class MigrationTests
 
         Assert.True(db.Exists);
         var tables = db.Query("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name");
-        Assert.Equal(new[] { "Customers", "ItemStages", "QcApprovals", "RequestItems", "Requests", "__EFMigrationsHistory" }, tables.ToArray());
+
+        // EF Core keeps its own bookkeeping tables (the migration history, and in EF Core 10 a migrations lock); only the application tables are compared.
+        Assert.Contains("__EFMigrationsHistory", tables);
+        Assert.Equal(
+            new[] { "Customers", "ItemStages", "QcApprovals", "RequestItems", "Requests" },
+            tables.Where(t => !t.StartsWith("__EF", StringComparison.Ordinal)).ToArray());
 
         await using var context = db.NewContext();
-        var applied = (await context.Database.GetAppliedMigrationsAsync()).ToArray();
+        var applied = (await context.Database.GetAppliedMigrationsAsync(TestContext.Current.CancellationToken)).ToArray();
         Assert.Single(applied);
         Assert.EndsWith("_InitialCreate", applied[0], StringComparison.Ordinal);
-        Assert.Empty(await context.Database.GetPendingMigrationsAsync());
+        Assert.Empty(await context.Database.GetPendingMigrationsAsync(TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -46,7 +51,7 @@ public class MigrationTests
         await using (var context = db.NewContext())
         {
             context.Customers.Add(PersistenceTestData.NewCustomer());
-            await context.SaveChangesAsync();
+            await context.SaveChangesAsync(TestContext.Current.CancellationToken);
         }
 
         var historyBefore = db.Query("SELECT MigrationId FROM __EFMigrationsHistory");
@@ -59,8 +64,8 @@ public class MigrationTests
         Assert.Equal(new[] { "Fictional Customer A" }, db.Query("SELECT Name FROM Customers").ToArray());
 
         await using var reopened = db.NewContext();
-        Assert.Empty(await reopened.Database.GetPendingMigrationsAsync());
-        Assert.Equal("Fictional Customer A", (await reopened.Customers.SingleAsync()).Name);
+        Assert.Empty(await reopened.Database.GetPendingMigrationsAsync(TestContext.Current.CancellationToken));
+        Assert.Equal("Fictional Customer A", (await reopened.Customers.SingleAsync(TestContext.Current.CancellationToken)).Name);
     }
 
     [Fact]
@@ -118,9 +123,9 @@ public class MigrationTests
         {
             var customer = PersistenceTestData.NewCustomer();
             context.Customers.Add(customer);
-            await context.SaveChangesAsync();
+            await context.SaveChangesAsync(TestContext.Current.CancellationToken);
             context.Requests.Add(PersistenceTestData.NewRequest(customer));
-            await context.SaveChangesAsync();
+            await context.SaveChangesAsync(TestContext.Current.CancellationToken);
         }
 
         Assert.Throws<SqliteException>(() => db.Execute("DELETE FROM Customers"));
@@ -138,22 +143,22 @@ public class MigrationTests
             var customer = PersistenceTestData.NewCustomer();
             var other = PersistenceTestData.NewCustomer("Fictional Customer B");
             context.Customers.AddRange(customer, other);
-            await context.SaveChangesAsync();
+            await context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
             // Same number: a different case, another customer and another Jalali year are all different business keys.
             context.Requests.Add(PersistenceTestData.NewRequest(customer, "wsj-898"));
             context.Requests.Add(PersistenceTestData.NewRequest(customer, "WSJ-898"));
             context.Requests.Add(PersistenceTestData.NewRequest(other, "wsj-898"));
             context.Requests.Add(PersistenceTestData.NewRequest(customer, "wsj-898", new DateOnly(2027, 3, 21)));
-            await context.SaveChangesAsync();
+            await context.SaveChangesAsync(TestContext.Current.CancellationToken);
         }
 
         Assert.Equal("4", db.Query("SELECT COUNT(*) FROM Requests").Single());
 
         await using var duplicateContext = db.NewContext();
-        var first = await duplicateContext.Customers.OrderBy(c => c.Id).FirstAsync();
+        var first = await duplicateContext.Customers.OrderBy(c => c.Id).FirstAsync(TestContext.Current.CancellationToken);
         duplicateContext.Requests.Add(PersistenceTestData.NewRequest(first, "wsj-898"));
-        await Assert.ThrowsAsync<DbUpdateException>(() => duplicateContext.SaveChangesAsync());
+        await Assert.ThrowsAsync<DbUpdateException>(() => duplicateContext.SaveChangesAsync(TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -166,7 +171,7 @@ public class MigrationTests
         {
             var customer = PersistenceTestData.NewCustomer();
             context.Customers.Add(customer);
-            await context.SaveChangesAsync();
+            await context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
             var request = PersistenceTestData.NewRequest(customer);
             request.AddItem(0, "A-01", "Ring", WorkType.Make, 1m, 1, PersistenceTestData.Now);
@@ -174,7 +179,7 @@ public class MigrationTests
             request.AddItem(0, "1.1", "Ring", WorkType.Make, 1m, 1, PersistenceTestData.Now);
             request.AddItem(0, "1.10", "Ring", WorkType.Make, 1m, 1, PersistenceTestData.Now).DefineInitialStage("Turning", 1m);
             context.Requests.Add(request);
-            await context.SaveChangesAsync();
+            await context.SaveChangesAsync(TestContext.Current.CancellationToken);
         }
 
         Assert.Equal("4", db.Query("SELECT COUNT(*) FROM RequestItems").Single());
