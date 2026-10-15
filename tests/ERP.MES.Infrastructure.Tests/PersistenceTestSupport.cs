@@ -28,6 +28,25 @@ internal sealed class TempDatabase : IDisposable
 
     public Task MigrateAsync() => SqliteDatabase.MigrateAsync(Path);
 
+    /// <summary>The user ids that the persistence tests use as creator (1) and QC approver (9).</summary>
+    public const long TestCreatorId = 1;
+
+    public const long TestApproverId = 9;
+
+    /// <summary>
+    /// Migrates and adds two ordinary user rows with the ids the persistence tests use as creator and approver. Since creators and approvers are real foreign keys
+    /// (Decision Log #70), a record needs an existing user. These rows exist only in throwaway test databases; the product creates users only through the account use
+    /// cases, and no sentinel id is ever inserted by product code.
+    /// </summary>
+    public async Task MigrateWithActorsAsync()
+    {
+        await MigrateAsync();
+        Execute(
+            "INSERT INTO Users (Id, Username, UsernameKey, DisplayName, DepartmentId, RoleId, IsActive, CreatedAtUtc, UpdatedAtUtc, Version) VALUES "
+            + $"({TestCreatorId}, 'test.creator', 'TEST.CREATOR', 'Test creator', 1, 3, 1, '2026-10-15 09:30:15', '2026-10-15 09:30:15', 1), "
+            + $"({TestApproverId}, 'test.approver', 'TEST.APPROVER', 'Test approver', 7, 3, 1, '2026-10-15 09:30:15', '2026-10-15 09:30:15', 1)");
+    }
+
     public IDbContextFactory<ErpMesDbContext> ContextFactory => SqliteDatabase.CreateContextFactory(Path);
 
     /// <summary>A new repository instance (and so new contexts) on every call, as after a restart.</summary>

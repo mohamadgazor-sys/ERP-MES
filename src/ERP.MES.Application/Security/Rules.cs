@@ -26,39 +26,6 @@ public static class PasswordRules
     }
 }
 
-public enum UsernameError
-{
-    None = 0,
-    Empty,
-    TooLong,
-    WhitespaceOrControlCharacter,
-}
-
-/// <summary>
-/// Login-name rules. The name is stored and compared exactly as given (case-sensitive, never trimmed, like the request number); characters that
-/// could make two names look identical or be invisible (white space, control characters) are rejected instead. This is an implementation assumption,
-/// listed in docs/AUTHENTICATION.md for confirmation.
-/// </summary>
-public static class UsernameRules
-{
-    public const int MaximumLength = 64;
-
-    public static UsernameError Validate(string? username)
-    {
-        if (string.IsNullOrEmpty(username))
-        {
-            return UsernameError.Empty;
-        }
-
-        if (username.Length > MaximumLength)
-        {
-            return UsernameError.TooLong;
-        }
-
-        return username.Any(c => char.IsWhiteSpace(c) || char.IsControl(c)) ? UsernameError.WhitespaceOrControlCharacter : UsernameError.None;
-    }
-}
-
 /// <summary>
 /// One-time secret tokens (bootstrap and recovery, Decision Log #39, #47): 32 random bytes from the operating-system generator, shown once as 64
 /// hexadecimal digits in groups. Only the SHA-256 digest is stored; a high-entropy random token needs no slow hash. Comparison is constant-time.

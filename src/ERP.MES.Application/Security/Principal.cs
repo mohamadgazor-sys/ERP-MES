@@ -7,10 +7,11 @@ public enum SignInStatus
 {
     Succeeded,
 
-    /// <summary>Unknown user, wrong password or inactive account: deliberately not distinguished.</summary>
-    InvalidCredentials,
-
-    LockedOut,
+    /// <summary>
+    /// Unknown user, wrong password, inactive account and locked account are deliberately not distinguished (Decision Log #65). The audit log keeps the
+    /// distinctions; the caller never sees them.
+    /// </summary>
+    Failed,
 }
 
 public sealed record SignInResult(SignInStatus Status, Principal? Principal);

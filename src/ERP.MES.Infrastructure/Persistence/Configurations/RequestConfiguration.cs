@@ -1,3 +1,4 @@
+using ERP.MES.Domain.Identity;
 using ERP.MES.Domain.Requests;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -28,6 +29,9 @@ public sealed class RequestConfiguration : IEntityTypeConfiguration<Request>
         // The approved status set is stored by its enum value; reference tables for controlled codes are an open mapping question.
         builder.Property(r => r.Status).HasConversion<int>().IsRequired();
         builder.Property(r => r.CreatedByUserId).IsRequired();
+
+        // The acting user must exist (Decision Log #70): a real foreign key to Users, deletion restricted.
+        builder.HasOne<User>().WithMany().HasForeignKey(r => r.CreatedByUserId).IsRequired().OnDelete(DeleteBehavior.Restrict);
         builder.Property(r => r.CreatedAtUtc).IsRequired();
         builder.Property(r => r.UpdatedAtUtc).IsRequired();
         builder.Ignore(r => r.Key);

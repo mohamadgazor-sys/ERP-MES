@@ -12,7 +12,7 @@ public class CustomerRepositoryTests
     public async Task A_new_customer_is_saved_with_a_generated_id_and_version_one_and_reloaded_exactly()
     {
         using var db = new TempDatabase();
-        await db.MigrateAsync();
+        await db.MigrateWithActorsAsync();
 
         var added = await db.Customers().AddAsync(PersistenceTestData.NewCustomer("  Fictional Customer  "), Token);
 
@@ -33,7 +33,7 @@ public class CustomerRepositoryTests
     public async Task Customers_can_be_listed_and_filtered_by_active_state()
     {
         using var db = new TempDatabase();
-        await db.MigrateAsync();
+        await db.MigrateWithActorsAsync();
         var first = await db.Customers().AddAsync(PersistenceTestData.NewCustomer("A"), Token);
         await db.Customers().AddAsync(PersistenceTestData.NewCustomer("B"), Token);
         await db.Customers().UpdateAsync(first.Value.Id, null, c => c.SetActive(false, Now.AddMinutes(1)), Token);
@@ -49,7 +49,7 @@ public class CustomerRepositoryTests
     public async Task An_update_runs_the_domain_method_saves_and_raises_the_version()
     {
         using var db = new TempDatabase();
-        await db.MigrateAsync();
+        await db.MigrateWithActorsAsync();
         var added = await db.Customers().AddAsync(PersistenceTestData.NewCustomer("Before"), Token);
 
         var updated = await db.Customers().UpdateAsync(added.Value.Id, added.Version, c => c.Rename("After", Now.AddMinutes(5)), Token);
@@ -65,7 +65,7 @@ public class CustomerRepositoryTests
     public async Task A_domain_rule_violation_in_an_update_propagates_and_nothing_is_saved()
     {
         using var db = new TempDatabase();
-        await db.MigrateAsync();
+        await db.MigrateWithActorsAsync();
         var added = await db.Customers().AddAsync(PersistenceTestData.NewCustomer("Keep me"), Token);
 
         // The persistence layer does not re-implement the Domain's rules and does not hide its exceptions.
@@ -82,7 +82,7 @@ public class CustomerRepositoryTests
     public async Task A_customer_with_an_id_cannot_be_added_again_and_a_missing_customer_is_reported()
     {
         using var db = new TempDatabase();
-        await db.MigrateAsync();
+        await db.MigrateWithActorsAsync();
         var added = await db.Customers().AddAsync(PersistenceTestData.NewCustomer(), Token);
 
         await Assert.ThrowsAsync<ArgumentException>(() => db.Customers().AddAsync(added.Value, Token));
@@ -96,7 +96,7 @@ public class CustomerRepositoryTests
     public async Task An_update_based_on_a_stale_version_is_rejected_and_does_not_overwrite_the_first_update()
     {
         using var db = new TempDatabase();
-        await db.MigrateAsync();
+        await db.MigrateWithActorsAsync();
         var added = await db.Customers().AddAsync(PersistenceTestData.NewCustomer("Original"), Token);
 
         // Two users loaded the same version.
@@ -117,7 +117,7 @@ public class CustomerRepositoryTests
     public async Task A_change_saved_by_someone_else_during_the_update_is_reported_and_not_overwritten()
     {
         using var db = new TempDatabase();
-        await db.MigrateAsync();
+        await db.MigrateWithActorsAsync();
         var added = await db.Customers().AddAsync(PersistenceTestData.NewCustomer("Original"), Token);
 
         // The change delegate runs between the load and the save; a raw statement stands for another user saving in that window.

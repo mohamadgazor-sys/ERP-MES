@@ -1,3 +1,4 @@
+using ERP.MES.Domain.Identity;
 using ERP.MES.Domain.Requests;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -29,6 +30,9 @@ public sealed class QcApprovalConfiguration : IEntityTypeConfiguration<QcApprova
             .OnDelete(DeleteBehavior.Restrict);
         builder.Property(a => a.ApprovedQuantity).IsRequired();
         builder.Property(a => a.ApprovedByUserId).IsRequired();
+
+        // The acting user must exist (Decision Log #70): a real foreign key to Users, deletion restricted.
+        builder.HasOne<User>().WithMany().HasForeignKey(a => a.ApprovedByUserId).IsRequired().OnDelete(DeleteBehavior.Restrict);
         builder.Property(a => a.ApprovedAtUtc).IsRequired();
     }
 }

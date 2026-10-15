@@ -1,3 +1,5 @@
+using ERP.MES.Domain.Identity;
+
 namespace ERP.MES.Application.Security;
 
 /// <summary>
@@ -80,6 +82,7 @@ public static class AuthorizationRules
     public static bool IsAllowed(Principal? principal, Permission permission) =>
         principal is not null && IsAllowed(principal.DepartmentCode, principal.RoleCode, permission);
 
-    internal static bool IsAllowed(UserAccount? user, Permission permission) =>
+    /// <summary>Judged by the stable codes of the user's department and role, never by their display names (Decision Log #67). An inactive user is denied everything.</summary>
+    internal static bool IsAllowed(User? user, Permission permission) =>
         user is { IsActive: true } && IsAllowed(user.Department.Code, user.Role.Code, permission);
 }

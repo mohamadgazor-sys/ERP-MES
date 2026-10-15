@@ -14,7 +14,7 @@ public class ConcurrencyTests
     public async Task A_stale_customer_update_is_rejected_and_does_not_overwrite_the_first_update()
     {
         using var db = new TempDatabase();
-        await db.MigrateAsync();
+        await db.MigrateWithActorsAsync();
         await using (var seed = db.NewContext())
         {
             seed.Customers.Add(PersistenceTestData.NewCustomer("Original name"));
@@ -49,7 +49,7 @@ public class ConcurrencyTests
     public async Task A_stale_request_item_update_is_rejected_and_does_not_overwrite_the_first_update()
     {
         using var db = new TempDatabase();
-        await db.MigrateAsync();
+        await db.MigrateWithActorsAsync();
         var requestId = await PersistenceTestData.SeedMixedRequestAsync(db);
 
         await using var first = db.NewContext();
@@ -76,7 +76,7 @@ public class ConcurrencyTests
     public async Task A_stale_item_stage_update_is_rejected_and_does_not_overwrite_the_first_update()
     {
         using var db = new TempDatabase();
-        await db.MigrateAsync();
+        await db.MigrateWithActorsAsync();
         var requestId = await PersistenceTestData.SeedMixedRequestAsync(db);
 
         await using var first = db.NewContext();
@@ -104,7 +104,7 @@ public class ConcurrencyTests
         // Request status transitions are not approved, so the Domain offers no public way to change a stored request. This test
         // changes the stored status directly through EF Core only to prove that the request row carries a working version.
         using var db = new TempDatabase();
-        await db.MigrateAsync();
+        await db.MigrateWithActorsAsync();
         var requestId = await PersistenceTestData.SeedMixedRequestAsync(db);
 
         await using var first = db.NewContext();
@@ -128,7 +128,7 @@ public class ConcurrencyTests
     public async Task New_rows_start_at_version_one_and_each_successful_update_adds_one()
     {
         using var db = new TempDatabase();
-        await db.MigrateAsync();
+        await db.MigrateWithActorsAsync();
         var requestId = await PersistenceTestData.SeedMixedRequestAsync(db);
 
         Assert.All(new[] { "Customers", "Requests", "RequestItems", "ItemStages" }, table =>
@@ -159,7 +159,7 @@ public class ConcurrencyTests
     public async Task Qc_approvals_are_append_only_and_have_no_version_column()
     {
         using var db = new TempDatabase();
-        await db.MigrateAsync();
+        await db.MigrateWithActorsAsync();
 
         foreach (var table in new[] { "Customers", "Requests", "RequestItems", "ItemStages" })
         {

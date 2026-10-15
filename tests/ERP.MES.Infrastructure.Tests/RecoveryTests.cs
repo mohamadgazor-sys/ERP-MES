@@ -1,4 +1,5 @@
 using ERP.MES.Application.Security;
+using ERP.MES.Domain.Identity;
 
 namespace ERP.MES.Infrastructure.Tests;
 
@@ -87,13 +88,13 @@ public class RecoveryTests
 
         Assert.Equal(RecoveryStatus.Succeeded, result.Status);
         Assert.Equal("admin.alpha|1|ADMIN|0|NULL",
-            Row(fixture, "SELECT u.Username || '|' || u.IsActive || '|' || r.Code || '|' || u.FailedLoginCount || '|' || COALESCE(u.LockoutEndUtc, 'NULL') FROM Users u JOIN Roles r ON r.Id = u.RoleId WHERE u.Username = 'admin.alpha'"));
+            Row(fixture, "SELECT u.Username || '|' || u.IsActive || '|' || r.Code || '|' || c.FailedLoginCount || '|' || COALESCE(c.LockoutEndUtc, 'NULL') FROM Users u JOIN UserCredentials c ON c.UserId = u.Id JOIN Roles r ON r.Id = u.RoleId WHERE u.Username = 'admin.alpha'"));
         Assert.Equal(new[] { "1" }, fixture.Db.Query("SELECT RecoveryTokenHash IS NULL FROM SystemSetup"));
         Assert.NotEqual(stampBefore, Row(fixture, "SELECT AdminChangeStamp FROM SystemSetup"));
         Assert.False(await fixture.Services.Recovery.IsRecoveryPendingAsync(Token));
 
         // The old password no longer works; the new one does, and it is not a one-time password.
-        Assert.Equal(SignInStatus.InvalidCredentials, (await fixture.Services.Authentication.SignInAsync(AlphaName, AlphaPassword, Token)).Status);
+        Assert.Equal(SignInStatus.Failed, (await fixture.Services.Authentication.SignInAsync(AlphaName, AlphaPassword, Token)).Status);
         var signedIn = await fixture.Services.Authentication.SignInAsync(AlphaName, NewPassword, Token);
         Assert.Equal(SignInStatus.Succeeded, signedIn.Status);
         Assert.False(signedIn.Principal!.MustChangePassword);
@@ -208,7 +209,7 @@ public class RecoveryTests
         var winnerPassword = results[0].Status == RecoveryStatus.Succeeded ? "First-Winner-Pass-6" : "Second-Winner-Pass-7";
         var loserPassword = results[0].Status == RecoveryStatus.Succeeded ? "Second-Winner-Pass-7" : "First-Winner-Pass-6";
         Assert.Equal(SignInStatus.Succeeded, (await fixture.Services.Authentication.SignInAsync(AlphaName, winnerPassword, Token)).Status);
-        Assert.Equal(SignInStatus.InvalidCredentials, (await fixture.Services.Authentication.SignInAsync(AlphaName, loserPassword, Token)).Status);
+        Assert.Equal(SignInStatus.Failed, (await fixture.Services.Authentication.SignInAsync(AlphaName, loserPassword, Token)).Status);
     }
 
     [Fact]

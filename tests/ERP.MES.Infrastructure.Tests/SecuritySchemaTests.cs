@@ -1,4 +1,6 @@
 using ERP.MES.Application.Security;
+using ERP.MES.Domain.Identity;
+using ERP.MES.Infrastructure.Persistence;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 
@@ -20,7 +22,7 @@ public class SecuritySchemaTests
             db.Query("SELECT Code FROM Departments ORDER BY Code"));
         Assert.Equal(new[] { "ADMIN", "MANAGER", "STAFF" }, db.Query("SELECT Code FROM Roles ORDER BY Code"));
         Assert.Empty(db.Query("SELECT Id FROM Departments WHERE Name = '' OR Name IS NULL"));
-        Assert.Equal(ReferenceData.Departments.Select(d => d.Name), db.Query("SELECT Name FROM Departments ORDER BY Id"));
+        Assert.Equal(ReferenceDataSeed.Departments.Select(d => d.Name), db.Query("SELECT Name FROM Departments ORDER BY Id"));
     }
 
     [Fact]
@@ -40,9 +42,13 @@ public class SecuritySchemaTests
         using var db = new TempDatabase();
         await db.MigrateAsync();
 
-        var columns = db.Query("SELECT name FROM pragma_table_info('Users') WHERE (name LIKE '%assword%' OR name LIKE '%ecret%' OR name LIKE '%oken%') AND name <> 'MustChangePassword' ORDER BY name");
+        const string Credential = "(name LIKE '%assword%' OR name LIKE '%ecret%' OR name LIKE '%oken%' OR name LIKE '%ash%' OR name LIKE '%alt%') AND name <> 'MustChangePassword'";
+        var credentialColumns = db.Query($"SELECT name FROM pragma_table_info('UserCredentials') WHERE {Credential} ORDER BY name");
 
-        Assert.Equal(new[] { "PasswordAlgorithm", "PasswordHash", "PasswordHashVersion", "PasswordSalt", "PasswordWorkFactor" }, columns);
+        Assert.Equal(new[] { "PasswordAlgorithm", "PasswordHash", "PasswordHashVersion", "PasswordSalt", "PasswordWorkFactor" }, credentialColumns);
+
+        // The Domain user table holds nothing about credentials (Decision Log #61).
+        Assert.Empty(db.Query($"SELECT name FROM pragma_table_info('Users') WHERE {Credential}"));
     }
 
     [Fact]
@@ -51,12 +57,12 @@ public class SecuritySchemaTests
         using var db = new TempDatabase();
         await db.MigrateAsync();
 
-        Assert.Equal(new[] { "Username" }, UniqueIndexColumns(db, "Users"));
+        Assert.Equal(new[] { "UsernameKey" }, UniqueIndexColumns(db, "Users"));
         Assert.Equal(new[] { "Code" }, UniqueIndexColumns(db, "Departments"));
         Assert.Equal(new[] { "Code" }, UniqueIndexColumns(db, "Roles"));
 
         var keys = new List<string>();
-        foreach (var table in new[] { "Users", "AuditLog", "SystemSetup" })
+        foreach (var table in new[] { "Users", "UserCredentials", "AuditLog", "SystemSetup" })
         {
             keys.AddRange(db.Query($"SELECT '{table}' || ':' || \"from\" || '->' || \"table\" || ':' || on_delete FROM pragma_foreign_key_list('{table}')"));
         }
@@ -66,10 +72,26 @@ public class SecuritySchemaTests
             {
                 "AuditLog:UserId->Users:RESTRICT",
                 "SystemSetup:RecoveryTargetUserId->Users:RESTRICT",
+                "UserCredentials:UserId->Users:RESTRICT",
                 "Users:DepartmentId->Departments:RESTRICT",
                 "Users:RoleId->Roles:RESTRICT",
             },
             keys.OrderBy(k => k, StringComparer.Ordinal).ToArray());
+    }
+
+    [Fact]
+    public async Task Two_names_with_the_same_canonical_key_are_refused_by_the_database()
+    {
+        using var db = new TempDatabase();
+        await db.MigrateAsync();
+        const string Insert =
+            "INSERT INTO Users (Username, UsernameKey, DisplayName, DepartmentId, RoleId, IsActive, CreatedAtUtc, UpdatedAtUtc, Version) VALUES ('{0}', '{1}', 'X', 1, 3, 1, '2026-10-15 09:30:15', '2026-10-15 09:30:15', 1)";
+
+        Assert.Equal(1, db.Execute(string.Format(System.Globalization.CultureInfo.InvariantCulture, Insert, "Alice", Username.Create("Alice").Key)));
+
+        // "alice" has the same key as "Alice": the unique index on the key rejects it, whatever the application did before.
+        Assert.Throws<SqliteException>(() => db.Execute(string.Format(System.Globalization.CultureInfo.InvariantCulture, Insert, "alice", Username.Create("alice").Key)));
+        Assert.Equal(1, db.Execute(string.Format(System.Globalization.CultureInfo.InvariantCulture, Insert, "Alicia", Username.Create("Alicia").Key)));
     }
 
     [Fact]

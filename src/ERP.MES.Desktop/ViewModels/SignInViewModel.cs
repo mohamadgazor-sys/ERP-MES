@@ -115,10 +115,8 @@ public sealed class SignInViewModel(
                     }
 
                     break;
-                case SignInStatus.LockedOut:
-                    Message = "حساب کاربری به‌طور موقت قفل شده است. چند دقیقه بعد دوباره تلاش کنید یا از مدیر سیستم بخواهید قفل را باز کند.";
-                    break;
                 default:
+                    // One message for every failure, including a locked account (Decision Log #65): the caller learns nothing about which it was.
                     Message = "نام کاربری یا گذرواژه نادرست است.";
                     break;
             }
@@ -259,11 +257,6 @@ public sealed class SignInViewModel(
                     break;
                 case AccountStatus.PasswordRejected:
                     Message = PasswordMessage(result.PasswordError);
-                    break;
-                case AccountStatus.LockedOut:
-                    _pendingUser = null;
-                    Mode = SignInMode.SignIn;
-                    Message = "حساب کاربری به‌طور موقت قفل شده است.";
                     break;
                 default:
                     _pendingUser = null;

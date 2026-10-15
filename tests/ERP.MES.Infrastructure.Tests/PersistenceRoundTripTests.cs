@@ -23,7 +23,7 @@ public class PersistenceRoundTripTests
     public async Task Keys_are_generated_and_assigned_to_the_domain_objects()
     {
         using var db = new TempDatabase();
-        await db.MigrateAsync();
+        await db.MigrateWithActorsAsync();
 
         var requestId = await SaveMixedRequestAsync(db);
 
@@ -38,7 +38,7 @@ public class PersistenceRoundTripTests
     public async Task A_customer_is_saved_and_loaded_with_all_values_and_utc_timestamps()
     {
         using var db = new TempDatabase();
-        await db.MigrateAsync();
+        await db.MigrateWithActorsAsync();
         await using (var context = db.NewContext())
         {
             var customer = PersistenceTestData.NewCustomer("  Fictional Customer with spaces  ");
@@ -64,7 +64,7 @@ public class PersistenceRoundTripTests
     public async Task A_mixed_request_with_items_stages_and_a_qc_approval_survives_a_restart()
     {
         using var db = new TempDatabase();
-        await db.MigrateAsync();
+        await db.MigrateWithActorsAsync();
         var requestId = await SaveMixedRequestAsync(db);
 
         await using var context = db.NewContext();
@@ -118,7 +118,7 @@ public class PersistenceRoundTripTests
     public async Task The_domain_keeps_working_on_reloaded_objects_and_each_change_persists()
     {
         using var db = new TempDatabase();
-        await db.MigrateAsync();
+        await db.MigrateWithActorsAsync();
         var requestId = await SaveMixedRequestAsync(db);
 
         // Session 2: continue the route of the MAKE item through stage 2 and change a priority.
@@ -163,7 +163,7 @@ public class PersistenceRoundTripTests
     public async Task Request_numbers_and_item_numbers_come_back_exactly_as_stored()
     {
         using var db = new TempDatabase();
-        await db.MigrateAsync();
+        await db.MigrateWithActorsAsync();
 
         // Persian digits, mixed case and inner spaces are kept as given; nothing is normalised.
         var numbers = new[] { "۱۲", "wsj-898", "WSJ-898", "A 1" };
@@ -194,7 +194,7 @@ public class PersistenceRoundTripTests
     public async Task A_second_context_on_the_same_file_sees_committed_data_only()
     {
         using var db = new TempDatabase();
-        await db.MigrateAsync();
+        await db.MigrateWithActorsAsync();
 
         await using var writer = db.NewContext();
         writer.Customers.Add(PersistenceTestData.NewCustomer());

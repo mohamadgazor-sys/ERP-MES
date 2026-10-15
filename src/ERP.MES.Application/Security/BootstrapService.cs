@@ -1,3 +1,5 @@
+using ERP.MES.Domain.Identity;
+
 namespace ERP.MES.Application.Security;
 
 public enum BootstrapStatus
@@ -71,7 +73,7 @@ public sealed class BootstrapService(
         string? token, string? username, string? displayName, string? password, CancellationToken cancellationToken = default)
     {
         // Input that is wrong in itself is refused without using up an attempt and without saying anything about the token.
-        var usernameError = UsernameRules.Validate(username);
+        var usernameError = Username.Validate(username);
         if (usernameError != UsernameError.None)
         {
             return new BootstrapResult(BootstrapStatus.UsernameRejected, UsernameError: usernameError);
@@ -166,7 +168,8 @@ public sealed class BootstrapService(
             var department = await unit.GetDepartmentAsync(DepartmentCodes.System, cancellationToken);
             var role = await unit.GetRoleAsync(RoleCodes.Admin, cancellationToken);
             setup.CompleteBootstrap(now);
-            unit.AddUser(new UserAccount(username!, displayName!.Trim(), department, role, record, mustChangePassword: false, now));
+            var user = new User(0, Username.Create(username), displayName!, department, role, now);
+            unit.AddAccount(new UserCredential(user, record, mustChangePassword: false, now));
             unit.AddAudit(Audit(AuditActions.BootstrapCompleted, null, "User", username, "The first administrator was created."));
             await unit.SaveAsync(cancellationToken);
             return new BootstrapResult(BootstrapStatus.Succeeded);

@@ -1,4 +1,5 @@
 using ERP.MES.Application.Security;
+using ERP.MES.Domain.Identity;
 
 namespace ERP.MES.Infrastructure.Tests;
 

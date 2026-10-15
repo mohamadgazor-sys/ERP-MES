@@ -1,4 +1,5 @@
 using ERP.MES.Application.Security;
+using ERP.MES.Domain.Identity;
 
 namespace ERP.MES.Infrastructure.Tests;
 
@@ -27,7 +28,7 @@ public class AccountAdministrationTests
         var id = await fixture.CreateUserAsync(admin, "planner.one", StaffPassword, DepartmentCodes.Planning, RoleCodes.Staff, Token);
 
         Assert.Equal("planner.one|PLANNING|STAFF|1|1",
-            Row(fixture, "SELECT u.Username || '|' || d.Code || '|' || r.Code || '|' || u.IsActive || '|' || u.MustChangePassword FROM Users u JOIN Departments d ON d.Id = u.DepartmentId JOIN Roles r ON r.Id = u.RoleId WHERE u.Username = 'planner.one'"));
+            Row(fixture, "SELECT u.Username || '|' || d.Code || '|' || r.Code || '|' || u.IsActive || '|' || c.MustChangePassword FROM Users u JOIN UserCredentials c ON c.UserId = u.Id JOIN Departments d ON d.Id = u.DepartmentId JOIN Roles r ON r.Id = u.RoleId WHERE u.Username = 'planner.one'"));
         var signedIn = await fixture.Services.Authentication.SignInAsync("planner.one", StaffPassword, Token);
         Assert.Equal(id, signedIn.Principal!.UserId);
         Assert.True(signedIn.Principal.MustChangePassword);
@@ -76,7 +77,7 @@ public class AccountAdministrationTests
     }
 
     [Fact]
-    public async Task Invalid_input_is_refused_and_user_names_are_unique_and_case_sensitive()
+    public async Task Invalid_input_is_refused_and_user_names_are_unique_ignoring_case()
     {
         var (fixture, admin) = await StartAsync();
         using var _ = fixture;
@@ -84,9 +85,14 @@ public class AccountAdministrationTests
         await fixture.CreateUserAsync(admin, "Alice", StaffPassword, cancellationToken: Token);
 
         Assert.Equal(AccountStatus.UsernameTaken, (await accounts.CreateUserAsync(admin, "Alice", "A", DepartmentCodes.Qc, RoleCodes.Staff, StaffPassword, Token)).Status);
-        Assert.Equal(AccountStatus.Succeeded, (await accounts.CreateUserAsync(admin, "alice", "A", DepartmentCodes.Qc, RoleCodes.Staff, StaffPassword, Token)).Status);
+
+        // User names are unique ignoring case (Decision Log #62): a name that differs only in case is the same name.
+        Assert.Equal(AccountStatus.UsernameTaken, (await accounts.CreateUserAsync(admin, "alice", "A", DepartmentCodes.Qc, RoleCodes.Staff, StaffPassword, Token)).Status);
+        Assert.Equal(AccountStatus.UsernameTaken, (await accounts.CreateUserAsync(admin, "ALICE", "A", DepartmentCodes.Qc, RoleCodes.Staff, StaffPassword, Token)).Status);
+        Assert.Equal(AccountStatus.Succeeded, (await accounts.CreateUserAsync(admin, "Bob", "B", DepartmentCodes.Qc, RoleCodes.Staff, StaffPassword, Token)).Status);
+        Assert.Equal("Bob", Row(fixture, "SELECT Username FROM Users WHERE UsernameKey = 'BOB'"));
         Assert.Equal(UsernameError.Empty, (await accounts.CreateUserAsync(admin, "", "A", DepartmentCodes.Qc, RoleCodes.Staff, StaffPassword, Token)).UsernameError);
-        Assert.Equal(UsernameError.WhitespaceOrControlCharacter, (await accounts.CreateUserAsync(admin, " bob", "B", DepartmentCodes.Qc, RoleCodes.Staff, StaffPassword, Token)).UsernameError);
+        Assert.Equal(UsernameError.LeadingOrTrailingWhitespace, (await accounts.CreateUserAsync(admin, " bob", "B", DepartmentCodes.Qc, RoleCodes.Staff, StaffPassword, Token)).UsernameError);
         Assert.Equal(AccountStatus.DisplayNameRejected, (await accounts.CreateUserAsync(admin, "bob", " ", DepartmentCodes.Qc, RoleCodes.Staff, StaffPassword, Token)).Status);
         Assert.Equal(AccountStatus.PasswordRejected, (await accounts.CreateUserAsync(admin, "bob", "B", DepartmentCodes.Qc, RoleCodes.Staff, "short", Token)).Status);
         Assert.Equal(AccountStatus.InvalidDepartmentOrRole, (await accounts.CreateUserAsync(admin, "bob", "B", "NOPE", RoleCodes.Staff, StaffPassword, Token)).Status);
@@ -158,11 +164,11 @@ public class AccountAdministrationTests
             await fixture.Services.Authentication.SignInAsync("staff.one", "wrong " + attempt, Token);
         }
 
-        Assert.Equal(SignInStatus.LockedOut, (await fixture.Services.Authentication.SignInAsync("staff.one", StaffPassword, Token)).Status);
+        Assert.Equal(SignInStatus.Failed, (await fixture.Services.Authentication.SignInAsync("staff.one", StaffPassword, Token)).Status);
         Assert.Equal(AccountStatus.PasswordRejected, (await fixture.Services.Accounts.ResetPasswordAsync(admin, staffId, "short", Token)).Status);
         Assert.Equal(AccountStatus.Succeeded, (await fixture.Services.Accounts.ResetPasswordAsync(admin, staffId, OtherPassword, Token)).Status);
 
-        Assert.Equal(SignInStatus.InvalidCredentials, (await fixture.Services.Authentication.SignInAsync("staff.one", StaffPassword, Token)).Status);
+        Assert.Equal(SignInStatus.Failed, (await fixture.Services.Authentication.SignInAsync("staff.one", StaffPassword, Token)).Status);
         var signedIn = await fixture.Services.Authentication.SignInAsync("staff.one", OtherPassword, Token);
         Assert.Equal(SignInStatus.Succeeded, signedIn.Status);
         Assert.True(signedIn.Principal!.MustChangePassword);
@@ -173,7 +179,7 @@ public class AccountAdministrationTests
             await fixture.Services.Authentication.SignInAsync("staff.one", "wrong " + attempt, Token);
         }
 
-        Assert.Equal(SignInStatus.LockedOut, (await fixture.Services.Authentication.SignInAsync("staff.one", OtherPassword, Token)).Status);
+        Assert.Equal(SignInStatus.Failed, (await fixture.Services.Authentication.SignInAsync("staff.one", OtherPassword, Token)).Status);
         Assert.Equal(AccountStatus.Succeeded, (await fixture.Services.Accounts.UnlockAsync(admin, staffId, Token)).Status);
         Assert.Equal(SignInStatus.Succeeded, (await fixture.Services.Authentication.SignInAsync("staff.one", OtherPassword, Token)).Status);
         Assert.Equal(AccountStatus.NotFound, (await fixture.Services.Accounts.UnlockAsync(admin, 999_999, Token)).Status);
@@ -191,12 +197,12 @@ public class AccountAdministrationTests
         Assert.Equal(AccountStatus.PasswordRejected, (await accounts.ChangeOwnPasswordAsync(user, StaffPassword, "short", Token)).Status);
         Assert.Equal(AccountStatus.PasswordUnchanged, (await accounts.ChangeOwnPasswordAsync(user, StaffPassword, StaffPassword, Token)).Status);
         Assert.Equal(AccountStatus.WrongCurrentPassword, (await accounts.ChangeOwnPasswordAsync(user, "not my password", OtherPassword, Token)).Status);
-        Assert.Equal("1", Row(fixture, "SELECT FailedLoginCount FROM Users WHERE Username = 'staff.one'"));
+        Assert.Equal("1", Row(fixture, "SELECT c.FailedLoginCount FROM UserCredentials c JOIN Users u ON u.Id = c.UserId WHERE u.Username = 'staff.one'"));
 
         Assert.Equal(AccountStatus.Succeeded, (await accounts.ChangeOwnPasswordAsync(user, StaffPassword, OtherPassword, Token)).Status);
         var after = await fixture.Services.Authentication.SignInAsync("staff.one", OtherPassword, Token);
         Assert.False(after.Principal!.MustChangePassword);
-        Assert.Equal(SignInStatus.InvalidCredentials, (await fixture.Services.Authentication.SignInAsync("staff.one", StaffPassword, Token)).Status);
+        Assert.Equal(SignInStatus.Failed, (await fixture.Services.Authentication.SignInAsync("staff.one", StaffPassword, Token)).Status);
         Assert.Contains(AuditActions.PasswordChanged, fixture.AuditActionsInOrder());
 
         // Five wrong current passwords lock the account, so the change form cannot be used to guess the password.
@@ -205,7 +211,7 @@ public class AccountAdministrationTests
             await accounts.ChangeOwnPasswordAsync(user, "wrong " + attempt, StaffPassword, Token);
         }
 
-        Assert.Equal(AccountStatus.LockedOut, (await accounts.ChangeOwnPasswordAsync(user, "wrong 5", StaffPassword, Token)).Status);
+        Assert.Equal(AccountStatus.WrongCurrentPassword, (await accounts.ChangeOwnPasswordAsync(user, "wrong 5", StaffPassword, Token)).Status);
     }
 
     [Fact]

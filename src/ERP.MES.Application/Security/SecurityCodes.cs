@@ -1,32 +1,5 @@
 namespace ERP.MES.Application.Security;
 
-/// <summary>Stable department codes (Decision Log #30, development seed). Final company names may replace the display names without a schema change; code uses these codes.</summary>
-public static class DepartmentCodes
-{
-    public const string Central = "CENTRAL";
-    public const string Management = "MANAGEMENT";
-    public const string Planning = "PLANNING";
-    public const string Drawing = "DRAWING";
-    public const string Warehouse = "WAREHOUSE";
-    public const string Production = "PRODUCTION";
-    public const string Qc = "QC";
-    public const string MaintenancePm = "MAINTENANCE_PM";
-    public const string System = "SYSTEM";
-
-    public static IReadOnlyList<string> All { get; } =
-        [Central, Management, Planning, Drawing, Warehouse, Production, Qc, MaintenancePm, System];
-}
-
-/// <summary>Stable role codes (Decision Log #30).</summary>
-public static class RoleCodes
-{
-    public const string Admin = "ADMIN";
-    public const string Manager = "MANAGER";
-    public const string Staff = "STAFF";
-
-    public static IReadOnlyList<string> All { get; } = [Admin, Manager, Staff];
-}
-
 /// <summary>Initialization state of the system (Milestone 1 plan section 5.3).</summary>
 public enum SetupState
 {

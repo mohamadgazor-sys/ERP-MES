@@ -1,4 +1,5 @@
 using ERP.MES.Application.Security;
+using ERP.MES.Domain.Identity;
 using ERP.MES.Infrastructure.Security;
 
 namespace ERP.MES.Infrastructure.Tests;
@@ -17,6 +18,22 @@ internal sealed class FixedAuditContext : IAuditContext
     public string OsUserName => "test.operator";
 
     public string? DatabaseLogin => null;
+}
+
+/// <summary>Delegates to the real hasher and counts verifications, so a test can show that every sign-in outcome does the same amount of password work.</summary>
+internal sealed class CountingHasher(IPasswordHasher inner) : IPasswordHasher
+{
+    public int VerifyCalls { get; private set; }
+
+    public PasswordHashRecord Hash(string password, int workFactor) => inner.Hash(password, workFactor);
+
+    public bool Verify(string password, PasswordHashRecord stored)
+    {
+        VerifyCalls++;
+        return inner.Verify(password, stored);
+    }
+
+    public bool NeedsUpgrade(PasswordHashRecord stored, int configuredWorkFactor) => inner.NeedsUpgrade(stored, configuredWorkFactor);
 }
 
 /// <summary>
@@ -56,6 +73,9 @@ internal sealed class SecurityFixture : IDisposable
     /// <summary>The same database and clock with services built from another policy (for example a higher work factor after an upgrade of the baseline).</summary>
     public void UsePolicy(AuthenticationPolicy policy) =>
         Services = SecurityServices.Create(Db.ContextFactory, policy, Clock, new FixedAuditContext());
+
+    public void UseHasher(IPasswordHasher hasher) =>
+        Services = SecurityServices.Create(Db.ContextFactory, Policy, Clock, new FixedAuditContext(), hasher);
 
     /// <summary>Runs the real bootstrap path: issue a token, redeem it, return the first administrator.</summary>
     public async Task<Principal> BootstrapAdminAsync(string username = AdminName, string password = AdminPassword, CancellationToken cancellationToken = default)

@@ -1,10 +1,12 @@
-namespace ERP.MES.Application.Security;
+using ERP.MES.Domain.Identity;
+
+namespace ERP.MES.Infrastructure.Persistence;
 
 /// <summary>
-/// The development seed of departments and roles (Decision Log #30). The Persian display names are development placeholders; final company names may
-/// replace them without a schema change, because code refers to the stable codes.
+/// The development seed of departments and roles (Decision Log #30), written by the migration. The Persian display names are development placeholders that
+/// may be replaced without a schema change; code and authorization use the stable codes (Decision Log #67).
 /// </summary>
-public static class ReferenceData
+public static class ReferenceDataSeed
 {
     public static IReadOnlyList<Department> Departments { get; } =
     [

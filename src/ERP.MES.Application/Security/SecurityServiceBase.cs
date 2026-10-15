@@ -1,3 +1,5 @@
+using ERP.MES.Domain.Identity;
+
 namespace ERP.MES.Application.Security;
 
 /// <summary>Shared plumbing of the security use cases: the collaborators and the construction of audit entries.</summary>
@@ -39,6 +41,8 @@ public abstract class SecurityServiceBase
     protected AuditLogEntry Audit(string actionCode, long? userId, string targetType, string? targetId, string summary) =>
         new(Clock.UtcNow, userId, AuditContext.MachineName, AuditContext.OsUserName, AuditContext.DatabaseLogin, actionCode, targetType, targetId, summary);
 
-    protected static Principal ToPrincipal(UserAccount user) =>
-        new(user.Id, user.Username, user.DisplayName, user.Department.Code, user.Role.Code, user.MustChangePassword);
+    protected static Principal ToPrincipal(UserCredential account) =>
+        new(account.User.Id, account.User.Username.Value, account.User.DisplayName, account.User.Department.Code, account.User.Role.Code, account.MustChangePassword);
+
+    protected static string Key(long id) => id.ToString(System.Globalization.CultureInfo.InvariantCulture);
 }

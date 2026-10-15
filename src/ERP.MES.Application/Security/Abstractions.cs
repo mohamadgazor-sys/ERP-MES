@@ -1,3 +1,5 @@
+using ERP.MES.Domain.Identity;
+
 namespace ERP.MES.Application.Security;
 
 /// <summary>The source of the current time, so rules and tests do not read the system clock directly.</summary>
@@ -33,18 +35,21 @@ public interface IPasswordHasher
 }
 
 /// <summary>
-/// One short database transaction over the security tables (users, setup state, audit log). Loaded objects are tracked; <see cref="SaveAsync"/> writes
-/// every change together or nothing. A row changed by someone else after it was loaded raises <see cref="Persistence.ConcurrencyConflictException"/>
-/// (the conditional update of Milestone 1 plan sections 5.2 and 5.7). No database type appears here.
+/// One short database transaction over the security data (users with their credentials, setup state, audit log). Loaded objects are tracked;
+/// <see cref="SaveAsync"/> writes every change together or nothing. A row changed by someone else after it was loaded raises
+/// <see cref="Persistence.ConcurrencyConflictException"/> (the conditional update of Milestone 1 plan sections 5.2 and 5.7). No database type appears here.
 /// </summary>
 public interface ISecurityUnit
 {
     Task<SystemSetup> GetSetupAsync(CancellationToken cancellationToken);
 
-    /// <summary>Exact (case-sensitive) match; the department and role are loaded.</summary>
-    Task<UserAccount?> FindUserByUsernameAsync(string username, CancellationToken cancellationToken);
+    /// <summary>
+    /// Finds an account by login name, ignoring case (the canonical key of Decision Log #62). A text that is not a valid user name (empty, leading or trailing
+    /// white space, control characters) cannot belong to any user and finds nothing. The user, its department and its role are loaded.
+    /// </summary>
+    Task<UserCredential?> FindAccountByUsernameAsync(string? username, CancellationToken cancellationToken);
 
-    Task<UserAccount?> FindUserByIdAsync(long userId, CancellationToken cancellationToken);
+    Task<UserCredential?> FindAccountByUserIdAsync(long userId, CancellationToken cancellationToken);
 
     Task<Department> GetDepartmentAsync(string code, CancellationToken cancellationToken);
 
@@ -52,7 +57,8 @@ public interface ISecurityUnit
 
     Task<int> CountActiveAdministratorsAsync(CancellationToken cancellationToken);
 
-    void AddUser(UserAccount user);
+    /// <summary>Adds a user together with its credential.</summary>
+    void AddAccount(UserCredential account);
 
     void AddAudit(AuditLogEntry entry);
 

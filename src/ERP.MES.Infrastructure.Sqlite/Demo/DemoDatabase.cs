@@ -112,7 +112,19 @@ public static class DemoDatabase
                 return await BuildAndInstallAsync(path, dates, credentialFilePath, policy, replacesDemoDatabase: false, cancellationToken);
 
             case DemoDatabaseState.Demo:
-                await SqliteDatabase.MigrateAsync(path, cancellationToken);
+                try
+                {
+                    await SqliteDatabase.MigrateAsync(path, cancellationToken);
+                }
+                catch (ActorReferencesInvalidException exception)
+                {
+                    // A demonstration database from before sign-in existed: its sample records refer to a placeholder user that never existed.
+                    throw new DemoDatabaseRefusedException(
+                        DemoDatabaseState.Demo,
+                        "Refused to initialise '" + path + "': it holds sample data created before sign-in existed, so " + exception.RecordCount
+                        + " record(s) refer to a user that does not exist. Nothing was changed. Replace it with the explicit reset: demo-reset <file> --yes.");
+                }
+
                 return await SeedExistingAsync(path, dates, credentialFilePath, policy, cancellationToken);
 
             case var state:
@@ -198,8 +210,8 @@ public static class DemoDatabase
         }
     }
 
-    // Initialising a database that already is a marked demonstration database: seed what is missing. A database that was seeded before the
-    // demonstration accounts existed is refused (its records refer to a user that does not exist); a marked but still empty one is provisioned.
+    // Initialising a database that already is a marked demonstration database: seed what is missing. A database that was seeded before sign-in existed never gets
+    // here (its migration is refused, see above); a marked but still empty one is provisioned.
     private static async Task<DemoDatabaseResult> SeedExistingAsync(
         string path, IJalaliDateService dates, string? credentialFilePath, AuthenticationPolicy? policy, CancellationToken cancellationToken)
     {
@@ -209,16 +221,6 @@ public static class DemoDatabase
         if (state == SetupState.Initialized)
         {
             return new DemoDatabaseResult(await SeedAsync(contexts, provisioner, dates, cancellationToken), 0, null);
-        }
-
-        await using (var context = await contexts.CreateDbContextAsync(cancellationToken))
-        {
-            if (await context.Customers.AnyAsync(cancellationToken))
-            {
-                throw new DemoDatabaseRefusedException(
-                    DemoDatabaseState.Demo,
-                    "Refused to initialise '" + path + "': it holds sample data that was created before the demonstration accounts existed, so its records refer to users that do not exist. Reset it. Nothing was changed.");
-            }
         }
 
         var credentialPath = Path.GetFullPath(credentialFilePath ?? DefaultCredentialFilePath());

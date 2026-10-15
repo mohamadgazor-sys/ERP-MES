@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Text.RegularExpressions;
 using ERP.MES.Application.Security;
+using ERP.MES.Domain.Identity;
 
 namespace ERP.MES.Infrastructure.Tests;
 
@@ -95,7 +96,7 @@ public partial class BootstrapTests
         var issued = await fixture.Services.Bootstrap.IssueTokenAsync(cancellationToken: Token);
         await Complete(fixture, issued.Token);
 
-        var row = fixture.Db.Query("SELECT length(PasswordHash) || '|' || length(PasswordSalt) || '|' || PasswordAlgorithm || '|' || PasswordHashVersion || '|' || PasswordWorkFactor || '|' || MustChangePassword FROM Users").Single();
+        var row = fixture.Db.Query("SELECT length(PasswordHash) || '|' || length(PasswordSalt) || '|' || PasswordAlgorithm || '|' || PasswordHashVersion || '|' || PasswordWorkFactor || '|' || MustChangePassword FROM UserCredentials").Single();
         Assert.Equal("32|16|PBKDF2-HMAC-SHA256|1|310000|0", row);
         Assert.DoesNotContain(SecurityFixture.AdminPassword, fixture.AllAuditText(), StringComparison.Ordinal);
     }
@@ -227,7 +228,9 @@ public partial class BootstrapTests
         var issued = await fixture.Services.Bootstrap.IssueTokenAsync(cancellationToken: Token);
 
         Assert.Equal(UsernameError.Empty, (await Complete(fixture, issued.Token, username: string.Empty)).UsernameError);
-        Assert.Equal(UsernameError.WhitespaceOrControlCharacter, (await Complete(fixture, issued.Token, username: "admin one")).UsernameError);
+        Assert.Equal(UsernameError.LeadingOrTrailingWhitespace, (await Complete(fixture, issued.Token, username: " admin")).UsernameError);
+        Assert.Equal(UsernameError.LeadingOrTrailingWhitespace, (await Complete(fixture, issued.Token, username: "admin ")).UsernameError);
+        Assert.Equal(UsernameError.ControlCharacter, (await Complete(fixture, issued.Token, username: "admin\tone")).UsernameError);
         Assert.Equal(UsernameError.TooLong, (await Complete(fixture, issued.Token, username: new string('a', 65))).UsernameError);
         Assert.Equal(BootstrapStatus.DisplayNameRejected, (await fixture.Services.Bootstrap.CompleteAsync(issued.Token, "admin.one", "  ", SecurityFixture.AdminPassword, Token)).Status);
         Assert.Equal("0", Attempts(fixture));

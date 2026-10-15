@@ -43,8 +43,8 @@ public partial class App : System.Windows.Application
                 return;
             }
 
-            // Normal start-up path for an existing database: apply pending migrations, nothing else.
-            await SqliteDatabase.MigrateAsync(databasePath);
+            // Normal start-up path for an existing database (Decision Log #69): apply pending migrations, nothing else. Never creates, seeds or resets a database.
+            await SqliteDatabase.MigrateExistingAsync(databasePath);
 
             var services = SecurityServices.Create(SqliteDatabase.CreateContextFactory(databasePath), policy);
             var viewModel = new SignInViewModel(services.Authentication, services.Bootstrap, services.Recovery, services.Accounts, policy.MinimumPasswordLength);
@@ -53,6 +53,11 @@ public partial class App : System.Windows.Application
             _signInWindow = new Views.SignInWindow(viewModel);
             _signInWindow.Show();
             await viewModel.LoadAsync();
+        }
+        catch (ActorReferencesInvalidException exception)
+        {
+            // A database from before sign-in existed: the message says what is wrong and how to replace a demonstration database.
+            Fail("پایگاه داده قدیمی است و ارتقا نیافت؛ هیچ تغییری داده نشد:\n" + exception.Message);
         }
         catch (InvalidAuthenticationPolicyException exception)
         {

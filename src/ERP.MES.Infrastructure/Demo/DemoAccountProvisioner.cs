@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using ERP.MES.Application.Security;
+using ERP.MES.Domain.Identity;
 using ERP.MES.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -95,7 +96,8 @@ public sealed class DemoAccountProvisioner(
     private async Task<long> FindUserIdAsync(string username, CancellationToken cancellationToken)
     {
         await using var context = await contexts.CreateDbContextAsync(cancellationToken);
-        var id = await context.Users.Where(u => u.Username == username).Select(u => (long?)u.Id).FirstOrDefaultAsync(cancellationToken);
+        var key = Username.KeyOfValid(username);
+        var id = await context.Users.Where(u => u.UsernameKey == key).Select(u => (long?)u.Id).FirstOrDefaultAsync(cancellationToken);
         return id ?? throw new InvalidOperationException("The demonstration account '" + username + "' does not exist.");
     }
 

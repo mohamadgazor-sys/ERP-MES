@@ -1,3 +1,5 @@
+using ERP.MES.Domain.Identity;
+
 namespace ERP.MES.Application.Security;
 
 public enum RecoveryStatus
@@ -61,16 +63,16 @@ public sealed class RecoveryService(
                 return new IssuedRecovery(RecoveryStatus.NotInitialized, null, null);
             }
 
-            var target = string.IsNullOrEmpty(targetUsername) ? null : await unit.FindUserByUsernameAsync(targetUsername, cancellationToken);
-            if (target is null || target.Role.Code != RoleCodes.Admin)
+            var target = await unit.FindAccountByUsernameAsync(targetUsername, cancellationToken);
+            if (target is null || target.User.Role.Code != RoleCodes.Admin)
             {
                 return new IssuedRecovery(RecoveryStatus.TargetNotAnAdministrator, null, null);
             }
 
             var (digest, text) = SecretTokens.Generate();
             var expires = Clock.UtcNow.AddHours(Policy.RecoveryTokenLifetimeHours);
-            setup.IssueRecoveryToken(digest, expires, target.Id);
-            unit.AddAudit(Audit(AuditActions.RecoveryTokenIssued, null, "User", target.Id.ToString(System.Globalization.CultureInfo.InvariantCulture), "A recovery token was issued. Reason: " + reason.Trim()));
+            setup.IssueRecoveryToken(digest, expires, target.User.Id);
+            unit.AddAudit(Audit(AuditActions.RecoveryTokenIssued, null, "User", Key(target.User.Id), "A recovery token was issued. Reason: " + reason.Trim()));
             await unit.SaveAsync(cancellationToken);
             return new IssuedRecovery(RecoveryStatus.Succeeded, text, expires);
         }, cancellationToken));
@@ -154,7 +156,7 @@ public sealed class RecoveryService(
                 return new RecoveryResult(RecoveryStatus.TokenExpiredOrLocked);
             }
 
-            var target = await unit.FindUserByIdAsync(counted.TargetUserId, cancellationToken);
+            var target = await unit.FindAccountByUserIdAsync(counted.TargetUserId, cancellationToken);
             if (target is null)
             {
                 return new RecoveryResult(RecoveryStatus.TokenInvalid);
@@ -167,12 +169,12 @@ public sealed class RecoveryService(
 
             var administratorRole = await unit.GetRoleAsync(RoleCodes.Admin, cancellationToken);
             target.SetPassword(record, mustChangePassword: false, now);
-            target.SetActive(true, now);
-            target.ChangeRole(administratorRole, now);
+            target.User.SetActive(true, now);
+            target.User.AssignRole(administratorRole, now);
             target.ClearLockout(now);
             setup.ClearRecoveryToken();
             setup.AdvanceAdminChangeStamp();
-            unit.AddAudit(Audit(AuditActions.RecoveryCompleted, target.Id, "User", target.Id.ToString(System.Globalization.CultureInfo.InvariantCulture), "An administrator account was recovered with a one-time token."));
+            unit.AddAudit(Audit(AuditActions.RecoveryCompleted, target.User.Id, "User", Key(target.User.Id), "An administrator account was recovered with a one-time token."));
             await unit.SaveAsync(cancellationToken);
             return new RecoveryResult(RecoveryStatus.Succeeded);
         }, cancellationToken));

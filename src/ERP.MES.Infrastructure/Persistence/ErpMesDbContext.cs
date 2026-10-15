@@ -1,4 +1,5 @@
 using ERP.MES.Application.Security;
+using ERP.MES.Domain.Identity;
 using ERP.MES.Domain.Requests;
 using Microsoft.EntityFrameworkCore;
 
@@ -25,7 +26,9 @@ public sealed class ErpMesDbContext(DbContextOptions<ErpMesDbContext> options) :
 
     public DbSet<Role> Roles => Set<Role>();
 
-    public DbSet<UserAccount> Users => Set<UserAccount>();
+    public DbSet<User> Users => Set<User>();
+
+    public DbSet<UserCredential> UserCredentials => Set<UserCredential>();
 
     public DbSet<SystemSetup> SystemSetups => Set<SystemSetup>();
 
@@ -34,7 +37,7 @@ public sealed class ErpMesDbContext(DbContextOptions<ErpMesDbContext> options) :
     /// <summary>Name of the shadow property that holds the application-managed row version (Decision Log #23).</summary>
     public const string RowVersionPropertyName = "Version";
 
-    private static readonly HashSet<Type> VersionedTypes = [typeof(Customer), typeof(Request), typeof(RequestItem), typeof(ItemStage), typeof(UserAccount), typeof(SystemSetup)];
+    private static readonly HashSet<Type> VersionedTypes = [typeof(Customer), typeof(Request), typeof(RequestItem), typeof(ItemStage), typeof(User), typeof(UserCredential), typeof(SystemSetup)];
 
     /// <summary>The row version of a tracked entity of a versioned type (customer, request, request item, item stage).</summary>
     public long GetRowVersion(object entity) => (long)Entry(entity).Property(RowVersionPropertyName).CurrentValue!;

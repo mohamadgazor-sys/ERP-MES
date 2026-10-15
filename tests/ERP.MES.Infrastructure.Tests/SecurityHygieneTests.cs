@@ -85,21 +85,64 @@ public class SecurityHygieneTests
         }
     }
 
+    // The Domain DOES hold the approved identity and organisation concepts (Architecture Specification 3.3; Decision Log #61): user, role, department and the
+    // login name. What it must stay free of is everything about proving identity and every technology.
     [Fact]
-    public void The_domain_has_no_authentication_or_account_behaviour()
+    public void The_domain_holds_the_identity_concepts_but_no_credential_cryptography_persistence_or_ui()
     {
+        var names = typeof(Customer).Assembly.GetTypes().Select(t => t.Name).ToArray();
+        Assert.Contains("User", names);
+        Assert.Contains("Role", names);
+        Assert.Contains("Department", names);
+        Assert.Contains("Username", names);
+
+        // Credentials, tokens, lockout and the other security workflow are not Domain types; they live in Application.
+        Assert.DoesNotContain(names, name => name.Contains("Credential", StringComparison.Ordinal) || name.Contains("Password", StringComparison.Ordinal)
+            || name.Contains("Token", StringComparison.Ordinal) || name is "SystemSetup" or "AuditLogEntry");
+        Assert.NotEqual(typeof(Customer).Assembly, typeof(ERP.MES.Application.Security.UserCredential).Assembly);
+
+        var domain = SolutionLayout.Load("Domain");
+        Assert.Empty(domain.ProjectReferences);
+        Assert.Empty(domain.PackageReferences);
+        Assert.False(domain.UsesWpf);
+
         foreach (var file in SourceFolderFiles("ERP.MES.Domain", ".cs"))
         {
-            var text = string.Join("\n", CodeLines(file));
-            foreach (var word in new[] { "password", "credential", "pbkdf", "authenticat", "lockout", "bootstrap", "SecurityUnit" })
+            var code = string.Join("\n", CodeLines(file));
+            foreach (var forbidden in new[] { "System.Security.Cryptography", "Microsoft.EntityFrameworkCore", "Microsoft.Data", "System.Windows", "System.Data", "password", "pbkdf", "credential", "lockout", "bootstrap" })
             {
-                Assert.DoesNotContain(word, text, StringComparison.OrdinalIgnoreCase);
+                Assert.DoesNotContain(forbidden, code, StringComparison.OrdinalIgnoreCase);
             }
         }
+    }
 
-        var typeNames = typeof(Customer).Assembly.GetTypes().Select(t => t.Name).ToArray();
-        Assert.DoesNotContain(typeNames, name => name is "UserAccount" or "User" or "Role" or "Department" or "SystemSetup" or "AuditLogEntry");
-        Assert.DoesNotContain(typeof(Customer).Assembly.GetTypes(), t => (t.Namespace ?? string.Empty).Contains("Security", StringComparison.Ordinal));
+    [Fact]
+    public void The_domain_identity_types_expose_no_password_hash_salt_or_token_member()
+    {
+        var members = typeof(Customer).Assembly.GetTypes()
+            .Where(t => t.Namespace == "ERP.MES.Domain.Identity")
+            .SelectMany(t => t.GetMembers(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.DeclaredOnly))
+            .Select(m => m.Name)
+            .Where(name => name != nameof(object.GetHashCode))
+            .ToArray();
+
+        foreach (var forbidden in new[] { "Password", "Hash", "Salt", "Token", "Credential", "Lockout" })
+        {
+            Assert.DoesNotContain(members, name => name.Contains(forbidden, StringComparison.OrdinalIgnoreCase));
+        }
+    }
+
+    [Fact]
+    public void The_desktop_application_never_calls_the_creating_migration_entry_point()
+    {
+        // Decision Log #69: start-up applies migrations to an existing database only and never creates, seeds or resets one.
+        foreach (var file in SourceFolderFiles("ERP.MES.Desktop", ".cs"))
+        {
+            var code = string.Join("\n", CodeLines(file));
+            Assert.DoesNotContain("SqliteDatabase.MigrateAsync(", code, StringComparison.Ordinal);
+            Assert.DoesNotContain("EnsureCreated", code, StringComparison.Ordinal);
+            Assert.DoesNotContain("DemoDatabase", code, StringComparison.Ordinal);
+        }
     }
 
     [Fact]

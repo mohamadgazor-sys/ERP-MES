@@ -1,5 +1,5 @@
-using System.Globalization;
 using ERP.MES.Application.Persistence;
+using ERP.MES.Domain.Identity;
 
 namespace ERP.MES.Application.Security;
 
@@ -17,9 +17,10 @@ public enum AccountStatus
     /// <summary>The change would deactivate or demote the last active administrator (Decision Log #47).</summary>
     LastAdministrator,
 
+    /// <summary>The current password given while changing a password was wrong or the account is locked; the two are not distinguished (Decision Log #65).</summary>
     WrongCurrentPassword,
+
     PasswordUnchanged,
-    LockedOut,
 }
 
 public sealed record AccountResult(
@@ -31,22 +32,21 @@ public sealed record AccountResult(
 /// <summary>
 /// Account management (Domain and Database Specification 15.2: only the Admin authorization administers users). Every administrative method reloads the acting
 /// user from the database and checks that they are an active Administrator, so a stale or forged <see cref="Principal"/> grants nothing. Users are never deleted.
-/// The last active Administrator can neither be deactivated nor demoted: the check and the change run in one transaction that also advances the setup row's
-/// <see cref="SystemSetup.AdminChangeStamp"/>, so of two concurrent removals exactly one succeeds (Milestone 1 plan 5.7).
+/// User names are unique ignoring case (Decision Log #62). The last active Administrator can neither be deactivated nor demoted: the check and the change run in
+/// one transaction that also advances the setup row's <see cref="SystemSetup.AdminChangeStamp"/>, so of two concurrent removals exactly one succeeds
+/// (Milestone 1 plan 5.7).
 /// </summary>
 public sealed class AccountService(
     ISecurityUnitRunner runner, IPasswordHasher hasher, IClock clock, IAuditContext auditContext, AuthenticationPolicy policy)
     : SecurityServiceBase(runner, hasher, clock, auditContext, policy)
 {
-    private static string Key(long id) => id.ToString(CultureInfo.InvariantCulture);
-
     /// <summary>Creates an account with a one-time initial password: the user has to choose their own at the first sign-in.</summary>
     public async Task<AccountResult> CreateUserAsync(
         Principal actor, string? username, string? displayName, string departmentCode, string roleCode, string? initialPassword, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(actor);
 
-        var usernameError = UsernameRules.Validate(username);
+        var usernameError = Username.Validate(username);
         if (usernameError != UsernameError.None)
         {
             return new AccountResult(AccountStatus.UsernameRejected, UsernameError: usernameError);
@@ -73,30 +73,31 @@ public sealed class AccountService(
         {
             return await ConflictRetry.RunAsync(() => Runner.RunAsync(async unit =>
             {
-                var acting = await unit.FindUserByIdAsync(actor.UserId, cancellationToken);
-                if (!AuthorizationRules.IsAllowed(acting, Permission.AdministerUsers))
+                var acting = await unit.FindAccountByUserIdAsync(actor.UserId, cancellationToken);
+                if (!AuthorizationRules.IsAllowed(acting?.User, Permission.AdministerUsers))
                 {
                     return new AccountResult(AccountStatus.NotAuthorized);
                 }
 
-                if (await unit.FindUserByUsernameAsync(username!, cancellationToken) is not null)
+                // Case-insensitive: "Ali" and "ali" are the same name.
+                if (await unit.FindAccountByUsernameAsync(username, cancellationToken) is not null)
                 {
                     return new AccountResult(AccountStatus.UsernameTaken);
                 }
 
                 var department = await unit.GetDepartmentAsync(departmentCode, cancellationToken);
                 var role = await unit.GetRoleAsync(roleCode, cancellationToken);
-                var user = new UserAccount(username!, displayName!.Trim(), department, role, record, mustChangePassword: true, Clock.UtcNow);
-                unit.AddUser(user);
-                unit.AddAudit(Audit(AuditActions.UserCreated, acting!.Id, "User", username, "Account created in " + departmentCode + " with role " + roleCode + "."));
+                var user = new User(0, Username.Create(username), displayName!, department, role, Clock.UtcNow);
+                unit.AddAccount(new UserCredential(user, record, mustChangePassword: true, Clock.UtcNow));
+                unit.AddAudit(Audit(AuditActions.UserCreated, acting!.User.Id, "User", username, "Account created in " + departmentCode + " with role " + roleCode + "."));
                 await unit.SaveAsync(cancellationToken);
                 return new AccountResult(AccountStatus.Succeeded, user.Id);
             }, cancellationToken));
         }
         catch (PersistenceException exception) when (exception is not ConcurrencyConflictException)
         {
-            // A simultaneous creation of the same name is stopped by the unique index.
-            var taken = await Runner.RunAsync(async unit => await unit.FindUserByUsernameAsync(username!, cancellationToken) is not null, cancellationToken);
+            // A simultaneous creation of the same name is stopped by the unique index on the canonical key.
+            var taken = await Runner.RunAsync(async unit => await unit.FindAccountByUsernameAsync(username, cancellationToken) is not null, cancellationToken);
             if (!taken)
             {
                 throw;
@@ -110,11 +111,11 @@ public sealed class AccountService(
         ChangeAdministeredUserAsync(
             actor,
             userId,
-            removesAdministrator: user => !isActive && user.IsAdministrator,
-            apply: async (unit, user, now, actorId) =>
+            removesAdministrator: account => !isActive && account.User.IsActiveAdministrator,
+            apply: async (unit, account, now, actorId) =>
             {
-                user.SetActive(isActive, now);
-                unit.AddAudit(Audit(isActive ? AuditActions.UserActivated : AuditActions.UserDeactivated, actorId, "User", Key(user.Id), isActive ? "Account activated." : "Account deactivated."));
+                account.User.SetActive(isActive, now);
+                unit.AddAudit(Audit(isActive ? AuditActions.UserActivated : AuditActions.UserDeactivated, actorId, "User", Key(account.User.Id), isActive ? "Account activated." : "Account deactivated."));
                 await Task.CompletedTask;
             },
             cancellationToken);
@@ -129,11 +130,11 @@ public sealed class AccountService(
         return await ChangeAdministeredUserAsync(
             actor,
             userId,
-            removesAdministrator: user => user.IsAdministrator && roleCode != RoleCodes.Admin,
-            apply: async (unit, user, now, actorId) =>
+            removesAdministrator: account => account.User.IsActiveAdministrator && roleCode != RoleCodes.Admin,
+            apply: async (unit, account, now, actorId) =>
             {
-                user.ChangeRole(await unit.GetRoleAsync(roleCode, cancellationToken), now);
-                unit.AddAudit(Audit(AuditActions.UserRoleChanged, actorId, "User", Key(user.Id), "Role changed to " + roleCode + "."));
+                account.User.AssignRole(await unit.GetRoleAsync(roleCode, cancellationToken), now);
+                unit.AddAudit(Audit(AuditActions.UserRoleChanged, actorId, "User", Key(account.User.Id), "Role changed to " + roleCode + "."));
             },
             cancellationToken);
     }
@@ -152,11 +153,11 @@ public sealed class AccountService(
             actor,
             userId,
             removesAdministrator: _ => false,
-            apply: async (unit, user, now, actorId) =>
+            apply: async (unit, account, now, actorId) =>
             {
-                user.SetPassword(record, mustChangePassword: true, now);
-                user.ClearLockout(now);
-                unit.AddAudit(Audit(AuditActions.PasswordReset, actorId, "User", Key(user.Id), "The password was reset by an administrator."));
+                account.SetPassword(record, mustChangePassword: true, now);
+                account.ClearLockout(now);
+                unit.AddAudit(Audit(AuditActions.PasswordReset, actorId, "User", Key(account.User.Id), "The password was reset by an administrator."));
                 await Task.CompletedTask;
             },
             cancellationToken);
@@ -167,15 +168,18 @@ public sealed class AccountService(
             actor,
             userId,
             removesAdministrator: _ => false,
-            apply: async (unit, user, now, actorId) =>
+            apply: async (unit, account, now, actorId) =>
             {
-                user.ClearLockout(now);
-                unit.AddAudit(Audit(AuditActions.AccountUnlocked, actorId, "User", Key(user.Id), "The account was unlocked by an administrator."));
+                account.ClearLockout(now);
+                unit.AddAudit(Audit(AuditActions.AccountUnlocked, actorId, "User", Key(account.User.Id), "The account was unlocked by an administrator."));
                 await Task.CompletedTask;
             },
             cancellationToken);
 
-    /// <summary>A signed-in user chooses their own password. A wrong current password counts as a failed sign-in (it could otherwise be guessed here).</summary>
+    /// <summary>
+    /// A signed-in user chooses their own password. A wrong current password counts as a failed sign-in, so the form cannot be used to guess the password; a locked
+    /// account gets the same answer as a wrong password (and its lock is not extended).
+    /// </summary>
     public async Task<AccountResult> ChangeOwnPasswordAsync(Principal user, string? currentPassword, string? newPassword, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(user);
@@ -193,29 +197,33 @@ public sealed class AccountService(
 
         return await ConflictRetry.RunAsync(() => Runner.RunAsync(async unit =>
         {
-            var account = await unit.FindUserByIdAsync(user.UserId, cancellationToken);
-            if (account is not { IsActive: true })
+            var account = await unit.FindAccountByUserIdAsync(user.UserId, cancellationToken);
+            if (account is not { User.IsActive: true })
             {
                 return new AccountResult(AccountStatus.NotAuthorized);
             }
 
             var now = Clock.UtcNow;
+            var userKey = Key(account.User.Id);
+            var currentIsCorrect = Hasher.Verify(currentPassword, account.PasswordRecord);
             if (account.IsLockedOut(now))
             {
-                return new AccountResult(AccountStatus.LockedOut);
+                unit.AddAudit(Audit(AuditActions.LoginFailed, account.User.Id, "User", userKey, "Password change refused: the account is locked."));
+                await unit.SaveAsync(cancellationToken);
+                return new AccountResult(AccountStatus.WrongCurrentPassword);
             }
 
-            if (!Hasher.Verify(currentPassword, account.PasswordRecord))
+            if (!currentIsCorrect)
             {
                 var lockedNow = account.RegisterFailedLogin(now, Policy);
-                unit.AddAudit(Audit(AuditActions.LoginFailed, account.Id, "User", Key(account.Id), "Wrong current password while changing the password."));
+                unit.AddAudit(Audit(AuditActions.LoginFailed, account.User.Id, "User", userKey, "Wrong current password while changing the password."));
                 if (lockedNow)
                 {
-                    unit.AddAudit(Audit(AuditActions.AccountLocked, account.Id, "User", Key(account.Id), "The account was locked after too many failed attempts."));
+                    unit.AddAudit(Audit(AuditActions.AccountLocked, account.User.Id, "User", userKey, "The account was locked after too many failed attempts."));
                 }
 
                 await unit.SaveAsync(cancellationToken);
-                return new AccountResult(lockedNow ? AccountStatus.LockedOut : AccountStatus.WrongCurrentPassword);
+                return new AccountResult(AccountStatus.WrongCurrentPassword);
             }
 
             if (Hasher.Verify(newPassword!, account.PasswordRecord))
@@ -224,9 +232,9 @@ public sealed class AccountService(
             }
 
             account.SetPassword(Hasher.Hash(newPassword!, Policy.Pbkdf2Iterations), mustChangePassword: false, now);
-            unit.AddAudit(Audit(AuditActions.PasswordChanged, account.Id, "User", Key(account.Id), "The user changed their own password."));
+            unit.AddAudit(Audit(AuditActions.PasswordChanged, account.User.Id, "User", userKey, "The user changed their own password."));
             await unit.SaveAsync(cancellationToken);
-            return new AccountResult(AccountStatus.Succeeded, account.Id);
+            return new AccountResult(AccountStatus.Succeeded, account.User.Id);
         }, cancellationToken));
     }
 
@@ -234,21 +242,21 @@ public sealed class AccountService(
     private async Task<AccountResult> ChangeAdministeredUserAsync(
         Principal actor,
         long userId,
-        Func<UserAccount, bool> removesAdministrator,
-        Func<ISecurityUnit, UserAccount, DateTime, long, Task> apply,
+        Func<UserCredential, bool> removesAdministrator,
+        Func<ISecurityUnit, UserCredential, DateTime, long, Task> apply,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(actor);
 
         return await ConflictRetry.RunAsync(() => Runner.RunAsync(async unit =>
         {
-            var acting = await unit.FindUserByIdAsync(actor.UserId, cancellationToken);
-            if (!AuthorizationRules.IsAllowed(acting, Permission.AdministerUsers))
+            var acting = await unit.FindAccountByUserIdAsync(actor.UserId, cancellationToken);
+            if (!AuthorizationRules.IsAllowed(acting?.User, Permission.AdministerUsers))
             {
                 return new AccountResult(AccountStatus.NotAuthorized);
             }
 
-            var target = await unit.FindUserByIdAsync(userId, cancellationToken);
+            var target = await unit.FindAccountByUserIdAsync(userId, cancellationToken);
             if (target is null)
             {
                 return new AccountResult(AccountStatus.NotFound);
@@ -260,18 +268,18 @@ public sealed class AccountService(
             {
                 if (await unit.CountActiveAdministratorsAsync(cancellationToken) <= 1)
                 {
-                    unit.AddAudit(Audit(AuditActions.LastAdminProtectionRefused, acting!.Id, "User", Key(target.Id), "Refused: the change would remove the last active administrator."));
+                    unit.AddAudit(Audit(AuditActions.LastAdminProtectionRefused, acting!.User.Id, "User", Key(target.User.Id), "Refused: the change would remove the last active administrator."));
                     await unit.SaveAsync(cancellationToken);
-                    return new AccountResult(AccountStatus.LastAdministrator, target.Id);
+                    return new AccountResult(AccountStatus.LastAdministrator, target.User.Id);
                 }
 
                 setup.AdvanceAdminChangeStamp();
             }
 
             var now = Clock.UtcNow;
-            await apply(unit, target, now, acting!.Id);
+            await apply(unit, target, now, acting!.User.Id);
             await unit.SaveAsync(cancellationToken);
-            return new AccountResult(AccountStatus.Succeeded, target.Id);
+            return new AccountResult(AccountStatus.Succeeded, target.User.Id);
         }, cancellationToken));
     }
 }

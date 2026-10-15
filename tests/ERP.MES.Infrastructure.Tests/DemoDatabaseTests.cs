@@ -140,7 +140,7 @@ public class DemoDatabaseTests
     public async Task Reset_refuses_an_unmarked_database_and_changes_nothing()
     {
         using var db = new TempDatabase();
-        await db.MigrateAsync();
+        await db.MigrateWithActorsAsync();
         await db.Customers().AddAsync(PersistenceTestData.NewCustomer("Real customer"), Token);
         var rowsBefore = Snapshot(db);
         var bytesBefore = await File.ReadAllBytesAsync(db.Path, Token);
@@ -160,7 +160,7 @@ public class DemoDatabaseTests
     public async Task Initialise_refuses_an_unmarked_database_and_does_not_mark_or_seed_it()
     {
         using var db = new TempDatabase();
-        await db.MigrateAsync();
+        await db.MigrateWithActorsAsync();
         await db.Customers().AddAsync(PersistenceTestData.NewCustomer("Real customer"), Token);
         var rowsBefore = Snapshot(db);
 

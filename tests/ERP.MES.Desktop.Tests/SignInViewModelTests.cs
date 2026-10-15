@@ -1,5 +1,6 @@
 using ERP.MES.Application.Security;
 using ERP.MES.Desktop.ViewModels;
+using ERP.MES.Domain.Identity;
 using ERP.MES.Infrastructure.Security;
 using ERP.MES.Infrastructure.Sqlite;
 
@@ -138,22 +139,24 @@ public sealed class SignInViewModelTests : IDisposable
     }
 
     [Fact]
-    public async Task Repeated_failures_show_the_lockout_message()
+    public async Task A_locked_account_shows_the_same_message_as_any_other_failure()
     {
         var viewModel = await CreateAsync();
         await InitialiseWithAdminAsync();
         await viewModel.LoadAsync(Token);
 
-        for (var attempt = 0; attempt < 4; attempt++)
+        await viewModel.SignInAsync(AdminName, "wrong 0", Token);
+        var wrong = viewModel.Message;
+        for (var attempt = 1; attempt < 5; attempt++)
         {
             await viewModel.SignInAsync(AdminName, "wrong " + attempt, Token);
         }
 
-        var invalid = viewModel.Message;
-        await viewModel.SignInAsync(AdminName, "wrong 5", Token);
-
-        Assert.NotEqual(invalid, viewModel.Message);
+        // The fifth failure locked the account; neither that attempt nor a later one with the right password says so (Decision Log #65).
+        Assert.Equal(wrong, viewModel.Message);
         await viewModel.SignInAsync(AdminName, AdminPassword, Token);
+        Assert.Equal(wrong, viewModel.Message);
+        Assert.Equal(SignInMode.SignIn, viewModel.Mode);
         Assert.Empty(_signedIn);
     }
 

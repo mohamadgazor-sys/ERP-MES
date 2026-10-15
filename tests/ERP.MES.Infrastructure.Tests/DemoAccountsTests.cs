@@ -1,5 +1,6 @@
 using System.Text;
 using ERP.MES.Application.Security;
+using ERP.MES.Domain.Identity;
 using ERP.MES.Domain.Calendar;
 using ERP.MES.Infrastructure.Demo;
 using ERP.MES.Infrastructure.Security;
@@ -46,7 +47,7 @@ public class DemoAccountsTests
             },
             db.Query("SELECT u.Username || '|' || d.Code || '|' || r.Code FROM Users u JOIN Departments d ON d.Id = u.DepartmentId JOIN Roles r ON r.Id = u.RoleId ORDER BY u.Username"));
         Assert.Equal(new[] { "Initialized" }, db.Query("SELECT State FROM SystemSetup"));
-        Assert.Equal(new[] { "7" }, db.Query("SELECT COUNT(*) FROM Users WHERE MustChangePassword = 1"));
+        Assert.Equal(new[] { "7" }, db.Query("SELECT COUNT(*) FROM UserCredentials WHERE MustChangePassword = 1"));
         Assert.All(db.Query("SELECT DisplayName FROM Users"), name => Assert.EndsWith("(نمونه آزمایشی)", name, StringComparison.Ordinal));
     }
 
@@ -105,11 +106,11 @@ public class DemoAccountsTests
         Assert.Equal(SignInStatus.Succeeded, signedIn.Status);
         Assert.True(signedIn.Principal!.MustChangePassword);
         Assert.Equal(DepartmentCodes.Qc, signedIn.Principal.DepartmentCode);
-        Assert.Equal(SignInStatus.InvalidCredentials, (await services.Authentication.SignInAsync("demo.qc", credentials["demo.planning"], Token)).Status);
+        Assert.Equal(SignInStatus.Failed, (await services.Authentication.SignInAsync("demo.qc", credentials["demo.planning"], Token)).Status);
 
         const string Own = "My-Own-Pass-Phrase-1";
         Assert.Equal(AccountStatus.Succeeded, (await services.Accounts.ChangeOwnPasswordAsync(signedIn.Principal, credentials["demo.qc"], Own, Token)).Status);
-        Assert.Equal(SignInStatus.InvalidCredentials, (await services.Authentication.SignInAsync("demo.qc", credentials["demo.qc"], Token)).Status);
+        Assert.Equal(SignInStatus.Failed, (await services.Authentication.SignInAsync("demo.qc", credentials["demo.qc"], Token)).Status);
         Assert.False((await services.Authentication.SignInAsync("demo.qc", Own, Token)).Principal!.MustChangePassword);
     }
 
@@ -118,7 +119,7 @@ public class DemoAccountsTests
     {
         using var db = new TempDatabase();
         await Init(db);
-        var users = db.Query("SELECT Id || Username || hex(PasswordHash) FROM Users ORDER BY Id");
+        var users = db.Query("SELECT u.Id || u.Username || hex(c.PasswordHash) FROM Users u JOIN UserCredentials c ON c.UserId = u.Id ORDER BY u.Id");
         var unusedPath = db.NextCredentialPath();
 
         var second = await DemoDatabase.InitializeAsync(db.Path, Dates, unusedPath, SecurityFixture.FastPolicy, Token);
@@ -126,7 +127,7 @@ public class DemoAccountsTests
         Assert.Equal(0, second.AccountsCreated);
         Assert.Null(second.CredentialFile);
         Assert.False(File.Exists(unusedPath));
-        Assert.Equal(users, db.Query("SELECT Id || Username || hex(PasswordHash) FROM Users ORDER BY Id"));
+        Assert.Equal(users, db.Query("SELECT u.Id || u.Username || hex(c.PasswordHash) FROM Users u JOIN UserCredentials c ON c.UserId = u.Id ORDER BY u.Id"));
     }
 
     [Fact]
@@ -143,7 +144,7 @@ public class DemoAccountsTests
         Assert.Equal(7, result.AccountsCreated);
         Assert.Equal(first.Keys.OrderBy(k => k, StringComparer.Ordinal), second.Keys.OrderBy(k => k, StringComparer.Ordinal));
         Assert.All(first.Keys, user => Assert.NotEqual(first[user], second[user]));
-        Assert.Equal(SignInStatus.InvalidCredentials, (await services.Authentication.SignInAsync("demo.admin", first["demo.admin"], Token)).Status);
+        Assert.Equal(SignInStatus.Failed, (await services.Authentication.SignInAsync("demo.admin", first["demo.admin"], Token)).Status);
         Assert.Equal(SignInStatus.Succeeded, (await services.Authentication.SignInAsync("demo.admin", second["demo.admin"], Token)).Status);
         Assert.Equal(7, Count(db, "Users"));
     }

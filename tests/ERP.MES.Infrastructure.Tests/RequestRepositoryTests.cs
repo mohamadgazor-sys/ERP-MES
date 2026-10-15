@@ -22,7 +22,7 @@ public class RequestRepositoryTests
     public async Task A_mixed_request_with_items_stages_and_approvals_is_saved_and_reloaded_in_a_new_session()
     {
         using var db = new TempDatabase();
-        await db.MigrateAsync();
+        await db.MigrateWithActorsAsync();
 
         var (customerId, added) = await SeedAsync(db);
 
@@ -54,7 +54,7 @@ public class RequestRepositoryTests
     public async Task A_request_for_a_missing_customer_is_rejected_and_nothing_is_saved()
     {
         using var db = new TempDatabase();
-        await db.MigrateAsync();
+        await db.MigrateWithActorsAsync();
         var unsavedCustomer = PersistenceTestData.NewCustomer();
         var request = PersistenceTestData.NewRequest(unsavedCustomer);
 
@@ -68,7 +68,7 @@ public class RequestRepositoryTests
     public async Task The_business_key_is_unique_per_customer_request_number_and_jalali_year_and_case_sensitive()
     {
         using var db = new TempDatabase();
-        await db.MigrateAsync();
+        await db.MigrateWithActorsAsync();
         var customer = (await db.Customers().AddAsync(PersistenceTestData.NewCustomer("A"), Token)).Value;
         var other = (await db.Customers().AddAsync(PersistenceTestData.NewCustomer("B"), Token)).Value;
 
@@ -95,7 +95,7 @@ public class RequestRepositoryTests
     public async Task Case_only_differences_are_reported_as_near_duplicates_without_blocking()
     {
         using var db = new TempDatabase();
-        await db.MigrateAsync();
+        await db.MigrateWithActorsAsync();
         var customer = (await db.Customers().AddAsync(PersistenceTestData.NewCustomer("A"), Token)).Value;
         var other = (await db.Customers().AddAsync(PersistenceTestData.NewCustomer("B"), Token)).Value;
         await db.Requests().AddAsync(PersistenceTestData.NewRequest(customer, "wsj-898"), Token);
@@ -118,7 +118,7 @@ public class RequestRepositoryTests
     public async Task The_request_list_shows_summaries_newest_first_and_can_be_filtered_by_customer()
     {
         using var db = new TempDatabase();
-        await db.MigrateAsync();
+        await db.MigrateWithActorsAsync();
         var customer = (await db.Customers().AddAsync(PersistenceTestData.NewCustomer("Customer A"), Token)).Value;
         var other = (await db.Customers().AddAsync(PersistenceTestData.NewCustomer("Customer B"), Token)).Value;
         var older = await db.Requests().AddAsync(PersistenceTestData.NewRequest(customer, "1", new DateOnly(2026, 4, 1), "older"), Token);
@@ -143,7 +143,7 @@ public class RequestRepositoryTests
     public async Task Items_stages_and_qc_approvals_are_added_and_changed_through_the_domain_and_persist()
     {
         using var db = new TempDatabase();
-        await db.MigrateAsync();
+        await db.MigrateWithActorsAsync();
         var (_, added) = await SeedAsync(db);
         var requestId = added.Value.Id;
 
@@ -193,7 +193,7 @@ public class RequestRepositoryTests
     public async Task Domain_rule_violations_in_an_update_propagate_unchanged_and_nothing_is_saved()
     {
         using var db = new TempDatabase();
-        await db.MigrateAsync();
+        await db.MigrateWithActorsAsync();
         var (_, added) = await SeedAsync(db);
         var requestId = added.Value.Id;
 
@@ -219,7 +219,7 @@ public class RequestRepositoryTests
     public async Task An_update_based_on_a_stale_request_version_is_rejected()
     {
         using var db = new TempDatabase();
-        await db.MigrateAsync();
+        await db.MigrateWithActorsAsync();
         var (_, added) = await SeedAsync(db);
 
         // Another user changed the request row (there is no public Domain method that does, so the version is raised directly).
@@ -234,7 +234,7 @@ public class RequestRepositoryTests
     public async Task A_stage_changed_by_someone_else_during_the_update_is_reported_and_not_overwritten()
     {
         using var db = new TempDatabase();
-        await db.MigrateAsync();
+        await db.MigrateWithActorsAsync();
         var (_, added) = await SeedAsync(db);
 
         await Assert.ThrowsAsync<ConcurrencyConflictException>(() => db.Requests().UpdateAsync(added.Value.Id, null, request =>
@@ -253,7 +253,7 @@ public class RequestRepositoryTests
     public async Task Missing_requests_are_reported_and_a_stored_request_cannot_be_added_again()
     {
         using var db = new TempDatabase();
-        await db.MigrateAsync();
+        await db.MigrateWithActorsAsync();
         var (_, added) = await SeedAsync(db);
 
         Assert.Null(await db.Requests().FindAsync(9999, Token));
@@ -266,7 +266,7 @@ public class RequestRepositoryTests
     public async Task Request_numbers_and_item_numbers_are_stored_and_returned_exactly()
     {
         using var db = new TempDatabase();
-        await db.MigrateAsync();
+        await db.MigrateWithActorsAsync();
         var customer = (await db.Customers().AddAsync(PersistenceTestData.NewCustomer(), Token)).Value;
 
         // Persian digits, mixed case and inner spaces are kept as given.
