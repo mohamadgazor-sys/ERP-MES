@@ -101,6 +101,19 @@ public sealed class Request
         Status = status;
     }
 
+    /// <summary>
+    /// DEMONSTRATION-ONLY (Decision Log #57, T1): places a request directly in one of the approved statuses without checking a
+    /// transition, so fictional sample data can show requests at different points. It is NOT a status transition and does not approve the
+    /// transition table, which stays an unapproved draft (Decision Log #60). It is deliberately <c>internal</c>: only the Infrastructure assembly (the demonstration seed) and the Domain tests can see
+    /// it, and a repository test allows exactly one production call site.
+    /// </summary>
+    internal void PlaceInStatusForDemonstration(RequestStatus status, DateTime changedAtUtc)
+    {
+        var utc = Customer.RequireUtc(changedAtUtc, nameof(changedAtUtc));
+        SetStatus(status);
+        UpdatedAtUtc = utc;
+    }
+
     /// <summary>True when an item with exactly this number already exists in the request. The comparison is exact (ordinal, no trimming); the spec does not say whether item numbers are case-sensitive, so the exact comparison is used until it is decided.</summary>
     public bool HasItemNo(string itemNo) =>
         _items.Any(i => string.Equals(i.ItemNo, itemNo, StringComparison.Ordinal));

@@ -155,6 +155,50 @@ public class RequestTests
         Assert.Single(request.Items);
     }
 
+    [Theory]
+    [InlineData(RequestStatus.SentToManagement)]
+    [InlineData(RequestStatus.MgmtApprovedAtPlanning)]
+    [InlineData(RequestStatus.Closed)]
+    public void A_request_can_be_placed_directly_in_an_approved_status_for_the_demonstration(RequestStatus status)
+    {
+        var request = RequestFixtures.NewRequest();
+        var changedAt = RequestFixtures.Now.AddHours(3);
+
+        request.PlaceInStatusForDemonstration(status, changedAt);
+
+        Assert.Equal(status, request.Status);
+        Assert.Equal(changedAt, request.UpdatedAtUtc);
+    }
+
+    [Fact]
+    public void Placing_a_request_in_a_status_rejects_unknown_statuses_and_non_utc_times()
+    {
+        var request = RequestFixtures.NewRequest();
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => request.PlaceInStatusForDemonstration((RequestStatus)99, RequestFixtures.Now));
+        Assert.Throws<ArgumentException>(() => request.PlaceInStatusForDemonstration(RequestStatus.Closed, DateTime.SpecifyKind(RequestFixtures.Now, DateTimeKind.Unspecified)));
+        Assert.Equal(RequestStatus.Created, request.Status);
+    }
+
+    [Fact]
+    public void The_demonstration_status_placement_is_internal_and_the_request_has_no_public_status_setter()
+    {
+        const System.Reflection.BindingFlags instance = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic;
+
+        var placement = typeof(Request).GetMethod("PlaceInStatusForDemonstration", instance);
+        Assert.NotNull(placement);
+        Assert.False(placement.IsPublic);
+        Assert.True(placement.IsAssembly);
+
+        // No public member can change the status: it has a private setter and no public method is named like a status change.
+        Assert.False(typeof(Request).GetProperty(nameof(Request.Status))!.SetMethod!.IsPublic);
+        var publicNames = typeof(Request).GetMethods(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.DeclaredOnly)
+            .Where(m => !m.IsSpecialName)
+            .Select(m => m.Name)
+            .ToArray();
+        Assert.DoesNotContain(publicNames, n => n.Contains("Status", StringComparison.Ordinal));
+    }
+
     [Fact]
     public void A_newly_created_request_accepts_items()
     {

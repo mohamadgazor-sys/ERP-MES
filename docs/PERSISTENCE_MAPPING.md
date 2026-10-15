@@ -5,7 +5,7 @@
 | **Status** | Implemented for review in the initial-migration pull request. |
 | **Scope** | The approved initial subset: customer, request, request item, item stage and QC approval. Nothing else is mapped. |
 | **Basis** | Domain and Database Specification sections 2, 4, 5, 6, 25, 26; Decision Log #23-#25, #31, #55, #56, #58 (row version: #23); `docs/DOMAIN_MODEL_DEMO_SCOPE.md`. |
-| **Not decided here** | The production database provider and version (SQL Server stays undecided); seed data and reset (next PR); any new business rule. |
+| **Not decided here** | The production database provider and version (SQL Server stays undecided); any new business rule. (Seed data and reset: `docs/DEMO_SEED_AND_RESET.md`.) |
 
 ## 1. Where things live
 
@@ -81,7 +81,7 @@ The SQLite project supplies the context factory (`SqliteDatabase.CreateContextFa
 - **Business key.** `AddAsync` checks the customer exists (`RecordNotFoundException`) and the key Customer + RequestNo + Jalali year is free (`DuplicateRequestException`; exact, case-sensitive); the database's unique index remains the final guard, and a race is also reported as `DuplicateRequestException`. Case-only near duplicates are reported by `FindCaseInsensitiveNearDuplicatesAsync` using the Domain's own comparison (Decision Log #31: a non-blocking warning).
 - **Aggregate loading** returns items, stages and approvals in a stable order (stages by `StageNo`), because the Domain addresses stages by position.
 
-**Concurrency scope (unchanged, M8).** Versions are per row. Adding an item changes the request's update time, so it raises the request row's version; stage, priority and QC changes alone change only the item or stage rows, so an `expectedVersion` for the request does not detect them. Item-level and stage-level expected versions are not exposed yet; they are added when the queue screen needs them.
+**Concurrency scope (unchanged, M8).** Versions are per row. Adding an item changes the request's update time, so it raises the request row's version; stage, priority and QC changes alone change only the item or stage rows, so an `expectedVersion` for the request does not detect them. Item-level and stage-level expected versions are not exposed yet; they are added when the queue screen needs them. The seed-and-reset PR deliberately left this contract unchanged; the PR that adds queue stage changes or QC actions must first decide how the screen passes the expected version of the specific item or stage and must add stale-update tests (`docs/DEMO_SEED_AND_RESET.md` section 4).
 
-**Not included:** seed data and reset, authentication, screens, queue read models, audit, a status-transition workflow, SQL Server.
+**Not included:** authentication, screens, queue read models, audit, a status-transition workflow, SQL Server.
 
