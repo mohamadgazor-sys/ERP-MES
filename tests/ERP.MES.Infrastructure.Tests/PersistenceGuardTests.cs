@@ -29,6 +29,8 @@ public partial class PersistenceGuardTests
         Assert.Contains("ErpMesDbContextModelSnapshot.cs", files);
         Assert.Single(files, f => f!.EndsWith("_InitialCreate.cs", StringComparison.Ordinal));
         Assert.Single(files, f => f!.EndsWith("_InitialCreate.Designer.cs", StringComparison.Ordinal));
+        Assert.Single(files, f => f!.EndsWith("_AddAuthentication.cs", StringComparison.Ordinal));
+        Assert.Single(files, f => f!.EndsWith("_AddAuthentication.Designer.cs", StringComparison.Ordinal));
     }
 
     [Fact]

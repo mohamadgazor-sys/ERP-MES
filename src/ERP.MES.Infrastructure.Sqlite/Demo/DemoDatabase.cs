@@ -1,7 +1,10 @@
+using ERP.MES.Application.Security;
 using ERP.MES.Domain.Calendar;
 using ERP.MES.Infrastructure.Demo;
 using ERP.MES.Infrastructure.Persistence;
+using ERP.MES.Infrastructure.Security;
 using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
 
 namespace ERP.MES.Infrastructure.Sqlite.Demo;
 
@@ -23,6 +26,9 @@ public enum DemoDatabaseState
     /// <summary>A file or folder that SQLite cannot open as a database.</summary>
     NotADatabase,
 }
+
+/// <summary>What initialising or resetting did: the sample data summary, how many demonstration accounts were created, and where their one-time credentials were written (null when none were created).</summary>
+public sealed record DemoDatabaseResult(DemoSeedSummary Seed, int AccountsCreated, string? CredentialFile);
 
 /// <summary>The requested demonstration operation was refused because the target is not a positively identified demonstration database.</summary>
 public sealed class DemoDatabaseRefusedException(DemoDatabaseState state, string message) : InvalidOperationException(message)
@@ -86,8 +92,15 @@ public static class DemoDatabase
     /// <summary>
     /// Creates the demonstration database when there is none (or only an empty file), or - when the target already is a marked demonstration database -
     /// applies pending migrations and adds whatever sample data is missing, without changing or duplicating what exists. Any other target is refused.
+    /// A new database also gets the fictional demonstration accounts; their one-time passwords go only to a protected credential file outside the repository
+    /// (<paramref name="credentialFilePath"/>, or a default under the user's local application data), never to the console or a log.
     /// </summary>
-    public static async Task<DemoSeedSummary> InitializeAsync(string databasePath, IJalaliDateService dates, CancellationToken cancellationToken = default)
+    public static async Task<DemoDatabaseResult> InitializeAsync(
+        string databasePath,
+        IJalaliDateService dates,
+        string? credentialFilePath = null,
+        AuthenticationPolicy? policy = null,
+        CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(dates);
         var path = FullPath(databasePath);
@@ -96,11 +109,11 @@ public static class DemoDatabase
         {
             case DemoDatabaseState.Missing:
             case DemoDatabaseState.EmptyFile:
-                return await BuildAndInstallAsync(path, dates, replacesDemoDatabase: false, cancellationToken);
+                return await BuildAndInstallAsync(path, dates, credentialFilePath, policy, replacesDemoDatabase: false, cancellationToken);
 
             case DemoDatabaseState.Demo:
                 await SqliteDatabase.MigrateAsync(path, cancellationToken);
-                return await SeedAsync(path, dates, cancellationToken);
+                return await SeedExistingAsync(path, dates, credentialFilePath, policy, cancellationToken);
 
             case var state:
                 throw Refused(path, state, "initialise");
@@ -108,11 +121,16 @@ public static class DemoDatabase
     }
 
     /// <summary>
-    /// Replaces a marked demonstration database by a freshly migrated, freshly seeded one. Refused - with the reason, changing nothing - unless the
-    /// target already is a positively identified demonstration database. A missing target is refused too: reset never creates a database
-    /// (use <see cref="InitializeAsync"/>).
+    /// Replaces a marked demonstration database by a freshly migrated, freshly seeded one with new demonstration accounts and new one-time passwords. Refused - with
+    /// the reason, changing nothing - unless the target already is a positively identified demonstration database. A missing target is refused too: reset never
+    /// creates a database (use <see cref="InitializeAsync"/>).
     /// </summary>
-    public static async Task<DemoSeedSummary> ResetAsync(string databasePath, IJalaliDateService dates, CancellationToken cancellationToken = default)
+    public static async Task<DemoDatabaseResult> ResetAsync(
+        string databasePath,
+        IJalaliDateService dates,
+        string? credentialFilePath = null,
+        AuthenticationPolicy? policy = null,
+        CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(dates);
         var path = FullPath(databasePath);
@@ -123,11 +141,16 @@ public static class DemoDatabase
             throw Refused(path, state, "reset");
         }
 
-        return await BuildAndInstallAsync(path, dates, replacesDemoDatabase: true, cancellationToken);
+        return await BuildAndInstallAsync(path, dates, credentialFilePath, policy, replacesDemoDatabase: true, cancellationToken);
     }
 
-    private static async Task<DemoSeedSummary> BuildAndInstallAsync(string path, IJalaliDateService dates, bool replacesDemoDatabase, CancellationToken cancellationToken)
+    private static async Task<DemoDatabaseResult> BuildAndInstallAsync(
+        string path, IJalaliDateService dates, string? credentialFilePath, AuthenticationPolicy? policy, bool replacesDemoDatabase, CancellationToken cancellationToken)
     {
+        // Refuse an unsafe credential file location BEFORE anything is built or replaced.
+        var credentialPath = Path.GetFullPath(credentialFilePath ?? DefaultCredentialFilePath());
+        EnsureCredentialFileCanBeCreated(credentialPath);
+
         var directory = Path.GetDirectoryName(path);
         if (!string.IsNullOrEmpty(directory))
         {
@@ -136,11 +159,18 @@ public static class DemoDatabase
 
         // A unique name of our own, so nothing that already exists is touched while the new database is built.
         var temporaryPath = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
+        var credentialFileWritten = false;
         try
         {
             await SqliteDatabase.MigrateAsync(temporaryPath, cancellationToken);
             WriteMarker(temporaryPath);
-            var summary = await SeedAsync(temporaryPath, dates, cancellationToken);
+            var (provisioner, contexts) = CreateProvisioner(temporaryPath, policy);
+            var credentials = await provisioner.ProvisionAsync(cancellationToken);
+            var summary = await SeedAsync(contexts, provisioner, dates, cancellationToken);
+
+            // The passwords are written (to the protected file only) before the new database replaces the old one.
+            CredentialFile.WriteNew(credentialPath, path, credentials);
+            credentialFileWritten = true;
 
             // Journal files of the demonstration database being replaced must not be applied to the new file. They are removed only for a
             // positively identified demonstration database, and only now that the replacement is complete.
@@ -150,7 +180,16 @@ public static class DemoDatabase
             }
 
             File.Move(temporaryPath, path, overwrite: true);
-            return summary;
+            return new DemoDatabaseResult(summary, credentials.Count, credentialPath);
+        }
+        catch
+        {
+            if (credentialFileWritten)
+            {
+                DeleteIfExists(credentialPath);
+            }
+
+            throw;
         }
         finally
         {
@@ -159,11 +198,71 @@ public static class DemoDatabase
         }
     }
 
-    private static Task<DemoSeedSummary> SeedAsync(string path, IJalaliDateService dates, CancellationToken cancellationToken)
+    // Initialising a database that already is a marked demonstration database: seed what is missing. A database that was seeded before the
+    // demonstration accounts existed is refused (its records refer to a user that does not exist); a marked but still empty one is provisioned.
+    private static async Task<DemoDatabaseResult> SeedExistingAsync(
+        string path, IJalaliDateService dates, string? credentialFilePath, AuthenticationPolicy? policy, CancellationToken cancellationToken)
+    {
+        var (provisioner, contexts) = CreateProvisioner(path, policy);
+        var state = await SecurityServices.Create(contexts, policy).Bootstrap.GetStateAsync(cancellationToken);
+
+        if (state == SetupState.Initialized)
+        {
+            return new DemoDatabaseResult(await SeedAsync(contexts, provisioner, dates, cancellationToken), 0, null);
+        }
+
+        await using (var context = await contexts.CreateDbContextAsync(cancellationToken))
+        {
+            if (await context.Customers.AnyAsync(cancellationToken))
+            {
+                throw new DemoDatabaseRefusedException(
+                    DemoDatabaseState.Demo,
+                    "Refused to initialise '" + path + "': it holds sample data that was created before the demonstration accounts existed, so its records refer to users that do not exist. Reset it. Nothing was changed.");
+            }
+        }
+
+        var credentialPath = Path.GetFullPath(credentialFilePath ?? DefaultCredentialFilePath());
+        EnsureCredentialFileCanBeCreated(credentialPath);
+        var credentials = await provisioner.ProvisionAsync(cancellationToken);
+        CredentialFile.WriteNew(credentialPath, path, credentials);
+        return new DemoDatabaseResult(await SeedAsync(contexts, provisioner, dates, cancellationToken), credentials.Count, credentialPath);
+    }
+
+    private static (DemoAccountProvisioner Provisioner, IDbContextFactory<ErpMesDbContext> Contexts) CreateProvisioner(string path, AuthenticationPolicy? policy)
     {
         var contexts = SqliteDatabase.CreateContextFactory(path);
-        var seeder = new DemoDataSeeder(new EfCustomerRepository(contexts), new EfRequestRepository(contexts), dates);
-        return seeder.SeedAsync(cancellationToken);
+        var services = SecurityServices.Create(contexts, policy);
+        return (new DemoAccountProvisioner(services.Bootstrap, services.Accounts, contexts), contexts);
+    }
+
+    private static async Task<DemoSeedSummary> SeedAsync(
+        IDbContextFactory<ErpMesDbContext> contexts, DemoAccountProvisioner provisioner, IJalaliDateService dates, CancellationToken cancellationToken)
+    {
+        var actors = await provisioner.ResolveActorsAsync(cancellationToken);
+        var seeder = new DemoDataSeeder(new EfCustomerRepository(contexts), new EfRequestRepository(contexts), dates, actors);
+        return await seeder.SeedAsync(cancellationToken);
+    }
+
+    // Outside the repository by construction: the user's local application data. Never overwritten (the name is unique).
+    private static string DefaultCredentialFilePath() =>
+        Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "ERP-MES",
+            "demo-credentials",
+            "erpmes-demo-" + DateTime.UtcNow.ToString("yyyyMMdd-HHmmss", System.Globalization.CultureInfo.InvariantCulture) + "-" + Guid.NewGuid().ToString("N")[..8] + ".credentials.txt");
+
+    private static void EnsureCredentialFileCanBeCreated(string credentialPath)
+    {
+        var directory = Path.GetDirectoryName(credentialPath) ?? throw new CredentialFileException("The credential file needs a folder.");
+        if (CredentialFile.IsInsideGitWorkingTree(directory))
+        {
+            throw new CredentialFileException("The credential file must be outside the repository: '" + credentialPath + "' is inside a Git working tree.");
+        }
+
+        if (File.Exists(credentialPath) || Directory.Exists(credentialPath))
+        {
+            throw new CredentialFileException("The credential file already exists and is never overwritten: '" + credentialPath + "'.");
+        }
     }
 
     private static void WriteMarker(string path)

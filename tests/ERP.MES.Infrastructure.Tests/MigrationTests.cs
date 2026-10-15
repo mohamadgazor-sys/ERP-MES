@@ -8,7 +8,7 @@ namespace ERP.MES.Infrastructure.Tests;
 public class MigrationTests
 {
     [Fact]
-    public async Task A_fresh_database_is_created_by_applying_the_initial_migration()
+    public async Task A_fresh_database_is_created_by_applying_the_committed_migrations()
     {
         using var db = new TempDatabase();
         Assert.False(db.Exists);
@@ -21,13 +21,14 @@ public class MigrationTests
         // EF Core keeps its own bookkeeping tables (the migration history, and in EF Core 10 a migrations lock); only the application tables are compared.
         Assert.Contains("__EFMigrationsHistory", tables);
         Assert.Equal(
-            new[] { "Customers", "ItemStages", "QcApprovals", "RequestItems", "Requests" },
+            new[] { "AuditLog", "Customers", "Departments", "ItemStages", "QcApprovals", "RequestItems", "Requests", "Roles", "SystemSetup", "Users" },
             tables.Where(t => !t.StartsWith("__EF", StringComparison.Ordinal)).ToArray());
 
         await using var context = db.NewContext();
         var applied = (await context.Database.GetAppliedMigrationsAsync(TestContext.Current.CancellationToken)).ToArray();
-        Assert.Single(applied);
+        Assert.Equal(2, applied.Length);
         Assert.EndsWith("_InitialCreate", applied[0], StringComparison.Ordinal);
+        Assert.EndsWith("_AddAuthentication", applied[1], StringComparison.Ordinal);
         Assert.Empty(await context.Database.GetPendingMigrationsAsync(TestContext.Current.CancellationToken));
     }
 
@@ -39,7 +40,7 @@ public class MigrationTests
 
         // Fails if the model changed without a new migration, or if the snapshot was edited away from the model.
         Assert.False(context.Database.HasPendingModelChanges());
-        Assert.Single(context.Database.GetMigrations());
+        Assert.Equal(2, context.Database.GetMigrations().Count());
     }
 
     [Fact]

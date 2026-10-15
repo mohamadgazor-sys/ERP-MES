@@ -1,6 +1,8 @@
+using ERP.MES.Application.Security;
 using ERP.MES.Domain.Calendar;
 using ERP.MES.Domain.Requests;
 using ERP.MES.Infrastructure.Demo;
+using ERP.MES.Infrastructure.Security;
 using ERP.MES.Infrastructure.Sqlite.Demo;
 
 namespace ERP.MES.Infrastructure.Tests;
@@ -29,6 +31,13 @@ public class DemoDatabaseTests
 
     private static int Count(TempDatabase db, string table) => int.Parse(db.Query("SELECT COUNT(*) FROM " + table)[0], System.Globalization.CultureInfo.InvariantCulture);
 
+    // A fresh credential file outside the repository for every call, and the documented fast work factor (the floor) so the suite stays quick.
+    private static Task<DemoDatabaseResult> Init(TempDatabase db) =>
+        DemoDatabase.InitializeAsync(db.Path, Dates, db.NextCredentialPath(), SecurityFixture.FastPolicy, Token);
+
+    private static Task<DemoDatabaseResult> Reset(TempDatabase db) =>
+        DemoDatabase.ResetAsync(db.Path, Dates, db.NextCredentialPath(), SecurityFixture.FastPolicy, Token);
+
     private static async Task<List<Request>> LoadAllAsync(TempDatabase db)
     {
         var requests = new List<Request>();
@@ -53,9 +62,9 @@ public class DemoDatabaseTests
         using var db = new TempDatabase();
         Assert.Equal(DemoDatabaseState.Missing, DemoDatabase.Inspect(db.Path));
 
-        var summary = await DemoDatabase.InitializeAsync(db.Path, Dates, Token);
+        var summary = await Init(db);
 
-        Assert.Equal(new DemoSeedSummary(3, 0, 6, 0), summary);
+        Assert.Equal(new DemoSeedSummary(3, 0, 6, 0), summary.Seed);
         Assert.Equal(DemoDatabaseState.Demo, DemoDatabase.Inspect(db.Path));
         Assert.Equal(new[] { DemoDatabase.ApplicationId.ToString(System.Globalization.CultureInfo.InvariantCulture) }, db.Query("PRAGMA application_id"));
         Assert.NotEmpty(db.Query("SELECT MigrationId FROM __EFMigrationsHistory"));
@@ -69,7 +78,7 @@ public class DemoDatabaseTests
         await File.WriteAllBytesAsync(db.Path, [], Token);
         Assert.Equal(DemoDatabaseState.EmptyFile, DemoDatabase.Inspect(db.Path));
 
-        await DemoDatabase.InitializeAsync(db.Path, Dates, Token);
+        await Init(db);
 
         Assert.Equal(DemoDatabaseState.Demo, DemoDatabase.Inspect(db.Path));
         Assert.Equal(3, Count(db, "Customers"));
@@ -83,7 +92,7 @@ public class DemoDatabaseTests
         DemoDatabase.Inspect(db.Path);
         Assert.False(db.Exists);
 
-        await DemoDatabase.InitializeAsync(db.Path, Dates, Token);
+        await Init(db);
         var before = await File.ReadAllBytesAsync(db.Path, Token);
         DemoDatabase.Inspect(db.Path);
         Assert.Equal(before, await File.ReadAllBytesAsync(db.Path, Token));
@@ -95,12 +104,14 @@ public class DemoDatabaseTests
     public async Task Initialising_a_demo_database_again_adds_nothing_and_changes_nothing()
     {
         using var db = new TempDatabase();
-        await DemoDatabase.InitializeAsync(db.Path, Dates, Token);
+        await Init(db);
         var before = Snapshot(db);
 
-        var second = await DemoDatabase.InitializeAsync(db.Path, Dates, Token);
+        var second = await Init(db);
 
-        Assert.Equal(new DemoSeedSummary(0, 3, 0, 6), second);
+        Assert.Equal(new DemoSeedSummary(0, 3, 0, 6), second.Seed);
+        Assert.Equal(0, second.AccountsCreated);
+        Assert.Null(second.CredentialFile);
         Assert.Equal(before, Snapshot(db));
     }
 
@@ -109,10 +120,13 @@ public class DemoDatabaseTests
     {
         using var db = new TempDatabase();
         await db.MigrateAsync();
-        var seeder = new DemoDataSeeder(db.Customers(), db.Requests(), Dates);
+        var services = SecurityServices.Create(db.ContextFactory, SecurityFixture.FastPolicy);
+        var provisioner = new DemoAccountProvisioner(services.Bootstrap, services.Accounts, db.ContextFactory);
+        await provisioner.ProvisionAsync(Token);
+        var actors = await provisioner.ResolveActorsAsync(Token);
 
-        var first = await seeder.SeedAsync(Token);
-        var second = await new DemoDataSeeder(db.Customers(), db.Requests(), Dates).SeedAsync(Token);
+        var first = await new DemoDataSeeder(db.Customers(), db.Requests(), Dates, actors).SeedAsync(Token);
+        var second = await new DemoDataSeeder(db.Customers(), db.Requests(), Dates, actors).SeedAsync(Token);
 
         Assert.Equal(new DemoSeedSummary(3, 0, 6, 0), first);
         Assert.Equal(new DemoSeedSummary(0, 3, 0, 6), second);
@@ -131,7 +145,7 @@ public class DemoDatabaseTests
         var rowsBefore = Snapshot(db);
         var bytesBefore = await File.ReadAllBytesAsync(db.Path, Token);
 
-        var refusal = await Assert.ThrowsAsync<DemoDatabaseRefusedException>(() => DemoDatabase.ResetAsync(db.Path, Dates, Token));
+        var refusal = await Assert.ThrowsAsync<DemoDatabaseRefusedException>(() => Reset(db));
 
         Assert.Equal(DemoDatabaseState.Unrecognized, refusal.State);
         Assert.Contains("demonstration marker", refusal.Message, StringComparison.Ordinal);
@@ -150,7 +164,7 @@ public class DemoDatabaseTests
         await db.Customers().AddAsync(PersistenceTestData.NewCustomer("Real customer"), Token);
         var rowsBefore = Snapshot(db);
 
-        var refusal = await Assert.ThrowsAsync<DemoDatabaseRefusedException>(() => DemoDatabase.InitializeAsync(db.Path, Dates, Token));
+        var refusal = await Assert.ThrowsAsync<DemoDatabaseRefusedException>(() => Init(db));
 
         Assert.Equal(DemoDatabaseState.Unrecognized, refusal.State);
         Assert.Equal(DemoDatabaseState.Unrecognized, DemoDatabase.Inspect(db.Path));
@@ -165,8 +179,8 @@ public class DemoDatabaseTests
         var content = string.Concat(Enumerable.Repeat("This is somebody's notes file, not a database. ", 80));
         await File.WriteAllTextAsync(db.Path, content, Token);
 
-        var reset = await Assert.ThrowsAsync<DemoDatabaseRefusedException>(() => DemoDatabase.ResetAsync(db.Path, Dates, Token));
-        var initialise = await Assert.ThrowsAsync<DemoDatabaseRefusedException>(() => DemoDatabase.InitializeAsync(db.Path, Dates, Token));
+        var reset = await Assert.ThrowsAsync<DemoDatabaseRefusedException>(() => Reset(db));
+        var initialise = await Assert.ThrowsAsync<DemoDatabaseRefusedException>(() => Init(db));
 
         Assert.Equal(DemoDatabaseState.NotADatabase, reset.State);
         Assert.Equal(DemoDatabaseState.NotADatabase, initialise.State);
@@ -180,7 +194,7 @@ public class DemoDatabaseTests
         Directory.CreateDirectory(folder);
         try
         {
-            var refusal = await Assert.ThrowsAsync<DemoDatabaseRefusedException>(() => DemoDatabase.ResetAsync(folder, Dates, Token));
+            var refusal = await Assert.ThrowsAsync<DemoDatabaseRefusedException>(() => DemoDatabase.ResetAsync(folder, Dates, null, null, Token));
 
             Assert.Equal(DemoDatabaseState.NotADatabase, refusal.State);
             Assert.True(Directory.Exists(folder));
@@ -196,7 +210,7 @@ public class DemoDatabaseTests
     {
         using var db = new TempDatabase();
 
-        var refusal = await Assert.ThrowsAsync<DemoDatabaseRefusedException>(() => DemoDatabase.ResetAsync(db.Path, Dates, Token));
+        var refusal = await Assert.ThrowsAsync<DemoDatabaseRefusedException>(() => Reset(db));
 
         Assert.Equal(DemoDatabaseState.Missing, refusal.State);
         Assert.False(db.Exists);
@@ -206,8 +220,8 @@ public class DemoDatabaseTests
     [Fact]
     public async Task A_blank_path_is_rejected()
     {
-        await Assert.ThrowsAsync<ArgumentException>(() => DemoDatabase.ResetAsync(" ", Dates, Token));
-        await Assert.ThrowsAsync<ArgumentException>(() => DemoDatabase.InitializeAsync("", Dates, Token));
+        await Assert.ThrowsAsync<ArgumentException>(() => DemoDatabase.ResetAsync(" ", Dates, null, null, Token));
+        await Assert.ThrowsAsync<ArgumentException>(() => DemoDatabase.InitializeAsync("", Dates, null, null, Token));
     }
 
     // ---- reset and reseed ----
@@ -216,7 +230,7 @@ public class DemoDatabaseTests
     public async Task Reset_removes_changes_and_extra_data_and_restores_exactly_the_same_sample_data()
     {
         using var db = new TempDatabase();
-        await DemoDatabase.InitializeAsync(db.Path, Dates, Token);
+        await Init(db);
         var original = Snapshot(db);
 
         // Someone works with the demo: adds a customer, a request and changes a priority.
@@ -226,9 +240,9 @@ public class DemoDatabaseTests
         await db.Requests().UpdateAsync(first.RequestId, null, r => r.Items[0].ChangePriority(Priority.Normal, PersistenceTestData.Now.AddDays(1)), Token);
         Assert.NotEqual(original, Snapshot(db));
 
-        var summary = await DemoDatabase.ResetAsync(db.Path, Dates, Token);
+        var summary = await Reset(db);
 
-        Assert.Equal(new DemoSeedSummary(3, 0, 6, 0), summary);
+        Assert.Equal(new DemoSeedSummary(3, 0, 6, 0), summary.Seed);
         Assert.Equal(original, Snapshot(db));
         Assert.Equal(DemoDatabaseState.Demo, DemoDatabase.Inspect(db.Path));
         Assert.Empty(TemporaryFilesNextTo(db));
@@ -238,11 +252,11 @@ public class DemoDatabaseTests
     public async Task Reset_twice_in_a_row_gives_the_same_data_without_duplicates()
     {
         using var db = new TempDatabase();
-        await DemoDatabase.InitializeAsync(db.Path, Dates, Token);
+        await Init(db);
 
-        await DemoDatabase.ResetAsync(db.Path, Dates, Token);
+        await Reset(db);
         var afterFirst = Snapshot(db);
-        await DemoDatabase.ResetAsync(db.Path, Dates, Token);
+        await Reset(db);
 
         Assert.Equal(afterFirst, Snapshot(db));
         Assert.Equal(3, Count(db, "Customers"));
@@ -258,7 +272,7 @@ public class DemoDatabaseTests
     public async Task The_sample_data_has_the_expected_counts_and_mixes_make_and_repair_items()
     {
         using var db = new TempDatabase();
-        await DemoDatabase.InitializeAsync(db.Path, Dates, Token);
+        await Init(db);
 
         var customers = await db.Customers().ListAsync(false, Token);
         var requests = await LoadAllAsync(db);
@@ -287,7 +301,7 @@ public class DemoDatabaseTests
     public async Task The_sample_data_shows_the_approved_statuses_priorities_and_stage_states()
     {
         using var db = new TempDatabase();
-        await DemoDatabase.InitializeAsync(db.Path, Dates, Token);
+        await Init(db);
         var requests = await LoadAllAsync(db);
         var items = requests.SelectMany(r => r.Items).ToList();
         var stages = items.SelectMany(i => i.Stages).ToList();
@@ -312,7 +326,7 @@ public class DemoDatabaseTests
     public async Task The_stored_sample_data_respects_the_qc_gate()
     {
         using var db = new TempDatabase();
-        await DemoDatabase.InitializeAsync(db.Path, Dates, Token);
+        await Init(db);
 
         foreach (var item in (await LoadAllAsync(db)).SelectMany(r => r.Items))
         {
@@ -340,7 +354,7 @@ public class DemoDatabaseTests
     public async Task The_sample_data_is_clearly_marked_as_demonstration_data_and_survives_reopening()
     {
         using var db = new TempDatabase();
-        await DemoDatabase.InitializeAsync(db.Path, Dates, Token);
+        await Init(db);
 
         // New repositories and contexts: the data comes from the file, not from memory.
         var customers = await db.Customers().ListAsync(false, Token);
@@ -350,8 +364,10 @@ public class DemoDatabaseTests
         Assert.All(customers, c => Assert.True(c.Value.IsActive));
         Assert.All(requests, r => Assert.StartsWith(DemoDataSeeder.RequestNoPrefix, r.RequestNo.Value, StringComparison.Ordinal));
         Assert.All(requests, r => Assert.StartsWith(DemoDataSeeder.TitlePrefix, r.Title, StringComparison.Ordinal));
-        Assert.All(requests, r => Assert.Equal(DemoDataSeeder.ActorUserId, r.CreatedByUserId));
-        Assert.All(requests.SelectMany(r => r.Items), i => Assert.Equal(DemoDataSeeder.ActorUserId, i.CreatedByUserId));
+        var centralId = long.Parse(db.Query("SELECT Id FROM Users WHERE Username = 'demo.central'").Single(), System.Globalization.CultureInfo.InvariantCulture);
+        Assert.All(customers, c => Assert.Equal(centralId, c.Value.CreatedByUserId));
+        Assert.All(requests, r => Assert.Equal(centralId, r.CreatedByUserId));
+        Assert.All(requests.SelectMany(r => r.Items), i => Assert.Equal(centralId, i.CreatedByUserId));
         Assert.All(customers, c => Assert.Equal(DateTimeKind.Utc, c.Value.CreatedAtUtc.Kind));
         Assert.All(requests, r => Assert.Equal(DateTimeKind.Utc, r.CreatedAtUtc.Kind));
 

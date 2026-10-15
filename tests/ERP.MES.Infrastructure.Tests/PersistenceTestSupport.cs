@@ -12,6 +12,18 @@ internal sealed class TempDatabase : IDisposable
 
     public bool Exists => File.Exists(Path);
 
+    private readonly List<string> _credentialFiles = [];
+
+    /// <summary>A new, unique path for a demonstration credential file in the temp folder (outside the repository); removed with the database.</summary>
+    public string NextCredentialPath()
+    {
+        var path = Path + "." + _credentialFiles.Count + ".credentials.txt";
+        _credentialFiles.Add(path);
+        return path;
+    }
+
+    public IReadOnlyList<string> CredentialFiles => _credentialFiles;
+
     public ErpMesDbContext NewContext() => new(SqliteDatabase.CreateOptions(Path));
 
     public Task MigrateAsync() => SqliteDatabase.MigrateAsync(Path);
@@ -61,6 +73,18 @@ internal sealed class TempDatabase : IDisposable
 
     public void Dispose()
     {
+        foreach (var file in _credentialFiles)
+        {
+            try
+            {
+                File.Delete(file);
+            }
+            catch (IOException)
+            {
+                // A leftover temp file does not affect the result.
+            }
+        }
+
         foreach (var suffix in new[] { string.Empty, "-wal", "-shm", "-journal" })
         {
             try

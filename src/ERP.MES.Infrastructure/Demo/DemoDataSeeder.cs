@@ -4,6 +4,13 @@ using ERP.MES.Domain.Requests;
 
 namespace ERP.MES.Infrastructure.Demo;
 
+/// <summary>
+/// The real demonstration accounts that the sample records are attributed to: the Central user who "created" the customers, requests and items, and the QC user who "approved" the
+/// stages. They are provisioned (through the production bootstrap and account use cases) before the seed runs, so every created-by / approved-by value in the sample data refers to an
+/// existing user row.
+/// </summary>
+public sealed record DemoSeedActors(long CreatedByUserId, long QcApproverUserId);
+
 /// <summary>What one seeding run did. Running the seed again on a seeded database adds nothing.</summary>
 public sealed record DemoSeedSummary(int CustomersAdded, int CustomersExisting, int RequestsAdded, int RequestsExisting);
 
@@ -20,14 +27,8 @@ public sealed record DemoSeedSummary(int CustomersAdded, int CustomersExisting, 
 /// The seed does not know whether the database it is given is a demonstration database. Marking and the safe-reset guard belong to the
 /// provider project (the demo-database class in ERP.MES.Infrastructure.Sqlite), and only that entry point should be used on a real file.
 /// </summary>
-public sealed class DemoDataSeeder(ICustomerRepository customers, IRequestRepository requests, IJalaliDateService dates)
+public sealed class DemoDataSeeder(ICustomerRepository customers, IRequestRepository requests, IJalaliDateService dates, DemoSeedActors actors)
 {
-    /// <summary>
-    /// Value stored as "created by" on every seeded record. No user exists yet (accounts arrive with the sign-in work and are not created here),
-    /// so this is a label for demonstration records only and does not identify a person or an account.
-    /// </summary>
-    public const long ActorUserId = 1;
-
     public const string DemoNameSuffix = "(نمونه آزمایشی)";
 
     public const string RequestNoPrefix = "DEMO-";
@@ -110,7 +111,7 @@ public sealed class DemoDataSeeder(ICustomerRepository customers, IRequestReposi
                 continue;
             }
 
-            var added = await customers.AddAsync(new Customer(0, CustomerNames[i], ActorUserId, AtUtc(1405, 6, 20, 0)), cancellationToken);
+            var added = await customers.AddAsync(new Customer(0, CustomerNames[i], actors.CreatedByUserId, AtUtc(1405, 6, 20, 0)), cancellationToken);
             customerIds[i] = added.Value.Id;
             customersAdded++;
         }
@@ -141,11 +142,11 @@ public sealed class DemoDataSeeder(ICustomerRepository customers, IRequestReposi
     {
         var createdAt = AtUtc(definition.Year, definition.Month, definition.Day, 0);
         var request = Request.Create(
-            0, customer, RequestNo.Create(definition.RequestNo), requestDate, definition.Title, definition.Description, ActorUserId, createdAt, dates);
+            0, customer, RequestNo.Create(definition.RequestNo), requestDate, definition.Title, definition.Description, actors.CreatedByUserId, createdAt, dates);
 
         foreach (var itemDefinition in definition.Items)
         {
-            var item = request.AddItem(0, itemDefinition.ItemNo, itemDefinition.PartName, itemDefinition.Type, itemDefinition.Quantity, ActorUserId, createdAt, itemDefinition.Priority);
+            var item = request.AddItem(0, itemDefinition.ItemNo, itemDefinition.PartName, itemDefinition.Type, itemDefinition.Quantity, actors.CreatedByUserId, createdAt, itemDefinition.Priority);
             foreach (var stage in itemDefinition.Stages)
             {
                 item.DefineInitialStage(stage.Title, stage.MinutesPerPiece);
@@ -159,7 +160,7 @@ public sealed class DemoDataSeeder(ICustomerRepository customers, IRequestReposi
     }
 
     // Moves an item through the Domain's own demonstration transitions, so the QC gate is enforced while the sample data is built.
-    private static void Advance(RequestItem item, ItemDef definition, DateTime activityStartUtc)
+    private void Advance(RequestItem item, ItemDef definition, DateTime activityStartUtc)
     {
         var stageCount = definition.Stages.Length;
         if (definition.Approved < 0 || definition.Approved > stageCount)
@@ -182,7 +183,7 @@ public sealed class DemoDataSeeder(ICustomerRepository customers, IRequestReposi
         {
             item.StartStage(stageNo);
             item.SubmitStageForQc(stageNo);
-            item.ApproveStageWholeQuantity(stageNo, ActorUserId, activityStartUtc.AddHours(stageNo * 4));
+            item.ApproveStageWholeQuantity(stageNo, actors.QcApproverUserId, activityStartUtc.AddHours(stageNo * 4));
         }
 
         if (allApproved)

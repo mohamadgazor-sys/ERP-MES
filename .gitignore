@@ -67,3 +67,7 @@ imports/
 # OS / editor
 .DS_Store
 Thumbs.db
+
+# Demonstration credentials (one-time passwords of the fictional accounts) must never be committed; the files are written outside the repository.
+*.credentials.txt
+erpmes-demo-credentials*

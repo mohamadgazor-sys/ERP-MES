@@ -19,6 +19,7 @@ public sealed class ShellViewModel : ObservableObject
     private readonly Func<DateTime> _utcNow;
     private NavigationItem _selectedItem;
     private string _statusText;
+    private string _userText = string.Empty;
 
     public ShellViewModel(IJalaliDateService dates, Func<DateTime> utcNow)
     {
@@ -82,6 +83,13 @@ public sealed class ShellViewModel : ObservableObject
     {
         get => _statusText;
         private set => SetProperty(ref _statusText, value);
+    }
+
+    /// <summary>The signed-in user, as shown in the status bar. Empty until someone has signed in.</summary>
+    public string UserText
+    {
+        get => _userText;
+        init => _userText = value;
     }
 
     public void RefreshClock() => StatusText = BuildStatusText();
