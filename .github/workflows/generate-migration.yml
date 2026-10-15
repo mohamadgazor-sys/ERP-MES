@@ -1,0 +1,38 @@
+name: Generate initial migration (temporary)
+
+# TEMPORARY, never merged to main. Runs the pinned dotnet-ef tool on Windows and prints the generated files as base64 so they can
+# be committed to the repository and reviewed. The committed files, not this workflow, are the deliverable.
+on:
+  push:
+    branches: [claude/migration-initial]
+
+permissions:
+  contents: read
+
+jobs:
+  generate:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: global.json
+      - run: dotnet restore ERP-MES.sln
+      - run: dotnet tool restore
+      - name: Generate the initial migration
+        run: dotnet ef migrations add InitialCreate --project src/ERP.MES.Infrastructure.Sqlite --startup-project src/ERP.MES.Provisioning --context ErpMesDbContext --output-dir Migrations
+      - name: Print the generated files (base64)
+        shell: pwsh
+        run: |
+          $files = Get-ChildItem -Path src/ERP.MES.Infrastructure.Sqlite/Migrations -File -Recurse
+          foreach ($f in $files) {
+            $bytes = [IO.File]::ReadAllBytes($f.FullName)
+            $sha = [BitConverter]::ToString([Security.Cryptography.SHA256]::Create().ComputeHash($bytes)).Replace('-','').ToLower()
+            Write-Host "@@FILE $($f.Name) $($bytes.Length) $sha"
+            $b64 = [Convert]::ToBase64String($bytes)
+            for ($i = 0; $i -lt $b64.Length; $i += 3000) { Write-Host ("@@B64 " + $b64.Substring($i, [Math]::Min(3000, $b64.Length - $i))) }
+            Write-Host "@@END $($f.Name)"
+          }
