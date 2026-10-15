@@ -32,6 +32,9 @@ public sealed class RequestConfiguration : IEntityTypeConfiguration<Request>
         builder.Property(r => r.UpdatedAtUtc).IsRequired();
         builder.Ignore(r => r.Key);
 
+        // Application-managed row version and concurrency token (Decision Log #23); see ErpMesDbContext.ApplyRowVersions.
+        builder.Property<long>(ErpMesDbContext.RowVersionPropertyName).IsConcurrencyToken().IsRequired();
+
         // Transactional rows are not physically deleted (Domain and Database Specification 25.3): every foreign key restricts deletion.
         builder.HasOne<Customer>().WithMany().HasForeignKey(r => r.CustomerId).IsRequired().OnDelete(DeleteBehavior.Restrict);
         builder.HasMany(r => r.Items).WithOne().HasForeignKey("RequestId").IsRequired().OnDelete(DeleteBehavior.Restrict);

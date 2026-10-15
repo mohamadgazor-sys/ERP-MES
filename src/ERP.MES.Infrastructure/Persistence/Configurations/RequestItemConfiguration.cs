@@ -27,6 +27,9 @@ public sealed class RequestItemConfiguration : IEntityTypeConfiguration<RequestI
         builder.Property(i => i.UpdatedAtUtc).IsRequired();
         builder.Ignore(i => i.IsRouteCompleted);
 
+        // Application-managed row version and concurrency token (Decision Log #23); see ErpMesDbContext.ApplyRowVersions.
+        builder.Property<long>(ErpMesDbContext.RowVersionPropertyName).IsConcurrencyToken().IsRequired();
+
         builder.HasMany(i => i.Stages).WithOne().HasForeignKey("RequestItemId").IsRequired().OnDelete(DeleteBehavior.Restrict);
         builder.Navigation(i => i.Stages).HasField("_stages").UsePropertyAccessMode(PropertyAccessMode.Field);
 

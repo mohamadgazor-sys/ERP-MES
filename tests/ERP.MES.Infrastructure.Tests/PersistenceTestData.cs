@@ -1,5 +1,6 @@
 using ERP.MES.Domain.Calendar;
 using ERP.MES.Domain.Requests;
+using ERP.MES.Infrastructure.Persistence;
 
 namespace ERP.MES.Infrastructure.Tests;
 
@@ -14,6 +15,20 @@ internal static class PersistenceTestData
 
     public static Request NewRequest(Customer customer, string requestNo = "P-565", DateOnly? date = null, string? title = null) =>
         Request.Create(0, customer, RequestNo.Create(requestNo), date ?? new DateOnly(2026, 10, 12), title, null, 1, Now, Dates);
+
+    /// <summary>Saves a customer and a <see cref="NewMixedRequest"/> in the database and returns the request id.</summary>
+    public static async Task<long> SeedMixedRequestAsync(TempDatabase db)
+    {
+        await using var context = db.NewContext();
+        var customer = NewCustomer();
+        context.Customers.Add(customer);
+        await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        var request = NewMixedRequest(customer);
+        context.Requests.Add(request);
+        await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        return request.Id;
+    }
 
     /// <summary>A request with a MAKE item (three stages, the first already QC approved) and a REPAIR item (one stage).</summary>
     public static Request NewMixedRequest(Customer customer)

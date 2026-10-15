@@ -24,6 +24,12 @@ public sealed class ItemStageConfiguration : IEntityTypeConfiguration<ItemStage>
         builder.Ignore(s => s.PlannedTotalMinutes);
 
         builder.Property<long>("RequestItemId");
-        builder.HasIndex("RequestItemId", nameof(ItemStage.StageNo)).IsUnique();
+
+        // Application-managed row version and concurrency token (Decision Log #23); see ErpMesDbContext.ApplyRowVersions.
+        builder.Property<long>(ErpMesDbContext.RowVersionPropertyName).IsConcurrencyToken().IsRequired();
+
+        // (RequestItemId, StageNo) is unique (Domain and Database Specification 26) and is the target of the QC approval's composite
+        // foreign key, so it is declared as an alternate key (a UNIQUE constraint); the surrogate primary key is unchanged.
+        builder.HasAlternateKey("RequestItemId", nameof(ItemStage.StageNo));
     }
 }

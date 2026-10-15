@@ -11,18 +11,7 @@ public class PersistenceRoundTripTests
 {
     private static readonly DateTime Now = PersistenceTestData.Now;
 
-    private static async Task<long> SaveMixedRequestAsync(TempDatabase db)
-    {
-        await using var context = db.NewContext();
-        var customer = PersistenceTestData.NewCustomer();
-        context.Customers.Add(customer);
-        await context.SaveChangesAsync(TestContext.Current.CancellationToken);
-
-        var request = PersistenceTestData.NewMixedRequest(customer);
-        context.Requests.Add(request);
-        await context.SaveChangesAsync(TestContext.Current.CancellationToken);
-        return request.Id;
-    }
+    private static Task<long> SaveMixedRequestAsync(TempDatabase db) => PersistenceTestData.SeedMixedRequestAsync(db);
 
     private static Task<Request> LoadAsync(ErpMesDbContext context, long requestId) =>
         context.Requests

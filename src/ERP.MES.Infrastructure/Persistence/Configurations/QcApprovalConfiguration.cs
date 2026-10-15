@@ -18,6 +18,15 @@ public sealed class QcApprovalConfiguration : IEntityTypeConfiguration<QcApprova
 
         builder.Property<long>("RequestItemId");
         builder.Property(a => a.StageNo).IsRequired();
+
+        // The approval must refer to a stage that exists and belongs to the same item: (RequestItemId, StageNo) -> ItemStages.
+        // Several approvals for one stage remain possible (append-only history), so this is not unique.
+        builder.HasOne<ItemStage>()
+            .WithMany()
+            .HasForeignKey("RequestItemId", nameof(QcApproval.StageNo))
+            .HasPrincipalKey("RequestItemId", nameof(ItemStage.StageNo))
+            .IsRequired()
+            .OnDelete(DeleteBehavior.Restrict);
         builder.Property(a => a.ApprovedQuantity).IsRequired();
         builder.Property(a => a.ApprovedByUserId).IsRequired();
         builder.Property(a => a.ApprovedAtUtc).IsRequired();

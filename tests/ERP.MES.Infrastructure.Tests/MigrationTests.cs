@@ -95,7 +95,9 @@ public class MigrationTests
             new[]
             {
                 "ItemStages:RequestItemId->RequestItems:RESTRICT",
+                "QcApprovals:RequestItemId->ItemStages:RESTRICT",
                 "QcApprovals:RequestItemId->RequestItems:RESTRICT",
+                "QcApprovals:StageNo->ItemStages:RESTRICT",
                 "RequestItems:RequestId->Requests:RESTRICT",
                 "Requests:CustomerId->Customers:RESTRICT",
             },
@@ -193,10 +195,34 @@ public class MigrationTests
             "SELECT RequestItemId, StageNo, StageTitle, PlannedMinutesPerPiece, PlannedQuantity, Status FROM ItemStages"));
     }
 
+    [Fact]
+    public async Task A_qc_approval_must_refer_to_an_existing_stage_of_the_same_item()
+    {
+        using var db = new TempDatabase();
+        await db.MigrateAsync();
+        await PersistenceTestData.SeedMixedRequestAsync(db);
+
+        var makeItemId = db.Query("SELECT Id FROM RequestItems WHERE ItemNo = '1.10'").Single();
+        var repairItemId = db.Query("SELECT Id FROM RequestItems WHERE ItemNo = '2.10'").Single();
+        string Insert(string itemId, int stageNo) =>
+            "INSERT INTO QcApprovals (RequestItemId, StageNo, ApprovedQuantity, ApprovedByUserId, ApprovedAtUtc) " +
+            $"VALUES ({itemId}, {stageNo}, '1', 9, '2026-10-15 09:30:15')";
+
+        // The item exists but has no stage 99, and stage 3 exists only on the other item: both are rejected by SQLite.
+        var nonexistent = Assert.Throws<SqliteException>(() => db.Execute(Insert(makeItemId, 99)));
+        Assert.Equal(19, nonexistent.SqliteErrorCode);
+        Assert.Throws<SqliteException>(() => db.Execute(Insert(repairItemId, 3)));
+        Assert.Single(db.Query("SELECT Id FROM QcApprovals"));
+
+        // The append-only history still works: another approval row for an existing stage is accepted.
+        Assert.Equal(1, db.Execute(Insert(makeItemId, 1)));
+        Assert.Equal(2, db.Query("SELECT Id FROM QcApprovals").Count);
+    }
+
     private static string[] UniqueIndexColumns(TempDatabase db, string table)
     {
         var result = new List<string>();
-        foreach (var index in db.Query($"SELECT name FROM pragma_index_list('{table}') WHERE \"unique\" = 1 AND origin = 'c'"))
+        foreach (var index in db.Query($"SELECT name FROM pragma_index_list('{table}') WHERE \"unique\" = 1 AND origin IN ('c', 'u')"))
         {
             var columns = db.Query($"SELECT name FROM pragma_index_info('{index}') ORDER BY seqno");
             result.Add(string.Join(",", columns));
