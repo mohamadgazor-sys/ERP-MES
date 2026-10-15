@@ -127,6 +127,9 @@ jobs:
           if ($LASTEXITCODE -ne 1) { throw "demo-reset on an unrecognized file must be refused with exit code 1 but exited with $LASTEXITCODE" }
           if ((Get-Content -LiteralPath $other -Raw).Trim() -ne 'this is not a demonstration database') { throw 'The refused file was changed.' }
 
+          # Every check above passed; the last native command (the refused reset) intentionally exited with 1, which must not become the step's result.
+          exit 0
+
       - name: Upload test results
         if: ${{ always() }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
