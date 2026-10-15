@@ -769,3 +769,34 @@ Append one dated entry after every substantial session. Do not replace prior ent
 
 ### Recommended exact next action
 - Review the DbContext, migration, snapshot and tests; then the persistence services, seed data and reset follow in separate PRs.
+
+---
+
+### Date / session
+- Date: 2026-10-15
+- Claude Code session ID (if useful): session_01JCnmzjXbpMcTjwPcE9vsqQ (PR #16 review: row version and QC-stage integrity)
+
+### Goal
+- Add the application-managed row version (Decision Log #23) and a database-enforced reference from a QC approval to a stage of the same item, then regenerate the initial migration with the pinned tool.
+
+### Completed
+- `Version` shadow property (long, concurrency token) on customer, request, request item and item stage, set by `ErpMesDbContext.SaveChanges*`; QC approvals stay unversioned; `GetRowVersion`.
+- `ItemStages` alternate key (RequestItemId, StageNo) and the composite foreign key from `QcApprovals`, preserving the surrogate keys.
+- The initial migration and snapshot were regenerated on the Windows runner by `dotnet-ef` 10.0.13 and committed unchanged (size and SHA-256 verified); the temporary workflow was removed.
+- Tests: four stale-update tests (customer, item, stage, request), version start/increment/no-op, no version on approvals, Domain free of the version, invalid and cross-item stage references rejected, append-only approvals accepted.
+- `docs/PERSISTENCE_MAPPING.md` updated (section 2.1, M4 resolved, M8-M9).
+
+### Files changed
+- See the pull request. No package was added; the licence inventory is unchanged.
+
+### Decisions newly approved
+- None. #23 was already approved.
+
+### Unresolved questions / risks
+- M1-M3 and M5-M9 in `docs/PERSISTENCE_MAPPING.md`, notably per-row (not per-aggregate) concurrency.
+
+### Commands/tests actually run and results
+- Not built locally (no SDK). Windows CI results are reported in the pull request.
+
+### Recommended exact next action
+- Review the corrected DbContext, migration, snapshot and tests.
