@@ -41,7 +41,7 @@ A database is a demonstration database only if the SQLite file header field `app
 
 Fixed (no clock, no randomness, no machine setting), so a reset followed by a seed always yields the same rows and ids. Dates are given as Jalali dates and converted with `JalaliDateService`; timestamps are 05:00 UTC on the Jalali day.
 
-Demonstration-only data is recognisable: customer names end with `(نمونه آزمایشی)`, request numbers start with `DEMO-` and request titles start with `[نمونه] `. **Created-by and approved-by values are real users since the sign-in PR**: the seed takes two user ids, the `demo.central` account (creator of customers, requests and items) and the `demo.qc` account (approver of the stages), which `DemoAccountProvisioner` creates before the seed runs. The earlier placeholder `1` is gone (`docs/AUTHENTICATION.md` section 9).
+Demonstration-only data is recognisable: customer names end with `(نمونه آزمایشی)`, request numbers start with `DEMO-` and request titles start with `[نمونه] `. **Created-by and approved-by values are real users since the sign-in PR**: the seed takes two user ids, the `demo.central` account (creator of customers, requests and items) and the `demo.qc` account (approver of the stages), which `DemoAccountProvisioner` creates before the seed runs. The earlier placeholder `1` is gone, and creators and approvers are real foreign keys (`docs/AUTHENTICATION.md` section 9). A demonstration database from before sign-in existed cannot be upgraded (its records name a user that never existed): `demo-init` refuses it and `demo-reset <file> --yes` replaces it.
 
 | Request (customer) | Jalali date | Status | Items (type, priority) and route state |
 |---|---|---|---|

@@ -921,3 +921,33 @@ Append one dated entry after every substantial session. Do not replace prior ent
 
 ### Recommended exact next action
 - Review the design notes and the assumptions list; run checklist section B on the CI-built artifact; then decide M10 and the Domain position, before customer/request UI.
+
+---
+
+### Date / session
+- Date: 2026-10-15
+- Claude Code session ID (if useful): session_01UwqjPjBXLd2apjZb2urjds (owner review of PR #19: architecture, A1-A8, M10)
+
+### Goal
+- Correct the architecture (identity concepts in the Domain), record the owner's decisions on assumptions A1-A8, and make the creator/approver columns real foreign keys with a safe upgrade path - keeping every approved security property intact.
+
+### Completed
+- Domain: `User`, `Role`, `Department`, `DepartmentCodes`/`RoleCodes` and `Username` (canonical key) in `ERP.MES.Domain/Identity`; no credential, cryptography, persistence or UI type there. Application: `UserCredential` and the use cases; Infrastructure: hashing, storage, mappings. Domain tests for the identity types; boundary tests rewritten to protect the real boundaries (the Domain may hold identity, never credentials or technology).
+- A1 case-insensitive user names through one canonical key (Domain-computed, unique column); A4 one generic sign-in failure with equal password work for every case, locked attempts never extend a lock, distinctions only in the audit log; A6 codes (not labels) drive authorization, tested by renaming labels; A8 start-up uses `MigrateExistingAsync` (never creates); A2, A3, A5, A7 recorded.
+- M10: foreign keys on `CreatedByUserId` / `ApprovedByUserId`; nullable only for the audit user and the pending recovery target. Older databases with placeholder actors are refused before the migration, unchanged; a demonstration database is replaced by `demo-reset`. The migration and snapshot were regenerated from the initial state with the pinned `dotnet-ef` 10.0.13.
+- Decision Log #61-#71; Architecture and Domain/Database specification notes; `docs/AUTHENTICATION.md` rewritten (including exact local instructions for checklist section B); persistence mapping, demo, checklist and demo-plan updates.
+
+### Files changed
+- See the pull request. No package was added. CI artifacts are still published only from pushes to `main`.
+
+### Decisions newly approved
+- #61-#70 recorded from the owner's review; #71 records what stays open (session handling, M8).
+
+### Unresolved questions / risks
+- Session handling/sign-out and the user-management screens; M8; the hash benchmark on the lowest-spec PC; Unicode normalization of user names; database-level audit protection and the production migration policy; the sign-in window has not been checked visually (pending the owner's run of checklist section B).
+
+### Commands/tests actually run and results
+- Not built locally (no SDK). Windows CI results are reported in the pull request.
+
+### Recommended exact next action
+- Run checklist section B with the instructions in `docs/AUTHENTICATION.md`; then review the architecture, migration, security behaviour and tests.

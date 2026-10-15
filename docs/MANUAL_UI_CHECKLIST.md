@@ -27,14 +27,14 @@ Sign-in, customers, request entry, queue, QC approval, persistence across restar
 
 ## B. Sign-in (sign-in pull request)
 
-Prepare a fictional database with the Provisioning tool (`dotnet run --project src/ERP.MES.Provisioning -- demo-init <file>`); its one-time passwords are in the credential file it names (not on screen). Point the application at it with the environment variable `ERPMES_DATABASE`. The application never creates a database.
+Exact local build and run instructions (Windows, SDK 10.0.401): `docs/AUTHENTICATION.md`, last section. In short: build, run `demo-init <file> --credentials <new file outside the repository>` (the one-time passwords are in that file, not on screen), set the environment variable `ERPMES_DATABASE` to the database and start the application. The application never creates a database. **This section has not been run yet; it waits for your check.**
 
 | # | Check | Expected | Result |
 |---|---|---|---|
 | B1 | Start without a database file | A message names the missing file and asks to run Provisioning; the application exits | |
 | B2 | Start with the prepared database | A small sign-in window (RTL, Tahoma, yellow demonstration banner) with user name and password; no first-run fields | |
 | B3 | Wrong password / unknown user | The same Persian message for both; the window stays | |
-| B4 | Five wrong passwords for one user | A message that the account is temporarily locked; the correct password is refused for about five minutes | |
+| B4 | Five wrong passwords for one user | The same generic message every time (the window never says the account is locked); afterwards even the correct password is refused with that same message for about five minutes (Decision Log #65) | |
 | B5 | Sign in as `demo.qc` with its one-time password | The "change password" step appears (current, new, repeat); a wrong current password, a short new password or a different repeat is refused with a message | |
 | B6 | Choose your own password (12+ characters) | The main window opens; the status bar shows the user name; signing in again needs the new password | |
 | B7 | A database made with `migrate` only (no administrator) | The window says the system has not been set up; no input fields | |
