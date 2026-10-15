@@ -42,7 +42,7 @@ internal sealed class TempDatabase : IDisposable
     {
         await MigrateAsync();
         Execute(
-            "INSERT INTO Users (Id, Username, UsernameKey, DisplayName, DepartmentId, RoleId, IsActive, CreatedAtUtc, UpdatedAtUtc, Version) VALUES "
+            "INSERT OR IGNORE INTO Users (Id, Username, UsernameKey, DisplayName, DepartmentId, RoleId, IsActive, CreatedAtUtc, UpdatedAtUtc, Version) VALUES "
             + $"({TestCreatorId}, 'test.creator', 'TEST.CREATOR', 'Test creator', 1, 3, 1, '2026-10-15 09:30:15', '2026-10-15 09:30:15', 1), "
             + $"({TestApproverId}, 'test.approver', 'TEST.APPROVER', 'Test approver', 7, 3, 1, '2026-10-15 09:30:15', '2026-10-15 09:30:15', 1)");
     }
