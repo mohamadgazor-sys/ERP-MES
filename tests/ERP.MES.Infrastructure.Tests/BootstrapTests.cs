@@ -213,10 +213,18 @@ public partial class BootstrapTests
         var leading = await Complete(fixture, issued.Token, password: " sixchars");
         var middle = await Complete(fixture, issued.Token, password: "six chars");
         var trailing = await Complete(fixture, issued.Token, password: "sixchars ");
+        var nonBreaking = await Complete(fixture, issued.Token, password: "six\u00A0chars");
+        var tab = await Complete(fixture, issued.Token, password: "six\tchars");
+        var lineBreak = await Complete(fixture, issued.Token, password: "sixchars\n");
+        var ideographic = await Complete(fixture, issued.Token, password: "\u3000sixchars");
 
-        Assert.Equal(PasswordPolicyError.ContainsSpace, leading.PasswordError);
-        Assert.Equal(PasswordPolicyError.ContainsSpace, middle.PasswordError);
-        Assert.Equal(PasswordPolicyError.ContainsSpace, trailing.PasswordError);
+        Assert.Equal(PasswordPolicyError.ContainsWhitespace, leading.PasswordError);
+        Assert.Equal(PasswordPolicyError.ContainsWhitespace, middle.PasswordError);
+        Assert.Equal(PasswordPolicyError.ContainsWhitespace, trailing.PasswordError);
+        Assert.Equal(PasswordPolicyError.ContainsWhitespace, nonBreaking.PasswordError);
+        Assert.Equal(PasswordPolicyError.ContainsWhitespace, tab.PasswordError);
+        Assert.Equal(PasswordPolicyError.ContainsWhitespace, lineBreak.PasswordError);
+        Assert.Equal(PasswordPolicyError.ContainsWhitespace, ideographic.PasswordError);
         Assert.Equal(BootstrapStatus.PasswordRejected, tooShort.Status);
         Assert.Equal(PasswordPolicyError.TooShort, tooShort.PasswordError);
         Assert.Equal(PasswordPolicyError.Empty, empty.PasswordError);

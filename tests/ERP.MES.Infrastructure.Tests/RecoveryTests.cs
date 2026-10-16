@@ -142,11 +142,11 @@ public class RecoveryTests
 
         Assert.Equal(RecoveryStatus.PasswordRejected, result.Status);
         Assert.Equal(PasswordPolicyError.TooShort, result.PasswordError);
-        foreach (var withSpace in new[] { " sixsix", "six six", "sixsix " })
+        foreach (var withSpace in new[] { " sixsix", "six six", "sixsix ", "\u00A0sixsix", "six\tsix", "sixsix\n", "six\u3000six" })
         {
             var rejected = await fixture.Services.Recovery.RedeemAsync(issued.Token, withSpace, Token);
             Assert.Equal(RecoveryStatus.PasswordRejected, rejected.Status);
-            Assert.Equal(PasswordPolicyError.ContainsSpace, rejected.PasswordError);
+            Assert.Equal(PasswordPolicyError.ContainsWhitespace, rejected.PasswordError);
         }
 
         Assert.Equal("0", Row(fixture, "SELECT RecoveryFailedAttempts FROM SystemSetup"));

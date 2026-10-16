@@ -95,11 +95,11 @@ public class AccountAdministrationTests
         Assert.Equal(UsernameError.LeadingOrTrailingWhitespace, (await accounts.CreateUserAsync(admin, " bob", "B", DepartmentCodes.Qc, RoleCodes.Staff, StaffPassword, Token)).UsernameError);
         Assert.Equal(AccountStatus.DisplayNameRejected, (await accounts.CreateUserAsync(admin, "bob", " ", DepartmentCodes.Qc, RoleCodes.Staff, StaffPassword, Token)).Status);
         Assert.Equal(AccountStatus.PasswordRejected, (await accounts.CreateUserAsync(admin, "bob", "B", DepartmentCodes.Qc, RoleCodes.Staff, "short", Token)).Status);
-        foreach (var withSpace in new[] { " sixsix", "six six", "sixsix " })
+        foreach (var withSpace in new[] { " sixsix", "six six", "sixsix ", "\u00A0sixsix", "six\tsix", "sixsix\n", "six\u3000six" })
         {
             var rejected = await accounts.CreateUserAsync(admin, "bob", "B", DepartmentCodes.Qc, RoleCodes.Staff, withSpace, Token);
             Assert.Equal(AccountStatus.PasswordRejected, rejected.Status);
-            Assert.Equal(PasswordPolicyError.ContainsSpace, rejected.PasswordError);
+            Assert.Equal(PasswordPolicyError.ContainsWhitespace, rejected.PasswordError);
         }
 
         Assert.Equal(AccountStatus.InvalidDepartmentOrRole, (await accounts.CreateUserAsync(admin, "bob", "B", "NOPE", RoleCodes.Staff, StaffPassword, Token)).Status);
@@ -173,11 +173,11 @@ public class AccountAdministrationTests
 
         Assert.Equal(SignInStatus.Failed, (await fixture.Services.Authentication.SignInAsync("staff.one", StaffPassword, Token)).Status);
         Assert.Equal(AccountStatus.PasswordRejected, (await fixture.Services.Accounts.ResetPasswordAsync(admin, staffId, "short", Token)).Status);
-        foreach (var withSpace in new[] { " sixsix", "six six", "sixsix " })
+        foreach (var withSpace in new[] { " sixsix", "six six", "sixsix ", "\u00A0sixsix", "six\tsix", "sixsix\n", "six\u3000six" })
         {
             var rejected = await fixture.Services.Accounts.ResetPasswordAsync(admin, staffId, withSpace, Token);
             Assert.Equal(AccountStatus.PasswordRejected, rejected.Status);
-            Assert.Equal(PasswordPolicyError.ContainsSpace, rejected.PasswordError);
+            Assert.Equal(PasswordPolicyError.ContainsWhitespace, rejected.PasswordError);
         }
 
         Assert.Equal(AccountStatus.Succeeded, (await fixture.Services.Accounts.ResetPasswordAsync(admin, staffId, OtherPassword, Token)).Status);
@@ -209,11 +209,11 @@ public class AccountAdministrationTests
         var accounts = fixture.Services.Accounts;
 
         Assert.Equal(AccountStatus.PasswordRejected, (await accounts.ChangeOwnPasswordAsync(user, StaffPassword, "short", Token)).Status);
-        foreach (var withSpace in new[] { " sixsix", "six six", "sixsix " })
+        foreach (var withSpace in new[] { " sixsix", "six six", "sixsix ", "\u00A0sixsix", "six\tsix", "sixsix\n", "six\u3000six" })
         {
             var rejected = await accounts.ChangeOwnPasswordAsync(user, StaffPassword, withSpace, Token);
             Assert.Equal(AccountStatus.PasswordRejected, rejected.Status);
-            Assert.Equal(PasswordPolicyError.ContainsSpace, rejected.PasswordError);
+            Assert.Equal(PasswordPolicyError.ContainsWhitespace, rejected.PasswordError);
         }
 
         Assert.Equal(AccountStatus.PasswordUnchanged, (await accounts.ChangeOwnPasswordAsync(user, StaffPassword, StaffPassword, Token)).Status);

@@ -16,7 +16,7 @@ public sealed record AuthenticationPolicy
     public const int Pbkdf2IterationsFloor = 310_000;
     public const int MaximumTokenLifetimeHours = 24 * 30;
 
-    /// <summary>Counted in characters; no composition rules. Spaces are forbidden by <see cref="PasswordRules"/> whatever this value is (Decision Log #72).</summary>
+    /// <summary>Counted in characters; no composition rules. White space is forbidden by <see cref="PasswordRules"/> whatever this value is (Decision Log #72).</summary>
     public int MinimumPasswordLength { get; init; } = 6;
 
     public int MaxFailedAttempts { get; init; } = 5;

@@ -113,17 +113,56 @@ public class AuthenticationPolicyTests : IDisposable
     public void A_space_anywhere_is_rejected_and_the_password_is_not_trimmed_to_fit(string password)
     {
         // Rejected - never repaired: the trimmed text of the first five would be a valid six-character password.
-        Assert.Equal(PasswordPolicyError.ContainsSpace, PasswordRules.Validate(password, AuthenticationPolicy.Default));
+        Assert.Equal(PasswordPolicyError.ContainsWhitespace, PasswordRules.Validate(password, AuthenticationPolicy.Default));
+    }
+
+    [Theory]
+    [InlineData("\u0020")]   // space
+    [InlineData("\u00A0")]   // no-break space
+    [InlineData("\u3000")]   // ideographic space
+    [InlineData("\u2003")]   // em space
+    [InlineData("\u202F")]   // narrow no-break space
+    [InlineData("\t")]       // tab
+    [InlineData("\n")]       // line feed
+    [InlineData("\r")]       // carriage return
+    [InlineData("\u000B")]   // vertical tab
+    [InlineData("\u000C")]   // form feed
+    [InlineData("\u0085")]   // next line
+    [InlineData("\u2028")]   // line separator
+    [InlineData("\u2029")]   // paragraph separator
+    public void Every_kind_of_white_space_is_rejected_at_the_start_in_the_middle_and_at_the_end(string whiteSpace)
+    {
+        var policy = AuthenticationPolicy.Default;
+
+        Assert.Equal(PasswordPolicyError.ContainsWhitespace, PasswordRules.Validate(whiteSpace + "sixsix", policy));
+        Assert.Equal(PasswordPolicyError.ContainsWhitespace, PasswordRules.Validate("six" + whiteSpace + "six", policy));
+        Assert.Equal(PasswordPolicyError.ContainsWhitespace, PasswordRules.Validate("sixsix" + whiteSpace, policy));
+        Assert.Equal(PasswordPolicyError.ContainsWhitespace, PasswordRules.Validate(whiteSpace + "a-much-longer-password" + whiteSpace, policy));
     }
 
     [Fact]
-    public void Characters_other_than_the_space_are_not_treated_as_spaces_or_normalised()
+    public void The_zero_width_non_joiner_and_non_white_space_characters_are_allowed_and_nothing_is_normalised()
     {
-        // Only the space character is forbidden (Decision Log #72). The zero-width non-joiner used in Persian writing is an ordinary character,
-        // and no text is normalised: decomposed and precomposed forms are both accepted exactly as typed.
-        Assert.Equal(PasswordPolicyError.None, PasswordRules.Validate("می\u200Cخواهم", AuthenticationPolicy.Default));
-        Assert.Equal(PasswordPolicyError.None, PasswordRules.Validate("e\u0301e\u0301e\u0301e\u0301e\u0301e\u0301", AuthenticationPolicy.Default));
-        Assert.Equal(PasswordPolicyError.None, PasswordRules.Validate("\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9", AuthenticationPolicy.Default));
+        var policy = AuthenticationPolicy.Default;
+
+        // U+200C (Persian) is not white space. So are the other invisible format characters this decision does not name.
+        Assert.Equal(PasswordPolicyError.None, PasswordRules.Validate("می\u200Cخواهم", policy));
+        Assert.Equal(PasswordPolicyError.None, PasswordRules.Validate("ab\u200Ccd\u200Ce", policy));
+        Assert.Equal(PasswordPolicyError.None, PasswordRules.Validate("\u200Cabcde", policy));
+        Assert.False(char.IsWhiteSpace('\u200C'));
+
+        // Nothing is normalised: the decomposed and the precomposed forms are both accepted exactly as typed (and counted as typed).
+        Assert.Equal(PasswordPolicyError.None, PasswordRules.Validate("e\u0301e\u0301e\u0301e\u0301e\u0301e\u0301", policy));
+        Assert.Equal(PasswordPolicyError.None, PasswordRules.Validate("\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9", policy));
+    }
+
+    [Fact]
+    public void White_space_is_reported_before_length_and_a_short_text_with_white_space_is_not_repaired_by_trimming()
+    {
+        // " abcde" would be a valid six characters only if the white space were kept, and "abcde" only if it were trimmed: it is rejected for the white space.
+        Assert.Equal(PasswordPolicyError.ContainsWhitespace, PasswordRules.Validate(" abcde", AuthenticationPolicy.Default));
+        Assert.Equal(PasswordPolicyError.ContainsWhitespace, PasswordRules.Validate("abcdef\n", AuthenticationPolicy.Default));
+        Assert.Equal(PasswordPolicyError.ContainsWhitespace, PasswordRules.Validate("\t\t\t\t\t\t", AuthenticationPolicy.Default));
     }
 
     [Fact]
@@ -135,13 +174,13 @@ public class AuthenticationPolicyTests : IDisposable
     }
 
     [Fact]
-    public void A_configured_longer_minimum_still_applies_but_the_space_rule_cannot_be_configured_away()
+    public void A_configured_longer_minimum_still_applies_but_the_white_space_rule_cannot_be_configured_away()
     {
         var policy = new AuthenticationPolicy { MinimumPasswordLength = 10 };
 
         Assert.Equal(PasswordPolicyError.TooShort, PasswordRules.Validate("abcdefghi", policy));
         Assert.Equal(PasswordPolicyError.None, PasswordRules.Validate("abcdefghij", policy));
-        Assert.Equal(PasswordPolicyError.ContainsSpace, PasswordRules.Validate("abcdefghi j", policy));
+        Assert.Equal(PasswordPolicyError.ContainsWhitespace, PasswordRules.Validate("abcdefghi j", policy));
     }
 
     [Fact]
