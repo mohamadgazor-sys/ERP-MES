@@ -327,7 +327,8 @@ public sealed class RequestsViewModel(
     }
 
     // Quantities are exact decimals; they are shown as stored (no rounding), in the digit shape of the screen.
-    private string QuantityDisplay(decimal value) => Digits(value.ToString(System.Globalization.CultureInfo.InvariantCulture));
+    // Display only: the stored text can carry trailing zeros ("10.0"); they are not shown. The value itself is never changed or rounded.
+    private string QuantityDisplay(decimal value) => Digits(value.ToString("0.############################", System.Globalization.CultureInfo.InvariantCulture));
 
     private string YearText(int year) => Digits(year.ToString(System.Globalization.CultureInfo.InvariantCulture));
 

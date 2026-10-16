@@ -201,6 +201,30 @@ public class RequestsViewModelTests
         Assert.Equal(requestId, restarted.Requests.Single().RequestId);
     }
 
+    [Theory]
+    [InlineData("10", "۱۰")]
+    [InlineData("10.0", "۱۰")]
+    [InlineData("2.50", "۲.۵")]
+    [InlineData("2.0001", "۲.۰۰۰۱")]
+    [InlineData("0.5", "۰.۵")]
+    public async Task Quantities_are_shown_without_insignificant_zeros_and_without_rounding(string typed, string shown)
+    {
+        using var h = await WorkflowHarness.CreateAsync(Token);
+        var customerId = await CustomerAsync(h);
+        await h.RequestsFor(h.Central).CreateAsync(customerId, "P-1", DateText, null, null, Token);
+        var drawing = h.RequestsFor(h.Drawing);
+        await drawing.LoadAsync(Token);
+        await drawing.SelectAsync(drawing.Requests.Single(), Token);
+
+        Assert.True(await drawing.AddItemAsync("1.10", "حلقه", WorkType.Make, typed, Priority.Normal, Token));
+
+        Assert.Equal(shown, drawing.Items.Single().QuantityText);
+        var restarted = h.RequestsFor(h.Qc, h.Restarted());
+        await restarted.LoadAsync(Token);
+        await restarted.SelectAsync(restarted.Requests.Single(), Token);
+        Assert.Equal(shown, restarted.Items.Single().QuantityText);
+    }
+
     [Fact]
     public async Task Drawing_cannot_add_a_repair_item_and_central_cannot_add_items_at_all()
     {
