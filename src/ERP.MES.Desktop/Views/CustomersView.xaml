@@ -1,0 +1,56 @@
+<UserControl x:Class="ERP.MES.Desktop.Views.CustomersView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Loaded="OnLoaded">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
+    </UserControl.Resources>
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0" Text="{Binding Message}" TextWrapping="Wrap" Foreground="#9B1C1C" FontWeight="SemiBold" Margin="0,0,0,8" />
+
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,8">
+            <CheckBox Content="نمایش مشتریان غیرفعال" IsChecked="{Binding ShowInactive, Mode=TwoWay}" VerticalAlignment="Center" Click="OnShowInactiveClick" />
+            <Button Content="بارگذاری مجدد" Margin="16,0,0,0" Padding="10,3" Click="OnReloadClick" />
+            <TextBlock Text="در حال بارگذاری…" Margin="16,0,0,0" VerticalAlignment="Center" Foreground="{StaticResource MutedTextBrush}"
+                       Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibility}}" />
+        </StackPanel>
+
+        <Grid Grid.Row="2">
+            <DataGrid ItemsSource="{Binding Customers}" SelectedItem="{Binding Selected, Mode=TwoWay}"
+                      AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single" HeadersVisibility="Column"
+                      CanUserAddRows="False" CanUserDeleteRows="False" Background="{StaticResource CardBrush}">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="نام مشتری" Binding="{Binding Name}" Width="*" />
+                    <DataGridTextColumn Header="وضعیت" Binding="{Binding StatusText}" Width="100" />
+                    <DataGridTextColumn Header="آخرین تغییر" Binding="{Binding UpdatedText}" Width="160" />
+                </DataGrid.Columns>
+            </DataGrid>
+            <TextBlock Text="هنوز مشتری‌ای ثبت نشده است." HorizontalAlignment="Center" VerticalAlignment="Center"
+                       Foreground="{StaticResource MutedTextBrush}" FontSize="16"
+                       Visibility="{Binding IsEmpty, Converter={StaticResource BoolToVisibility}}" />
+        </Grid>
+
+        <Border Grid.Row="3" Margin="0,12,0,0" Padding="12" Background="{StaticResource CardBrush}"
+                BorderBrush="{StaticResource BorderBrushSoft}" BorderThickness="1">
+            <StackPanel>
+                <TextBlock Text="نام مشتری (برای افزودن یا تغییر نام مشتری انتخاب‌شده)" Margin="0,0,0,4" />
+                <TextBox x:Name="NameBox" Margin="0,0,0,8" />
+                <StackPanel Orientation="Horizontal">
+                    <Button Content="افزودن مشتری" Padding="12,5" Click="OnAddClick" IsEnabled="{Binding CanMaintain}" />
+                    <Button Content="تغییر نام انتخاب‌شده" Padding="12,5" Margin="8,0,0,0" Click="OnRenameClick" IsEnabled="{Binding CanMaintain}" />
+                    <Button Content="غیرفعال کردن" Padding="12,5" Margin="8,0,0,0" Click="OnDeactivateClick" IsEnabled="{Binding CanMaintain}" />
+                    <Button Content="فعال کردن" Padding="12,5" Margin="8,0,0,0" Click="OnActivateClick" IsEnabled="{Binding CanMaintain}" />
+                </StackPanel>
+                <TextBlock Text="مشتری هرگز حذف نمی‌شود؛ فقط غیرفعال می‌شود. اگر دسترسی لازم را ندارید، دکمه‌های تغییر غیرفعال‌اند و هر تغییر در لایهٔ برنامه دوباره بررسی می‌شود."
+                           TextWrapping="Wrap" Margin="0,8,0,0" FontSize="12" Foreground="{StaticResource MutedTextBrush}" />
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>

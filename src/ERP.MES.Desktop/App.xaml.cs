@@ -22,6 +22,7 @@ public partial class App : System.Windows.Application
 
     private Views.SignInWindow? _signInWindow;
     private SecurityServices? _services;
+    private Microsoft.EntityFrameworkCore.IDbContextFactory<ERP.MES.Infrastructure.Persistence.ErpMesDbContext>? _contexts;
     private AuthenticationPolicy? _policy;
     private UserSession? _session;
     private MainWindow? _mainWindow;
@@ -53,7 +54,8 @@ public partial class App : System.Windows.Application
             await SqliteDatabase.MigrateExistingAsync(databasePath);
 
             _policy = policy;
-            _services = SecurityServices.Create(SqliteDatabase.CreateContextFactory(databasePath), policy);
+            _contexts = SqliteDatabase.CreateContextFactory(databasePath);
+            _services = SecurityServices.Create(_contexts, policy);
 
             // Windows logoff or shutdown: the session ends without questions and the clean shutdown is audited best-effort (Decision Log #74).
             SessionEnding += (_, _) => _session?.EndForShutdown();
@@ -116,7 +118,14 @@ public partial class App : System.Windows.Application
         _session = session;
         _windowsMonitor = new WindowsSessionMonitor(Dispatcher, reason => OnWindowsSessionEvent(session, reason));
 
-        _mainWindow = new MainWindow(shell, session);
+        // The functional pages of this session. The principal is only a UI snapshot (refreshed at unlock); every Application command checks the user again.
+        var workflow = WorkflowServices.Create(_contexts!, _services.Authorization, dates);
+        Principal CurrentUser() => session.Principal;
+        var pages = new WorkflowPages(
+            new CustomersViewModel(workflow.Customers, workflow.Requests, dates, CurrentUser),
+            new RequestsViewModel(workflow.Requests, workflow.Customers, dates, DigitStyle.Persian, () => DateTime.UtcNow, CurrentUser));
+
+        _mainWindow = new MainWindow(shell, session, pages);
         _mainWindow.Show();
         _signInWindow?.Close();
         _signInWindow = null;

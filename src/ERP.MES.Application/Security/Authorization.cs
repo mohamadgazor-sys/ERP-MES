@@ -29,6 +29,12 @@ public enum Permission
     DefineMakeItems,
     DefineRepairItemsAndEditAnyItem,
     ImportItemsFromExcel,
+
+    /// <summary>Create, rename, deactivate or reactivate a customer. Not in the original matrix; added by the owner (Decision Log #75): Central and Planning.</summary>
+    MaintainCustomers,
+
+    /// <summary>Read the customer list and the request list and details. Not in the original matrix; added by the owner (Decision Log #75): every active signed-in user, read-only.</summary>
+    ViewCustomersAndRequests,
 }
 
 /// <summary>
@@ -61,6 +67,10 @@ public static class AuthorizationRules
         [Permission.DefineMakeItems] = new([DepartmentCodes.Drawing], null),
         [Permission.DefineRepairItemsAndEditAnyItem] = new([DepartmentCodes.Planning], null),
         [Permission.ImportItemsFromExcel] = new([DepartmentCodes.Planning, DepartmentCodes.Drawing], null),
+        [Permission.MaintainCustomers] = new([DepartmentCodes.Central, DepartmentCodes.Planning], null),
+
+        // Read-only access for every active user (an empty department list means any department, no role is required).
+        [Permission.ViewCustomersAndRequests] = new([], null),
     };
 
     /// <summary>All permissions that have a rule, for tests and documentation.</summary>

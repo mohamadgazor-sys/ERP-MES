@@ -181,6 +181,53 @@ public class RequestTests
     }
 
     [Fact]
+    public void A_created_request_can_be_submitted_to_management_with_or_without_items()
+    {
+        var empty = RequestFixtures.NewRequest("A-1");
+        var withItem = RequestFixtures.NewRequest("A-2", requestId: 101);
+        withItem.AddMake("1.10");
+        var changedAt = RequestFixtures.Now.AddMinutes(5);
+
+        empty.SubmitToManagement(changedAt);
+        withItem.SubmitToManagement(changedAt);
+
+        Assert.Equal(RequestStatus.SentToManagement, empty.Status);
+        Assert.Equal(RequestStatus.SentToManagement, withItem.Status);
+        Assert.Equal(changedAt, empty.UpdatedAtUtc);
+        Assert.Single(withItem.Items);
+    }
+
+    [Theory]
+    [InlineData(RequestStatus.SentToManagement)]
+    [InlineData(RequestStatus.MgmtApprovedAtPlanning)]
+    [InlineData(RequestStatus.MgmtRejectedAtPlanning)]
+    [InlineData(RequestStatus.UnderDrawingReview)]
+    [InlineData(RequestStatus.DrawingReturnedToPlanning)]
+    [InlineData(RequestStatus.Cancelled)]
+    [InlineData(RequestStatus.Closed)]
+    public void Only_a_created_request_can_be_submitted_and_nothing_changes_otherwise(RequestStatus status)
+    {
+        var request = RequestFixtures.NewRequest();
+        request.SetStatus(status);
+        var updated = request.UpdatedAtUtc;
+
+        Assert.Throws<InvalidOperationException>(() => request.SubmitToManagement(RequestFixtures.Now.AddHours(1)));
+
+        Assert.Equal(status, request.Status);
+        Assert.Equal(updated, request.UpdatedAtUtc);
+    }
+
+    [Fact]
+    public void Submitting_needs_a_utc_time_and_changes_nothing_when_it_is_not()
+    {
+        var request = RequestFixtures.NewRequest();
+
+        Assert.Throws<ArgumentException>(() => request.SubmitToManagement(DateTime.SpecifyKind(RequestFixtures.Now, DateTimeKind.Unspecified)));
+
+        Assert.Equal(RequestStatus.Created, request.Status);
+    }
+
+    [Fact]
     public void The_demonstration_status_placement_is_internal_and_the_request_has_no_public_status_setter()
     {
         const System.Reflection.BindingFlags instance = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic;

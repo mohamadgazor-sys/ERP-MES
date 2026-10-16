@@ -7,8 +7,9 @@ namespace ERP.MES.Domain.Requests;
 /// holds the customer-supplied <see cref="RequestNo"/>, the Jalali request year derived from the request date at
 /// creation, the status and its items, which may mix MAKE and REPAIR work.
 ///
-/// Status transitions are intentionally absent: the transition table is an unapproved draft. Contract, workflow
-/// history, documents and persistence are outside this type.
+/// The only status change offered is the one named by the approved permission "create a request and submit it to
+/// Management" (Decision Log #34, #75): <see cref="SubmitToManagement"/>. The rest of the transition table is an unapproved
+/// draft and is not modelled. Contract, workflow history, documents and persistence are outside this type.
 /// </summary>
 public sealed class Request
 {
@@ -85,6 +86,23 @@ public sealed class Request
         var utc = Customer.RequireUtc(createdAtUtc, nameof(createdAtUtc));
         var year = dates.GetJalaliYear(requestDate);
         return new Request(id, customer.Id, requestNo, requestDate, year, title, description, createdByUserId, utc);
+    }
+
+    /// <summary>
+    /// The one request transition of this milestone (Decision Log #75): <c>CREATED</c> to <c>SENT_TO_MANAGEMENT</c>, the "submit to Management" of the approved Central
+    /// action. It is allowed from <c>CREATED</c> only, with or without items (items are defined afterwards by Drawing and Planning). It does not approve the draft
+    /// transition table: approval, rejection, reopening and cancellation are not modelled. The caller (the Application use case) has already checked the permission.
+    /// </summary>
+    public void SubmitToManagement(DateTime changedAtUtc)
+    {
+        var utc = Customer.RequireUtc(changedAtUtc, nameof(changedAtUtc));
+        if (Status != RequestStatus.Created)
+        {
+            throw new InvalidOperationException("Only a " + RequestStatus.Created.Code() + " request can be submitted to Management; this one is " + Status.Code() + ".");
+        }
+
+        Status = RequestStatus.SentToManagement;
+        UpdatedAtUtc = utc;
     }
 
     /// <summary>

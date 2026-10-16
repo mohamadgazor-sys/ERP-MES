@@ -1072,3 +1072,35 @@ Append one dated entry after every substantial session. Do not replace prior ent
 
 ### Recommended exact next action
 - Review and merge the pull request, run checklist section C, then start the role-sensitive customer/request UI (its commands must call `CurrentAuthorization` first).
+
+---
+
+### Date / session
+- Date: 2026-10-16
+- Claude Code session ID (if useful): session_01UwqjPjBXLd2apjZb2urjds (first customer and request workflows, Decision Log #75)
+
+### Goal
+- Replace the customer and request placeholders with functional screens on the approved persistence contracts, without inventing permissions or workflow.
+
+### Completed
+- Gaps found in the approved matrix were put to the owner and decided (#75): customer maintenance (Central, Planning), read access (every active user), the single transition CREATED to SENT_TO_MANAGEMENT, and the mixed-item workflow (Central header, Drawing MAKE, Planning REPAIR/any).
+- Domain: `Request.SubmitToManagement` (CREATED only). Application: permissions `MaintainCustomers`, `ViewCustomersAndRequests`; `CurrentAuthorization.EvaluateAsync`; `CustomerService`, `RequestService` (create, list, view, submit, add item, capabilities), `Outcome`/`OperationStatus`/`ValidationIssue` codes, `QuantityText`. Infrastructure: `WorkflowServices`.
+- Desktop: `CustomersView`/`CustomersViewModel`, `RequestsView`/`RequestsViewModel`, Persian `Messages`, page wiring per session. The screens decide nothing: buttons follow `Capabilities` from the Application and every command is checked again.
+- Tests: Domain (submit), Application use cases against real SQLite (authorization boundaries per department, stale principals, validation, business key, near-duplicate warning, concurrency, persistence through new services, database failure), view models (empty/validation/denial/conflict/failure states).
+- Docs: Decision Log #75, `docs/AUTHENTICATION.md` section 7, Domain/Database Specification 15.4 note, demo plan, checklist section D.
+
+### Files changed
+- See the pull request. No package, no schema change, no migration.
+
+### Decisions newly approved
+- #75.
+
+### Unresolved questions / risks
+- M8 (item/stage expected versions) still open: items are only added; nothing updates an item or stage. Editing request details (Planning) and items needs Domain methods first. Quantity input shapes, blank-optional handling and the Persian status wording are UI conveniences to confirm. An inactive customer is not refused for a new request because no rule says so.
+- The WPF layer is compiled but not exercised by unit tests: checklist section D is pending the owner's run.
+
+### Commands/tests actually run and results
+- Not built locally (no SDK). Windows CI results are reported in the pull request.
+
+### Recommended exact next action
+- Review and merge the pull request, run checklist section D, then decide the next approved portion (request-detail editing needs a Domain method and the transition table).

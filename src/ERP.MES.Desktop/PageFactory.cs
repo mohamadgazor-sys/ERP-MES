@@ -7,12 +7,14 @@ namespace ERP.MES.Desktop;
 /// <summary>Chooses the view for the selected navigation item. Pages that are not built yet get a clearly labelled placeholder.</summary>
 internal static class PageFactory
 {
-    public static FrameworkElement Create(ShellViewModel shell)
+    public static FrameworkElement Create(ShellViewModel shell, WorkflowPages pages)
     {
         var item = shell.SelectedItem;
         return item.Key switch
         {
             ShellViewModel.DashboardKey => new DashboardView { DataContext = shell },
+            ShellViewModel.CustomersKey => new CustomersView(pages.Customers),
+            ShellViewModel.RequestsKey => new RequestsView(pages.Requests),
             ShellViewModel.LimitationsKey => new LimitationsView(),
             _ => new PlaceholderView(item.Title, shell.NotImplementedText),
         };

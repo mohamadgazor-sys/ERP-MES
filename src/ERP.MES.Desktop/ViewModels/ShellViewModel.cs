@@ -29,8 +29,8 @@ public sealed class ShellViewModel : ObservableObject
         Items =
         [
             new NavigationItem(DashboardKey, "داشبورد", true),
-            new NavigationItem(CustomersKey, "مشتریان", false),
-            new NavigationItem(RequestsKey, "درخواست‌ها", false),
+            new NavigationItem(CustomersKey, "مشتریان", true),
+            new NavigationItem(RequestsKey, "درخواست‌ها", true),
             new NavigationItem(QueueKey, "صف تولید", false),
             new NavigationItem(QualityKey, "کنترل کیفیت", false),
             new NavigationItem(LimitationsKey, "محدودیت‌های نسخه نمایشی", true),

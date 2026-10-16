@@ -15,13 +15,15 @@ public partial class MainWindow : Window
 
     private readonly ShellViewModel _shell;
     private readonly UserSession _session;
+    private readonly WorkflowPages _pages;
     private readonly DispatcherTimer _clock;
     private readonly DispatcherTimer _idleCheck;
     private bool _closeApproved;
     private bool _closePending;
 
-    public MainWindow(ShellViewModel shell, UserSession session)
+    public MainWindow(ShellViewModel shell, UserSession session, WorkflowPages pages)
     {
+        _pages = pages ?? throw new ArgumentNullException(nameof(pages));
         _shell = shell ?? throw new ArgumentNullException(nameof(shell));
         _session = session ?? throw new ArgumentNullException(nameof(session));
         InitializeComponent();
@@ -163,6 +165,6 @@ public partial class MainWindow : Window
 
     private void ShowCurrentPage()
     {
-        PageHost.Content = PageFactory.Create(_shell);
+        PageHost.Content = PageFactory.Create(_shell, _pages);
     }
 }
