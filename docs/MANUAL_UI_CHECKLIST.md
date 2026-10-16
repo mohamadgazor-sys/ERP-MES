@@ -42,3 +42,21 @@ Exact local build and run instructions (Windows, SDK 10.0.401): `docs/AUTHENTICA
 | B9 | `issue-recovery-token` for an administrator, then start | "Use recovery token" appears on the sign-in window only now; a new password different from the old one is required | |
 | B10 | Passwords on screen | No password is ever shown in clear; the fields are cleared after each action | |
 
+## C. Session lifecycle (session pull request, Decision Log #74) - pending the owner's run
+
+Set `"InactivityLockMinutes": 1` in `appsettings.Local.json` next to the executable to try the inactivity lock quickly (the range is 1-120; 0 is refused at start-up with a message).
+
+| # | Step | Expected | OK |
+|---|---|---|---|
+| C1 | Sign in, click "قفل (Ctrl+L)" in the status bar; then try `Ctrl+L` | The window content disappears behind the lock screen showing only your name and "قفل شد: درخواست کاربر" | |
+| C2 | Type a wrong password on the lock screen | "گذرواژه نادرست است."; the lock screen stays; the field is cleared | |
+| C3 | Type your own password | The window content returns where you left it | |
+| C4 | Do nothing for the configured time (1 minute) | The lock screen appears by itself ("مدتی از برنامه استفاده نشد") | |
+| C5 | Press Win+L, then unlock Windows | The application is locked when you return, and stays locked until you type the password | |
+| C6 | Five wrong passwords on the lock screen | The sign-in window appears ("نشست پایان یافت. دوباره وارد شوید."); the correct password is refused for about five minutes (same as B4) | |
+| C7 | Lock, then click "ورود با کاربر دیگر" | The sign-in window appears (no questions: there are no forms with unsaved changes in this build) | |
+| C8 | Click "خروج از حساب" | The sign-in window appears; the previous user's name is gone | |
+| C9 | Close the main window | The application ends; starting it again shows the sign-in window | |
+| C10 | Sign in as a non-administrator, lock; in a second copy of the application on the same database sign in as the administrator and deactivate that user (user administration has no screen yet: use the same sequence of steps as the tests, or skip this step); back in the first copy type the password | The session ends and the sign-in window appears | |
+
+The unsaved-changes questions (Save / Discard / Cancel, the switch-user confirmation) cannot be seen in this build because no form can hold unsaved changes yet; they are covered by tests with fake forms.

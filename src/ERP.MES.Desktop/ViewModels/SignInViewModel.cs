@@ -267,6 +267,15 @@ public sealed class SignInViewModel(
         });
     }
 
+    /// <summary>A neutral notice on the sign-in screen, for example after a session ended. It never says why more than a normal failed sign-in would.</summary>
+    public void ShowNotice(string message)
+    {
+        if (Mode == SignInMode.SignIn)
+        {
+            Message = message;
+        }
+    }
+
     /// <summary>Shown when something unexpected failed (for example the database was unreachable). No technical detail or secret is shown.</summary>
     public void ReportUnexpectedFailure() =>
         Message = "خطای غیرمنتظره رخ داد. دوباره تلاش کنید؛ اگر ادامه یافت با مدیر سیستم تماس بگیرید.";

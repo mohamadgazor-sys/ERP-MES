@@ -1061,11 +1061,15 @@ The concrete password-hashing algorithm/library is an implementation/security de
 
 > **[Approved — Decision Log #27, #41, #65]** PBKDF2-HMAC-SHA256 from the .NET base library (initially 600,000 iterations, a fresh salt per password, parameters stored with each hash). Sign-in gives one generic failure for unknown, wrong, inactive and locked accounts. Implementation notes: `docs/AUTHENTICATION.md`.
 
+> **[Approved - Decision Log #74]** Desktop session lifecycle: in-memory session only (no token, refresh token or persisted login); inactivity lock after 15 minutes by default (1-120, configurable, never disabled) measured on a monotonic clock; lock on Windows lock or user-session switch; "Lock now" and Ctrl+L; unlock with the same user's password through the existing verification and lockout, reloading the user from the database; explicit sign-out; save/discard/cancel only where supported; audit of sign-out, lock (with reason), unlock, user switch and a best-effort clean shutdown. Application commands authorize against the current persisted user (`CurrentAuthorization`), never against the desktop principal. Details: `docs/AUTHENTICATION.md` section 8a.
+
 ## 17.2 Authorization enforcement
 
 Permission checks must exist at the Application use-case boundary.
 
 UI visibility is supplemental UX behavior, not the security boundary.
+
+> **[Approved - Decision Log #74]** Every role-sensitive Application command or write revalidates the user's active status, department and role against persisted data at the time of the operation (`CurrentAuthorization.RequireAsync`). The desktop principal is a UI snapshot and never authorizes a business operation by itself.
 
 Example:
 

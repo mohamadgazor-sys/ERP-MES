@@ -10,6 +10,8 @@ public sealed record SecurityServices(
     BootstrapService Bootstrap,
     RecoveryService Recovery,
     AccountService Accounts,
+    SessionService Sessions,
+    CurrentAuthorization Authorization,
     AuthenticationPolicy Policy)
 {
     public static SecurityServices Create(
@@ -32,6 +34,8 @@ public sealed record SecurityServices(
             new BootstrapService(runner, effectiveHasher, effectiveClock, effectiveContext, effectivePolicy),
             new RecoveryService(runner, effectiveHasher, effectiveClock, effectiveContext, effectivePolicy),
             new AccountService(runner, effectiveHasher, effectiveClock, effectiveContext, effectivePolicy),
+            new SessionService(runner, effectiveHasher, effectiveClock, effectiveContext, effectivePolicy),
+            new CurrentAuthorization(runner),
             effectivePolicy);
     }
 }

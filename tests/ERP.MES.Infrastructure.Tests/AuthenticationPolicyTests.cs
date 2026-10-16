@@ -26,6 +26,8 @@ public class AuthenticationPolicyTests : IDisposable
         var policy = AuthenticationPolicy.Default;
 
         Assert.Equal(6, policy.MinimumPasswordLength);
+        Assert.Equal(15, policy.InactivityLockMinutes);
+        Assert.Equal(TimeSpan.FromMinutes(15), policy.InactivityLockTimeout);
         Assert.Equal(5, policy.MaxFailedAttempts);
         Assert.Equal(5, policy.LockoutMinutes);
         Assert.Equal(600_000, policy.Pbkdf2Iterations);
@@ -37,6 +39,9 @@ public class AuthenticationPolicyTests : IDisposable
 
     [Theory]
     [InlineData("MinimumPasswordLength", 5)]
+    [InlineData("InactivityLockMinutes", 0)]
+    [InlineData("InactivityLockMinutes", -5)]
+    [InlineData("InactivityLockMinutes", 121)]
     [InlineData("MaxFailedAttempts", 2)]
     [InlineData("MaxFailedAttempts", 11)]
     [InlineData("LockoutMinutes", 0)]
@@ -50,6 +55,7 @@ public class AuthenticationPolicyTests : IDisposable
         var policy = setting switch
         {
             "MinimumPasswordLength" => new AuthenticationPolicy { MinimumPasswordLength = value },
+            "InactivityLockMinutes" => new AuthenticationPolicy { InactivityLockMinutes = value },
             "MaxFailedAttempts" => new AuthenticationPolicy { MaxFailedAttempts = value },
             "LockoutMinutes" => new AuthenticationPolicy { LockoutMinutes = value },
             "Pbkdf2Iterations" => new AuthenticationPolicy { Pbkdf2Iterations = value },
@@ -71,6 +77,7 @@ public class AuthenticationPolicyTests : IDisposable
         var policy = new AuthenticationPolicy
         {
             MinimumPasswordLength = 6,
+            InactivityLockMinutes = 1,
             MaxFailedAttempts = 3,
             LockoutMinutes = 1,
             Pbkdf2Iterations = 310_000,
@@ -206,6 +213,44 @@ public class AuthenticationPolicyTests : IDisposable
         Assert.Equal(15, policy.LockoutMinutes);
         Assert.Equal(14, policy.MinimumPasswordLength);
         Assert.Equal(600_000, policy.Pbkdf2Iterations);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    [InlineData(121)]
+    [InlineData(100000)]
+    public void An_inactivity_timeout_outside_1_to_120_minutes_stops_the_load_and_zero_cannot_disable_it(int minutes)
+    {
+        var path = Write("timeout.json", "{ \"Authentication\": { \"InactivityLockMinutes\": " + minutes + " } }");
+
+        var exception = Assert.Throws<InvalidAuthenticationPolicyException>(() => AuthenticationPolicyFile.Load(path));
+
+        var problem = Assert.Single(exception.Problems);
+        Assert.Contains("InactivityLockMinutes must be between 1 and 120", problem, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData(1)]
+    [InlineData(15)]
+    [InlineData(120)]
+    public void An_inactivity_timeout_from_1_to_120_minutes_is_accepted_and_a_local_file_may_change_it(int minutes)
+    {
+        var shared = Write("appsettings.json", """{ "Authentication": { "InactivityLockMinutes": 30 } }""");
+        var local = Write("appsettings.Local.json", "{ \"Authentication\": { \"InactivityLockMinutes\": " + minutes + " } }");
+
+        var policy = AuthenticationPolicyFile.Load(shared, local);
+
+        Assert.Equal(minutes, policy.InactivityLockMinutes);
+        Assert.Equal(TimeSpan.FromMinutes(minutes), policy.InactivityLockTimeout);
+    }
+
+    [Fact]
+    public void A_misspelt_inactivity_setting_is_an_error_not_a_silent_default()
+    {
+        var path = Write("misspelt.json", """{ "Authentication": { "InactivityLockMinute": 5 } }""");
+
+        Assert.ThrowsAny<Exception>(() => AuthenticationPolicyFile.Load(path));
     }
 
     [Fact]

@@ -2,10 +2,10 @@
 
 | | |
 |---|---|
-| **Status** | Implemented for review in the sign-in pull request (#19), corrected after the owner's review (Decision Log #61-#71). |
+| **Status** | Sign-in (#19) corrected after the owner's review (Decision Log #61-#71); password policy #72; desktop session lifecycle #74 (this document, section 8a). |
 | **Scope** | Password hashing, sign-in with lockout, the one-time administrator bootstrap, administrator recovery, account administration with the last-administrator rule, the default-deny authorization rule set, the audit log, the sign-in window, the restricted Provisioning commands, real fictional demonstration accounts, and real foreign keys for creators and approvers. |
 | **Basis** | Decision Log #26, #27, #30, #34, #39-#42, #47, #48 and the owner decisions #61-#71; `docs/MILESTONE_1_PLAN.md` sections 5-7; Domain and Database Specification 15; Architecture Specification 3.3 and 17; `docs/FOUR_DAY_DEMO_PLAN.md` T5 and T6. |
-| **Not decided here** | The production database provider/version, the full permission matrix beyond the approved rows, session policy, the customer/request/queue/QC screens, the Jalali date-input decisions (Q1-Q6). |
+| **Not decided here** | The production database provider/version, the full permission matrix beyond the approved rows, the production-only parts of the session policy (section 11), the customer/request/queue/QC screens. |
 
 The approved design is implemented as written. Nothing was weakened because the demonstration database is resettable; the demonstration-specific parts (`Infrastructure/Demo`, `DemoDatabase`) use the production use cases.
 
@@ -35,7 +35,7 @@ A user is therefore two records: the Domain `User` (who a person is in the organ
 ## 3. Sign-in, lockout and one-time passwords (Decision Log #40, #62, #64, #65)
 
 - **Password policy (#72).** Minimum 6 characters (counted in characters, not bytes). **No Unicode white-space character is allowed anywhere in the password**, including the start and end: space, no-break space (U+00A0), ideographic space (U+3000), tab, line breaks and every other character that .NET `char.IsWhiteSpace` accepts. Such a password is rejected - never trimmed or normalised. Every other character is allowed and no mix of character kinds is required; the Persian zero-width non-joiner (U+200C) is not white space and stays allowed. One policy (`PasswordRules`) is applied wherever a user chooses a new password: initial password of a new account, own password change, administrator reset, bootstrap and recovery. Signing in verifies the typed text exactly and does not apply the policy, so an existing password is never refused by it. Generated demonstration passwords are 20 random characters from an alphabet without white space.
-- Defaults: minimum password length 6 (see above), 5 failed attempts, 5-minute lockout; all configurable, none below its floor (length >= 6, attempts 3-10, lockout >= 1 minute, iterations >= 310,000).
+- Defaults: minimum password length 6 (see above), 5 failed attempts, 5-minute lockout, inactivity lock 15 minutes (section 8a); all configurable, none outside its range (length >= 6, attempts 3-10, lockout >= 1 minute, iterations >= 310,000, inactivity lock 1-120 minutes).
 - **User names (#62).** Stored as typed, matched and made unique ignoring case through one canonical key (upper case, invariant culture) computed by the Domain `Username` and stored in a unique `UsernameKey` column, so the application and the database apply the same rule (no database collation decides). Leading or trailing white space is rejected, never trimmed; control characters, an empty name and more than 64 characters are rejected. A text that is not a valid name can belong to no user, so signing in with it simply fails. No Unicode normalization is applied (for example Arabic versus Persian letter forms): not decided.
 - **One generic failure (#65).** Unknown user, wrong password, inactive account and locked account give the caller exactly the same answer (`Failed`, no principal) and the window shows one message. The audit log keeps the distinctions internally (`LoginFailed` with the reason, `AccountLocked`). **Every one of those cases performs exactly one password verification** (a dummy hash for an unknown name, the stored hash otherwise), so response time does not reveal which case it was; a test counts the verifications. An attempt on a locked account never touches the credential, so **it cannot extend the lockout**.
 - The failed-attempt counter and the lockout end are columns of the credential row, so they hold across every application instance sharing the database. Concurrent failures are all counted (row version; a lost race is retried).
@@ -88,6 +88,29 @@ Everything else is denied, including for the Admin role (it administers accounts
 
 **Append-only is enforced in the application implementation** (the persistence layer rejects an update or delete of an entry) - approved for the SQLite demonstration. **Database-level protection (permissions or equivalent) is an explicit production requirement**, to be designed with the production database; SQLite also reports no database login, so that column stays empty.
 
+## 8a. Desktop session lifecycle (Decision Log #74)
+
+The session lives **in memory in the desktop application**. There is no session token, refresh token, remember-me or stored login, and no session table: closing the application ends it, and the next start always shows the sign-in window.
+
+| Topic | Behaviour |
+|---|---|
+| **Inactivity lock** | After `Authentication:InactivityLockMinutes` (default **15**, allowed **1-120**; 0 or any other value stops start-up, so it cannot be turned off) without keyboard, mouse, touch or stylus input anywhere in the application. Measured with a **monotonic clock** (`IMonotonicClock`, `Stopwatch`), so changing the Windows date or time can neither bypass nor trigger it; a one-second timer compares the idle time with the limit; the boundary is exact (idle time >= limit locks). |
+| **Manual lock** | The status-bar button "قفل (Ctrl+L)" and `Ctrl+L`; the same `UserSession.LockAsync` as the inactivity lock. |
+| **Windows events** | `SystemEvents.SessionSwitch`: *session lock* locks (reason `WindowsLock`); *console disconnect* and *remote disconnect* lock (reason `UserSessionSwitch`). Unlock, connect and logon events do nothing: **resuming Windows never unlocks the application**. |
+| **Lock screen** | An opaque overlay replaces the window content (which is hidden and disabled). It shows only the signed-in user's display name, the lock reason and the unlock controls. Unsaved drafts stay in memory; nothing is written to disk for the lock. A running operation finishes; the lock only hides the UI. |
+| **Unlock** | The **same user's password**, through `SessionService.UnlockAsync`: exactly one password verification in every outcome, the same failed-attempt counter and lockout as sign-in (a lock is never extended), a generic failure message, hash upgrade after a correct password. The user (status, department, role, must-change flag) is **reloaded from the database** and replaces the cached principal. |
+| **Unlock outcomes** | *Succeeded*: session resumes, idle timer restarts. *Failed* (wrong or empty password): stays locked, generic message. *PasswordChangeRequired* (correct password but a new one must be chosen): stays locked and shows the change-password fields (`AccountService.ChangeOwnPasswordAsync`, the password policy of #72) until it succeeds. *SessionEnded*: the account is **deactivated**, **locked out** (possibly by this attempt) or no longer exists - the session ends and the sign-in window appears with a neutral notice. A deactivation found during the mandatory password change also ends the session. |
+| **Current authorization** | `CurrentAuthorization.CheckAsync` / `RequireAsync(principal, permission)` reloads the user and applies the default-deny `AuthorizationRules` to the **current** status, department and role (an inactive user, an unknown user, or one who must still choose a password gets nothing). **Every future role-sensitive Application command or write calls it first**; the desktop `Principal` is a UI snapshot and never authorizes anything by itself. `AccountService` already reloads its acting user in the same way. |
+| **Sign-out** | The status-bar button "خروج از حساب": unsaved changes are settled first, the event is audited, the main window and its view models are dropped and a **new** sign-in window with a new view model is shown. |
+| **Unsaved work** | Forms register with `UnsavedWorkRegistry` (`IUnsavedWork`: `HasUnsavedChanges`, `CanSave`, `SaveAsync`, `Discard`). **Save** is offered only when every form with changes can save; otherwise the choices are Discard and Cancel. Cancel leaves the user in the session; a failed save does too. No form exists yet, so no prompt can appear in this build; the contract and the prompts (`MessageBoxPrompts`) are tested with fakes. |
+| **Switch user** | "ورود با کاربر دیگر" on the lock screen. With unsaved drafts an explicit confirmation (a generic text, no data) is required before they are discarded; declining leaves the session locked. Without drafts there is nothing to discard and nothing is asked. Audited as `SessionUserSwitched`. |
+| **Closing** | Closing the window settles unsaved changes like a sign-out (from a locked session: the discard confirmation when there are drafts), ends the session and writes `ApplicationSessionEnded` **best-effort** (waits at most 3 seconds; a failure is counted, never blocks closing). Windows logoff or shutdown ends the session without questions and audits the same way. |
+| **Audit** | `SessionSignedOut`, `SessionLocked` (reason in the summary: Inactivity, Manual, WindowsLock, UserSessionSwitch), `SessionUnlocked`, `SessionUserSwitched`, `ApplicationSessionEnded`; failed unlocks are `LoginFailed` (and `AccountLocked`) exactly like sign-in. No password, hash or token is ever written. **A crash, forced termination or power loss writes nothing, and nothing is written afterwards to pretend otherwise.** If the database cannot be reached the lock, sign-out or shutdown still happens; the missing entry is counted in `UserSession.AuditFailures`. |
+
+Known limits (demo): a wrong *current* password during the mandatory password change counts as a failed sign-in like everywhere else, but the change form cannot tell that it locked the account out (the answer is deliberately the same); the user can still use "sign in as another user". Sessions are per process: a second workstation does not see this one's lock or sign-out.
+
+Code: Application `SessionService`, `CurrentAuthorization`, `SessionLockReason`, `UnlockResult`; Desktop `Session/UserSession`, `UnsavedWorkRegistry`, `WindowsSessionMonitor`, `MessageBoxPrompts`, `Views/LockOverlay`, `MainWindow` (input hook, idle timer, shortcut, buttons) and `App` (composition, sign-out and shutdown handling).
+
 ## 9. Actor references, the demonstration accounts and the old placeholder (Decision Log #70)
 
 **Creators and approvers are foreign keys.** `Customers`, `Requests` and `RequestItems` (`CreatedByUserId`) and `QcApprovals` (`ApprovedByUserId`) refer to `Users` with deletion restricted; the columns are required. In the authentication schema, `AuditLog.UserId` and `SystemSetup.RecoveryTargetUserId` are foreign keys too, **nullable only because the requirements genuinely allow an unknown actor** (an unknown login name or an operator in an audit entry; no recovery pending). No sentinel user id and no fake account is used anywhere.
@@ -112,15 +135,15 @@ Everything else is denied, including for the Admin role (it administers accounts
 
 | Item | Status |
 |---|---|
-| Sign-out and session handling; **no session-timeout policy is approved or implemented** | Open. Must be settled before role-sensitive operational screens are delivered (#71). |
-| Item/stage expected-version support (M8) | Open. Must be resolved, with stale-update tests, before queue-stage or QC actions (#71). |
+| Central storage of the timeout for multi-PC deployment; server-side session records (forced sign-out, guaranteed end-of-session audit); an absolute maximum session length; per-role timeouts; session-administration screens | Production-only, not started (#74). The demo policy is in section 8a. |
+| Item/stage expected-version support (M8) | **Still open.** Must be resolved, with stale-update tests, before queue-stage or QC actions (#71); not touched by the session work. |
 | Database-level audit protection (permissions or equivalent) | Production requirement (#68). |
 | Production migration policy | Undecided (#69). |
 | Hash benchmark on the lowest-spec supported PC | `benchmark-hash` exists; the PC is not identified. 600,000 stays a starting value (#42). |
 | Unicode normalization of user names | Not decided (#62). |
 | SQL Server permission scripts, central storage of the policy for multi-PC deployment | Production design, not started. |
 | User-management screens; screens that call the authorization rules | Not built. |
-| Customer/request UI, queue and QC actions; the Jalali date-input decisions (Q1-Q6) | Separate work. |
+| Customer/request UI, queue and QC actions | Separate work. The Jalali questions Q1-Q6 are decided in #73. |
 
 ## 12. Verification
 

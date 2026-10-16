@@ -1,6 +1,7 @@
 using System.IO;
 using System.Windows;
 using ERP.MES.Application.Security;
+using ERP.MES.Desktop.Session;
 using ERP.MES.Desktop.ViewModels;
 using ERP.MES.Desktop.Views;
 using ERP.MES.Domain.Calendar;
@@ -20,6 +21,11 @@ public partial class App : System.Windows.Application
     public const string DatabaseVariable = "ERPMES_DATABASE";
 
     private Views.SignInWindow? _signInWindow;
+    private SecurityServices? _services;
+    private AuthenticationPolicy? _policy;
+    private UserSession? _session;
+    private MainWindow? _mainWindow;
+    private WindowsSessionMonitor? _windowsMonitor;
 
     protected override async void OnStartup(StartupEventArgs e)
     {
@@ -46,13 +52,13 @@ public partial class App : System.Windows.Application
             // Normal start-up path for an existing database (Decision Log #69): apply pending migrations, nothing else. Never creates, seeds or resets a database.
             await SqliteDatabase.MigrateExistingAsync(databasePath);
 
-            var services = SecurityServices.Create(SqliteDatabase.CreateContextFactory(databasePath), policy);
-            var viewModel = new SignInViewModel(services.Authentication, services.Bootstrap, services.Recovery, services.Accounts, policy.MinimumPasswordLength);
-            viewModel.SignedIn += OnSignedIn;
+            _policy = policy;
+            _services = SecurityServices.Create(SqliteDatabase.CreateContextFactory(databasePath), policy);
 
-            _signInWindow = new Views.SignInWindow(viewModel);
-            _signInWindow.Show();
-            await viewModel.LoadAsync();
+            // Windows logoff or shutdown: the session ends without questions and the clean shutdown is audited best-effort (Decision Log #74).
+            SessionEnding += (_, _) => _session?.EndForShutdown();
+
+            await ShowSignInAsync(notice: null);
         }
         catch (ActorReferencesInvalidException exception)
         {
@@ -69,16 +75,91 @@ public partial class App : System.Windows.Application
         }
     }
 
+    /// <summary>Shows a new sign-in window with a new view model, so nothing of a previous session is carried over.</summary>
+    private async Task ShowSignInAsync(string? notice)
+    {
+        var viewModel = new SignInViewModel(
+            _services!.Authentication, _services.Bootstrap, _services.Recovery, _services.Accounts, _policy!.MinimumPasswordLength);
+        viewModel.SignedIn += OnSignedIn;
+
+        _signInWindow = new Views.SignInWindow(viewModel);
+        _signInWindow.Show();
+        await viewModel.LoadAsync();
+        if (notice is not null)
+        {
+            viewModel.ShowNotice(notice);
+        }
+    }
+
+    private async void ShowSignIn(string? notice)
+    {
+        try
+        {
+            await ShowSignInAsync(notice);
+        }
+        catch (Exception)
+        {
+            Fail("اجرای برنامه ممکن نبود. پایگاه داده یا تنظیمات را بررسی کنید.");
+        }
+    }
+
     private void OnSignedIn(object? sender, Principal user)
     {
         var siteZone = TimeZoneInfo.FindSystemTimeZoneById(SiteTimeZoneId);
         var dates = new JalaliDateService(DigitStyle.Persian, siteZone);
         var shell = new ShellViewModel(dates, () => DateTime.UtcNow) { UserText = "کاربر: " + user.DisplayName };
 
-        var window = new MainWindow(shell);
-        window.Show();
+        // The session lives in memory only: no token, nothing stored, nothing that survives closing the application (Decision Log #74).
+        var prompts = new MessageBoxPrompts();
+        var session = new UserSession(user, _services!.Sessions, _services.Accounts, new StopwatchClock(), _policy!, new UnsavedWorkRegistry(), prompts, prompts);
+        session.Ended += OnSessionEnded;
+        _session = session;
+        _windowsMonitor = new WindowsSessionMonitor(Dispatcher, reason => OnWindowsSessionEvent(session, reason));
+
+        _mainWindow = new MainWindow(shell, session);
+        _mainWindow.Show();
         _signInWindow?.Close();
         _signInWindow = null;
+    }
+
+    private static async void OnWindowsSessionEvent(UserSession session, Microsoft.Win32.SessionSwitchReason reason)
+    {
+        try
+        {
+            await session.OnWindowsSessionEventAsync(reason);
+        }
+        catch (Exception)
+        {
+            // Locking has already taken effect; only its audit entry can fail, and the session counts that.
+        }
+    }
+
+    private void OnSessionEnded(object? sender, SessionEndReason reason)
+    {
+        _windowsMonitor?.Dispose();
+        _windowsMonitor = null;
+        var window = _mainWindow;
+        _mainWindow = null;
+        _session = null;
+
+        if (reason == SessionEndReason.ApplicationClosed)
+        {
+            window?.CloseWithoutPrompt();
+            Shutdown();
+            return;
+        }
+
+        // The new sign-in window is shown before the old main window closes, so the application never has no window.
+        ShowSignIn(reason == SessionEndReason.AccountUnavailable ? "نشست پایان یافت. دوباره وارد شوید." : null);
+        window?.CloseWithoutPrompt();
+    }
+
+    protected override void OnExit(ExitEventArgs e)
+    {
+        // Safety net for an exit that did not go through a normal close: end the session and audit it best-effort.
+        _session?.EndForShutdown();
+        _windowsMonitor?.Dispose();
+        base.OnExit(e);
     }
 
     private void Fail(string message)
