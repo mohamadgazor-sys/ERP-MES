@@ -60,7 +60,7 @@ public interface IJalaliDateService
     /// <exception cref="ArgumentOutOfRangeException">The result is outside the supported range.</exception>
     string FormatDateTime(DateTime utcTimestamp);
 
-    /// <summary>Parses user text such as "1405/07/19" (Latin or Persian digits).</summary>
+    /// <summary>Parses user text such as "1405/07/19" (Latin, Persian or Arabic-Indic digits; surrounding white space is ignored, Decision Log #73).</summary>
     bool TryParseDate(string? text, out JalaliDate date, out JalaliDateError error);
 
     /// <summary>

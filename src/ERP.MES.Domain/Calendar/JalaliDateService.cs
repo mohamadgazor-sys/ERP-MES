@@ -5,11 +5,13 @@ namespace ERP.MES.Domain.Calendar;
 /// <summary>
 /// Jalali conversion, formatting and parsing built on <see cref="PersianCalendar"/> (Decision Log #45).
 /// The digit shape of produced text and the time zone used for local times are explicit constructor
-/// arguments because neither is decided yet. The instance holds no mutable state and is thread-safe.
+/// arguments; the application chooses Persian digits and Iran Standard Time (Decision Log #73). Input accepts Latin, Persian and Arabic-Indic digits and
+/// ignores surrounding white space. The instance holds no mutable state and is thread-safe.
 /// </summary>
 public sealed class JalaliDateService : IJalaliDateService
 {
     private const char PersianZero = '\u06F0';
+    private const char ArabicIndicZero = '\u0660';
 
     private readonly PersianCalendar _calendar = new();
     private readonly DigitStyle _outputDigits;
@@ -201,13 +203,15 @@ public sealed class JalaliDateService : IJalaliDateService
     {
         date = default;
 
-        if (string.IsNullOrWhiteSpace(text))
+        // Surrounding white space is ignored (Decision Log #73); white space inside the text is still checked by the normalisation below.
+        var trimmed = text?.Trim();
+        if (string.IsNullOrEmpty(trimmed))
         {
             error = JalaliDateError.Empty;
             return false;
         }
 
-        if (!TryNormalise(text, allowTime: false, out var normalised, out error))
+        if (!TryNormalise(trimmed, allowTime: false, out var normalised, out error))
         {
             return false;
         }
@@ -219,13 +223,14 @@ public sealed class JalaliDateService : IJalaliDateService
     {
         utcTimestamp = default;
 
-        if (string.IsNullOrWhiteSpace(text))
+        var trimmed = text?.Trim();
+        if (string.IsNullOrEmpty(trimmed))
         {
             error = JalaliDateError.Empty;
             return false;
         }
 
-        if (!TryNormalise(text, allowTime: true, out var normalised, out error))
+        if (!TryNormalise(trimmed, allowTime: true, out var normalised, out error))
         {
             return false;
         }
@@ -312,8 +317,8 @@ public sealed class JalaliDateService : IJalaliDateService
     }
 
     /// <summary>
-    /// Maps Persian digits to Latin and rejects every character that is not allowed. Arabic-Indic digits
-    /// (U+0660 to U+0669), other separators, letters and surrounding white space are rejected, not converted.
+    /// Maps Persian (U+06F0 to U+06F9) and Arabic-Indic (U+0660 to U+0669) digits to Latin and rejects every character that is not allowed:
+    /// other separators, letters, seconds and white space inside the text. The caller has already removed surrounding white space.
     /// </summary>
     private static bool TryNormalise(string text, bool allowTime, out string normalised, out JalaliDateError error)
     {
@@ -328,6 +333,10 @@ public sealed class JalaliDateService : IJalaliDateService
             else if (c is >= '\u06F0' and <= '\u06F9')
             {
                 buffer[i] = (char)('0' + (c - PersianZero));
+            }
+            else if (c is >= '\u0660' and <= '\u0669')
+            {
+                buffer[i] = (char)('0' + (c - ArabicIndicZero));
             }
             else if (c == '/' || (allowTime && (c == ' ' || c == ':')))
             {

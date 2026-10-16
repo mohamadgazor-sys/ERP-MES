@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | Implemented for review in the M1.2A pull request. Behaviour below is what the code does; items in §7 are open questions for the owner. |
+| **Status** | Implemented (M1.2A). Questions Q1-Q6 were answered by the owner on 2026-10-16 and recorded as Decision Log #73; §7 shows the answers. Behaviour below is what the code does. |
 | **Location** | `src/ERP.MES.Domain/Calendar/` (interface `IJalaliDateService`, class `JalaliDateService`, types `JalaliDate`, `DateRange`, `DigitStyle`, `JalaliDateError`); tests in `tests/ERP.MES.Domain.Tests/Calendar/` |
 | **Basis** | Decision Log #24 (storage conventions), #45 (`PersianCalendar` behind `JalaliDateService`); Master Specification section 0.6 and 27; plan section 3.1 |
 | **Not part of this step** | `Money`/Rial formatting, rounding or storage scale; database mapping; request/item schema; Excel import; workflow; UI controls |
@@ -31,7 +31,7 @@ All Jalali conversion, formatting and parsing happens in this one service. Nothi
 | `TryParseDate(string?)` | Parses `yyyy/M/d` text. |
 | `TryParseDateTime(string?)` | Parses `yyyy/M/d H:mm` as local time and returns the UTC timestamp to store. |
 
-The constructor takes **two required arguments, with no defaults**: the `DigitStyle` of produced text and the display `TimeZoneInfo`. Neither is decided yet (§7), so the caller must choose explicitly.
+The constructor takes **two required arguments, with no defaults**: the `DigitStyle` of produced text and the display `TimeZoneInfo`. The application chooses `DigitStyle.Persian` and the Windows zone `Iran Standard Time` (Decision Log #73); the service itself assumes neither, so tests and tools can pass others.
 
 ## 3. Supported formats
 
@@ -48,15 +48,16 @@ Seconds are not shown; they are dropped, not rounded. Midnight is `00:00`, never
 
 - Date: year exactly 4 digits, month and day 1 or 2 digits, separator `/` only. Examples accepted: `1405/07/19`, `1405/7/9`, `۱۴۰۵/۰۷/۱۹`, and mixed digit shapes in one text (`۱۴۰۵/07/۱۹`).
 - Date-time: a date as above, exactly one space, then hour 1 or 2 digits and minute exactly 2 digits, separator `:`. Example: `1405/07/20 9:05`.
-- Digits: Latin `0-9` and Persian `۰-۹` (U+06F0 to U+06F9) are accepted. **Arabic-Indic digits (U+0660 to U+0669) are rejected.**
-- White space around the text is not trimmed (a UI layer may trim before calling).
+- Digits: Latin `0-9`, Persian `۰-۹` (U+06F0 to U+06F9) and **Arabic-Indic `٠-٩` (U+0660 to U+0669)** are accepted, alone or mixed in one text; all mean the same value (Decision Log #73).
+- **White space before and after the whole text is ignored** (every character for which `char.IsWhiteSpace` is true: space, tab, line breaks, no-break space, ideographic space, ...). White space *inside* the text is still checked: a date accepts none, a date-time accepts exactly one ordinary space between date and time.
+- Still rejected: the separators `-` and `.`, seconds, letters, the zero-width characters U+200B/U+200C (they are not white space and not digits), and any other character.
 
 ## 4. Invalid-input behaviour
 
 Parsing and creation never throw for bad user text. They return `false`, set a `JalaliDateError`, and leave the output at `default`. Checks run in this order and the first failure is reported:
 
-1. `Empty` — `null`, empty or white-space only.
-2. `InvalidCharacter` — any character other than Latin or Persian digits and `/` (for date-times also one space and `:`). Includes `-`, `.`, `\`, letters, `T`, surrounding spaces in a date-only text, line breaks, and Arabic-Indic digits.
+1. `Empty` — `null`, empty or white-space only (checked after surrounding white space is removed).
+2. `InvalidCharacter` — any character other than Latin, Persian or Arabic-Indic digits and `/` (for date-times also one space and `:`). Includes `-`, `.`, `\`, letters, `T`, white space or line breaks *inside* the text, and zero-width characters.
 3. `InvalidFormat` — allowed characters, wrong structure: wrong number of parts, empty part, a year that is not 4 digits, a month or day of more than 2 digits, a time that is not `H:mm`/`HH:mm` (for example `10:5` or `10:30:15`), a missing or doubled space.
 4. `YearOutOfRange` — year 0, or beyond the last supported year (the year that contains Gregorian 9999-12-31, where `DateTime` ends; the tests derive this limit from the calendar and do not hard-code it); also any date in a later month of that last year (the calendar throws if asked about those months, so the service rejects them first; the second CI run found this). A day after the last supported day *within its own month* is reported as `DayOutOfRange`, because `PersianCalendar` itself treats that month as ending at the last supported day (found by the first CI run of the tests, which had assumed otherwise).
 5. `MonthOutOfRange` — month 0 or above 12.
@@ -69,7 +70,7 @@ Programmer errors (typed values that cannot be right) throw: `ArgumentException`
 
 ## 5. Golden data used by the tests
 
-`PersianCalendar` is accepted unless a golden test fails against it (plan section 3.1). The pairs below are widely documented Iranian calendar dates; I wrote them from general knowledge and cross-checked their consistency with an independent arithmetic model of the calendar (all 33 rows agree), but I did **not** obtain them from a published table in this session. **Please review them or supply a source you accept.**
+`PersianCalendar` is accepted unless a golden test fails against it (plan section 3.1). The pairs below are widely documented Iranian calendar dates; They were first written from general knowledge and cross-checked with an arithmetic model of the calendar. On 2026-10-16 all 33 pairs, and the leap years 1370 to 1411 (leap: 1370, 1375, 1379, 1383, 1387, 1391, 1395, 1399, 1403, 1408), were checked again against a second, independent implementation: the jalaali-js 33-year-cycle break-table algorithm (Borkowski/Birashk), re-implemented in Python for the check, with **0 mismatches** (`PersianCalendar` is not involved in that algorithm). The owner accepted these pairs as the source for the tests (Decision Log #73, Q6). They are still not from an official published table.
 
 | Jalali | Gregorian | What it shows |
 |---|---|---|
@@ -102,15 +103,15 @@ Additional property tests: every day from 1900 to 2100 round-trips and advances 
 - No UI date picker, no database mapping, no use by request or item code.
 - No `Result<T>` type (planned separately); the `Try...` members use an error enum.
 
-## 7. Open questions for the owner (documented, not assumed)
+## 7. Questions Q1-Q6 and the owner's answers (Decision Log #73, 2026-10-16)
 
-| # | Question | What the code does meanwhile |
-|---|---|---|
-| Q1 | Which digit shape should appear on screen, Persian or Latin? (Audit U39.) | `DigitStyle` is a required constructor argument; both are tested. |
-| Q2 | Which time zone is "local" for display and entry (for example Iran Standard Time)? | `TimeZoneInfo` is a required constructor argument; tests use fixed and test-only zones. |
-| Q3 | Should input also accept Arabic-Indic digits, other separators (`-`, `.`), surrounding white space, or seconds? | All rejected with a specific error. |
-| Q4 | Is `yyyy/MM/dd` with `/` the wanted display format, and should seconds ever be shown? | `yyyy/MM/dd` and `yyyy/MM/dd HH:mm`. |
-| Q5 | For times that do not exist or occur twice (relevant for dates when Iran used daylight saving, up to 2022), is rejecting acceptable? | Rejected with `NonExistentLocalTime` / `AmbiguousLocalTime`. |
-| Q6 | Are the golden dates in section 5 an accepted source? | Tests use them as written. |
+| # | Question | Answer | Where it lives |
+|---|---|---|---|
+| Q1 | Digit shape on screen | **Persian digits** (۰-۹) | The application creates the service with `DigitStyle.Persian` (`App.xaml.cs`); `DigitStyle.Latin` remains for tools and tests. |
+| Q2 | Which time zone is local | **Iran Standard Time** (Windows id; UTC+03:30, no daylight saving since 2022), fixed - not the PC's own zone | The application passes `TimeZoneInfo.FindSystemTimeZoneById("Iran Standard Time")`. Tests look the zone up by identifier and never read the machine's current zone. |
+| Q3 | Extra input forms | **Accept** Arabic-Indic digits (U+0660 to U+0669) and **ignore surrounding white space**. **Not accepted** (unchanged): separators `-` and `.`, seconds. | `TryParseDate`, `TryParseDateTime` |
+| Q4 | Display format | **Accepted as implemented:** `yyyy/MM/dd`, `yyyy/MM/dd HH:mm`, 24-hour, no seconds (dropped, not rounded) | `FormatDate`, `FormatDateTime` |
+| Q5 | Non-existent / ambiguous local times | **Accepted as implemented:** rejected with a specific error, never moved or guessed. Iran has no daylight saving today, so this only matters for historical timestamps. | `NonExistentLocalTime`, `AmbiguousLocalTime` |
+| Q6 | Golden dates as a source | **Accepted** (see §5 for the independent cross-check) | `JalaliConversionTests`, `JalaliIranTimeZoneTests` |
 
-Answers would be recorded as Decision Log entries; until then none of these is treated as decided.
+Open follow-ups that remain outside this service: exports and Excel digit shape (screen digits only are decided); how the pre-2022 daylight-saving history of `Iran Standard Time` should be treated for old imported timestamps (the OS time-zone database decides; nothing is assumed).
