@@ -972,6 +972,8 @@ Items are editable only until production release; afterwards only Planning may c
 
 > **[Approved - Decision Log #75]** Added by the owner while building the first screens: **maintain customers** (create, rename, deactivate, reactivate; never delete) - Central or Planning; **view customers and requests** (read-only) - every active signed-in user. A mixed MAKE/REPAIR request is built in turn: Central creates and submits it, Drawing adds MAKE items, Planning adds REPAIR items and may add any item; a priority other than Normal at item entry also needs the permission to change the Planning priority. The only request transition implemented is CREATED to SENT_TO_MANAGEMENT (Central).
 
+> **[Implementation assumption - NOT approved]** The read-only Management production queue is visible to the Management department only (permission `ViewProductionQueue`) until the owner confirms who else may view it (`docs/PRODUCTION_QUEUE.md` section 5).
+
 ---
 
 # 16. Unit of Measure Domain

@@ -43,10 +43,8 @@ public class ShellViewModelTests
         Assert.True(shell.Items.Single(i => i.Key == ShellViewModel.LimitationsKey).IsImplemented);
         Assert.True(shell.Items.Single(i => i.Key == ShellViewModel.CustomersKey).IsImplemented);
         Assert.True(shell.Items.Single(i => i.Key == ShellViewModel.RequestsKey).IsImplemented);
-        foreach (var key in new[] { "queue", "qc" })
-        {
-            Assert.False(shell.Items.Single(i => i.Key == key).IsImplemented, key);
-        }
+        Assert.True(shell.Items.Single(i => i.Key == ShellViewModel.QueueKey).IsImplemented);
+        Assert.False(shell.Items.Single(i => i.Key == "qc").IsImplemented);
     }
 
     [Fact]

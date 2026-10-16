@@ -35,6 +35,13 @@ public enum Permission
 
     /// <summary>Read the customer list and the request list and details. Not in the original matrix; added by the owner (Decision Log #75): every active signed-in user, read-only.</summary>
     ViewCustomersAndRequests,
+
+    /// <summary>
+    /// Read the Management production queue (live production overview). IMPLEMENTATION ASSUMPTION, not an approved matrix row: the Master Specification says Management
+    /// needs a live production overview, so the read-only queue is limited to the Management department until the owner confirms who else may see it
+    /// (docs/PRODUCTION_QUEUE.md). It grants no write permission; changing priorities and overriding the queue order keep their own permissions.
+    /// </summary>
+    ViewProductionQueue,
 }
 
 /// <summary>
@@ -71,6 +78,9 @@ public static class AuthorizationRules
 
         // Read-only access for every active user (an empty department list means any department, no role is required).
         [Permission.ViewCustomersAndRequests] = new([], null),
+
+        // Read-only production queue: Management (implementation assumption, see the enum member).
+        [Permission.ViewProductionQueue] = new([DepartmentCodes.Management], null),
     };
 
     /// <summary>All permissions that have a rule, for tests and documentation.</summary>
