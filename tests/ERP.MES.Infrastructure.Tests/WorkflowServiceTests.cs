@@ -386,7 +386,7 @@ public class WorkflowServiceTests
         var listed = (await w.Customers.ListAsync(w.Central, activeOnly: false, Token)).Value!;
         Assert.False(listed.Single(c => c.Value.Id == inactive.Value.Id).Value.IsActive);
         Assert.True(listed.Single(c => c.Value.Id == active.Value.Id).Value.IsActive);
-        Assert.Equal(0, (await w.Requests.ListAsync(w.Central, active.Value.Id, Token)).Value!.Count);
+        Assert.Empty((await w.Requests.ListAsync(w.Central, active.Value.Id, Token)).Value!);
     }
 
     [Fact]
@@ -407,7 +407,7 @@ public class WorkflowServiceTests
 
         Assert.Equal(ValidationIssue.CustomerInactive, outcome.Issue);
         Assert.Equal(0, Count(w, "Requests"));
-        Assert.Equal(0, (await w.Restarted().Requests.ListAsync(w.Central, null, Token)).Value!.Count);
+        Assert.Empty((await w.Restarted().Requests.ListAsync(w.Central, null, Token)).Value!);
     }
 
     [Fact]
