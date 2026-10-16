@@ -193,7 +193,7 @@ No credential in the repository (a test scans tracked files for seed users, know
 
 | Setting | Proposed default | Notes |
 |---|---|---|
-| `MinimumPasswordLength` | **12** | Counted in characters; no composition rules proposed |
+| `MinimumPasswordLength` | **6** | Counted in characters; no composition rules; no white space (Decision Log #72, which supersedes the earlier 12) |
 | `MaxFailedAttempts` | **5** | Counter stored in the database per user (shared across PCs) |
 | `LockoutMinutes` | **5** | Lock ends automatically; Administrator can unlock |
 | `Pbkdf2Iterations` | **600000** | See §6.2 |

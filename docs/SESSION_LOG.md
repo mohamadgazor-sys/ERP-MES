@@ -951,3 +951,61 @@ Append one dated entry after every substantial session. Do not replace prior ent
 
 ### Recommended exact next action
 - Run checklist section B with the instructions in `docs/AUTHENTICATION.md`; then review the architecture, migration, security behaviour and tests.
+
+---
+
+### Date / session
+- Date: 2026-10-16
+- Claude Code session ID (if useful): session_01UwqjPjBXLd2apjZb2urjds (password-policy change, separate PR after the merge of PR #19)
+
+### Goal
+- Change the password policy only: minimum 6 characters, white space forbidden anywhere, no composition rules, one policy for every place a user chooses a password.
+
+### Completed
+- `PasswordRules.Validate` rejects any space character (new `PasswordPolicyError.ContainsSpace`) and counts the minimum in characters; `AuthenticationPolicy` default 6 and safety floor 6; Desktop `appsettings.json` 6; sign-in window message for a space. Bootstrap, recovery, new account, administrator reset and own change all call the same rule; sign-in does not.
+- Tests: boundary 5/6, no composition rules, space at start/middle/end, no trimming or normalisation, each entry point (bootstrap, create, reset, own change, recovery), generated demonstration passwords valid under the policy, view-model message. Two existing tests used passwords that were valid only under the old rule and were adjusted.
+- Docs: Decision Log #72 (supersedes the length in #40), `docs/AUTHENTICATION.md`, Milestone 1 plan table, checklist B6.
+
+### Files changed
+- See the pull request. No package added, no schema change, no migration. Cryptography, lockout, tokens, audit, authorization and artifact publication untouched.
+
+### Decisions newly approved
+- #72.
+
+### Unresolved questions / risks
+- Whether "space" should also cover other Unicode space-like characters (no-break space, ideographic space); #72 covers U+0020 only. All earlier open items remain (sign-out/session handling, M8, hash benchmark on the lowest-spec PC, database-level audit protection, production migration policy, Q1-Q6).
+
+### Commands/tests actually run and results
+- Not built locally (no SDK). Windows CI results are reported in the pull request.
+
+### Recommended exact next action
+- Review and merge the PR; run checklist section B (B6 now accepts 6+ characters without spaces).
+
+---
+
+### Date / session
+- Date: 2026-10-16
+- Claude Code session ID (if useful): session_01UwqjPjBXLd2apjZb2urjds (correction inside PR #20: reject all Unicode white space)
+
+### Goal
+- Refine the password rule of #72 from "space character" to "any Unicode white space"; nothing else.
+
+### Completed
+- `PasswordRules.Validate` rejects any character for which `char.IsWhiteSpace` is true (error renamed `ContainsWhitespace`); U+200C stays allowed; no trimming or normalisation; six-character minimum unchanged; sign-in still does not apply the policy. Sign-in window message names space, tab and line break.
+- Tests: U+0020, U+00A0, U+3000, em/narrow no-break space, tab, LF, CR, VT, FF, NEL, line/paragraph separators rejected at start, middle and end; U+200C and decomposed/precomposed forms accepted as typed; entry-point tests (bootstrap, create, reset, own change, recovery) include non-space white space.
+- Decision Log #72, `docs/AUTHENTICATION.md`, plan table and checklist B6 updated to the white-space rule.
+
+### Files changed
+- See the pull request. No package, schema, migration, hashing, lockout, token, audit or authorization change.
+
+### Decisions newly approved
+- #72 refined (white space instead of space only); this closes the "other space-like characters" question I raised.
+
+### Unresolved questions / risks
+- Unchanged from the previous entry. Invisible non-white-space format characters other than U+200C (for example U+200B) are accepted as ordinary characters.
+
+### Commands/tests actually run and results
+- Not built locally (no SDK). Windows CI results are reported in the pull request.
+
+### Recommended exact next action
+- Review and merge PR #20; run checklist section B.

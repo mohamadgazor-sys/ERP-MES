@@ -36,7 +36,7 @@ Exact local build and run instructions (Windows, SDK 10.0.401): `docs/AUTHENTICA
 | B3 | Wrong password / unknown user | The same Persian message for both; the window stays | |
 | B4 | Five wrong passwords for one user | The same generic message every time (the window never says the account is locked); afterwards even the correct password is refused with that same message for about five minutes (Decision Log #65) | |
 | B5 | Sign in as `demo.qc` with its one-time password | The "change password" step appears (current, new, repeat); a wrong current password, a short new password or a different repeat is refused with a message | |
-| B6 | Choose your own password (12+ characters) | The main window opens; the status bar shows the user name; signing in again needs the new password | |
+| B6 | Choose your own password (6+ characters, no white space; a password containing a space, tab or line break is refused with a message) | The main window opens; the status bar shows the user name; signing in again needs the new password | |
 | B7 | A database made with `migrate` only (no administrator) | The window says the system has not been set up; no input fields | |
 | B8 | `issue-admin-token`, then start | The first-run screen (token, administrator name, display name, password twice); a wrong token is refused; the right one creates the administrator and returns to sign-in; the first-run screen never appears again | |
 | B9 | `issue-recovery-token` for an administrator, then start | "Use recovery token" appears on the sign-in window only now; a new password different from the old one is required | |

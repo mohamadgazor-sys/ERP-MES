@@ -138,11 +138,23 @@ public class RecoveryTests
         using var fixture = scene.Fixture;
         var issued = await fixture.Services.Recovery.IssueTokenAsync(AlphaName, "lost access", Token);
 
-        var result = await fixture.Services.Recovery.RedeemAsync(issued.Token, "too short", Token);
+        var result = await fixture.Services.Recovery.RedeemAsync(issued.Token, "short", Token);
 
         Assert.Equal(RecoveryStatus.PasswordRejected, result.Status);
         Assert.Equal(PasswordPolicyError.TooShort, result.PasswordError);
+        foreach (var withSpace in new[] { " sixsix", "six six", "sixsix ", "\u00A0sixsix", "six\tsix", "sixsix\n", "six\u3000six" })
+        {
+            var rejected = await fixture.Services.Recovery.RedeemAsync(issued.Token, withSpace, Token);
+            Assert.Equal(RecoveryStatus.PasswordRejected, rejected.Status);
+            Assert.Equal(PasswordPolicyError.ContainsWhitespace, rejected.PasswordError);
+        }
+
         Assert.Equal("0", Row(fixture, "SELECT RecoveryFailedAttempts FROM SystemSetup"));
+
+        // Six characters are enough and nothing else is required; the token was not used up by the rejections.
+        var accepted = await fixture.Services.Recovery.RedeemAsync(issued.Token, "sixsix", Token);
+        Assert.Equal(RecoveryStatus.Succeeded, accepted.Status);
+        Assert.Equal(SignInStatus.Succeeded, (await fixture.Services.Authentication.SignInAsync(AlphaName, "sixsix", Token)).Status);
     }
 
     [Fact]

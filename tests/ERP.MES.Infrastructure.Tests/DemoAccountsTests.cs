@@ -234,4 +234,15 @@ public class DemoAccountsTests
         Assert.Equal(3, Count(db, "Customers"));
         Assert.True(File.Exists(result.CredentialFile));
     }
+
+    [Fact]
+    public void Generated_one_time_passwords_are_long_random_and_valid_under_the_password_policy()
+    {
+        var generated = Enumerable.Range(0, 50).Select(_ => DemoAccountProvisioner.GeneratePassword()).ToList();
+
+        // Booleans only, so a failure message never prints a generated password.
+        Assert.True(generated.All(p => PasswordRules.Validate(p, AuthenticationPolicy.Default) == PasswordPolicyError.None));
+        Assert.True(generated.All(p => p.Length == 20));
+        Assert.Equal(generated.Count, generated.Distinct(StringComparer.Ordinal).Count());
+    }
 }

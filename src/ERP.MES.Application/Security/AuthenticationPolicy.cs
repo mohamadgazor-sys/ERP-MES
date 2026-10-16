@@ -9,15 +9,15 @@ public sealed record AuthenticationPolicy
     /// <summary>The approved defaults.</summary>
     public static AuthenticationPolicy Default { get; } = new();
 
-    public const int MinimumLengthFloor = 8;
+    public const int MinimumLengthFloor = 6;
     public const int MinimumAttemptsFloor = 3;
     public const int MaximumAttemptsCeiling = 10;
     public const int LockoutMinutesFloor = 1;
     public const int Pbkdf2IterationsFloor = 310_000;
     public const int MaximumTokenLifetimeHours = 24 * 30;
 
-    /// <summary>Counted in characters; no composition rules.</summary>
-    public int MinimumPasswordLength { get; init; } = 12;
+    /// <summary>Counted in characters; no composition rules. White space is forbidden by <see cref="PasswordRules"/> whatever this value is (Decision Log #72).</summary>
+    public int MinimumPasswordLength { get; init; } = 6;
 
     public int MaxFailedAttempts { get; init; } = 5;
 

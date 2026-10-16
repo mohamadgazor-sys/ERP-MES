@@ -9,9 +9,16 @@ public enum PasswordPolicyError
     None = 0,
     Empty,
     TooShort,
+    ContainsWhitespace,
 }
 
-/// <summary>The password policy (Milestone 1 plan 6.1): a minimum length counted in characters, and nothing else. The password is used exactly as typed: it is never trimmed or normalised.</summary>
+/// <summary>
+/// The password policy (Decision Log #72): a minimum length counted in characters, and no Unicode white-space character anywhere (space, no-break space, ideographic
+/// space, tab, line breaks and every other character for which <see cref="char.IsWhiteSpace(char)"/> is true). Nothing else is required or forbidden: there are no
+/// composition rules, and the zero-width non-joiner used in Persian writing is not white space and stays allowed. The password is used exactly as typed - it is never
+/// trimmed or normalised - so a password with white space is rejected, not repaired. The same rule applies wherever a user chooses a new password; signing in with an
+/// existing password only verifies it and never applies this policy.
+/// </summary>
 public static class PasswordRules
 {
     public static PasswordPolicyError Validate(string? password, AuthenticationPolicy policy)
@@ -20,6 +27,11 @@ public static class PasswordRules
         if (string.IsNullOrEmpty(password))
         {
             return PasswordPolicyError.Empty;
+        }
+
+        if (password.Any(char.IsWhiteSpace))
+        {
+            return PasswordPolicyError.ContainsWhitespace;
         }
 
         return new StringInfo(password).LengthInTextElements < policy.MinimumPasswordLength ? PasswordPolicyError.TooShort : PasswordPolicyError.None;

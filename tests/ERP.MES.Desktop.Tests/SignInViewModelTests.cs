@@ -180,6 +180,9 @@ public sealed class SignInViewModelTests : IDisposable
         Assert.Equal(SignInMode.ChangePassword, viewModel.Mode);
         await viewModel.ChangePasswordAsync(StaffPassword, "short", "short", Token);
         Assert.Equal(SignInMode.ChangePassword, viewModel.Mode);
+        await viewModel.ChangePasswordAsync(StaffPassword, "has space", "has space", Token);
+        Assert.Equal(SignInMode.ChangePassword, viewModel.Mode);
+        Assert.Contains("فاصله", viewModel.Message, StringComparison.Ordinal);
         Assert.Empty(_signedIn);
 
         await viewModel.ChangePasswordAsync(StaffPassword, OwnPassword, OwnPassword, Token);

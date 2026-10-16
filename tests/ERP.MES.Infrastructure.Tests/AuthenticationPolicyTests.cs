@@ -25,7 +25,7 @@ public class AuthenticationPolicyTests : IDisposable
     {
         var policy = AuthenticationPolicy.Default;
 
-        Assert.Equal(12, policy.MinimumPasswordLength);
+        Assert.Equal(6, policy.MinimumPasswordLength);
         Assert.Equal(5, policy.MaxFailedAttempts);
         Assert.Equal(5, policy.LockoutMinutes);
         Assert.Equal(600_000, policy.Pbkdf2Iterations);
@@ -36,7 +36,7 @@ public class AuthenticationPolicyTests : IDisposable
     }
 
     [Theory]
-    [InlineData("MinimumPasswordLength", 7)]
+    [InlineData("MinimumPasswordLength", 5)]
     [InlineData("MaxFailedAttempts", 2)]
     [InlineData("MaxFailedAttempts", 11)]
     [InlineData("LockoutMinutes", 0)]
@@ -70,7 +70,7 @@ public class AuthenticationPolicyTests : IDisposable
     {
         var policy = new AuthenticationPolicy
         {
-            MinimumPasswordLength = 8,
+            MinimumPasswordLength = 6,
             MaxFailedAttempts = 3,
             LockoutMinutes = 1,
             Pbkdf2Iterations = 310_000,
@@ -80,21 +80,109 @@ public class AuthenticationPolicyTests : IDisposable
     }
 
     [Theory]
-    [InlineData("12345678901", PasswordPolicyError.TooShort)]
-    [InlineData("123456789012", PasswordPolicyError.None)]
+    [InlineData("abcdef", PasswordPolicyError.None)]
+    [InlineData("abcde", PasswordPolicyError.TooShort)]
+    [InlineData("a", PasswordPolicyError.TooShort)]
     [InlineData("", PasswordPolicyError.Empty)]
     [InlineData(null, PasswordPolicyError.Empty)]
-    public void The_password_length_is_counted_in_characters_with_no_composition_rules(string? password, PasswordPolicyError expected)
+    public void The_minimum_is_six_characters(string? password, PasswordPolicyError expected)
     {
         Assert.Equal(expected, PasswordRules.Validate(password, AuthenticationPolicy.Default));
+    }
+
+    [Theory]
+    [InlineData("alllowercase")]
+    [InlineData("ALLUPPERCASE")]
+    [InlineData("123456789012")]
+    [InlineData("!@#$%^&*()_+")]
+    [InlineData("a-much-longer-password-with-no-required-mix")]
+    [InlineData("گذرواژه‌ام")]
+    public void There_are_no_composition_rules(string password)
+    {
+        Assert.Equal(PasswordPolicyError.None, PasswordRules.Validate(password, AuthenticationPolicy.Default));
+    }
+
+    [Theory]
+    [InlineData(" abcdef")]
+    [InlineData("abcdef ")]
+    [InlineData("abc def")]
+    [InlineData("  abcdef  ")]
+    [InlineData("abcdefghijklmnop qrstuvwxyz")]
+    [InlineData("      ")]
+    [InlineData(" ab ")]
+    public void A_space_anywhere_is_rejected_and_the_password_is_not_trimmed_to_fit(string password)
+    {
+        // Rejected - never repaired: the trimmed text of the first five would be a valid six-character password.
+        Assert.Equal(PasswordPolicyError.ContainsWhitespace, PasswordRules.Validate(password, AuthenticationPolicy.Default));
+    }
+
+    [Theory]
+    [InlineData("\u0020")]   // space
+    [InlineData("\u00A0")]   // no-break space
+    [InlineData("\u3000")]   // ideographic space
+    [InlineData("\u2003")]   // em space
+    [InlineData("\u202F")]   // narrow no-break space
+    [InlineData("\t")]       // tab
+    [InlineData("\n")]       // line feed
+    [InlineData("\r")]       // carriage return
+    [InlineData("\u000B")]   // vertical tab
+    [InlineData("\u000C")]   // form feed
+    [InlineData("\u0085")]   // next line
+    [InlineData("\u2028")]   // line separator
+    [InlineData("\u2029")]   // paragraph separator
+    public void Every_kind_of_white_space_is_rejected_at_the_start_in_the_middle_and_at_the_end(string whiteSpace)
+    {
+        var policy = AuthenticationPolicy.Default;
+
+        Assert.Equal(PasswordPolicyError.ContainsWhitespace, PasswordRules.Validate(whiteSpace + "sixsix", policy));
+        Assert.Equal(PasswordPolicyError.ContainsWhitespace, PasswordRules.Validate("six" + whiteSpace + "six", policy));
+        Assert.Equal(PasswordPolicyError.ContainsWhitespace, PasswordRules.Validate("sixsix" + whiteSpace, policy));
+        Assert.Equal(PasswordPolicyError.ContainsWhitespace, PasswordRules.Validate(whiteSpace + "a-much-longer-password" + whiteSpace, policy));
+    }
+
+    [Fact]
+    public void The_zero_width_non_joiner_and_non_white_space_characters_are_allowed_and_nothing_is_normalised()
+    {
+        var policy = AuthenticationPolicy.Default;
+
+        // U+200C (Persian) is not white space. So are the other invisible format characters this decision does not name.
+        Assert.Equal(PasswordPolicyError.None, PasswordRules.Validate("می\u200Cخواهم", policy));
+        Assert.Equal(PasswordPolicyError.None, PasswordRules.Validate("ab\u200Ccd\u200Cef", policy));
+        // The length is counted in text elements (existing behaviour, unchanged here): a joiner after a letter belongs to that letter and adds nothing to the count.
+        Assert.Equal(PasswordPolicyError.TooShort, PasswordRules.Validate("ab\u200Ccd\u200Ce", policy));
+        Assert.Equal(PasswordPolicyError.None, PasswordRules.Validate("\u200Cabcde", policy));
+        Assert.False(char.IsWhiteSpace('\u200C'));
+
+        // Nothing is normalised: the decomposed and the precomposed forms are both accepted exactly as typed (and counted as typed).
+        Assert.Equal(PasswordPolicyError.None, PasswordRules.Validate("e\u0301e\u0301e\u0301e\u0301e\u0301e\u0301", policy));
+        Assert.Equal(PasswordPolicyError.None, PasswordRules.Validate("\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9", policy));
+    }
+
+    [Fact]
+    public void White_space_is_reported_before_length_and_a_short_text_with_white_space_is_not_repaired_by_trimming()
+    {
+        // " abcde" would be a valid six characters only if the white space were kept, and "abcde" only if it were trimmed: it is rejected for the white space.
+        Assert.Equal(PasswordPolicyError.ContainsWhitespace, PasswordRules.Validate(" abcde", AuthenticationPolicy.Default));
+        Assert.Equal(PasswordPolicyError.ContainsWhitespace, PasswordRules.Validate("abcdef\n", AuthenticationPolicy.Default));
+        Assert.Equal(PasswordPolicyError.ContainsWhitespace, PasswordRules.Validate("\t\t\t\t\t\t", AuthenticationPolicy.Default));
     }
 
     [Fact]
     public void Persian_text_counts_by_characters_not_by_bytes()
     {
-        // Seven Persian letters are fourteen bytes in UTF-8 but only seven characters.
-        Assert.Equal(PasswordPolicyError.TooShort, PasswordRules.Validate("گذرواژه", AuthenticationPolicy.Default));
-        Assert.Equal(PasswordPolicyError.None, PasswordRules.Validate("گذرواژه-امن-۱۲۳", AuthenticationPolicy.Default));
+        // Five Persian letters are ten bytes in UTF-8 but only five characters; six letters are enough.
+        Assert.Equal(PasswordPolicyError.TooShort, PasswordRules.Validate("گذرها", AuthenticationPolicy.Default));
+        Assert.Equal(PasswordPolicyError.None, PasswordRules.Validate("گذرواژ", AuthenticationPolicy.Default));
+    }
+
+    [Fact]
+    public void A_configured_longer_minimum_still_applies_but_the_white_space_rule_cannot_be_configured_away()
+    {
+        var policy = new AuthenticationPolicy { MinimumPasswordLength = 10 };
+
+        Assert.Equal(PasswordPolicyError.TooShort, PasswordRules.Validate("abcdefghi", policy));
+        Assert.Equal(PasswordPolicyError.None, PasswordRules.Validate("abcdefghij", policy));
+        Assert.Equal(PasswordPolicyError.ContainsWhitespace, PasswordRules.Validate("abcdefghi j", policy));
     }
 
     [Fact]
