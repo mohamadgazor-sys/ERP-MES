@@ -72,7 +72,7 @@ The next workflow (customer and request entry, then queue and QC) reaches the da
 | Contract | Implementation (provider-neutral, `ERP.MES.Infrastructure/Persistence/`) | Operations |
 |---|---|---|
 | `ICustomerRepository` | `EfCustomerRepository` | `AddAsync`, `FindAsync`, `ListAsync(activeOnly)`, `UpdateAsync(id, expectedVersion, change)` |
-| `IRequestRepository` | `EfRequestRepository` | `AddAsync`, `FindAsync`, `ExistsAsync(key)`, `FindCaseInsensitiveNearDuplicatesAsync`, `ListAsync(customerId)` (summaries), `UpdateAsync(id, expectedVersion, change)` |
+| `IRequestRepository` | `EfRequestRepository` | `AddAsync`, `FindAsync`, `ExistsAsync(key)`, `FindCaseInsensitiveNearDuplicatesAsync`, `ListAsync(customerId)` (summaries), `FindWithVersionsAsync(id)`, `UpdateAsync(id, expectedVersion, change)` (request row only), `UpdateRowsAsync(id, RowVersionExpectations, change)` (item and stage rows; Decision Log #77) |
 
 The SQLite project supplies the context factory (`SqliteDatabase.CreateContextFactory(path)`); the composition root creates the repositories from it. No new package and no change to the migration were needed.
 
@@ -83,7 +83,7 @@ The SQLite project supplies the context factory (`SqliteDatabase.CreateContextFa
 - **Business key.** `AddAsync` checks the customer exists (`RecordNotFoundException`) and the key Customer + RequestNo + Jalali year is free (`DuplicateRequestException`; exact, case-sensitive); the database's unique index remains the final guard, and a race is also reported as `DuplicateRequestException`. Case-only near duplicates are reported by `FindCaseInsensitiveNearDuplicatesAsync` using the Domain's own comparison (Decision Log #31: a non-blocking warning).
 - **Aggregate loading** returns items, stages and approvals in a stable order (stages by `StageNo`), because the Domain addresses stages by position.
 
-**Concurrency scope and item/stage expected versions (M8, Decision Log #77).** Versions are per row. Adding an item changes the request's update time, so it raises the request row's version; stage, priority and QC changes alone change only the item or stage rows, so an `expectedVersion` for the request does not detect them.
+**Concurrency scope and item/stage expected versions (M8, resolved by Decision Log #77).** Callers must use `UpdateRowsAsync` with the expected versions of the rows they intend to change. Versions are per row, not aggregate-level. Adding an item changes the request's update time, so it raises the request row's version; stage, priority and QC changes alone change only the item or stage rows, so an `expectedVersion` for the request does not detect them.
 
 - `FindWithVersionsAsync(requestId)` returns `VersionedRequest`: the request plus `RequestVersions` (request row, every item by id, every stage by item id and stage number). `RequestService.GetAsync` exposes the same in `RequestDetail.Versions`.
 - `UpdateRowsAsync(requestId, RowVersionExpectations, change)` compares every named row (request, items, stages) with the stored row **before** `change` runs. A stale version, on any one named row, throws `ConcurrencyConflictException` and nothing is changed; a named item or stage that does not exist throws `RecordNotFoundException`. `change` calls the existing Domain methods, so their validation (including the QC gate) is unchanged, and a Domain exception persists nothing. QC approvals are appended and carry no version.
