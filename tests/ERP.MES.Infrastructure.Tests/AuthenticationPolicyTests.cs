@@ -147,7 +147,9 @@ public class AuthenticationPolicyTests : IDisposable
 
         // U+200C (Persian) is not white space. So are the other invisible format characters this decision does not name.
         Assert.Equal(PasswordPolicyError.None, PasswordRules.Validate("می\u200Cخواهم", policy));
-        Assert.Equal(PasswordPolicyError.None, PasswordRules.Validate("ab\u200Ccd\u200Ce", policy));
+        Assert.Equal(PasswordPolicyError.None, PasswordRules.Validate("ab\u200Ccd\u200Cef", policy));
+        // The length is counted in text elements (existing behaviour, unchanged here): a joiner after a letter belongs to that letter and adds nothing to the count.
+        Assert.Equal(PasswordPolicyError.TooShort, PasswordRules.Validate("ab\u200Ccd\u200Ce", policy));
         Assert.Equal(PasswordPolicyError.None, PasswordRules.Validate("\u200Cabcde", policy));
         Assert.False(char.IsWhiteSpace('\u200C'));
 
