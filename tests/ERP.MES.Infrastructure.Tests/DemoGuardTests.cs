@@ -123,20 +123,37 @@ public class DemoGuardTests
         Assert.Empty(usedConstructors);
     }
 
-    [Fact]
-    public void The_seed_and_reset_code_creates_no_credentials()
-    {
-        var files = SourceFiles("ERP.MES.Infrastructure").Where(f => Relative(f).Contains("/Demo/", StringComparison.Ordinal))
-            .Concat(SourceFiles("ERP.MES.Infrastructure.Sqlite").Where(f => Relative(f).Contains("/Demo/", StringComparison.Ordinal)))
-            .Append(Path.Combine(SolutionLayout.Root, "src", "ERP.MES.Provisioning", "Program.cs"))
-            .ToArray();
+    private static IEnumerable<string> CodeLines(string file) =>
+        File.ReadAllLines(file).Where(line => !line.TrimStart().StartsWith("//", StringComparison.Ordinal));
 
-        Assert.Equal(3, files.Length);
+    [Fact]
+    public void The_seed_and_reset_entry_points_hard_code_no_password()
+    {
+        var files = new[]
+        {
+            Path.Combine(SolutionLayout.Root, "src", "ERP.MES.Infrastructure", "Demo", "DemoDataSeeder.cs"),
+            Path.Combine(SolutionLayout.Root, "src", "ERP.MES.Infrastructure.Sqlite", "Demo", "DemoDatabase.cs"),
+        };
+
         foreach (var file in files)
         {
-            var text = File.ReadAllText(file);
-            Assert.DoesNotContain("password", text, StringComparison.OrdinalIgnoreCase);
-            Assert.DoesNotContain("PBKDF2", text, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain(CodeLines(file), line => line.Contains("password", StringComparison.OrdinalIgnoreCase));
+            Assert.DoesNotContain(CodeLines(file), line => line.Contains("PBKDF2", StringComparison.OrdinalIgnoreCase));
         }
+    }
+
+    [Fact]
+    public void Only_the_demonstration_database_class_and_the_demo_folder_use_the_demo_account_provisioner()
+    {
+        var users = Directory.EnumerateDirectories(Path.Combine(SolutionLayout.Root, "src"))
+            .SelectMany(project => SourceFiles(Path.GetFileName(project)))
+            .Where(file => File.ReadAllText(file).Contains("DemoAccountProvisioner", StringComparison.Ordinal))
+            .Select(Relative)
+            .OrderBy(f => f, StringComparer.Ordinal)
+            .ToArray();
+
+        Assert.Equal(
+            new[] { "src/ERP.MES.Infrastructure.Sqlite/Demo/DemoDatabase.cs", "src/ERP.MES.Infrastructure/Demo/DemoAccountProvisioner.cs" },
+            users);
     }
 }

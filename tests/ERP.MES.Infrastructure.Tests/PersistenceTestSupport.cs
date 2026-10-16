@@ -12,9 +12,40 @@ internal sealed class TempDatabase : IDisposable
 
     public bool Exists => File.Exists(Path);
 
+    private readonly List<string> _credentialFiles = [];
+
+    /// <summary>A new, unique path for a demonstration credential file in the temp folder (outside the repository); removed with the database.</summary>
+    public string NextCredentialPath()
+    {
+        var path = Path + "." + _credentialFiles.Count + ".credentials.txt";
+        _credentialFiles.Add(path);
+        return path;
+    }
+
+    public IReadOnlyList<string> CredentialFiles => _credentialFiles;
+
     public ErpMesDbContext NewContext() => new(SqliteDatabase.CreateOptions(Path));
 
     public Task MigrateAsync() => SqliteDatabase.MigrateAsync(Path);
+
+    /// <summary>The user ids that the persistence tests use as creator (1) and QC approver (9).</summary>
+    public const long TestCreatorId = 1;
+
+    public const long TestApproverId = 9;
+
+    /// <summary>
+    /// Migrates and adds two ordinary user rows with the ids the persistence tests use as creator and approver. Since creators and approvers are real foreign keys
+    /// (Decision Log #70), a record needs an existing user. These rows exist only in throwaway test databases; the product creates users only through the account use
+    /// cases, and no sentinel id is ever inserted by product code.
+    /// </summary>
+    public async Task MigrateWithActorsAsync()
+    {
+        await MigrateAsync();
+        Execute(
+            "INSERT OR IGNORE INTO Users (Id, Username, UsernameKey, DisplayName, DepartmentId, RoleId, IsActive, CreatedAtUtc, UpdatedAtUtc, Version) VALUES "
+            + $"({TestCreatorId}, 'test.creator', 'TEST.CREATOR', 'Test creator', 1, 3, 1, '2026-10-15 09:30:15', '2026-10-15 09:30:15', 1), "
+            + $"({TestApproverId}, 'test.approver', 'TEST.APPROVER', 'Test approver', 7, 3, 1, '2026-10-15 09:30:15', '2026-10-15 09:30:15', 1)");
+    }
 
     public IDbContextFactory<ErpMesDbContext> ContextFactory => SqliteDatabase.CreateContextFactory(Path);
 
@@ -61,6 +92,18 @@ internal sealed class TempDatabase : IDisposable
 
     public void Dispose()
     {
+        foreach (var file in _credentialFiles)
+        {
+            try
+            {
+                File.Delete(file);
+            }
+            catch (IOException)
+            {
+                // A leftover temp file does not affect the result.
+            }
+        }
+
         foreach (var suffix in new[] { string.Empty, "-wal", "-shm", "-journal" })
         {
             try

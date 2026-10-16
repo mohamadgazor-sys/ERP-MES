@@ -1,3 +1,4 @@
+using ERP.MES.Domain.Identity;
 using ERP.MES.Domain.Requests;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -23,6 +24,9 @@ public sealed class RequestItemConfiguration : IEntityTypeConfiguration<RequestI
         // The Planning priority lives on the item; stages inherit it (Decision Log #58, G6).
         builder.Property(i => i.Priority).HasConversion<int>().IsRequired();
         builder.Property(i => i.CreatedByUserId).IsRequired();
+
+        // The acting user must exist (Decision Log #70): a real foreign key to Users, deletion restricted.
+        builder.HasOne<User>().WithMany().HasForeignKey(i => i.CreatedByUserId).IsRequired().OnDelete(DeleteBehavior.Restrict);
         builder.Property(i => i.CreatedAtUtc).IsRequired();
         builder.Property(i => i.UpdatedAtUtc).IsRequired();
         builder.Ignore(i => i.IsRouteCompleted);

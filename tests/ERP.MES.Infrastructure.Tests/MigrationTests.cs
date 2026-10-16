@@ -8,12 +8,12 @@ namespace ERP.MES.Infrastructure.Tests;
 public class MigrationTests
 {
     [Fact]
-    public async Task A_fresh_database_is_created_by_applying_the_initial_migration()
+    public async Task A_fresh_database_is_created_by_applying_the_committed_migrations()
     {
         using var db = new TempDatabase();
         Assert.False(db.Exists);
 
-        await db.MigrateAsync();
+        await db.MigrateWithActorsAsync();
 
         Assert.True(db.Exists);
         var tables = db.Query("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name");
@@ -21,13 +21,14 @@ public class MigrationTests
         // EF Core keeps its own bookkeeping tables (the migration history, and in EF Core 10 a migrations lock); only the application tables are compared.
         Assert.Contains("__EFMigrationsHistory", tables);
         Assert.Equal(
-            new[] { "Customers", "ItemStages", "QcApprovals", "RequestItems", "Requests" },
+            new[] { "AuditLog", "Customers", "Departments", "ItemStages", "QcApprovals", "RequestItems", "Requests", "Roles", "SystemSetup", "UserCredentials", "Users" },
             tables.Where(t => !t.StartsWith("__EF", StringComparison.Ordinal)).ToArray());
 
         await using var context = db.NewContext();
         var applied = (await context.Database.GetAppliedMigrationsAsync(TestContext.Current.CancellationToken)).ToArray();
-        Assert.Single(applied);
+        Assert.Equal(2, applied.Length);
         Assert.EndsWith("_InitialCreate", applied[0], StringComparison.Ordinal);
+        Assert.EndsWith("_AddAuthentication", applied[1], StringComparison.Ordinal);
         Assert.Empty(await context.Database.GetPendingMigrationsAsync(TestContext.Current.CancellationToken));
     }
 
@@ -39,14 +40,14 @@ public class MigrationTests
 
         // Fails if the model changed without a new migration, or if the snapshot was edited away from the model.
         Assert.False(context.Database.HasPendingModelChanges());
-        Assert.Single(context.Database.GetMigrations());
+        Assert.Equal(2, context.Database.GetMigrations().Count());
     }
 
     [Fact]
     public async Task Opening_an_existing_migrated_database_keeps_its_schema_and_data()
     {
         using var db = new TempDatabase();
-        await db.MigrateAsync();
+        await db.MigrateWithActorsAsync();
 
         await using (var context = db.NewContext())
         {
@@ -57,8 +58,8 @@ public class MigrationTests
         var historyBefore = db.Query("SELECT MigrationId FROM __EFMigrationsHistory");
 
         // The normal startup path again, as after an application restart: nothing is recreated or re-applied.
-        await db.MigrateAsync();
-        await db.MigrateAsync();
+        await db.MigrateWithActorsAsync();
+        await db.MigrateWithActorsAsync();
 
         Assert.Equal(historyBefore, db.Query("SELECT MigrationId FROM __EFMigrationsHistory"));
         Assert.Equal(new[] { "Fictional Customer A" }, db.Query("SELECT Name FROM Customers").ToArray());
@@ -72,7 +73,7 @@ public class MigrationTests
     public async Task Business_keys_are_unique_indexes_with_the_specified_columns()
     {
         using var db = new TempDatabase();
-        await db.MigrateAsync();
+        await db.MigrateWithActorsAsync();
 
         Assert.Equal(new[] { "CustomerId,RequestNo,JalaliRequestYear" }, UniqueIndexColumns(db, "Requests"));
         Assert.Equal(new[] { "RequestId,ItemNo" }, UniqueIndexColumns(db, "RequestItems"));
@@ -83,10 +84,10 @@ public class MigrationTests
     public async Task Every_foreign_key_restricts_deletion_because_transactional_rows_are_not_physically_deleted()
     {
         using var db = new TempDatabase();
-        await db.MigrateAsync();
+        await db.MigrateWithActorsAsync();
 
         var keys = new List<string>();
-        foreach (var table in new[] { "Requests", "RequestItems", "ItemStages", "QcApprovals" })
+        foreach (var table in new[] { "Customers", "Requests", "RequestItems", "ItemStages", "QcApprovals" })
         {
             keys.AddRange(db.Query($"SELECT '{table}' || ':' || \"from\" || '->' || \"table\" || ':' || on_delete FROM pragma_foreign_key_list('{table}')"));
         }
@@ -94,11 +95,15 @@ public class MigrationTests
         Assert.Equal(
             new[]
             {
+                "Customers:CreatedByUserId->Users:RESTRICT",
                 "ItemStages:RequestItemId->RequestItems:RESTRICT",
+                "QcApprovals:ApprovedByUserId->Users:RESTRICT",
                 "QcApprovals:RequestItemId->ItemStages:RESTRICT",
                 "QcApprovals:RequestItemId->RequestItems:RESTRICT",
                 "QcApprovals:StageNo->ItemStages:RESTRICT",
+                "RequestItems:CreatedByUserId->Users:RESTRICT",
                 "RequestItems:RequestId->Requests:RESTRICT",
+                "Requests:CreatedByUserId->Users:RESTRICT",
                 "Requests:CustomerId->Customers:RESTRICT",
             },
             keys.OrderBy(k => k, StringComparer.Ordinal).ToArray());
@@ -108,7 +113,7 @@ public class MigrationTests
     public async Task Foreign_keys_are_enforced_on_every_connection()
     {
         using var db = new TempDatabase();
-        await db.MigrateAsync();
+        await db.MigrateWithActorsAsync();
 
         Assert.Equal(new[] { "1" }, db.Query("PRAGMA foreign_keys").ToArray());
         Assert.Throws<SqliteException>(() => db.Execute(
@@ -120,7 +125,7 @@ public class MigrationTests
     public async Task A_customer_with_requests_cannot_be_deleted()
     {
         using var db = new TempDatabase();
-        await db.MigrateAsync();
+        await db.MigrateWithActorsAsync();
         await using (var context = db.NewContext())
         {
             var customer = PersistenceTestData.NewCustomer();
@@ -138,7 +143,7 @@ public class MigrationTests
     public async Task The_request_business_key_is_enforced_and_request_numbers_are_case_sensitive()
     {
         using var db = new TempDatabase();
-        await db.MigrateAsync();
+        await db.MigrateWithActorsAsync();
 
         await using (var context = db.NewContext())
         {
@@ -167,7 +172,7 @@ public class MigrationTests
     public async Task Item_numbers_and_stage_numbers_are_unique_at_the_database_level_and_item_numbers_are_case_sensitive()
     {
         using var db = new TempDatabase();
-        await db.MigrateAsync();
+        await db.MigrateWithActorsAsync();
 
         await using (var context = db.NewContext())
         {
@@ -199,7 +204,7 @@ public class MigrationTests
     public async Task A_qc_approval_must_refer_to_an_existing_stage_of_the_same_item()
     {
         using var db = new TempDatabase();
-        await db.MigrateAsync();
+        await db.MigrateWithActorsAsync();
         await PersistenceTestData.SeedMixedRequestAsync(db);
 
         var makeItemId = db.Query("SELECT Id FROM RequestItems WHERE ItemNo = '1.10'").Single();

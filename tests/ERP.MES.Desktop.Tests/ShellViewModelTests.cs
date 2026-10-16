@@ -134,4 +134,14 @@ public class ShellViewModelTests
         Assert.Throws<ArgumentNullException>(() => new ShellViewModel(null!, () => SampleUtc));
         Assert.Throws<ArgumentNullException>(() => new ShellViewModel(new JalaliDateService(DigitStyle.Persian, SiteZone), null!));
     }
+
+    [Fact]
+    public void The_signed_in_user_is_shown_only_once_one_is_set()
+    {
+        Assert.Equal(string.Empty, Create(SampleUtc).UserText);
+
+        var shell = new ShellViewModel(new JalaliDateService(DigitStyle.Persian, SiteZone), () => SampleUtc) { UserText = "کاربر: نمونه" };
+
+        Assert.Equal("کاربر: نمونه", shell.UserText);
+    }
 }

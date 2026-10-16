@@ -1,3 +1,5 @@
+using ERP.MES.Application.Security;
+using ERP.MES.Domain.Identity;
 using ERP.MES.Domain.Requests;
 using Microsoft.EntityFrameworkCore;
 
@@ -20,10 +22,22 @@ public sealed class ErpMesDbContext(DbContextOptions<ErpMesDbContext> options) :
 
     public DbSet<QcApproval> QcApprovals => Set<QcApproval>();
 
+    public DbSet<Department> Departments => Set<Department>();
+
+    public DbSet<Role> Roles => Set<Role>();
+
+    public DbSet<User> Users => Set<User>();
+
+    public DbSet<UserCredential> UserCredentials => Set<UserCredential>();
+
+    public DbSet<SystemSetup> SystemSetups => Set<SystemSetup>();
+
+    public DbSet<AuditLogEntry> AuditLog => Set<AuditLogEntry>();
+
     /// <summary>Name of the shadow property that holds the application-managed row version (Decision Log #23).</summary>
     public const string RowVersionPropertyName = "Version";
 
-    private static readonly HashSet<Type> VersionedTypes = [typeof(Customer), typeof(Request), typeof(RequestItem), typeof(ItemStage)];
+    private static readonly HashSet<Type> VersionedTypes = [typeof(Customer), typeof(Request), typeof(RequestItem), typeof(ItemStage), typeof(User), typeof(UserCredential), typeof(SystemSetup)];
 
     /// <summary>The row version of a tracked entity of a versioned type (customer, request, request item, item stage).</summary>
     public long GetRowVersion(object entity) => (long)Entry(entity).Property(RowVersionPropertyName).CurrentValue!;
@@ -49,6 +63,13 @@ public sealed class ErpMesDbContext(DbContextOptions<ErpMesDbContext> options) :
     private void ApplyRowVersions()
     {
         ChangeTracker.DetectChanges();
+
+        // The audit log is append-only (Decision Log #26): an entry can be added, never changed or removed.
+        if (ChangeTracker.Entries<AuditLogEntry>().Any(e => e.State is EntityState.Modified or EntityState.Deleted))
+        {
+            throw new InvalidOperationException("The audit log is append-only: entries cannot be changed or deleted.");
+        }
+
         foreach (var entry in ChangeTracker.Entries().Where(e => VersionedTypes.Contains(e.Metadata.ClrType)).ToList())
         {
             var version = entry.Property(RowVersionPropertyName);
@@ -66,6 +87,9 @@ public sealed class ErpMesDbContext(DbContextOptions<ErpMesDbContext> options) :
     protected override void OnModelCreating(ModelBuilder modelBuilder) =>
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(ErpMesDbContext).Assembly);
 
-    protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder) =>
+    protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
+    {
         configurationBuilder.Properties<DateTime>().HaveConversion<UtcDateTimeConverter>();
+        configurationBuilder.Properties<DateTime?>().HaveConversion<UtcDateTimeConverter>();
+    }
 }

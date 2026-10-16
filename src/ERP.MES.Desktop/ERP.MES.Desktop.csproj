@@ -7,6 +7,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- Non-secret authentication defaults (Milestone 1 plan 6.1). appsettings.Local.json is ignored by Git and may override them. -->
+    <Content Include="appsettings.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\src\ERP.MES.Application\ERP.MES.Application.csproj" />
     <ProjectReference Include="..\..\src\ERP.MES.Infrastructure\ERP.MES.Infrastructure.csproj" />
     <ProjectReference Include="..\..\src\ERP.MES.Infrastructure.Sqlite\ERP.MES.Infrastructure.Sqlite.csproj" />

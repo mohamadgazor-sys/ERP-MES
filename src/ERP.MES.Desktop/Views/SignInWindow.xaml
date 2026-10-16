@@ -1,0 +1,73 @@
+<Window x:Class="ERP.MES.Desktop.Views.SignInWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xml:lang="fa-IR"
+        FlowDirection="RightToLeft"
+        FontFamily="{StaticResource UiFont}"
+        FontSize="14"
+        Background="{StaticResource SurfaceBrush}"
+        Title="{Binding Title}"
+        Width="480" SizeToContent="Height" MinHeight="320" ResizeMode="NoResize"
+        WindowStartupLocation="CenterScreen">
+    <StackPanel Margin="24">
+        <!-- Demonstration banner, as on the main window. -->
+        <Border Background="{StaticResource DemoBannerBrush}" Padding="10,6" Margin="0,0,0,16">
+            <TextBlock Text="نسخه نمایشی: فقط داده‌ها و حساب‌های فرضی." Foreground="{StaticResource DemoBannerTextBrush}"
+                       TextWrapping="Wrap" FontWeight="SemiBold" />
+        </Border>
+
+        <TextBlock x:Name="MessageText" Text="{Binding Message}" TextWrapping="Wrap" Margin="0,0,0,12"
+                   Foreground="#9B1C1C" FontWeight="SemiBold" />
+
+        <!-- Not initialised: nothing to enter. -->
+        <StackPanel x:Name="NotProvisionedPanel" Visibility="Collapsed" />
+
+        <!-- First run: the one-time bootstrap token creates the first administrator (never a default account). -->
+        <StackPanel x:Name="FirstRunPanel" Visibility="Collapsed">
+            <TextBlock Text="راه‌اندازی اولیه: توکن یک‌بار مصرفی که مدیر فنی به شما داده است را وارد کنید." TextWrapping="Wrap" Margin="0,0,0,8" />
+            <TextBlock Text="توکن" />
+            <TextBox x:Name="FirstRunToken" FlowDirection="LeftToRight" Margin="0,2,0,8" />
+            <TextBlock Text="نام کاربری مدیر سیستم" />
+            <TextBox x:Name="FirstRunUsername" FlowDirection="LeftToRight" Margin="0,2,0,8" />
+            <TextBlock Text="نام نمایشی" />
+            <TextBox x:Name="FirstRunDisplayName" Margin="0,2,0,8" />
+            <TextBlock Text="گذرواژه" />
+            <PasswordBox x:Name="FirstRunPassword" Margin="0,2,0,8" />
+            <TextBlock Text="تکرار گذرواژه" />
+            <PasswordBox x:Name="FirstRunRepeat" Margin="0,2,0,12" />
+            <Button Content="ایجاد مدیر سیستم" Click="OnFirstRunClick" Padding="12,6" IsDefault="True" />
+        </StackPanel>
+
+        <StackPanel x:Name="SignInPanel" Visibility="Collapsed">
+            <TextBlock Text="نام کاربری" />
+            <TextBox x:Name="SignInUsername" FlowDirection="LeftToRight" Margin="0,2,0,8" />
+            <TextBlock Text="گذرواژه" />
+            <PasswordBox x:Name="SignInPassword" Margin="0,2,0,12" />
+            <Button Content="ورود" Click="OnSignInClick" Padding="12,6" IsDefault="True" />
+            <Button x:Name="UseRecoveryButton" Content="استفاده از توکن بازیابی" Click="OnUseRecoveryClick" Margin="0,12,0,0"
+                    Padding="12,6" Visibility="Collapsed" />
+        </StackPanel>
+
+        <StackPanel x:Name="RecoveryPanel" Visibility="Collapsed">
+            <TextBlock Text="بازیابی دسترسی مدیر: توکن بازیابی و گذرواژه جدید (متفاوت از گذرواژه قبلی) را وارد کنید." TextWrapping="Wrap" Margin="0,0,0,8" />
+            <TextBlock Text="توکن بازیابی" />
+            <TextBox x:Name="RecoveryToken" FlowDirection="LeftToRight" Margin="0,2,0,8" />
+            <TextBlock Text="گذرواژه جدید" />
+            <PasswordBox x:Name="RecoveryPassword" Margin="0,2,0,8" />
+            <TextBlock Text="تکرار گذرواژه جدید" />
+            <PasswordBox x:Name="RecoveryRepeat" Margin="0,2,0,12" />
+            <Button Content="ثبت گذرواژه جدید" Click="OnRecoveryClick" Padding="12,6" IsDefault="True" />
+            <Button Content="بازگشت به ورود" Click="OnBackClick" Margin="0,12,0,0" Padding="12,6" />
+        </StackPanel>
+
+        <StackPanel x:Name="ChangePasswordPanel" Visibility="Collapsed">
+            <TextBlock Text="گذرواژه فعلی" />
+            <PasswordBox x:Name="CurrentPassword" Margin="0,2,0,8" />
+            <TextBlock Text="گذرواژه جدید" />
+            <PasswordBox x:Name="NewPassword" Margin="0,2,0,8" />
+            <TextBlock Text="تکرار گذرواژه جدید" />
+            <PasswordBox x:Name="NewPasswordRepeat" Margin="0,2,0,12" />
+            <Button Content="تغییر گذرواژه" Click="OnChangePasswordClick" Padding="12,6" IsDefault="True" />
+        </StackPanel>
+    </StackPanel>
+</Window>
