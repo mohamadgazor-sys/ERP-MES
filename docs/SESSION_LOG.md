@@ -1009,3 +1009,34 @@ Append one dated entry after every substantial session. Do not replace prior ent
 
 ### Recommended exact next action
 - Review and merge PR #20; run checklist section B.
+
+---
+
+### Date / session
+- Date: 2026-10-16
+- Claude Code session ID (if useful): session_01UwqjPjBXLd2apjZb2urjds (JalaliDateService Q1-Q6 follow-up)
+
+### Goal
+- Close the open `JalaliDateService` questions Q1-Q6 with the owner's answers, add deterministic tests for them, and document them. No customer/request UI or other workflow.
+
+### Completed
+- Verified `main` after the merges of PRs #19 and #20; read the Master Specification (section 0.6, 27), Decision Log #8, #24, #45, plan section 3.1, the audit item U39 and `docs/JALALI_DATE_SERVICE.md`. Q1-Q6 had never been answered; they were put to the owner and answered (Decision Log #73).
+- Code (`ERP.MES.Domain/Calendar/JalaliDateService.cs`): input accepts Arabic-Indic digits and ignores surrounding white space; everything else unchanged. The application already builds the service with Persian digits and `Iran Standard Time` (`App.xaml.cs`), so no composition change.
+- Tests: Arabic-Indic and mixed digit shapes, surrounding white space (incl. no-break and ideographic space), inner white space and zero-width characters still rejected, white-space-only is `Empty`; new `JalaliIranTimeZoneTests` with hand-written expected values at Nowruz, 30 Esfand of a leap year, month and Gregorian-new-year boundaries, local-midnight UTC boundaries, Persian screen text, and the zone looked up by identifier (not the machine's zone). Existing tests that asserted the old rejections were changed deliberately.
+- Golden dates: 33 pairs and the leap years re-checked with an independent algorithm (0 mismatches).
+- Docs: Decision Log #73, `docs/JALALI_DATE_SERVICE.md` (sections 3, 4, 5, 7).
+
+### Files changed
+- See the pull request. No package, schema or migration; no change to authentication or any workflow.
+
+### Decisions newly approved
+- #73 (Q1-Q6).
+
+### Unresolved questions / risks
+- Digit shape in exports/Excel; pre-2022 daylight-saving treatment for old imported timestamps; golden dates are not from an official published table; earlier open items (sign-out/session handling, M8, hash benchmark, database-level audit protection, production migration policy).
+
+### Commands/tests actually run and results
+- Not built locally (no SDK). Windows CI results are reported in the pull request.
+
+### Recommended exact next action
+- Review and merge the pull request; then decide the next milestone (customer/request screens need session handling and M8 decisions first).
