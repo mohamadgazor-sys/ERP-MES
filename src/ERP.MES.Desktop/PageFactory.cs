@@ -15,6 +15,7 @@ internal static class PageFactory
             ShellViewModel.DashboardKey => new DashboardView { DataContext = shell },
             ShellViewModel.CustomersKey => new CustomersView(pages.Customers),
             ShellViewModel.RequestsKey => new RequestsView(pages.Requests),
+            ShellViewModel.QueueKey => new ProductionQueueView(pages.Queue),
             ShellViewModel.LimitationsKey => new LimitationsView(),
             _ => new PlaceholderView(item.Title, shell.NotImplementedText),
         };

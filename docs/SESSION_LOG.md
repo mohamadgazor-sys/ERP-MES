@@ -1163,3 +1163,37 @@ Append one dated entry after every substantial session. Do not replace prior ent
 
 ### Recommended exact next action
 - Review and merge; then the Management production queue.
+
+---
+
+### Date / session
+- Date: 2026-10-16
+- Claude Code session ID (if useful): session_01UwqjPjBXLd2apjZb2urjds (read-only Management production queue)
+
+### Goal
+- Implement the initial Management production queue as a read-only workflow, report options for the open queue-order policy, and add no write control.
+
+### Completed
+- Verified `main` (merge commits of #19-#25 present; Decision Log #77 present; M8 resolved), SDK 10.0.401, `dotnet-ef` 10.0.13.
+- Application: `ProductionQueueService` (permission check against the freshly loaded user, `ListAsync` + `FindWithVersionsAsync`, documented provisional display order, current stage and QC position, estimates, row versions); new permission `ViewProductionQueue` (Management department only - an UNAPPROVED implementation assumption, flagged in the Decision Log "Unresolved", the Domain specification 15.4 and `docs/PRODUCTION_QUEUE.md`). `WorkflowServices.Queue`.
+- Desktop: `ProductionQueueViewModel` and `ProductionQueueView` (Persian RTL, Persian digits, loading / rows / empty / permission-denied / conflict / database-error / unexpected-error states, "بارگذاری دوباره"); the "صف تولید" navigation item is now implemented. No write action exists (a test checks the view model's public surface).
+- Tests: `ProductionQueueTests` (real SQLite: visibility, current stage and QC derivation, estimates, deterministic order and tie-breaks, row versions, permissions incl. deactivated and forged principals, empty, read-only proof, failure statuses), `ProductionQueueViewModelTests` (Persian texts and digits, states, loading, retry, failures), the permission matrix test and the shell navigation test updated.
+- Docs: `docs/PRODUCTION_QUEUE.md` (scope, columns, states, assumption, display order, options T1-T4 and O1-O4 with a recommendation), Decision Log unresolved items, `PERSISTENCE_MAPPING.md`, `MANUAL_UI_CHECKLIST.md` section E.
+
+### Files changed
+- See the pull request. No package, schema or migration change; no persistence contract change.
+
+### Decisions newly approved
+- None. The queue-order policy (equal priorities, override precedence) and who may view the queue are open and are NOT marked approved.
+
+### Unresolved questions / risks
+- Owner decision needed before any write control: T1-T4 (equal priority) and O1-O4 (override precedence) in `docs/PRODUCTION_QUEUE.md` section 7; recommendation T2 with T1 fallback, and O1 with a review flag.
+- Who may view the queue (Management only for now).
+- The queue loads one request at a time through the existing contracts; a read model is needed for large data. The queue is an item-level overview, not the per-unit queue of released stages, and not live (snapshot + reload).
+- The WPF layer is compiled but not exercised by unit tests: checklist section E is pending the owner's run.
+
+### Commands/tests actually run and results
+- Not built locally (no SDK). Windows CI results are reported in the pull request.
+
+### Recommended exact next action
+- Review and merge; run checklist section E; decide the queue-order policy and the viewing permission; then stage progression and QC approval (using `UpdateRowsAsync`).
