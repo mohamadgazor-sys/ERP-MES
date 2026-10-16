@@ -338,8 +338,167 @@ public class WorkflowServiceTests
         using var w = await StartAsync();
 
         Assert.Equal(ValidationIssue.CustomerRequired, (await w.Requests.CreateAsync(w.Central, new CreateRequestCommand(0, "P-1", "1405/07/20", null, null), Token)).Issue);
-        Assert.Equal(OperationStatus.NotFound, (await w.Requests.CreateAsync(w.Central, new CreateRequestCommand(4242, "P-1", "1405/07/20", null, null), Token)).Status);
+        var missing = await w.Requests.CreateAsync(w.Central, new CreateRequestCommand(4242, "P-1", "1405/07/20", null, null), Token);
+        Assert.Equal(OperationStatus.ValidationFailed, missing.Status);
+        Assert.Equal(ValidationIssue.CustomerNotFound, missing.Issue);
         Assert.Equal(0, Count(w, "Requests"));
+    }
+
+    // ---- requests only for ACTIVE customers (Decision Log #76) ----
+
+    private static string CustomerRows(World w) => string.Join("\n", w.Fixture.Db.Query("SELECT Id, Name, IsActive, Version, UpdatedAtUtc FROM Customers ORDER BY Id"));
+
+    private static CreateRequestCommand NewRequestFor(long customerId, string requestNo = "P-1") => new(customerId, requestNo, "1405/07/20", "Title", null);
+
+    [Fact]
+    public async Task A_request_is_created_for_an_active_customer()
+    {
+        using var w = await StartAsync();
+        var customer = await CustomerAsync(w);
+
+        var outcome = await w.Requests.CreateAsync(w.Central, NewRequestFor(customer.Value.Id), Token);
+
+        Assert.True(outcome.Succeeded);
+        Assert.Equal(customer.Value.Id, outcome.Value!.Value.CustomerId);
+        Assert.Equal(1, Count(w, "Requests"));
+    }
+
+    [Fact]
+    public async Task A_request_for_an_inactive_customer_is_refused_by_the_application_service_alone_and_nothing_changes()
+    {
+        using var w = await StartAsync();
+        var active = await CustomerAsync(w, "Active customer");
+        var inactive = await CustomerAsync(w, "Inactive customer");
+        Assert.True((await w.Customers.SetActiveAsync(w.Central, inactive.Value.Id, inactive.Version, false, Token)).Succeeded);
+        var before = CustomerRows(w);
+
+        // Called directly, as a test or another client would: no screen, no dropdown, no cached list is involved.
+        var outcome = await w.Requests.CreateAsync(w.Central, NewRequestFor(inactive.Value.Id), Token);
+
+        Assert.Equal(OperationStatus.ValidationFailed, outcome.Status);
+        Assert.Equal(ValidationIssue.CustomerInactive, outcome.Issue);
+        Assert.Null(outcome.Value);
+        Assert.Equal(0, Count(w, "Requests"));
+        Assert.Equal(0, Count(w, "RequestItems"));
+
+        // The customer was not reactivated or changed, and the request was not given to another customer.
+        Assert.Equal(before, CustomerRows(w));
+        var listed = (await w.Customers.ListAsync(w.Central, activeOnly: false, Token)).Value!;
+        Assert.False(listed.Single(c => c.Value.Id == inactive.Value.Id).Value.IsActive);
+        Assert.True(listed.Single(c => c.Value.Id == active.Value.Id).Value.IsActive);
+        Assert.Empty((await w.Requests.ListAsync(w.Central, active.Value.Id, Token)).Value!);
+    }
+
+    [Fact]
+    public async Task A_customer_deactivated_after_being_listed_but_before_the_request_is_created_is_refused()
+    {
+        using var w = await StartAsync();
+        var customer = await CustomerAsync(w);
+
+        // The screen's dropdown was filled from this list while the customer was active...
+        var shown = (await w.Customers.ListAsync(w.Central, activeOnly: true, Token)).Value!;
+        Assert.Contains(shown, c => c.Value.Id == customer.Value.Id);
+
+        // ...then someone else deactivates the customer...
+        Assert.True((await w.Customers.SetActiveAsync(w.Planning, customer.Value.Id, customer.Version, false, Token)).Succeeded);
+
+        // ...and the stale choice is used. The current persisted status decides.
+        var outcome = await w.Requests.CreateAsync(w.Central, NewRequestFor(shown.Single().Value.Id), Token);
+
+        Assert.Equal(ValidationIssue.CustomerInactive, outcome.Issue);
+        Assert.Equal(0, Count(w, "Requests"));
+        Assert.Empty((await w.Restarted().Requests.ListAsync(w.Central, null, Token)).Value!);
+    }
+
+    [Fact]
+    public async Task A_nonexistent_customer_is_refused_with_its_own_code_and_no_other_customer_is_used()
+    {
+        using var w = await StartAsync();
+        await CustomerAsync(w, "The only customer");
+        var before = CustomerRows(w);
+
+        foreach (var id in new long[] { 4242, long.MaxValue })
+        {
+            var outcome = await w.Requests.CreateAsync(w.Central, NewRequestFor(id), Token);
+            Assert.Equal(OperationStatus.ValidationFailed, outcome.Status);
+            Assert.Equal(ValidationIssue.CustomerNotFound, outcome.Issue);
+        }
+
+        Assert.Equal(0, Count(w, "Requests"));
+        Assert.Equal(before, CustomerRows(w));
+        Assert.Equal(ValidationIssue.CustomerRequired, (await w.Requests.CreateAsync(w.Central, NewRequestFor(0), Token)).Issue);
+        Assert.Equal(ValidationIssue.CustomerRequired, (await w.Requests.CreateAsync(w.Central, NewRequestFor(-3), Token)).Issue);
+    }
+
+    [Fact]
+    public async Task A_refused_request_leaves_the_database_exactly_as_it_was()
+    {
+        using var w = await StartAsync();
+        var customer = await CustomerAsync(w);
+        await RequestAsync(w, customer.Value.Id, "OLD-1");
+        Assert.True((await w.Customers.SetActiveAsync(w.Central, customer.Value.Id, customer.Version, false, Token)).Succeeded);
+        var requests = w.Fixture.Db.Query("SELECT Id, CustomerId, RequestNo, Status, Version FROM Requests ORDER BY Id");
+        var customers = CustomerRows(w);
+        var audit = w.Fixture.AuditActionsInOrder();
+
+        var outcome = await w.Requests.CreateAsync(w.Central, new CreateRequestCommand(customer.Value.Id, "NEW-1", "1405/07/21", "Title", "Description"), Token);
+
+        Assert.False(outcome.Succeeded);
+        Assert.Equal(requests, w.Fixture.Db.Query("SELECT Id, CustomerId, RequestNo, Status, Version FROM Requests ORDER BY Id"));
+        Assert.Equal(customers, CustomerRows(w));
+        Assert.Equal(audit, w.Fixture.AuditActionsInOrder());
+        Assert.Equal(0, Count(w, "RequestItems"));
+        Assert.Equal(0, Count(w, "ItemStages"));
+    }
+
+    [Fact]
+    public async Task Reactivating_the_customer_allows_a_request_again_because_only_the_current_status_counts()
+    {
+        using var w = await StartAsync();
+        var customer = await CustomerAsync(w);
+        var off = await w.Customers.SetActiveAsync(w.Central, customer.Value.Id, customer.Version, false, Token);
+        Assert.Equal(ValidationIssue.CustomerInactive, (await w.Requests.CreateAsync(w.Central, NewRequestFor(customer.Value.Id), Token)).Issue);
+
+        Assert.True((await w.Customers.SetActiveAsync(w.Central, customer.Value.Id, off.Value!.Version, true, Token)).Succeeded);
+
+        Assert.True((await w.Requests.CreateAsync(w.Central, NewRequestFor(customer.Value.Id), Token)).Succeeded);
+        Assert.Equal(1, Count(w, "Requests"));
+    }
+
+    [Fact]
+    public async Task Requests_that_already_exist_keep_working_after_their_customer_is_deactivated()
+    {
+        using var w = await StartAsync();
+        var customer = await CustomerAsync(w);
+        var created = await RequestAsync(w, customer.Value.Id);
+        Assert.True((await w.Customers.SetActiveAsync(w.Central, customer.Value.Id, customer.Version, false, Token)).Succeeded);
+        w.Fixture.Clock.Advance(TimeSpan.FromMinutes(1));
+
+        var detail = await w.Requests.GetAsync(w.Qc, created.Value.Id, Token);
+        var item = await w.Requests.AddItemAsync(w.Drawing, created.Value.Id, created.Version, Make("1.10"), Token);
+        var submitted = await w.Requests.SubmitToManagementAsync(w.Central, created.Value.Id, item.Value!.Version, Token);
+
+        Assert.True(detail.Succeeded);
+        Assert.Equal("Fictional Customer A", detail.Value!.CustomerName);
+        Assert.True(item.Succeeded);
+        Assert.True(submitted.Succeeded);
+        Assert.Single((await w.Requests.ListAsync(w.Central, customer.Value.Id, Token)).Value!);
+    }
+
+    [Fact]
+    public async Task The_permission_is_checked_before_the_customer_so_a_user_without_it_learns_nothing_about_the_customer()
+    {
+        using var w = await StartAsync();
+        var customer = await CustomerAsync(w);
+        Assert.True((await w.Customers.SetActiveAsync(w.Central, customer.Value.Id, customer.Version, false, Token)).Succeeded);
+
+        foreach (var user in new[] { w.Planning, w.Drawing, w.Qc })
+        {
+            Assert.Equal(OperationStatus.NotAuthorized, (await w.Requests.CreateAsync(user, NewRequestFor(customer.Value.Id), Token)).Status);
+            Assert.Equal(OperationStatus.NotAuthorized, (await w.Requests.CreateAsync(user, NewRequestFor(4242), Token)).Status);
+        }
+
+        Assert.Equal(OperationStatus.NotAuthorized, (await w.Requests.CreateAsync(null, NewRequestFor(customer.Value.Id), Token)).Status);
     }
 
     [Fact]

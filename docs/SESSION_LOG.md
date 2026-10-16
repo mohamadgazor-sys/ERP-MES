@@ -1104,3 +1104,32 @@ Append one dated entry after every substantial session. Do not replace prior ent
 
 ### Recommended exact next action
 - Review and merge the pull request, run checklist section D, then decide the next approved portion (request-detail editing needs a Domain method and the transition table).
+
+---
+
+### Date / session
+- Date: 2026-10-16
+- Claude Code session ID (if useful): session_01UwqjPjBXLd2apjZb2urjds (inactive-customer rule, Decision Log #76)
+
+### Goal
+- Enforce, in the Application use case, that a new request is created only for an active customer, re-reading the customer's status at creation.
+
+### Completed
+- `RequestService.CreateAsync` reads the customer from the database when the request is created and refuses an inactive customer (`ValidationIssue.CustomerInactive`) or a missing one (`CustomerNotFound`, previously the `NotFound` status); nothing is created or changed. Persian messages and a list reload on the request screen. Existing requests of a later-deactivated customer are untouched.
+- Tests: active succeeds; inactive refused through the service without the UI; deactivated after being listed but before creation; non-existent; database unchanged and no partial request; reactivation allows creation again; existing requests keep working; authorization is checked first; screen reload after the refusal.
+- Docs: Decision Log #76 (and the open point in #75 resolved), checklist D18-D19. The earlier session-log entry that listed this as open is historical and left as written.
+
+### Files changed
+- See the pull request. No package, schema or migration; persistence contracts unchanged.
+
+### Decisions newly approved
+- #76.
+
+### Unresolved questions / risks
+- Two steps (check, then save) remain because the persistence contract is unchanged: a deactivation within milliseconds between them can still let one request through (documented in #76). Everything else from the previous entry is unchanged (M8, request/item editing, the WPF layer pending the owner's run).
+
+### Commands/tests actually run and results
+- Not built locally (no SDK). Windows CI results are reported in the pull request.
+
+### Recommended exact next action
+- Review and merge; run checklist D18-D19 together with section D.

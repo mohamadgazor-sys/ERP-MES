@@ -35,6 +35,12 @@ public enum ValidationIssue
     None = 0,
     CustomerNameRequired,
     CustomerRequired,
+
+    /// <summary>The chosen customer does not exist (any more). Nothing was created and no other customer was substituted.</summary>
+    CustomerNotFound,
+
+    /// <summary>The chosen customer is inactive NOW (Decision Log #76). Nothing was created; the customer was not reactivated or changed.</summary>
+    CustomerInactive,
     RequestNoRequired,
     RequestNoWhitespace,
     RequestDateRequired,

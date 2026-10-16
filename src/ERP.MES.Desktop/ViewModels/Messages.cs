@@ -35,6 +35,8 @@ public static class Messages
     {
         ValidationIssue.CustomerNameRequired => "نام مشتری را وارد کنید.",
         ValidationIssue.CustomerRequired => "مشتری را انتخاب کنید.",
+        ValidationIssue.CustomerNotFound => "مشتری انتخاب‌شده دیگر وجود ندارد؛ مشتری دیگری را انتخاب کنید. درخواستی ثبت نشد.",
+        ValidationIssue.CustomerInactive => "این مشتری غیرفعال است و برای او درخواست جدید ثبت نمی‌شود. درخواستی ثبت نشد؛ مشتری فعال دیگری را انتخاب کنید.",
         ValidationIssue.RequestNoRequired => "شمارهٔ درخواست را وارد کنید.",
         ValidationIssue.RequestNoWhitespace => "شمارهٔ درخواست نباید با فاصله یا نویسهٔ خالی شروع یا تمام شود.",
         ValidationIssue.RequestDateRequired => "تاریخ درخواست را وارد کنید.",

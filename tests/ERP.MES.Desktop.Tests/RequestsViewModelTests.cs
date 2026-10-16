@@ -154,6 +154,47 @@ public class RequestsViewModelTests
     }
 
     [Fact]
+    public async Task A_customer_deactivated_after_the_dropdown_was_filled_is_refused_with_a_clear_message_and_the_list_reloads()
+    {
+        using var h = await WorkflowHarness.CreateAsync(Token);
+        var staying = await CustomerAsync(h, "مشتری فعال");
+        var leaving = await CustomerAsync(h, "مشتری در حال غیرفعال شدن");
+        var vm = h.RequestsFor(h.Central);
+        await vm.LoadAsync(Token);
+        Assert.Equal(2, vm.Customers.Count);
+
+        var stored = (await h.Workflow.Customers.ListAsync(h.Central, false, Token)).Value!.Single(c => c.Value.Id == leaving);
+        Assert.True((await h.Workflow.Customers.SetActiveAsync(h.Planning, leaving, stored.Version, false, Token)).Succeeded);
+
+        var saved = await vm.CreateAsync(leaving, "P-1", DateText, null, null, Token);
+
+        Assert.False(saved);
+        Assert.Equal(Messages.ForIssue(ValidationIssue.CustomerInactive, JalaliDateError.None), vm.Message);
+        Assert.Contains("غیرفعال", vm.Message, StringComparison.Ordinal);
+        Assert.Empty(vm.Requests);
+        Assert.Equal(new[] { staying }, vm.Customers.Select(c => c.Id).ToArray());
+        Assert.Empty((await h.Workflow.Requests.ListAsync(h.Central, null, Token)).Value!);
+
+        // A request for the other, active customer still works.
+        Assert.True(await vm.CreateAsync(staying, "P-1", DateText, null, null, Token));
+    }
+
+    [Fact]
+    public async Task A_customer_that_no_longer_exists_is_refused_with_its_own_message()
+    {
+        using var h = await WorkflowHarness.CreateAsync(Token);
+        await CustomerAsync(h);
+        var vm = h.RequestsFor(h.Central);
+        await vm.LoadAsync(Token);
+
+        Assert.False(await vm.CreateAsync(4242, "P-1", DateText, null, null, Token));
+
+        Assert.Equal(Messages.ForIssue(ValidationIssue.CustomerNotFound, JalaliDateError.None), vm.Message);
+        Assert.NotEqual(Messages.ForIssue(ValidationIssue.CustomerInactive, JalaliDateError.None), vm.Message);
+        Assert.Empty(vm.Requests);
+    }
+
+    [Fact]
     public async Task Departments_without_the_right_are_told_so_and_nothing_is_created()
     {
         using var h = await WorkflowHarness.CreateAsync(Token);

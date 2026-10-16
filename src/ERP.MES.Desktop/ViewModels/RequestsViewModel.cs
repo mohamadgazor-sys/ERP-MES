@@ -217,8 +217,10 @@ public sealed class RequestsViewModel(
     private async Task ShowFailureAsync<T>(Outcome<T> outcome, CancellationToken cancellationToken, long? reopen = null)
     {
         var text = Messages.For(outcome);
-        if (outcome.Status is OperationStatus.ConcurrencyConflict or OperationStatus.NotFound)
+        var customerChanged = outcome.Issue is ValidationIssue.CustomerInactive or ValidationIssue.CustomerNotFound;
+        if (customerChanged || outcome.Status is OperationStatus.ConcurrencyConflict or OperationStatus.NotFound)
         {
+            // After a conflict, a vanished record or a customer that is no longer usable the lists are reloaded, so the screen shows what is true now.
             await ReloadAsync(cancellationToken, keepMessage: true);
             if (reopen is { } id && outcome.Status == OperationStatus.ConcurrencyConflict)
             {

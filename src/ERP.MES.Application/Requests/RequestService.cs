@@ -102,7 +102,7 @@ public sealed class RequestService(
     }
 
     /// <summary>
-    /// Creates a request in status CREATED (Central). The number is stored exactly as typed; the Jalali year comes from the request date (Decision Log #31). A number that
+    /// Creates a request in status CREATED (Central), only for an ACTIVE customer that exists at this moment (Decision Log #76). Requests that already exist keep working when their customer is deactivated later. The number is stored exactly as typed; the Jalali year comes from the request date (Decision Log #31). A number that
     /// differs from an existing one of the same customer and year only by letter case is accepted and reported in <see cref="Outcome{T}.Warnings"/> (non-blocking warning).
     /// </summary>
     public async Task<Outcome<Stored<Request>>> CreateAsync(Principal? principal, CreateRequestCommand command, CancellationToken cancellationToken = default)
@@ -139,10 +139,17 @@ public sealed class RequestService(
         var now = clock.UtcNow;
         return await CustomerService.GuardAsync(async () =>
         {
+            // The customer is read from the database NOW: a list the screen showed earlier, or any cached state, decides nothing (Decision Log #76). Only an active
+            // customer may get a new request; a missing or inactive one is refused, and the customer is neither changed nor replaced by another.
             var customer = await customers.FindAsync(command.CustomerId, cancellationToken);
             if (customer is null)
             {
-                return Outcome<Stored<Request>>.Fail(OperationStatus.NotFound);
+                return Outcome<Stored<Request>>.Invalid(ValidationIssue.CustomerNotFound);
+            }
+
+            if (!customer.Value.IsActive)
+            {
+                return Outcome<Stored<Request>>.Invalid(ValidationIssue.CustomerInactive);
             }
 
             var request = Request.Create(
