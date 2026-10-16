@@ -11,8 +11,8 @@ public sealed record CreateRequestCommand(long CustomerId, string? RequestNo, st
 /// <summary>What a person typed to add an item. <see cref="Quantity"/> is already a number; see <see cref="QuantityText"/>.</summary>
 public sealed record AddItemCommand(string? ItemNo, string? PartName, WorkType WorkType, decimal Quantity, Priority Priority = Priority.Normal);
 
-/// <summary>A request with its items and the name of its customer, loaded at <see cref="Stored{T}.Version"/>.</summary>
-public sealed record RequestDetail(Stored<Request> Request, string CustomerName);
+/// <summary>A request with its items and the name of its customer, loaded at <see cref="Stored{T}.Version"/>; <see cref="Versions"/> holds the row version of the request and of every item and stage, for the item- and stage-level expected versions (Decision Log #77).</summary>
+public sealed record RequestDetail(Stored<Request> Request, string CustomerName, RequestVersions Versions);
 
 /// <summary>
 /// Which actions the current user may perform right now, for enabling buttons. It is an answer of the Application (from the database, via
@@ -90,14 +90,15 @@ public sealed class RequestService(
 
         return await CustomerService.GuardAsync(async () =>
         {
-            var stored = await requests.FindAsync(requestId, cancellationToken);
-            if (stored is null)
+            var versioned = await requests.FindWithVersionsAsync(requestId, cancellationToken);
+            if (versioned is null)
             {
                 return Outcome<RequestDetail>.Fail(OperationStatus.NotFound);
             }
 
-            var customer = await customers.FindAsync(stored.Value.CustomerId, cancellationToken);
-            return Outcome<RequestDetail>.Ok(new RequestDetail(stored, customer?.Value.Name ?? string.Empty));
+            var customer = await customers.FindAsync(versioned.Value.CustomerId, cancellationToken);
+            return Outcome<RequestDetail>.Ok(new RequestDetail(
+                new Stored<Request>(versioned.Value, versioned.Versions.Request), customer?.Value.Name ?? string.Empty, versioned.Versions));
         });
     }
 

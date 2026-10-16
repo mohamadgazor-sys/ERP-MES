@@ -65,11 +65,9 @@ Honest limits of the sample, all inherited from the Domain model (Decision Log #
 
 A new or reset demonstration database also gets seven fictional accounts, created through the production bootstrap and account use cases, each with a random one-time password written only to a protected credential file outside the repository (`--credentials <file>`, or a default under the user's local application data). `demo-init` on an initialised database creates none; `demo-reset` creates new accounts with new passwords. The commands never print a password. Details, the file protection and the checks: `docs/AUTHENTICATION.md` section 9.
 
-## 4. Concurrency (M8) - unchanged, and what the next PRs must do
+## 4. Concurrency (M8) - resolved by Decision Log #77
 
-This PR changes **no persistence contract**. Per-row versioning (M8) is as documented in `PERSISTENCE_MAPPING.md` section 5: a request-level `expectedVersion` does not detect a competing change to an item's priority or a stage's status.
-
-**Before** a later PR adds queue stage changes or QC actions, it must explicitly decide and show how the screen carries the expected version of the **specific item or stage being changed** (for example by extending the repository contract with item and stage versions in `Stored<T>`/update arguments), and it must come with stale-update tests for those operations. Seed and reset do not depend on this.
+This PR changed **no persistence contract**. At that time a request-level `expectedVersion` did not detect a competing change to an item's priority or a stage's status. M8 was resolved afterwards by Decision Log #77: queue and QC actions must use `UpdateRowsAsync` with the expected versions of the rows they intend to change (`PERSISTENCE_MAPPING.md` section 5). Concurrency is per row, not aggregate-level. Seed and reset do not depend on this.
 
 ## 5. Verification
 

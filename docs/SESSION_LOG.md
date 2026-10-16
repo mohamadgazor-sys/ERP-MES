@@ -1133,3 +1133,33 @@ Append one dated entry after every substantial session. Do not replace prior ent
 
 ### Recommended exact next action
 - Review and merge; run checklist D18-D19 together with section D.
+
+---
+
+### Date / session
+- Date: 2026-10-16
+- Claude Code session ID (if useful): session_01UwqjPjBXLd2apjZb2urjds (M8: item and stage expected versions, Decision Log #77)
+
+### Goal
+- Close M8: let callers supply the version they loaded for the specific item or stage being changed, before queue and QC actions are built.
+
+### Completed
+- `RowVersions.cs` (`StageRef`, `RequestVersions`, `VersionedRequest`, `RowVersionExpectations`); `IRequestRepository.FindWithVersionsAsync` and `UpdateRowsAsync(requestId, RowVersionExpectations, change)`; `EfRequestRepository` implements them (check before the change, then the existing `PersistenceSave`); `RequestDetail.Versions`.
+- Inspection result: a stage operation can also change its item (QC approval) and the next stage; protection is per row, documented in #77 and `PERSISTENCE_MAPPING.md` section 5. No aggregate-level claim.
+- Tests: `RowVersionTests` (current versions succeed; stale item; stale stage; one stale named row rejects everything; competing write between load and save leaves no partial change; request-level version does not detect item changes; missing rows; Domain rules still apply).
+- Docs: Decision Log #77, `PERSISTENCE_MAPPING.md`, `AUTHENTICATION.md` section 11.
+
+### Files changed
+- See the pull request. No package, schema or migration change.
+
+### Decisions newly approved
+- #77.
+
+### Unresolved questions / risks
+- Per-row only: an aggregate-level version is still undecided. Queue and QC actions are not implemented; they must name the rows they change.
+
+### Commands/tests actually run and results
+- Not built locally (no SDK). Windows CI results are reported in the pull request.
+
+### Recommended exact next action
+- Review and merge; then the Management production queue.

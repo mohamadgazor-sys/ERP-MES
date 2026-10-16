@@ -138,7 +138,7 @@ Code: Application `SessionService`, `CurrentAuthorization`, `SessionLockReason`,
 | Item | Status |
 |---|---|
 | Central storage of the timeout for multi-PC deployment; server-side session records (forced sign-out, guaranteed end-of-session audit); an absolute maximum session length; per-role timeouts; session-administration screens | Production-only, not started (#74). The demo policy is in section 8a. |
-| Item/stage expected-version support (M8) | **Still open.** Must be resolved, with stale-update tests, before queue-stage or QC actions (#71); not touched by the session work. |
+| Item/stage expected-version support (M8) | **Resolved** by Decision Log #77: queue and QC actions must use `UpdateRowsAsync` with the expected versions of the rows they change. Concurrency is per row, not aggregate-level. |
 | Database-level audit protection (permissions or equivalent) | Production requirement (#68). |
 | Production migration policy | Undecided (#69). |
 | Hash benchmark on the lowest-spec supported PC | `benchmark-hash` exists; the PC is not identified. 600,000 stays a starting value (#42). |

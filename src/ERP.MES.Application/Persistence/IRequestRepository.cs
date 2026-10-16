@@ -35,4 +35,19 @@ public interface IRequestRepository
     /// operation raises <see cref="ConcurrencyConflictException"/>. An exception thrown by <paramref name="change"/> propagates and nothing is saved.
     /// </summary>
     Task<Stored<Request>> UpdateAsync(long requestId, long? expectedVersion, Action<Request> change, CancellationToken cancellationToken = default);
+
+    /// <summary>Like <see cref="FindAsync"/>, and also returns the row version of the request, of every item and of every stage (Decision Log #77, M8).</summary>
+    Task<VersionedRequest?> FindWithVersionsAsync(long requestId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Item- and stage-level expected versions (Decision Log #77, M8). Loads the request with its items, stages and approvals, compares EVERY row named in
+    /// <paramref name="expected"/> with the stored row, and only if all of them match runs <paramref name="change"/> (the Domain methods, which keep enforcing their own
+    /// rules) and saves the result in one transaction. A named row at another version raises <see cref="ConcurrencyConflictException"/>; a named row that does not
+    /// exist raises <see cref="RecordNotFoundException"/>; in both cases <paramref name="change"/> has not run and nothing is saved. A row changed by someone else after the
+    /// load raises <see cref="ConcurrencyConflictException"/> at save time and nothing at all is saved (all-or-nothing). QC approvals are appended, never changed or removed.
+    ///
+    /// The guarantee is per row, not per aggregate: it protects the rows the caller names (and every row the change touches, for the short time between load and
+    /// save), not "the request as the caller last saw it" unless the caller names every row it relied on (see <see cref="RowVersionExpectations.FromLoaded"/>).
+    /// </summary>
+    Task<VersionedRequest> UpdateRowsAsync(long requestId, RowVersionExpectations expected, Action<Request> change, CancellationToken cancellationToken = default);
 }

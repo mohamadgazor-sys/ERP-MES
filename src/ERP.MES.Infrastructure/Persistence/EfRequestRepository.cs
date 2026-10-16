@@ -129,6 +129,63 @@ public sealed class EfRequestRepository(IDbContextFactory<ErpMesDbContext> conte
         return new Stored<Request>(request, context.GetRowVersion(request));
     }
 
+    public async Task<VersionedRequest?> FindWithVersionsAsync(long requestId, CancellationToken cancellationToken = default)
+    {
+        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
+        var request = await LoadAggregate(context).SingleOrDefaultAsync(r => r.Id == requestId, cancellationToken);
+        return request is null ? null : new VersionedRequest(request, CaptureVersions(context, request));
+    }
+
+    public async Task<VersionedRequest> UpdateRowsAsync(long requestId, RowVersionExpectations expected, Action<Request> change, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(expected);
+        ArgumentNullException.ThrowIfNull(change);
+
+        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
+        var request = await LoadAggregate(context).SingleOrDefaultAsync(r => r.Id == requestId, cancellationToken)
+            ?? throw new RecordNotFoundException("request", requestId);
+
+        // Every named row is compared BEFORE the change runs, so a rejected operation has changed nothing, in memory or in the database.
+        CheckExpected(context, request, expected);
+        change(request);
+        await PersistenceSave.SaveAsync(context, cancellationToken);
+        return new VersionedRequest(request, CaptureVersions(context, request));
+    }
+
+    private static RequestVersions CaptureVersions(ErpMesDbContext context, Request request)
+    {
+        var items = new Dictionary<long, long>();
+        var stages = new Dictionary<StageRef, long>();
+        foreach (var item in request.Items)
+        {
+            items[item.Id] = context.GetRowVersion(item);
+            foreach (var stage in item.Stages)
+            {
+                stages[new StageRef(item.Id, stage.StageNo)] = context.GetRowVersion(stage);
+            }
+        }
+
+        return new RequestVersions(context.GetRowVersion(request), items, stages);
+    }
+
+    private static void CheckExpected(ErpMesDbContext context, Request request, RowVersionExpectations expected)
+    {
+        PersistenceSave.CheckExpectedVersion(context, request, expected.Request);
+
+        foreach (var (itemId, version) in expected.Items)
+        {
+            var item = request.Items.FirstOrDefault(i => i.Id == itemId) ?? throw new RecordNotFoundException("request item", itemId);
+            PersistenceSave.CheckExpectedVersion(context, item, version);
+        }
+
+        foreach (var (stageRef, version) in expected.Stages)
+        {
+            var stage = request.Items.FirstOrDefault(i => i.Id == stageRef.ItemId)?.Stages.FirstOrDefault(s => s.StageNo == stageRef.StageNo)
+                ?? throw new RecordNotFoundException("stage " + stageRef.StageNo + " of item", stageRef.ItemId);
+            PersistenceSave.CheckExpectedVersion(context, stage, version);
+        }
+    }
+
     // Items, stages and approvals are loaded in a stable order: the Domain addresses stages by position, so they must come back in stage order.
     private static IQueryable<Request> LoadAggregate(ErpMesDbContext context) =>
         context.Requests
