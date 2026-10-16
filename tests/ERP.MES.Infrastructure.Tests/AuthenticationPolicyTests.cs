@@ -25,7 +25,7 @@ public class AuthenticationPolicyTests : IDisposable
     {
         var policy = AuthenticationPolicy.Default;
 
-        Assert.Equal(12, policy.MinimumPasswordLength);
+        Assert.Equal(6, policy.MinimumPasswordLength);
         Assert.Equal(5, policy.MaxFailedAttempts);
         Assert.Equal(5, policy.LockoutMinutes);
         Assert.Equal(600_000, policy.Pbkdf2Iterations);
@@ -36,7 +36,7 @@ public class AuthenticationPolicyTests : IDisposable
     }
 
     [Theory]
-    [InlineData("MinimumPasswordLength", 7)]
+    [InlineData("MinimumPasswordLength", 5)]
     [InlineData("MaxFailedAttempts", 2)]
     [InlineData("MaxFailedAttempts", 11)]
     [InlineData("LockoutMinutes", 0)]
@@ -70,7 +70,7 @@ public class AuthenticationPolicyTests : IDisposable
     {
         var policy = new AuthenticationPolicy
         {
-            MinimumPasswordLength = 8,
+            MinimumPasswordLength = 6,
             MaxFailedAttempts = 3,
             LockoutMinutes = 1,
             Pbkdf2Iterations = 310_000,
@@ -80,21 +80,68 @@ public class AuthenticationPolicyTests : IDisposable
     }
 
     [Theory]
-    [InlineData("12345678901", PasswordPolicyError.TooShort)]
-    [InlineData("123456789012", PasswordPolicyError.None)]
+    [InlineData("abcdef", PasswordPolicyError.None)]
+    [InlineData("abcde", PasswordPolicyError.TooShort)]
+    [InlineData("a", PasswordPolicyError.TooShort)]
     [InlineData("", PasswordPolicyError.Empty)]
     [InlineData(null, PasswordPolicyError.Empty)]
-    public void The_password_length_is_counted_in_characters_with_no_composition_rules(string? password, PasswordPolicyError expected)
+    public void The_minimum_is_six_characters(string? password, PasswordPolicyError expected)
     {
         Assert.Equal(expected, PasswordRules.Validate(password, AuthenticationPolicy.Default));
+    }
+
+    [Theory]
+    [InlineData("alllowercase")]
+    [InlineData("ALLUPPERCASE")]
+    [InlineData("123456789012")]
+    [InlineData("!@#$%^&*()_+")]
+    [InlineData("a-much-longer-password-with-no-required-mix")]
+    [InlineData("گذرواژه‌ام")]
+    public void There_are_no_composition_rules(string password)
+    {
+        Assert.Equal(PasswordPolicyError.None, PasswordRules.Validate(password, AuthenticationPolicy.Default));
+    }
+
+    [Theory]
+    [InlineData(" abcdef")]
+    [InlineData("abcdef ")]
+    [InlineData("abc def")]
+    [InlineData("  abcdef  ")]
+    [InlineData("abcdefghijklmnop qrstuvwxyz")]
+    [InlineData("      ")]
+    [InlineData(" ab ")]
+    public void A_space_anywhere_is_rejected_and_the_password_is_not_trimmed_to_fit(string password)
+    {
+        // Rejected - never repaired: the trimmed text of the first five would be a valid six-character password.
+        Assert.Equal(PasswordPolicyError.ContainsSpace, PasswordRules.Validate(password, AuthenticationPolicy.Default));
+    }
+
+    [Fact]
+    public void Characters_other_than_the_space_are_not_treated_as_spaces_or_normalised()
+    {
+        // Only the space character is forbidden (Decision Log #72). The zero-width non-joiner used in Persian writing is an ordinary character,
+        // and no text is normalised: decomposed and precomposed forms are both accepted exactly as typed.
+        Assert.Equal(PasswordPolicyError.None, PasswordRules.Validate("می\u200Cخواهم", AuthenticationPolicy.Default));
+        Assert.Equal(PasswordPolicyError.None, PasswordRules.Validate("e\u0301e\u0301e\u0301e\u0301e\u0301e\u0301", AuthenticationPolicy.Default));
+        Assert.Equal(PasswordPolicyError.None, PasswordRules.Validate("\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9", AuthenticationPolicy.Default));
     }
 
     [Fact]
     public void Persian_text_counts_by_characters_not_by_bytes()
     {
-        // Seven Persian letters are fourteen bytes in UTF-8 but only seven characters.
-        Assert.Equal(PasswordPolicyError.TooShort, PasswordRules.Validate("گذرواژه", AuthenticationPolicy.Default));
-        Assert.Equal(PasswordPolicyError.None, PasswordRules.Validate("گذرواژه-امن-۱۲۳", AuthenticationPolicy.Default));
+        // Five Persian letters are ten bytes in UTF-8 but only five characters; six letters are enough.
+        Assert.Equal(PasswordPolicyError.TooShort, PasswordRules.Validate("گذرها", AuthenticationPolicy.Default));
+        Assert.Equal(PasswordPolicyError.None, PasswordRules.Validate("گذرواژ", AuthenticationPolicy.Default));
+    }
+
+    [Fact]
+    public void A_configured_longer_minimum_still_applies_but_the_space_rule_cannot_be_configured_away()
+    {
+        var policy = new AuthenticationPolicy { MinimumPasswordLength = 10 };
+
+        Assert.Equal(PasswordPolicyError.TooShort, PasswordRules.Validate("abcdefghi", policy));
+        Assert.Equal(PasswordPolicyError.None, PasswordRules.Validate("abcdefghij", policy));
+        Assert.Equal(PasswordPolicyError.ContainsSpace, PasswordRules.Validate("abcdefghi j", policy));
     }
 
     [Fact]

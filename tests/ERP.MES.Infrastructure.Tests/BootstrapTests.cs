@@ -208,17 +208,24 @@ public partial class BootstrapTests
         using var fixture = await SecurityFixture.CreateAsync();
         var issued = await fixture.Services.Bootstrap.IssueTokenAsync(cancellationToken: Token);
 
-        var tooShort = await Complete(fixture, issued.Token, password: "short-pass1");
+        var tooShort = await Complete(fixture, issued.Token, password: "short");
         var empty = await Complete(fixture, issued.Token, password: string.Empty);
+        var leading = await Complete(fixture, issued.Token, password: " sixchars");
+        var middle = await Complete(fixture, issued.Token, password: "six chars");
+        var trailing = await Complete(fixture, issued.Token, password: "sixchars ");
 
+        Assert.Equal(PasswordPolicyError.ContainsSpace, leading.PasswordError);
+        Assert.Equal(PasswordPolicyError.ContainsSpace, middle.PasswordError);
+        Assert.Equal(PasswordPolicyError.ContainsSpace, trailing.PasswordError);
         Assert.Equal(BootstrapStatus.PasswordRejected, tooShort.Status);
         Assert.Equal(PasswordPolicyError.TooShort, tooShort.PasswordError);
         Assert.Equal(PasswordPolicyError.Empty, empty.PasswordError);
         Assert.Equal("0", Attempts(fixture));
         Assert.Equal("AwaitingBootstrap", State(fixture));
 
-        // Exactly twelve characters is enough.
-        Assert.Equal(BootstrapStatus.Succeeded, (await Complete(fixture, issued.Token, password: "twelve-chars")).Status);
+        // Exactly six characters is enough, with no mix of character kinds required.
+        Assert.Equal(BootstrapStatus.Succeeded, (await Complete(fixture, issued.Token, password: "sixsix")).Status);
+        Assert.Equal(SignInStatus.Succeeded, (await fixture.Services.Authentication.SignInAsync("admin.one", "sixsix", Token)).Status);
     }
 
     [Fact]

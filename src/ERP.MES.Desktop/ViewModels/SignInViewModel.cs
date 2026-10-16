@@ -281,6 +281,7 @@ public sealed class SignInViewModel(
     private string PasswordMessage(PasswordPolicyError error) => error switch
     {
         PasswordPolicyError.TooShort => $"گذرواژه باید دست‌کم {minimumPasswordLength} نویسه باشد.",
+        PasswordPolicyError.ContainsSpace => "گذرواژه نباید فاصله (space) داشته باشد.",
         _ => "گذرواژه را وارد کنید.",
     };
 

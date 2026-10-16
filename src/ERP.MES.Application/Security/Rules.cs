@@ -9,9 +9,14 @@ public enum PasswordPolicyError
     None = 0,
     Empty,
     TooShort,
+    ContainsSpace,
 }
 
-/// <summary>The password policy (Milestone 1 plan 6.1): a minimum length counted in characters, and nothing else. The password is used exactly as typed: it is never trimmed or normalised.</summary>
+/// <summary>
+/// The password policy (Decision Log #72): a minimum length counted in characters, and no space character (U+0020) anywhere. Nothing else is required or forbidden:
+/// there are no composition rules. The password is used exactly as typed - it is never trimmed or normalised - so a password with a space is rejected, not repaired.
+/// The same rule applies wherever a user chooses a new password; signing in with an existing password only verifies it and never applies this policy.
+/// </summary>
 public static class PasswordRules
 {
     public static PasswordPolicyError Validate(string? password, AuthenticationPolicy policy)
@@ -20,6 +25,11 @@ public static class PasswordRules
         if (string.IsNullOrEmpty(password))
         {
             return PasswordPolicyError.Empty;
+        }
+
+        if (password.Contains(' ', StringComparison.Ordinal))
+        {
+            return PasswordPolicyError.ContainsSpace;
         }
 
         return new StringInfo(password).LengthInTextElements < policy.MinimumPasswordLength ? PasswordPolicyError.TooShort : PasswordPolicyError.None;
