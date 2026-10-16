@@ -49,5 +49,5 @@ public interface IRequestRepository
     /// The guarantee is per row, not per aggregate: it protects the rows the caller names (and every row the change touches, for the short time between load and
     /// save), not "the request as the caller last saw it" unless the caller names every row it relied on (see <see cref="RowVersionExpectations.FromLoaded"/>).
     /// </summary>
-    Task<VersionedRequest> UpdateAsync(long requestId, RowVersionExpectations expected, Action<Request> change, CancellationToken cancellationToken = default);
+    Task<VersionedRequest> UpdateRowsAsync(long requestId, RowVersionExpectations expected, Action<Request> change, CancellationToken cancellationToken = default);
 }

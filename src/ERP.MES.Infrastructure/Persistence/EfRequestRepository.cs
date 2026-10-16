@@ -136,7 +136,7 @@ public sealed class EfRequestRepository(IDbContextFactory<ErpMesDbContext> conte
         return request is null ? null : new VersionedRequest(request, CaptureVersions(context, request));
     }
 
-    public async Task<VersionedRequest> UpdateAsync(long requestId, RowVersionExpectations expected, Action<Request> change, CancellationToken cancellationToken = default)
+    public async Task<VersionedRequest> UpdateRowsAsync(long requestId, RowVersionExpectations expected, Action<Request> change, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(expected);
         ArgumentNullException.ThrowIfNull(change);

@@ -32,8 +32,8 @@ public class RowVersionTests
             var loaded = await db.Requests().FindWithVersionsAsync(requestId, Token);
 
             Assert.NotNull(loaded);
-            var make = Make(loaded.Value.Value);
-            var repair = Repair(loaded.Value.Value);
+            var make = Make(loaded.Value);
+            var repair = Repair(loaded.Value);
             Assert.Equal(2, loaded.Versions.Items.Count);
             Assert.Equal(4, loaded.Versions.Stages.Count);
             Assert.All(loaded.Versions.Items.Values, v => Assert.True(v >= 1));
@@ -56,7 +56,7 @@ public class RowVersionTests
             var make = Make(before.Value);
             var repair = Repair(before.Value);
 
-            var after = await repository.UpdateAsync(
+            var after = await repository.UpdateRowsAsync(
                 requestId,
                 RowVersionExpectations.ForItem(make.Id, before.Versions.ItemVersion(make.Id)).WithStage(make.Id, 2, before.Versions.StageVersion(make.Id, 2)),
                 r => Make(r).StartStage(2),
@@ -86,13 +86,13 @@ public class RowVersionTests
             var staleItemVersion = loaded.Versions.ItemVersion(make.Id);
 
             // Another user changes the priority first.
-            await repository.UpdateAsync(
+            await repository.UpdateRowsAsync(
                 requestId,
                 RowVersionExpectations.ForItem(make.Id, staleItemVersion),
                 r => Assert.True(Make(r).ChangePriority(Priority.VeryUrgent, Later)),
                 Token);
 
-            await Assert.ThrowsAsync<ConcurrencyConflictException>(() => repository.UpdateAsync(
+            await Assert.ThrowsAsync<ConcurrencyConflictException>(() => repository.UpdateRowsAsync(
                 requestId,
                 RowVersionExpectations.ForItem(make.Id, staleItemVersion),
                 r => Assert.True(Make(r).ChangePriority(Priority.Normal, Later.AddMinutes(1))),
@@ -115,9 +115,9 @@ public class RowVersionTests
             var make = Make(loaded.Value);
             var staleStageVersion = loaded.Versions.StageVersion(make.Id, 2);
 
-            await repository.UpdateAsync(requestId, RowVersionExpectations.ForStage(make.Id, 2, staleStageVersion), r => Make(r).StartStage(2), Token);
+            await repository.UpdateRowsAsync(requestId, RowVersionExpectations.ForStage(make.Id, 2, staleStageVersion), r => Make(r).StartStage(2), Token);
 
-            await Assert.ThrowsAsync<ConcurrencyConflictException>(() => repository.UpdateAsync(
+            await Assert.ThrowsAsync<ConcurrencyConflictException>(() => repository.UpdateRowsAsync(
                 requestId,
                 RowVersionExpectations.ForStage(make.Id, 2, staleStageVersion),
                 r => Make(r).StartStage(2),
@@ -138,7 +138,7 @@ public class RowVersionTests
             var loaded = (await repository.FindWithVersionsAsync(requestId, Token))!;
             var make = Make(loaded.Value);
             // Stage 2 is taken to WAITING_QC; the user who loaded the request earlier will try to approve it.
-            await repository.UpdateAsync(requestId, RowVersionExpectations.None, r => { Make(r).StartStage(2); Make(r).SubmitStageForQc(2); }, Token);
+            await repository.UpdateRowsAsync(requestId, RowVersionExpectations.None, r => { Make(r).StartStage(2); Make(r).SubmitStageForQc(2); }, Token);
             var current = (await repository.FindWithVersionsAsync(requestId, Token))!;
 
             // Stage 2 is current but stage 3 (released together with the approval) is named with an old version.
@@ -147,7 +147,7 @@ public class RowVersionTests
                 .WithStage(make.Id, 3, current.Versions.StageVersion(make.Id, 3) - 1);
 
             var changeRan = false;
-            await Assert.ThrowsAsync<ConcurrencyConflictException>(() => repository.UpdateAsync(
+            await Assert.ThrowsAsync<ConcurrencyConflictException>(() => repository.UpdateRowsAsync(
                 requestId,
                 expected,
                 r => { changeRan = true; Make(r).ApproveStageWholeQuantity(2, 9, Later); },
@@ -170,18 +170,18 @@ public class RowVersionTests
         using (db)
         {
             var repository = db.Requests();
-            await repository.UpdateAsync(requestId, RowVersionExpectations.None, r => { Make(r).StartStage(2); Make(r).SubmitStageForQc(2); }, Token);
+            await repository.UpdateRowsAsync(requestId, RowVersionExpectations.None, r => { Make(r).StartStage(2); Make(r).SubmitStageForQc(2); }, Token);
             var loaded = (await repository.FindWithVersionsAsync(requestId, Token))!;
             var make = Make(loaded.Value);
 
             // The approval touches stage 2, stage 3, the append-only QC approvals and the item's UpdatedAtUtc. A second user changes stage 3 after our load.
             var competing = db.Requests();
-            await Assert.ThrowsAsync<ConcurrencyConflictException>(() => repository.UpdateAsync(
+            await Assert.ThrowsAsync<ConcurrencyConflictException>(() => repository.UpdateRowsAsync(
                 requestId,
                 RowVersionExpectations.FromLoaded(loaded.Versions),
                 r =>
                 {
-                    competing.UpdateAsync(requestId, RowVersionExpectations.None, c => Make(c).ApproveStageWholeQuantity(2, 9, Later), Token).GetAwaiter().GetResult();
+                    competing.UpdateRowsAsync(requestId, RowVersionExpectations.None, c => Make(c).ApproveStageWholeQuantity(2, 9, Later), Token).GetAwaiter().GetResult();
                     Make(r).ApproveStageWholeQuantity(2, 9, Later.AddMinutes(5));
                 },
                 Token));
@@ -207,14 +207,14 @@ public class RowVersionTests
             var repository = db.Requests();
             var loaded = (await repository.FindWithVersionsAsync(requestId, Token))!;
             var make = Make(loaded.Value);
-            await repository.UpdateAsync(
+            await repository.UpdateRowsAsync(
                 requestId, RowVersionExpectations.None, r => Assert.True(Make(r).ChangePriority(Priority.VeryUrgent, Later)), Token);
 
             // The request row did not change, so its version still matches: the request-level check cannot protect item rows.
-            await repository.UpdateAsync(requestId, RowVersionExpectations.ForRequest(loaded.Versions.Request), r => Make(r).StartStage(2), Token);
+            await repository.UpdateRowsAsync(requestId, RowVersionExpectations.ForRequest(loaded.Versions.Request), r => Make(r).StartStage(2), Token);
 
             // Naming the item row does detect the change.
-            await Assert.ThrowsAsync<ConcurrencyConflictException>(() => repository.UpdateAsync(
+            await Assert.ThrowsAsync<ConcurrencyConflictException>(() => repository.UpdateRowsAsync(
                 requestId, RowVersionExpectations.ForItem(make.Id, loaded.Versions.ItemVersion(make.Id)), _ => { }, Token));
         }
     }
@@ -229,9 +229,9 @@ public class RowVersionTests
             var loaded = (await repository.FindWithVersionsAsync(requestId, Token))!;
             var make = Make(loaded.Value);
 
-            await Assert.ThrowsAsync<RecordNotFoundException>(() => repository.UpdateAsync(requestId, RowVersionExpectations.ForItem(make.Id + 9999, 1), _ => { }, Token));
-            await Assert.ThrowsAsync<RecordNotFoundException>(() => repository.UpdateAsync(requestId, RowVersionExpectations.ForStage(make.Id, 9, 1), _ => { }, Token));
-            await Assert.ThrowsAsync<RecordNotFoundException>(() => repository.UpdateAsync(requestId + 1000, RowVersionExpectations.None, _ => { }, Token));
+            await Assert.ThrowsAsync<RecordNotFoundException>(() => repository.UpdateRowsAsync(requestId, RowVersionExpectations.ForItem(make.Id + 9999, 1), _ => { }, Token));
+            await Assert.ThrowsAsync<RecordNotFoundException>(() => repository.UpdateRowsAsync(requestId, RowVersionExpectations.ForStage(make.Id, 9, 1), _ => { }, Token));
+            await Assert.ThrowsAsync<RecordNotFoundException>(() => repository.UpdateRowsAsync(requestId + 1000, RowVersionExpectations.None, _ => { }, Token));
         }
     }
 
@@ -246,9 +246,9 @@ public class RowVersionTests
             var make = Make(loaded.Value);
 
             // Stage 3 cannot start while stage 2 is not QC approved, and stage 2 cannot be QC approved before it was submitted.
-            await Assert.ThrowsAsync<InvalidOperationException>(() => repository.UpdateAsync(
+            await Assert.ThrowsAsync<InvalidOperationException>(() => repository.UpdateRowsAsync(
                 requestId, RowVersionExpectations.FromLoaded(loaded.Versions), r => Make(r).StartStage(3), Token));
-            await Assert.ThrowsAsync<InvalidOperationException>(() => repository.UpdateAsync(
+            await Assert.ThrowsAsync<InvalidOperationException>(() => repository.UpdateRowsAsync(
                 requestId, RowVersionExpectations.FromLoaded(loaded.Versions), r => Make(r).ApproveStageWholeQuantity(2, 9, Later), Token));
 
             var stored = (await repository.FindWithVersionsAsync(requestId, Token))!;
