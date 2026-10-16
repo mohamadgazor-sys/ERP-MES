@@ -15,9 +15,19 @@ public sealed record AuthenticationPolicy
     public const int LockoutMinutesFloor = 1;
     public const int Pbkdf2IterationsFloor = 310_000;
     public const int MaximumTokenLifetimeHours = 24 * 30;
+    public const int InactivityLockMinutesFloor = 1;
+    public const int InactivityLockMinutesCeiling = 120;
 
     /// <summary>Counted in characters; no composition rules. White space is forbidden by <see cref="PasswordRules"/> whatever this value is (Decision Log #72).</summary>
     public int MinimumPasswordLength { get; init; } = 6;
+
+    /// <summary>
+    /// Minutes without keyboard or mouse input after which the desktop session locks (Decision Log #74). Between <see cref="InactivityLockMinutesFloor"/> and
+    /// <see cref="InactivityLockMinutesCeiling"/>; there is no value that disables the lock.
+    /// </summary>
+    public int InactivityLockMinutes { get; init; } = 15;
+
+    public TimeSpan InactivityLockTimeout => TimeSpan.FromMinutes(InactivityLockMinutes);
 
     public int MaxFailedAttempts { get; init; } = 5;
 
@@ -42,6 +52,11 @@ public sealed record AuthenticationPolicy
         if (MinimumPasswordLength < MinimumLengthFloor)
         {
             problems.Add($"MinimumPasswordLength must be at least {MinimumLengthFloor}.");
+        }
+
+        if (InactivityLockMinutes < InactivityLockMinutesFloor || InactivityLockMinutes > InactivityLockMinutesCeiling)
+        {
+            problems.Add($"InactivityLockMinutes must be between {InactivityLockMinutesFloor} and {InactivityLockMinutesCeiling}.");
         }
 
         CheckAttempts(MaxFailedAttempts, nameof(MaxFailedAttempts));

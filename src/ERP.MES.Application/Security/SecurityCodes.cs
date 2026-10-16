@@ -36,4 +36,13 @@ public static class AuditActions
     public const string RecoveryFailed = "RecoveryFailed";
     public const string RecoveryLocked = "RecoveryLocked";
     public const string RecoveryCompleted = "RecoveryCompleted";
+
+    // Desktop session lifecycle (Decision Log #74). Nothing here ever carries a password, hash or token.
+    public const string SessionSignedOut = "SessionSignedOut";
+    public const string SessionLocked = "SessionLocked";
+    public const string SessionUnlocked = "SessionUnlocked";
+    public const string SessionUserSwitched = "SessionUserSwitched";
+
+    /// <summary>Written on a clean shutdown, on a best-effort basis. A crash, a forced termination or a power loss writes nothing, and nothing is written later to pretend otherwise.</summary>
+    public const string ApplicationSessionEnded = "ApplicationSessionEnded";
 }

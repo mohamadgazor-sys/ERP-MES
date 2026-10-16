@@ -1040,3 +1040,35 @@ Append one dated entry after every substantial session. Do not replace prior ent
 
 ### Recommended exact next action
 - Review and merge the pull request; then decide the next milestone (customer/request screens need session handling and M8 decisions first).
+
+---
+
+### Date / session
+- Date: 2026-10-16
+- Claude Code session ID (if useful): session_01UwqjPjBXLd2apjZb2urjds (desktop session lifecycle, Decision Log #74)
+
+### Goal
+- Implement the owner-approved sign-out and session-lifecycle policy before any role-sensitive screen: inactivity lock, Windows lock/switch, manual lock, unlock with re-authentication, current authorization, sign-out, unsaved-work decisions, audit.
+
+### Completed
+- Application: `SessionService` (audit of sign-out, lock with reason, user switch, clean shutdown; `UnlockAsync` with one verification per attempt, existing counter/lockout, hash upgrade, user reload), `CurrentAuthorization` (reloads the user; default deny; used by every future role-sensitive command), `AuthenticationPolicy.InactivityLockMinutes` (default 15, 1-120, validated at start-up), new audit action codes.
+- Desktop: `UserSession` (monotonic-clock idle timer, lock/unlock/sign-out/switch/close), `UnsavedWorkRegistry` and prompts (Save only where supported), `WindowsSessionMonitor`, `LockOverlay`, "Lock now" button and Ctrl+L, sign-out button, input hook, idle timer, shutdown handling in `App`.
+- Tests: timeout boundaries and settings validation, manual lock, Windows events (including that resuming never unlocks), unlock success/failure/lockout/deactivation/must-change/role-and-department refresh, equal password work, hash upgrade, sign-out and unsaved-change decisions, switch user, best-effort shutdown audit, stale-principal authorization.
+- Docs: Decision Log #74 (and #71/unresolved list updated), `docs/AUTHENTICATION.md` section 8a, Architecture Specification notes (17.1/17.2), checklist section C.
+
+### Files changed
+- See the pull request. No package, no schema change, no migration. Password hashing, lockout, bootstrap/recovery, default-deny authorization, last-active-Administrator protection and audit behaviour are unchanged; artifacts remain main-only.
+
+### Decisions newly approved
+- #74.
+
+### Unresolved questions / risks
+- M8 (item/stage expected versions) is still open for the queue and QC workflows. Production-only: central timeout storage, server-side session records, absolute maximum session length, per-role timeouts, database-level audit protection, production migration policy.
+- The WPF parts (lock overlay, buttons, input hook, shutdown handling) are compiled and unit-tested through `UserSession` but have not been seen on a screen: checklist section C is pending the owner's run.
+- Known limit: a lockout caused by wrong *current* passwords in the mandatory password-change form is not reported as such (same generic answer as elsewhere).
+
+### Commands/tests actually run and results
+- Not built locally (no SDK). Windows CI results are reported in the pull request.
+
+### Recommended exact next action
+- Review and merge the pull request, run checklist section C, then start the role-sensitive customer/request UI (its commands must call `CurrentAuthorization` first).
