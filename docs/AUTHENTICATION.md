@@ -79,8 +79,10 @@ A user is therefore two records: the Domain `User` (who a person is in the organ
 | Register downtime | Maintenance/PM |
 | Create/submit a request | Central |
 | Import items from Excel | Planning or Drawing |
+| Maintain customers (create, rename, deactivate, reactivate; added by Decision Log #75) | Central or Planning |
+| View customers and requests, read-only (added by Decision Log #75) | Every active user |
 
-Everything else is denied, including for the Admin role (it administers accounts and nothing else), for an unknown permission, a missing department or role, and an inactive user. The expected table is written out a second time in the tests and compared for every department x role combination. **No screen calls these rules yet.** "Planning reviews downtime" is deliberately **not** mapped, because the specification leaves that workflow open.
+Everything else is denied, including for the Admin role (it administers accounts and, with the read-only viewing open to everyone, reads - nothing else), for an unknown permission, a missing department or role, and an inactive user. The expected table is written out a second time in the tests and compared for every department x role combination. **The customer and request screens (Decision Log #75) call them through `CurrentAuthorization` in the Application commands; the screens themselves decide nothing.** "Planning reviews downtime" is deliberately **not** mapped, because the specification leaves that workflow open.
 
 ## 8. Audit log (Decision Log #26, #68)
 

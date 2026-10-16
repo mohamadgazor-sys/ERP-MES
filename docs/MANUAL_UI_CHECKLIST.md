@@ -60,3 +60,29 @@ Set `"InactivityLockMinutes": 1` in `appsettings.Local.json` next to the executa
 | C10 | Sign in as a non-administrator, lock; in a second copy of the application on the same database sign in as the administrator and deactivate that user (user administration has no screen yet: use the same sequence of steps as the tests, or skip this step); back in the first copy type the password | The session ends and the sign-in window appears | |
 
 The unsaved-changes questions (Save / Discard / Cancel, the switch-user confirmation) cannot be seen in this build because no form can hold unsaved changes yet; they are covered by tests with fake forms.
+
+## D. Customers and requests (customer/request pull request, Decision Log #75) - pending the owner's run
+
+Prepare a fictional demonstration database with `demo-init` (see `docs/AUTHENTICATION.md` section 12); the credential file lists one user per department (`demo.central`, `demo.planning`, `demo.drawing`, `demo.qc`, `demo.management`, ...). Sign in as each user in turn.
+
+| # | Step | Expected | OK |
+|---|---|---|---|
+| D1 | Open "مشتریان" as `demo.central` | The fictional customers are listed (name, status, last change in Jalali date and time with Persian digits); the add/rename/deactivate buttons are enabled | |
+| D2 | Add a customer with an empty or blank name | "نام مشتری را وارد کنید."; nothing is added | |
+| D3 | Add a customer "مشتری آزمایشی ۱"; close and restart the application; sign in again and open the page | The customer is still listed | |
+| D4 | Select it, type a new name, "تغییر نام انتخاب‌شده" | The name changes and persists after a restart | |
+| D5 | Select it, "غیرفعال کردن" | It disappears from the list; tick "نمایش مشتریان غیرفعال" and it shows as "غیرفعال"; "فعال کردن" brings it back; there is no delete button | |
+| D6 | Sign in as `demo.qc` or `demo.drawing` and open "مشتریان" | The list is shown; the buttons are disabled | |
+| D7 | Sign in as `demo.central`, open "درخواست‌ها" | The seeded requests are listed newest first with request number, customer, Jalali date, Jalali year, status and item count | |
+| D8 | Expand "ثبت درخواست جدید": choose a customer, request number `wsj-898`, date `۱۴۰۵/۰۷/۲۰`, a title; "ثبت درخواست" | The request appears with status "ایجادشده"; it is selected below | |
+| D9 | Enter the same number again for the same customer and year | "درخواستی با همین شماره ... وجود دارد."; nothing is added. Enter `WSJ-898` instead: it is added and a non-blocking warning names `wsj-898` | |
+| D10 | Enter wrong dates: `۱۴۰۵-۰۷-۲۰`, `۱۴۰۴/۱۲/۳۰`, `۱۴۰۵/۱۳/۰۱`, or leave it empty | A specific Persian message each time; nothing is added | |
+| D11 | As `demo.central`, "ارسال به مدیریت" on the new request | Status becomes "ارسال‌شده به مدیریت"; the button is disabled afterwards. There is no approve/reject action (not approved yet) | |
+| D12 | As `demo.central`, look for "افزودن آیتم" | It is disabled: Central does not define items | |
+| D13 | As `demo.drawing`, open the new request, "افزودن آیتم": item `1.10`, part name, quantity `۱۰`, type "ساخت" | The item is listed with "ساخت", quantity `۱۰`, priority "عادی". Trying type "تعمیر" or a priority other than "عادی" is refused with "شما اجازهٔ انجام این کار را ندارید." | |
+| D14 | As `demo.planning`, add item `2.10`, quantity `۲.۵`, type "تعمیر", priority "فوری" | The request now shows one MAKE and one REPAIR item; priority labels are exactly عادی / فوری / خیلی فوری | |
+| D15 | Enter a duplicate item number, quantity `0` or letters | A specific Persian message; nothing is added | |
+| D16 | Open the same request in two copies of the application (two users), add an item in the first, then in the second | The second is told the record was changed by another user, the list reloads and shows the first item; adding again then works | |
+| D17 | Lock the session (Ctrl+L) while a request is open, unlock | The same page and selection return (session lifecycle, section C) | |
+
+Fixed seeded routes and the demonstration banner stay visible; queue stage progression, QC, Excel import and request-detail editing are not part of these screens.

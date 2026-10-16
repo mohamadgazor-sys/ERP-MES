@@ -71,8 +71,8 @@ End of day 1: the app opens on the dashboard and stores a customer.
 | PR | Content | Tests |
 |---|---|---|
 | D2.1 | Sign-in with real password hashing, first-run administrator creation, session (lifecycle: Decision Log #74, `docs/AUTHENTICATION.md` section 8a); fictional users from the seed. **Implemented in the sign-in PR (#19):** the full approved design (`docs/AUTHENTICATION.md`), not a simplified demo version; the demonstration accounts use the production use cases; sign-out and session timeout are not included | Hashing/verification tests, lock-out defaults of #40, bootstrap, recovery, authorization matrix |
-| D2.2 | Customer list and customer entry (name only, #32) | ViewModel and persistence tests |
-| D2.3 | Request entry: header, free-form RequestNo, items with WorkType MAKE or REPAIR per item, a request with mixed types | Business-key tests (duplicate rejected, different case accepted) |
+| D2.2 | Customer list and customer entry (name only, #32). **Implemented** with Decision Log #75: create, rename, deactivate/reactivate (no deletion); Central and Planning maintain, every active user reads | ViewModel and persistence tests |
+| D2.3 | Request entry: header, free-form RequestNo, items with WorkType MAKE or REPAIR per item, a request with mixed types. **Implemented** with Decision Log #75: Central creates and submits (CREATED to SENT_TO_MANAGEMENT only), Drawing adds MAKE items, Planning adds REPAIR/any items; no request-detail editing yet | Business-key tests (duplicate rejected, different case accepted) |
 | D2.4 | Seed and reset: `ERP.MES.Provisioning` commands to create and reset a fictional dataset in a marked demo database | Tests that reset refuses an unmarked database |
 
 End of day 2: enter a customer and a mixed MAKE/REPAIR request, restart, and see them again.

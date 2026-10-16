@@ -30,6 +30,10 @@ public class AuthorizationRulesTests
         [Permission.DefineMakeItems] = (["DRAWING"], null),
         [Permission.DefineRepairItemsAndEditAnyItem] = (["PLANNING"], null),
         [Permission.ImportItemsFromExcel] = (["PLANNING", "DRAWING"], null),
+
+        // Added by the owner (Decision Log #75): customer maintenance for Central and Planning; read-only viewing for every active user.
+        [Permission.MaintainCustomers] = (["CENTRAL", "PLANNING"], null),
+        [Permission.ViewCustomersAndRequests] = ([], null),
     };
 
     [Fact]
@@ -68,11 +72,12 @@ public class AuthorizationRulesTests
     }
 
     [Fact]
-    public void The_administrator_role_administers_accounts_and_has_no_business_permission()
+    public void The_administrator_role_administers_accounts_reads_and_has_no_business_write_permission()
     {
         var allowed = Enum.GetValues<Permission>().Where(p => AuthorizationRules.IsAllowed("SYSTEM", "ADMIN", p)).ToArray();
 
-        Assert.Equal(new[] { Permission.AdministerUsers }, allowed);
+        // Read-only viewing is open to every active user (Decision Log #75); the only write permission of the Admin role is administering accounts.
+        Assert.Equal(new[] { Permission.AdministerUsers, Permission.ViewCustomersAndRequests }.OrderBy(p => (int)p), allowed.OrderBy(p => (int)p));
         Assert.False(AuthorizationRules.IsAllowed("PLANNING", "STAFF", Permission.AdministerUsers));
         Assert.False(AuthorizationRules.IsAllowed("MANAGEMENT", "MANAGER", Permission.AdministerUsers));
     }

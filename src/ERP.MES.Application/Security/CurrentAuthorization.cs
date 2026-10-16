@@ -3,6 +3,12 @@ namespace ERP.MES.Application.Security;
 /// <summary>The outcome of a current-authorization check: whether the permission is granted now, and the user as freshly loaded from the database (null when there is no such user).</summary>
 public sealed record AuthorizationDecision(bool IsAllowed, Principal? Current);
 
+/// <summary>The user as freshly loaded, and which of the asked permissions are granted to them now.</summary>
+public sealed record PermissionSet(Principal? Current, IReadOnlySet<Permission> Allowed)
+{
+    public bool Has(Permission permission) => Allowed.Contains(permission);
+}
+
 /// <summary>Raised by <see cref="CurrentAuthorization.RequireAsync"/> when the permission is not granted now.</summary>
 public sealed class NotAuthorizedException(Permission permission)
     : InvalidOperationException("The user is not authorized for " + permission + ".")
@@ -40,6 +46,34 @@ public sealed class CurrentAuthorization(ISecurityUnitRunner runner)
             // A user who still has to choose their own password has no operational access either.
             var allowed = !account.MustChangePassword && AuthorizationRules.IsAllowed(user, permission);
             return new AuthorizationDecision(allowed, current);
+        }, cancellationToken);
+    }
+
+    /// <summary>
+    /// Several permissions at once from ONE reload of the user. <see cref="PermissionSet.Current"/> is null when there is no such user. A user who still has to choose a
+    /// password, or who is inactive, is granted none.
+    /// </summary>
+    public Task<PermissionSet> EvaluateAsync(Principal? principal, IEnumerable<Permission> permissions, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(permissions);
+        var wanted = permissions.ToArray();
+        if (principal is null)
+        {
+            return Task.FromResult(new PermissionSet(null, new HashSet<Permission>()));
+        }
+
+        return runner.RunAsync(async unit =>
+        {
+            var account = await unit.FindAccountByUserIdAsync(principal.UserId, cancellationToken);
+            if (account is null)
+            {
+                return new PermissionSet(null, new HashSet<Permission>());
+            }
+
+            var user = account.User;
+            var current = new Principal(user.Id, user.Username.Value, user.DisplayName, user.Department.Code, user.Role.Code, account.MustChangePassword);
+            var allowed = account.MustChangePassword ? new HashSet<Permission>() : wanted.Where(p => AuthorizationRules.IsAllowed(user, p)).ToHashSet();
+            return new PermissionSet(current, allowed);
         }, cancellationToken);
     }
 

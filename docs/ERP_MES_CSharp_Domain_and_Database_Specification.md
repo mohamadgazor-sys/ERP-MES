@@ -970,6 +970,8 @@ Used for development only; revisit before production. Every action not listed he
 
 Items are editable only until production release; afterwards only Planning may change them, through the controlled route-revision mechanism that is still to be specified (§6.2).
 
+> **[Approved - Decision Log #75]** Added by the owner while building the first screens: **maintain customers** (create, rename, deactivate, reactivate; never delete) - Central or Planning; **view customers and requests** (read-only) - every active signed-in user. A mixed MAKE/REPAIR request is built in turn: Central creates and submits it, Drawing adds MAKE items, Planning adds REPAIR items and may add any item; a priority other than Normal at item entry also needs the permission to change the Planning priority. The only request transition implemented is CREATED to SENT_TO_MANAGEMENT (Central).
+
 ---
 
 # 16. Unit of Measure Domain
