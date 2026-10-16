@@ -85,4 +85,7 @@ Prepare a fictional demonstration database with `demo-init` (see `docs/AUTHENTIC
 | D16 | Open the same request in two copies of the application (two users), add an item in the first, then in the second | The second is told the record was changed by another user, the list reloads and shows the first item; adding again then works | |
 | D17 | Lock the session (Ctrl+L) while a request is open, unlock | The same page and selection return (session lifecycle, section C) | |
 
+| D18 | In two copies of the application: copy 1 as `demo.central` on "درخواست‌ها" with a customer selected in the form; copy 2 as `demo.central` or `demo.planning` deactivates that customer ("مشتریان"). In copy 1 press "ثبت درخواست" | "این مشتری غیرفعال است ... درخواستی ثبت نشد ..."; no request is added; the customer list in copy 1 reloads without that customer; the customer is still inactive | |
+| D19 | An old request of that now inactive customer | It is still listed and opened; Drawing/Planning can still add items and Central can still submit it | |
+
 Fixed seeded routes and the demonstration banner stay visible; queue stage progression, QC, Excel import and request-detail editing are not part of these screens.
