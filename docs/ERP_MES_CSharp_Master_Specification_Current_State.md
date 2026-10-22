@@ -136,6 +136,10 @@ The following decisions were explicitly confirmed after reviewing the source spe
 
 ## 1.1 Request and item work classification
 
+> **Superseded/clarified (2026-10-22, Decision Log #84):** A request has exactly one work type (MAKE or REPAIR); all items inherit it; mixed requests are prohibited. The text below is kept as history.
+
+
+
 The new C# system is **customer-request based**. Internal company requests are **not processed as a request type in v1**.
 
 At item level, `WorkTypeID` is the authoritative classifier:
@@ -193,6 +197,10 @@ The old Access objects `tblProjects`, `tblItems`, `tblProjectStatuses`, `tblProj
 The C# system must not require a request to be converted into a project before production can begin.
 
 ## 1.3 Contract determination and approval
+
+> **Superseded/clarified (2026-10-22, Decision Log #85):** Contract determination applies to MAKE requests only; a pure REPAIR request skips it. The text below is kept as history.
+
+
 
 Every customer request must pass a contract-determination check by Planning after Drawing has confirmed the technical doability/capability of the request.
 
@@ -661,6 +669,9 @@ No incomplete repair item may silently enter production.
 
 # 6. Customer Make Workflow
 
+> **Superseded/clarified (2026-10-22, Decision Log #86):** Planning defines all items and stages after the Management, Drawing and contract gates; Drawing owns feasibility and raw-material inquiries and does not define production stages or MAKE items. The text below is kept as history.
+
+
 ## 6.1 High-level path
 
 ```text
@@ -735,6 +746,10 @@ Supply decisions must remain data-driven.
 The system must not hard-code Casting, Ceramic, Tehran, Contractor, or any other route as always being Stage 1.
 
 ## 6.4 Warehouse inquiry
+
+> **Superseded/clarified (2026-10-22, Decision Log #88):** Warehouse answers Yes/No per line with optional notes; no reservation or deduction. The text below is kept as history.
+
+
 
 When internal warehouse availability needs to be checked:
 
@@ -874,6 +889,10 @@ The exact UX/mechanism for creating a revised route is an implementation item, b
 ---
 
 # 9. Production Unit Assignment
+
+> **Superseded/clarified (2026-10-22, Decision Log #89):** Planning owns the planned stage-to-unit/machine assignment; supervisors do not change a planned machine; they make approved overtime assignments only. The text below is kept as history.
+
+
 
 Planning assigns stages to Production Units, not normally to individual machines/operators.
 
@@ -1354,6 +1373,9 @@ The old Access repair-only QC table/form remains legacy/reference.
 
 ## 14.4 Partial QC result
 
+> **Design annotation (2026-10-22, Decision Log #82/#83; PROPOSAL, not approved unless stated):** Decision Log #83: QC results at individual-unit / sub-quantity level are required for the future production workflow; the demonstration remains whole-quantity. See `QC_QUANTITY_MODEL_DESIGN.md`.
+
+
 The system must support partial results such as:
 
 ```text
@@ -1594,6 +1616,9 @@ The view should support at least:
 
 # 17. Warehouse
 
+> **Design annotation (2026-10-22, Decision Log #82/#83; PROPOSAL, not approved unless stated):** The owner's lifecycle adds Warehouse cost calculation after final QC and 'finished/sent' only after Management price approval. How this relates to final receipt (17.2) is U-38. See `COSTING_DESIGN.md`.
+
+
 ## 17.1 Warehouse inquiry
 
 Warehouse inquiry is informational.
@@ -1763,6 +1788,10 @@ are deprecated in the current simplified contract route unless later required, b
 
 # 19. Costing
 
+> **Design annotation (2026-10-22, Decision Log #82/#91; PROPOSAL except where stated):** R4 requires per-unit total = machining cost of one item + raw-material cost of one item; total = per-unit x produced quantity. Final machining cost uses approved actual job-report time x the applicable machine rate; planned duration is for labelled estimates only (#91, approved). Other policies are proposals in `COSTING_DESIGN.md`; the Contract Make route in this section stays in force until the owner decides D4 (`OWNER_DECISION_PACKET.md`).
+
+
+
 ## 19.0 Currency standard
 
 All currency and monetary amounts in the system use **Iranian Rial (IRR)** as the sole canonical currency in v1.
@@ -1923,6 +1952,12 @@ This is a backlog item, not a reason to invent a different costing model now.
 
 # 20. Quantity and Unit-of-Measure Model
 
+> **Superseded/clarified (2026-10-22, Decision Log #90):** QC owns UOM and quantity types as distinct concepts with a controlled mapping to the base counting unit; sets define their own composition. The text below is kept as history.
+
+
+> **Design annotation (2026-10-22, Decision Log #82/#83; PROPOSAL, not approved unless stated):** R3 / #83: quantity types are separate from units of measure and QC dispositions are per individual unit for the future workflow. See `QC_QUANTITY_MODEL_DESIGN.md` (U-17..U-21).
+
+
 The system needs to distinguish:
 
 - order quantity
@@ -2026,6 +2061,9 @@ Downtime must not be incorrectly attributed to operator performance when the cau
 ---
 
 # 22. Operator and Unit Performance Reporting
+
+> **Design annotation (2026-10-22, Decision Log #82/#83; PROPOSAL, not approved unless stated):** R5/R6: daily job reports and KPI reporting over any period X-Y with hour-based operator ranking; the 24-day period becomes a preset (U-33). Reward formulas stay Phase 2 (#21). See `JOB_REPORTS_KPI_AND_OVERTIME_DESIGN.md`.
+
 
 ## 22.1 Daily production report
 

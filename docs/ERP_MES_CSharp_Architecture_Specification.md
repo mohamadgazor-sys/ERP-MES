@@ -475,6 +475,12 @@ No UI screen should be allowed to directly perform a state-changing database upd
 
 ## 7.1 Request workflow
 
+> **Superseded/clarified (2026-10-22, Decision Log #84-#87):** One type per request, contract determination for MAKE only, Planning defines items after the gates, PDF mandatory before submission. The text below is kept as history.
+
+
+> **Design annotation (2026-10-22, Decision Log #82/#83; PROPOSAL, not approved unless stated):** Owner lifecycle steps 1-12 and proposed later request statuses: `WORKFLOW_REDESIGN.md` section 3 (not approved).
+
+
 The request state machine handles request-level movement:
 
 ```text
@@ -676,6 +682,9 @@ The queue should show at minimum:
 - External/internal route indicator where applicable
 
 ## 10.2 Queue ordering
+
+> **Design annotation (2026-10-22, Decision Log #82/#83; PROPOSAL, not approved unless stated):** Per-unit queues with machines per stage: `WORKFLOW_REDESIGN.md` section 6; the order in Decision Log #78 is unchanged.
+
 
 The live queue must respond to Planning priority changes and Management-authorized overrides.
 
@@ -916,6 +925,9 @@ Delivery time and QC receipt/decision time should be retained separately where o
 
 ## 14.2 Partial result
 
+> **Design annotation (2026-10-22, Decision Log #82/#83; PROPOSAL, not approved unless stated):** Decision Log #83: individual-unit QC dispositions required for the future workflow; see `QC_QUANTITY_MODEL_DESIGN.md`.
+
+
 QC must support at least:
 
 - accepted quantity;
@@ -995,6 +1007,9 @@ Machine rates and material prices need effective dates and audit information.
 Calculations should snapshot the actual rate used so later master-data changes do not rewrite historical approved costs.
 
 ## 16.3 Machine cost
+
+> **Design annotation (2026-10-22, Decision Log #82/#83; PROPOSAL, not approved unless stated):** Formula, policies and snapshots: `COSTING_DESIGN.md` (not approved).
+
 
 Conceptual formula:
 
