@@ -130,7 +130,8 @@ public partial class App : System.Windows.Application
             new CustomersViewModel(workflow.Customers, workflow.Requests, dates, CurrentUser),
             new RequestsViewModel(workflow.Requests, workflow.Documents, workflow.Lifecycle, workflow.Customers, dates, DigitStyle.Persian, () => DateTime.UtcNow, CurrentUser),
             new ProductionQueueViewModel(workflow.Queue, dates, DigitStyle.Persian, () => DateTime.UtcNow, CurrentUser),
-            new StageWorkViewModel(workflow.StageWork, DigitStyle.Persian, CurrentUser));
+            new StageWorkViewModel(workflow.StageWork, DigitStyle.Persian, CurrentUser),
+            new QcMasterViewModel(workflow.QcMaster, CurrentUser));
 
         _mainWindow = new MainWindow(shell, session, pages);
         _mainWindow.Show();

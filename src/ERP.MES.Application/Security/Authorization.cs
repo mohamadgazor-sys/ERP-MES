@@ -37,6 +37,12 @@ public enum Permission
     ViewCustomersAndRequests,
 
     /// <summary>
+    /// Read the QC master data (units of measure, conversions, quantity types) that other departments select from, for example Planning when it defines items (Decision Log #90).
+    /// Read-only, for every active signed-in user. Changing the definitions stays with <see cref="MaintainUnitsOfMeasure"/> (QC).
+    /// </summary>
+    ViewQcMasterData,
+
+    /// <summary>
     /// Read the read-only production overview (the "production queue" page). Approved by the owner (Decision Log #78) for active users of the Management and Planning
     /// departments; every other department is denied by default. It grants no write permission: changing priorities, overriding the queue order and stage or QC actions keep
     /// their own permissions. Views of one production unit's queue may get separate permissions later.
@@ -90,6 +96,9 @@ public static class AuthorizationRules
 
         // Read-only access for every active user (an empty department list means any department, no role is required).
         [Permission.ViewCustomersAndRequests] = new([], null),
+
+        // QC master data is read by every active user (Planning selects from it); only QC changes it (MaintainUnitsOfMeasure, Decision Log #90).
+        [Permission.ViewQcMasterData] = new([], null),
 
         // Read-only production overview: Management and Planning (Decision Log #78).
         [Permission.ViewProductionQueue] = new([DepartmentCodes.Management, DepartmentCodes.Planning], null),

@@ -2,6 +2,8 @@
 
 **Status: DESIGN ONLY. Not implemented.** Approved: QC owns units of measure and quantity types as distinct concepts; Planning selects them for items; every quantity type maps through a controlled mapping to the base QC-counting unit; a set's composition is defined explicitly, never assumed (#90); individual-unit QC dispositions for the intended production system (#83, #92). The structures below are PROPOSED/DEFAULT; physical-piece identity and rework/scrap totals are `OWNER_DECISION_PACKET.md` D2, D3.
 
+> **Implementation status:** the master data of sections 2 and 3 (units of measure, conversions, quantity types with explicit set members) is implemented (QC masters PR, Decision Log #90). Item columns, QC inspection lines and balances (sections 3-6) are not.
+
 ## 1. Existing position that this design touches
 
 - [EXISTING] Decision Log #9, Master 20: QC owns configurable units of measure; reciprocal conversions are derived automatically (PAIR to PCS 2 implies PCS to PAIR 0.5).

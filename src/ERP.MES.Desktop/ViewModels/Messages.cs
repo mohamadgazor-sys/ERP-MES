@@ -51,6 +51,17 @@ public static class Messages
         ValidationIssue.ReasonRequired => "دلیل یا توضیح را وارد کنید.",
         ValidationIssue.ReasonTooLong => "دلیل یا توضیح بیش از ۲۰۰۰ نویسه است.",
         ValidationIssue.DrawingOutcomeInvalid => "نتیجهٔ نقشه‌کشی را انتخاب کنید.",
+        ValidationIssue.CodeInvalid => "کد باید ۱ تا ۲۰ نویسه از A تا Z، ارقام، «_» یا «-» باشد.",
+        ValidationIssue.CodeDuplicate => "این کد قبلاً ثبت شده است.",
+        ValidationIssue.NameRequired => "نام فارسی را وارد کنید.",
+        ValidationIssue.UnitKindInvalid => "نوع واحد را انتخاب کنید.",
+        ValidationIssue.UnitNotFound => "واحد انتخاب‌شده وجود ندارد.",
+        ValidationIssue.ConversionSameUnit => "تبدیل به دو واحد متفاوت نیاز دارد.",
+        ValidationIssue.FactorInvalid => "ضریب تبدیل باید عددی بزرگ‌تر از صفر باشد.",
+        ValidationIssue.ConversionDuplicate => "بین این دو واحد قبلاً تبدیل تعریف شده است (تبدیل معکوس خودکار محاسبه می‌شود).",
+        ValidationIssue.BaseUnitInvalid => "واحد شمارش پایه باید یک واحد فعال از نوع «شمارشی» باشد.",
+        ValidationIssue.BaseUnitsInvalid => "تعداد واحد پایه باید حداقل ۱ باشد.",
+        ValidationIssue.SetMembersInvalid => "ست باید حداقل دو عضو داشته باشد و هر عضو شرح و تعداد حداقل ۱ بخواهد.",
         ValidationIssue.RequestPdfRequired => "پیش از ارسال به مدیریت، فایل PDF درخواست را پیوست کنید.",
         ValidationIssue.PdfEmpty => "فایل انتخاب‌شده خالی است.",
         ValidationIssue.PdfTooLarge => "حجم فایل بیشتر از حد مجاز است (پیش‌فرض ۲۰ مگابایت).",
@@ -107,6 +118,14 @@ public static class Messages
         DepartmentCodes.MaintenancePm => "نگهداری و تعمیرات",
         DepartmentCodes.System => "سیستم",
         _ => code,
+    };
+
+    public static string UnitKindText(ERP.MES.Domain.Quality.UnitKind kind) => kind switch
+    {
+        ERP.MES.Domain.Quality.UnitKind.Count => "شمارشی",
+        ERP.MES.Domain.Quality.UnitKind.Mass => "جرم",
+        ERP.MES.Domain.Quality.UnitKind.Length => "طول",
+        _ => "سایر",
     };
 
     public static string WorkTypeText(WorkType type) => type == WorkType.Make ? "ساخت" : "تعمیر";

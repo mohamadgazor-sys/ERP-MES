@@ -377,6 +377,247 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
                     b.ToTable("Users", (string)null);
                 });
 
+            modelBuilder.Entity("ERP.MES.Domain.Quality.QuantityType", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("BaseUnitId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("BaseUnitsPerType")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .UseCollation("BINARY");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long?>("CreatedByUserId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BaseUnitId");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.ToTable("QuantityTypes", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1L,
+                            BaseUnitId = 1L,
+                            BaseUnitsPerType = 1,
+                            Code = "PIECE",
+                            CreatedAtUtc = new DateTime(2026, 10, 22, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            Name = "قطعه",
+                            UpdatedAtUtc = new DateTime(2026, 10, 22, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Version = 1L
+                        },
+                        new
+                        {
+                            Id = 2L,
+                            BaseUnitId = 1L,
+                            BaseUnitsPerType = 2,
+                            Code = "PAIR",
+                            CreatedAtUtc = new DateTime(2026, 10, 22, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            Name = "جفت",
+                            UpdatedAtUtc = new DateTime(2026, 10, 22, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Version = 1L
+                        });
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Quality.QuantityTypeMember", b =>
+                {
+                    b.Property<long>("QuantityTypeId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("MemberNo")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("BaseUnits")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("QuantityTypeId", "MemberNo");
+
+                    b.ToTable("QuantityTypeMembers", (string)null);
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Quality.UnitConversion", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long?>("CreatedByUserId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("Factor")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("FromUnitId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("ToUnitId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("ToUnitId");
+
+                    b.HasIndex("FromUnitId", "ToUnitId")
+                        .IsUnique();
+
+                    b.ToTable("UnitConversions", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1L,
+                            CreatedAtUtc = new DateTime(2026, 10, 22, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Factor = 2m,
+                            FromUnitId = 2L,
+                            IsActive = true,
+                            ToUnitId = 1L,
+                            UpdatedAtUtc = new DateTime(2026, 10, 22, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Version = 1L
+                        });
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Quality.UnitOfMeasure", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .UseCollation("BINARY");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long?>("CreatedByUserId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Kind")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.ToTable("UnitsOfMeasure", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1L,
+                            Code = "PCS",
+                            CreatedAtUtc = new DateTime(2026, 10, 22, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            Kind = 1,
+                            Name = "عدد (قطعه)",
+                            UpdatedAtUtc = new DateTime(2026, 10, 22, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Version = 1L
+                        },
+                        new
+                        {
+                            Id = 2L,
+                            Code = "PAIR",
+                            CreatedAtUtc = new DateTime(2026, 10, 22, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            Kind = 1,
+                            Name = "جفت",
+                            UpdatedAtUtc = new DateTime(2026, 10, 22, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Version = 1L
+                        },
+                        new
+                        {
+                            Id = 3L,
+                            Code = "KG",
+                            CreatedAtUtc = new DateTime(2026, 10, 22, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            Kind = 2,
+                            Name = "کیلوگرم",
+                            UpdatedAtUtc = new DateTime(2026, 10, 22, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Version = 1L
+                        },
+                        new
+                        {
+                            Id = 4L,
+                            Code = "MM",
+                            CreatedAtUtc = new DateTime(2026, 10, 22, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            Kind = 3,
+                            Name = "میلی‌متر",
+                            UpdatedAtUtc = new DateTime(2026, 10, 22, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Version = 1L
+                        });
+                });
+
             modelBuilder.Entity("ERP.MES.Domain.Requests.Customer", b =>
                 {
                     b.Property<long>("Id")
@@ -720,6 +961,57 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
                     b.Navigation("Role");
                 });
 
+            modelBuilder.Entity("ERP.MES.Domain.Quality.QuantityType", b =>
+                {
+                    b.HasOne("ERP.MES.Domain.Quality.UnitOfMeasure", null)
+                        .WithMany()
+                        .HasForeignKey("BaseUnitId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ERP.MES.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Quality.QuantityTypeMember", b =>
+                {
+                    b.HasOne("ERP.MES.Domain.Quality.QuantityType", null)
+                        .WithMany("Members")
+                        .HasForeignKey("QuantityTypeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Quality.UnitConversion", b =>
+                {
+                    b.HasOne("ERP.MES.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("ERP.MES.Domain.Quality.UnitOfMeasure", null)
+                        .WithMany()
+                        .HasForeignKey("FromUnitId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ERP.MES.Domain.Quality.UnitOfMeasure", null)
+                        .WithMany()
+                        .HasForeignKey("ToUnitId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Quality.UnitOfMeasure", b =>
+                {
+                    b.HasOne("ERP.MES.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
             modelBuilder.Entity("ERP.MES.Domain.Requests.Customer", b =>
                 {
                     b.HasOne("ERP.MES.Domain.Identity.User", null)
@@ -826,6 +1118,11 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
                         .HasForeignKey("RequestId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Quality.QuantityType", b =>
+                {
+                    b.Navigation("Members");
                 });
 
             modelBuilder.Entity("ERP.MES.Domain.Requests.Request", b =>
