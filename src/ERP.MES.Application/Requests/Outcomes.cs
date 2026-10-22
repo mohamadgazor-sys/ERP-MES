@@ -60,6 +60,21 @@ public enum ValidationIssue
     /// <summary>The stage action is not one of the demonstration actions.</summary>
     StageActionInvalid,
 
+    /// <summary>The request cannot be submitted to Management until Central has attached the request PDF (Decision Log #87).</summary>
+    RequestPdfRequired,
+
+    /// <summary>The chosen file is empty.</summary>
+    PdfEmpty,
+
+    /// <summary>The file is larger than the configured limit (Decision Log #54: 20 MiB by default).</summary>
+    PdfTooLarge,
+
+    /// <summary>The file is not a PDF (the content has no PDF signature).</summary>
+    PdfNotPdf,
+
+    /// <summary>The file name is missing or is not a ".pdf" name.</summary>
+    PdfFileNameInvalid,
+
     /// <summary>The caller did not supply the loaded row versions the action relies on; nothing was changed (Decision Log #77).</summary>
     VersionsMissing,
 }

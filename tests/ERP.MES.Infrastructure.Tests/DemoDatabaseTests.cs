@@ -269,7 +269,7 @@ public class DemoDatabaseTests
     // ---- the sample data ----
 
     [Fact]
-    public async Task The_sample_data_has_the_expected_counts_and_mixes_make_and_repair_items()
+    public async Task The_sample_data_has_the_expected_counts_and_one_work_type_per_request()
     {
         using var db = new TempDatabase();
         await Init(db);
@@ -287,6 +287,11 @@ public class DemoDatabaseTests
         Assert.Equal(3, requests.Count(r => r.WorkType == WorkType.Make));
         Assert.Equal(3, requests.Count(r => r.WorkType == WorkType.Repair));
         Assert.Equal(12, items.Count);
+
+        // Every sample request carries a fictional PDF except the freshly created one, which shows the rule "attach the PDF before submitting" (Decision Log #87).
+        Assert.Equal(5, requests.Count(r => r.HasRequestPdf));
+        Assert.Equal(new[] { RequestStatus.Created }, requests.Where(r => !r.HasRequestPdf).Select(r => r.Status).ToArray());
+        Assert.All(requests.Where(r => r.HasRequestPdf), r => Assert.EndsWith(".pdf", r.CurrentRequestPdf!.FileName, StringComparison.Ordinal));
         Assert.All(items, i => Assert.InRange(i.Stages.Count, 2, 3));
         Assert.Equal(27, items.Sum(i => i.Stages.Count));
         Assert.Equal(9, items.Sum(i => i.QcApprovals.Count));

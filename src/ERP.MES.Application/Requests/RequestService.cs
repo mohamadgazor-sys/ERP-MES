@@ -23,11 +23,12 @@ public sealed record Capabilities(
     bool CanMaintainCustomers,
     bool CanCreateRequest,
     bool CanSubmitRequest,
+    bool CanAttachRequestPdf,
     bool CanAddMakeItem,
     bool CanAddRepairItem,
     bool CanSetPriority)
 {
-    public static Capabilities None { get; } = new(false, false, false, false, false, false, false);
+    public static Capabilities None { get; } = new(false, false, false, false, false, false, false, false);
 }
 
 /// <summary>
@@ -62,6 +63,7 @@ public sealed class RequestService(
         return new Capabilities(
             set.Has(Permission.ViewCustomersAndRequests),
             set.Has(Permission.MaintainCustomers),
+            set.Has(Permission.CreateAndSubmitRequest),
             set.Has(Permission.CreateAndSubmitRequest),
             set.Has(Permission.CreateAndSubmitRequest),
             set.Has(Permission.DefineMakeItems) || repair,
@@ -178,8 +180,18 @@ public sealed class RequestService(
         var now = clock.UtcNow;
         try
         {
-            return await CustomerService.GuardAsync(async () => Outcome<Stored<Request>>.Ok(
-                await requests.UpdateAsync(requestId, expectedVersion, r => r.SubmitToManagement(now), cancellationToken)));
+            return await CustomerService.GuardAsync(async () =>
+            {
+                // Central must attach the request PDF before submitting (Decision Log #87). A PDF can be replaced but never removed, so a request that has one here still has
+                // one when the update runs; the Domain checks again inside the update.
+                var current = await requests.FindAsync(requestId, cancellationToken);
+                if (current is not null && current.Value.Status == RequestStatus.Created && !current.Value.HasRequestPdf)
+                {
+                    return Outcome<Stored<Request>>.Invalid(ValidationIssue.RequestPdfRequired);
+                }
+
+                return Outcome<Stored<Request>>.Ok(await requests.UpdateAsync(requestId, expectedVersion, r => r.SubmitToManagement(now), cancellationToken));
+            });
         }
         catch (InvalidOperationException)
         {

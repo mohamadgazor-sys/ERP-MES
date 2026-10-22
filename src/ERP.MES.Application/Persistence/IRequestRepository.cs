@@ -1,3 +1,4 @@
+using ERP.MES.Domain.Documents;
 using ERP.MES.Application.Security;
 using ERP.MES.Domain.Requests;
 
@@ -36,6 +37,9 @@ public interface IRequestRepository
     /// operation raises <see cref="ConcurrencyConflictException"/>. An exception thrown by <paramref name="change"/> propagates and nothing is saved.
     /// </summary>
     Task<Stored<Request>> UpdateAsync(long requestId, long? expectedVersion, Action<Request> change, CancellationToken cancellationToken = default);
+
+    /// <summary>The binary of the request's current PDF with its file name, or null when the request has none or does not exist. The content is loaded only here, never with the request.</summary>
+    Task<StoredDocument?> FindCurrentRequestPdfAsync(long requestId, CancellationToken cancellationToken = default);
 
     /// <summary>Like <see cref="FindAsync"/>, and also returns the row version of the request, of every item and of every stage (Decision Log #77, M8).</summary>
     Task<VersionedRequest?> FindWithVersionsAsync(long requestId, CancellationToken cancellationToken = default);

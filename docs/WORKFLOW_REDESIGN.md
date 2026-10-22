@@ -227,7 +227,7 @@ The demonstration (PRs #18-#27) stays as it is until each gap below is closed by
 
 | Area | Demonstration | Intended process | Closed by phase |
 |---|---|---|---|
-| Request lifecycle | Create, submit; no Management decision, forwarding, Drawing review, contract, gates; mixed MAKE/REPAIR sample; PDF optional | Section 3; one type per request; PDF mandatory | 1 |
+| Request lifecycle | Create, submit; no Management decision, forwarding, Drawing review, contract, gates. *(One type per request: implemented, #84. PDF mandatory before submission: implemented, #87.)* | Section 3 | 1b |
 | Items and stages | Fixed seeded routes; no unit or machine on stages | Planning defines stages with unit and machine; Excel import | 3, 4 |
 | Stage actions | Release/start/submit/approve with no request-status, contract or Management gate [DEMO] | Gates of section 5 | 1, 2, 5 |
 | QC | Whole quantity only | Per-unit accepted / rework / scrap | 5 |

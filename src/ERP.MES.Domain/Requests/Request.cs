@@ -1,4 +1,5 @@
 using ERP.MES.Domain.Calendar;
+using ERP.MES.Domain.Documents;
 
 namespace ERP.MES.Domain.Requests;
 
@@ -15,6 +16,7 @@ namespace ERP.MES.Domain.Requests;
 public sealed class Request
 {
     private readonly List<RequestItem> _items = [];
+    private readonly List<RequestDocumentLink> _documentLinks = [];
 
     private Request(
         long id,
@@ -74,6 +76,15 @@ public sealed class Request
 
     public IReadOnlyList<RequestItem> Items => _items;
 
+    /// <summary>All document links, oldest first, including superseded ones (the history is kept).</summary>
+    public IReadOnlyList<RequestDocumentLink> DocumentLinks => _documentLinks;
+
+    /// <summary>The current request PDF, or null when none is attached (Decision Log #87).</summary>
+    public RequestDocumentLink? CurrentRequestPdf =>
+        _documentLinks.LastOrDefault(l => l.Type == DocumentType.RequestPdf && l.IsCurrent);
+
+    public bool HasRequestPdf => CurrentRequestPdf is not null;
+
     public static Request Create(
         long id,
         Customer customer,
@@ -112,8 +123,39 @@ public sealed class Request
             throw new InvalidOperationException("Only a " + RequestStatus.Created.Code() + " request can be submitted to Management; this one is " + Status.Code() + ".");
         }
 
+        // Central must attach the request PDF before submitting (Decision Log #87).
+        if (!HasRequestPdf)
+        {
+            throw new InvalidOperationException("The request PDF must be attached before the request is submitted to Management.");
+        }
+
         Status = RequestStatus.SentToManagement;
         UpdatedAtUtc = utc;
+    }
+
+    /// <summary>
+    /// Attaches the request PDF (Decision Log #87). Allowed while the request is still <c>CREATED</c> (before it is submitted to Management). A PDF that already
+    /// exists is superseded, not deleted: its link stays with the time it was replaced. The document is stored once and linked here (Decision Log #35).
+    /// </summary>
+    public RequestDocumentLink AttachRequestPdf(StoredDocument document, long linkedByUserId, DateTime attachedAtUtc)
+    {
+        ArgumentNullException.ThrowIfNull(document);
+        if (document.Type != DocumentType.RequestPdf)
+        {
+            throw new ArgumentException("Only a request PDF can be attached as the request PDF.", nameof(document));
+        }
+
+        var utc = Customer.RequireUtc(attachedAtUtc, nameof(attachedAtUtc));
+        if (Status != RequestStatus.Created)
+        {
+            throw new InvalidOperationException("The request PDF can be attached only while the request is " + RequestStatus.Created.Code() + "; this one is " + Status.Code() + ".");
+        }
+
+        CurrentRequestPdf?.Supersede(utc);
+        var link = new RequestDocumentLink(document, linkedByUserId, utc);
+        _documentLinks.Add(link);
+        UpdatedAtUtc = utc;
+        return link;
     }
 
     /// <summary>

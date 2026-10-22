@@ -338,6 +338,81 @@ public class RequestsViewModelTests
         Assert.Single(drawing.Items);
     }
 
+    private static byte[] Pdf() => System.Text.Encoding.ASCII.GetBytes("%PDF-1.4\n% fictional test document\n%%EOF\n");
+
+    [Fact]
+    public async Task The_request_pdf_must_be_attached_before_submitting_is_offered_and_shows_its_name_and_size()
+    {
+        using var h = await WorkflowHarness.CreateAsync(Token);
+        var customerId = await CustomerAsync(h);
+        var central = h.RequestsFor(h.Central);
+        await central.CreateAsync(customerId, "P-1", WorkType.Make, DateText, null, null, Token);
+
+        Assert.False(central.HasPdf);
+        Assert.True(central.CanAttachPdf);
+        Assert.False(central.CanSubmit);
+        Assert.Contains("پیوست نشده", central.PdfText, StringComparison.Ordinal);
+        Assert.False(await central.SubmitAsync(Token));
+        Assert.Equal(Messages.ForIssue(ValidationIssue.RequestPdfRequired, JalaliDateError.None), central.Message);
+
+        Assert.True(await central.AttachPdfAsync(@"C:\x\Order 7.pdf", Pdf(), Token));
+
+        Assert.True(central.HasPdf);
+        Assert.Equal("فایل PDF درخواست پیوست شد.", central.Message);
+        Assert.Contains("Order 7.pdf", central.PdfText, StringComparison.Ordinal);
+        Assert.Contains("کیلوبایت", central.PdfText, StringComparison.Ordinal);
+        var file = await central.LoadPdfAsync(Token);
+        Assert.NotNull(file);
+        Assert.Equal("Order 7.pdf", file!.FileName);
+        Assert.Equal(Pdf(), file.Content);
+    }
+
+    [Fact]
+    public async Task A_wrong_file_is_refused_with_a_persian_message_and_replacing_the_pdf_works_until_the_request_is_submitted()
+    {
+        using var h = await WorkflowHarness.CreateAsync(Token);
+        var customerId = await CustomerAsync(h);
+        var central = h.RequestsFor(h.Central);
+        await central.CreateAsync(customerId, "P-1", WorkType.Make, DateText, null, null, Token);
+
+        Assert.False(await central.AttachPdfAsync("notes.pdf", System.Text.Encoding.ASCII.GetBytes("plain text"), Token));
+        Assert.Equal(Messages.ForIssue(ValidationIssue.PdfNotPdf, JalaliDateError.None), central.Message);
+        Assert.False(await central.AttachPdfAsync("empty.pdf", [], Token));
+        Assert.Equal(Messages.ForIssue(ValidationIssue.PdfEmpty, JalaliDateError.None), central.Message);
+        Assert.False(await central.AttachPdfAsync("notes.txt", Pdf(), Token));
+        Assert.Equal(Messages.ForIssue(ValidationIssue.PdfFileNameInvalid, JalaliDateError.None), central.Message);
+        Assert.False(central.HasPdf);
+
+        h.Clock.Advance(TimeSpan.FromMinutes(1));
+        Assert.True(await central.AttachPdfAsync("one.pdf", Pdf(), Token));
+        h.Clock.Advance(TimeSpan.FromMinutes(1));
+        Assert.True(await central.AttachPdfAsync("two.pdf", Pdf(), Token));
+        Assert.Contains("two.pdf", central.PdfText, StringComparison.Ordinal);
+
+        Assert.True(await central.SubmitAsync(Token));
+        Assert.False(central.CanAttachPdf);
+        Assert.False(await central.AttachPdfAsync("three.pdf", Pdf(), Token));
+    }
+
+    [Fact]
+    public async Task Other_departments_cannot_attach_a_pdf_but_can_view_it()
+    {
+        using var h = await WorkflowHarness.CreateAsync(Token);
+        var customerId = await CustomerAsync(h);
+        var central = h.RequestsFor(h.Central);
+        await central.CreateAsync(customerId, "P-1", WorkType.Make, DateText, null, null, Token);
+        await central.AttachPdfAsync("request.pdf", Pdf(), Token);
+        var planning = h.RequestsFor(h.Planning);
+        await planning.LoadAsync(Token);
+        await planning.SelectAsync(planning.Requests.Single(), Token);
+
+        Assert.False(planning.CanAttachPdf);
+        Assert.True(planning.HasPdf);
+        Assert.False(await planning.AttachPdfAsync("other.pdf", Pdf(), Token));
+        Assert.Equal(Messages.NotAuthorized, planning.Message);
+        Assert.NotNull(await planning.LoadPdfAsync(Token));
+    }
+
     [Fact]
     public async Task Central_submits_to_management_once_and_the_button_then_disappears()
     {
@@ -345,6 +420,8 @@ public class RequestsViewModelTests
         var customerId = await CustomerAsync(h);
         var central = h.RequestsFor(h.Central);
         await central.CreateAsync(customerId, "P-1", WorkType.Make, DateText, null, null, Token);
+        Assert.False(central.CanSubmit);
+        Assert.True(await central.AttachPdfAsync("request.pdf", Pdf(), Token));
         Assert.True(central.CanSubmit);
 
         Assert.True(await central.SubmitAsync(Token));

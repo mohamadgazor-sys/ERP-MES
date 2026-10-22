@@ -1417,3 +1417,36 @@ Append one dated entry after every substantial session. Do not replace prior ent
 
 ### Recommended exact next action
 - Merge after CI, then phase 1a-ii (store the request PDF once, require it before submission).
+
+---
+
+### Date / session
+- Date: 2026-10-22
+- Claude Code session ID (if useful): session_01UwqjPjBXLd2apjZb2urjds (phase 1a-ii: request PDF before submission, Decision Log #87)
+
+### Goal
+- Central must attach the request PDF before submitting the request to Management (#87), with the document stored once and linked (#35), the 20 MiB limit (#54) and an audit trail.
+
+### Completed
+- Domain: `StoredDocument` (PDF signature, exact size limit, file-name cleaning, SHA-256), `RequestDocumentLink` (snapshot, superseded not deleted), `Request.AttachRequestPdf`, `Request.HasRequestPdf`/`CurrentRequestPdf`; `SubmitToManagement` refuses without a PDF.
+- Application: `DocumentPolicy` (default 20 MiB), `RequestDocumentService` (attach/replace with expected version and audit, view), `RequestPdfRequired` and PDF validation issues, `Capabilities.CanAttachRequestPdf`.
+- Persistence: tables `Documents` and `RequestDocumentLinks` (foreign keys restricted), migration `AddRequestPdfDocuments`, `IRequestRepository.FindCurrentRequestPdfAsync`.
+- Desktop: attach/replace and view buttons and PDF line on the request screen; submit enabled only with a PDF.
+- Demo seed: fictional PDFs on five requests; the `CREATED` request has none.
+
+### Files changed
+- Source, tests, one migration, documentation. No new package.
+
+### Decisions newly approved
+- None (implements #87).
+
+### Unresolved questions / risks
+- Opening a PDF writes a copy to the current user's temp folder (not deleted by the application).
+- Content-hash de-duplication and retention/deletion remain undecided (#35); the size limit is a policy object, a configuration-file key is not read yet.
+- WPF buttons/dialogs were not exercised by a person; view-model tests cover the logic.
+
+### Commands/tests actually run and results
+- Local (Linux, substituted SDK on that machine only): see the pull request for the final head's Windows CI totals.
+
+### Recommended exact next action
+- Merge after CI, then phase 1b (request lifecycle: Management decision, forward to Drawing, Drawing result).

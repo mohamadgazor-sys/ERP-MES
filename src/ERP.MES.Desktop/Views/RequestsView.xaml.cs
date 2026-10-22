@@ -58,6 +58,48 @@ public partial class RequestsView : UserControl
         }
     }
 
+    /// <summary>The largest file the window will even read into memory; the Application applies the real limit (Decision Log #54) and gives the message.</summary>
+    private const long ReadCapBytes = 100L * 1024 * 1024;
+
+    private async void OnAttachPdfClick(object sender, RoutedEventArgs e)
+    {
+        var dialog = new Microsoft.Win32.OpenFileDialog { Filter = "PDF (*.pdf)|*.pdf", CheckFileExists = true, Multiselect = false, Title = "انتخاب فایل PDF درخواست" };
+        if (dialog.ShowDialog() != true)
+        {
+            return;
+        }
+
+        await SafeAsync(async () =>
+        {
+            var info = new System.IO.FileInfo(dialog.FileName);
+            if (info.Length > ReadCapBytes)
+            {
+                _viewModel.ReportPdfTooLarge();
+                return;
+            }
+
+            var bytes = await System.IO.File.ReadAllBytesAsync(dialog.FileName);
+            await _viewModel.AttachPdfAsync(info.Name, bytes);
+        });
+    }
+
+    private async void OnViewPdfClick(object sender, RoutedEventArgs e)
+    {
+        await SafeAsync(async () =>
+        {
+            var file = await _viewModel.LoadPdfAsync();
+            if (file is null)
+            {
+                return;
+            }
+
+            // A copy in the current user's temp folder, opened with the PDF viewer the user has installed.
+            var path = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "ERP-MES-" + Guid.NewGuid().ToString("N") + "-" + System.IO.Path.GetFileName(file.FileName));
+            await System.IO.File.WriteAllBytesAsync(path, file.Content);
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(path) { UseShellExecute = true });
+        });
+    }
+
     private async void OnSubmitClick(object sender, RoutedEventArgs e) => await SafeAsync(() => _viewModel.SubmitAsync());
 
     private async void OnAddItemClick(object sender, RoutedEventArgs e)

@@ -52,7 +52,7 @@ Demonstration-only data is recognisable: customer names end with `(نمونه آ
 | DEMO-1405-003 (C) | 1405/06/28 | `MGMT_APPROVED_AT_PLANNING` | **MAKE request.** 5.10 normal: all 3 stages approved (route completed). 5.20 urgent: stage 1 approved, stage 2 released |
 | DEMO-1404-087 (C) | 1404/12/20 | `CLOSED` | **REPAIR request.** 6.10, 6.20 (normal): both routes completed; a request of the previous Jalali year |
 
-Totals: 3 customers, 6 requests, 12 items (6 in the three MAKE requests, 6 in the three REPAIR requests; a request has one work type, Decision Log #84), 27 stages, 9 QC approvals. Stage states: 9 QC approved, 2 waiting for QC, 1 in progress, 2 waiting, 4 planned, 9 waiting for previous QC.
+Every sample request except `DEMO-1405-015` (status `CREATED`) carries a small fictional PDF (`<request number>.pdf`, text says it is a demonstration document), so the screen can show the rule "attach the PDF before submitting" (Decision Log #87) with the one request that has none. Totals: 3 customers, 6 requests (5 PDFs), 12 items (6 in the three MAKE requests, 6 in the three REPAIR requests; a request has one work type, Decision Log #84), 27 stages, 9 QC approvals. Stage states: 9 QC approved, 2 waiting for QC, 1 in progress, 2 waiting, 4 planned, 9 waiting for previous QC.
 
 Honest limits of the sample, all inherited from the Domain model (Decision Log #57, #58):
 

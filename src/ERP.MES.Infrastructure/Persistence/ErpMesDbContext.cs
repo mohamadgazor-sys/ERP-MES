@@ -1,4 +1,5 @@
 using ERP.MES.Application.Security;
+using ERP.MES.Domain.Documents;
 using ERP.MES.Domain.Identity;
 using ERP.MES.Domain.Requests;
 using Microsoft.EntityFrameworkCore;
@@ -21,6 +22,10 @@ public sealed class ErpMesDbContext(DbContextOptions<ErpMesDbContext> options) :
     public DbSet<ItemStage> ItemStages => Set<ItemStage>();
 
     public DbSet<QcApproval> QcApprovals => Set<QcApproval>();
+
+    public DbSet<StoredDocument> Documents => Set<StoredDocument>();
+
+    public DbSet<RequestDocumentLink> RequestDocumentLinks => Set<RequestDocumentLink>();
 
     public DbSet<Department> Departments => Set<Department>();
 

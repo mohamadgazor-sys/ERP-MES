@@ -367,6 +367,8 @@ public class ProductionQueueTests
 
         public Task<Stored<Request>> UpdateAsync(long requestId, long? expectedVersion, Action<Request> change, CancellationToken cancellationToken = default) => throw new NotSupportedException();
 
+        public Task<ERP.MES.Domain.Documents.StoredDocument?> FindCurrentRequestPdfAsync(long requestId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+
         public Task<VersionedRequest?> FindWithVersionsAsync(long requestId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
 
         public Task<VersionedRequest> UpdateRowsAsync(long requestId, RowVersionExpectations expected, Action<Request> change, CancellationToken cancellationToken = default) =>

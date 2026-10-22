@@ -143,7 +143,7 @@ public class ActorReferenceTests
 
         await SqliteDatabase.MigrateAsync(db.Path, Token);
 
-        Assert.Equal(3, db.Query("SELECT MigrationId FROM __EFMigrationsHistory").Count);
+        Assert.Equal(4, db.Query("SELECT MigrationId FROM __EFMigrationsHistory").Count);
         Assert.Equal("Customers:CreatedByUserId->Users", db.Query("SELECT 'Customers:' || \"from\" || '->' || \"table\" FROM pragma_foreign_key_list('Customers')").Single());
         Assert.Empty(db.Query("PRAGMA foreign_key_check"));
     }
@@ -213,7 +213,7 @@ public class ActorReferenceTests
         var reset = await DemoDatabase.ResetAsync(db.Path, PersistenceTestData.Dates, db.NextCredentialPath(), SecurityFixture.FastPolicy, Token);
 
         Assert.Equal(8, reset.AccountsCreated);
-        Assert.Equal(3, db.Query("SELECT MigrationId FROM __EFMigrationsHistory").Count);
+        Assert.Equal(4, db.Query("SELECT MigrationId FROM __EFMigrationsHistory").Count);
         Assert.DoesNotContain("Old sample customer", db.Query("SELECT Name FROM Customers"));
         Assert.Equal(3, db.Query("SELECT Id FROM Customers").Count);
         Assert.Empty(db.Query("PRAGMA foreign_key_check"));

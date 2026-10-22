@@ -1,3 +1,5 @@
+using ERP.MES.Application.Requests;
+using ERP.MES.Domain.Documents;
 using ERP.MES.Application.Persistence;
 using ERP.MES.Domain.Calendar;
 using ERP.MES.Domain.Requests;
@@ -49,7 +51,11 @@ public sealed class DemoDataSeeder(ICustomerRepository customers, IRequestReposi
     // Approved: number of leading stages that QC has approved. Next: state of the stage after them (ignored when every stage is approved).
     private sealed record ItemDef(string ItemNo, string PartName, decimal Quantity, Priority Priority, StageDef[] Stages, int Approved, StageState Next);
 
-    private sealed record RequestDef(int CustomerIndex, string RequestNo, WorkType Type, int Year, int Month, int Day, string Title, string Description, RequestStatus Status, ItemDef[] Items);
+    private sealed record RequestDef(int CustomerIndex, string RequestNo, WorkType Type, int Year, int Month, int Day, string Title, string Description, RequestStatus Status, ItemDef[] Items)
+    {
+        /// <summary>Every sample request carries a fictional PDF except the freshly created one, so the demonstration can show the rule "attach the PDF before submitting" (Decision Log #87).</summary>
+        public bool HasPdf => Status != RequestStatus.Created;
+    }
 
     private static readonly string[] CustomerNames =
     [
@@ -144,6 +150,18 @@ public sealed class DemoDataSeeder(ICustomerRepository customers, IRequestReposi
         var request = Request.Create(
             0, customer, RequestNo.Create(definition.RequestNo), definition.Type, requestDate, definition.Title, definition.Description, actors.CreatedByUserId, createdAt, dates);
 
+        if (definition.HasPdf)
+        {
+            var pdfName = definition.RequestNo + ".pdf";
+            var pdfBytes = FictionalPdf(definition.RequestNo);
+            if (!StoredDocument.TryCreateRequestPdf(pdfName, pdfBytes, DocumentHash.Sha256Hex(pdfBytes), long.MaxValue, actors.CreatedByUserId, createdAt, out var pdf, out var pdfError))
+            {
+                throw new InvalidOperationException("The fictional demonstration PDF was refused: " + pdfError);
+            }
+
+            request.AttachRequestPdf(pdf!, actors.CreatedByUserId, createdAt);
+        }
+
         foreach (var itemDefinition in definition.Items)
         {
             var item = request.AddItem(0, itemDefinition.ItemNo, itemDefinition.PartName, itemDefinition.Quantity, actors.CreatedByUserId, createdAt, itemDefinition.Priority);
@@ -157,6 +175,39 @@ public sealed class DemoDataSeeder(ICustomerRepository customers, IRequestReposi
 
         request.PlaceInStatusForDemonstration(definition.Status, createdAt.AddDays(1));
         return request;
+    }
+
+    // A tiny, valid, FICTIONAL one-page PDF (no customer data): the text only says that it is a demonstration document.
+    private static byte[] FictionalPdf(string requestNo)
+    {
+        var text = "Fictional demonstration request " + requestNo + " - not a real document";
+        var stream = "BT /F1 11 Tf 20 100 Td (" + text.Replace("\\", "\\\\").Replace("(", "\\(").Replace(")", "\\)") + ") Tj ET";
+        var objects = new[]
+        {
+            "<< /Type /Catalog /Pages 2 0 R >>",
+            "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+            "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 420 144] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>",
+            "<< /Length " + stream.Length + " >>\nstream\n" + stream + "\nendstream",
+            "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+        };
+
+        var builder = new System.Text.StringBuilder("%PDF-1.4\n");
+        var offsets = new List<int>();
+        for (var i = 0; i < objects.Length; i++)
+        {
+            offsets.Add(builder.Length);
+            builder.Append(i + 1).Append(" 0 obj\n").Append(objects[i]).Append("\nendobj\n");
+        }
+
+        var xref = builder.Length;
+        builder.Append("xref\n0 ").Append(objects.Length + 1).Append("\n0000000000 65535 f \n");
+        foreach (var offset in offsets)
+        {
+            builder.Append(offset.ToString("D10", System.Globalization.CultureInfo.InvariantCulture)).Append(" 00000 n \n");
+        }
+
+        builder.Append("trailer\n<< /Size ").Append(objects.Length + 1).Append(" /Root 1 0 R >>\nstartxref\n").Append(xref).Append("\n%%EOF\n");
+        return System.Text.Encoding.ASCII.GetBytes(builder.ToString());
     }
 
     // Moves an item through the Domain's own demonstration transitions, so the QC gate is enforced while the sample data is built.
