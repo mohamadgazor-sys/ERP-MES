@@ -120,6 +120,39 @@ public enum ValidationIssue
     /// <summary>A new rate must apply from a date later than the machine's latest rate (history is never rewritten).</summary>
     RateNotLater,
 
+    /// <summary>The operator's full name is required (at most 200 characters).</summary>
+    OperatorNameInvalid,
+
+    /// <summary>The chosen user account does not exist or is not active.</summary>
+    UserInvalid,
+
+    /// <summary>The user account is already linked to another operator.</summary>
+    UserAlreadyLinked,
+
+    /// <summary>The operator does not exist or is not active.</summary>
+    OperatorInvalid,
+
+    /// <summary>An open assignment of this operator to this machine already exists.</summary>
+    AssignmentExists,
+
+    /// <summary>The assignment is already closed.</summary>
+    AssignmentClosed,
+
+    /// <summary>The last day cannot be before the first day.</summary>
+    EndBeforeStart,
+
+    /// <summary>An open qualification of this operator on this machine already exists.</summary>
+    QualificationExists,
+
+    /// <summary>The qualification has already ended.</summary>
+    QualificationEnded,
+
+    /// <summary>The date is required.</summary>
+    DateRequired,
+
+    /// <summary>The date is not a valid Jalali date; the date error says why.</summary>
+    DateInvalid,
+
     /// <summary>The request cannot be submitted to Management until Central has attached the request PDF (Decision Log #87).</summary>
     RequestPdfRequired,
 

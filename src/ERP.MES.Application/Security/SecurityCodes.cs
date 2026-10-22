@@ -57,6 +57,12 @@ public static class AuditActions
     public const string ProductionUnitAdded = "ProductionUnitAdded";
     public const string MachineAdded = "MachineAdded";
     public const string MachineRateChanged = "MachineRateChanged";
+    public const string OperatorRegistered = "OperatorRegistered";
+    public const string OperatorLinkedToUser = "OperatorLinkedToUser";
+    public const string OperatorMachineAssigned = "OperatorMachineAssigned";
+    public const string OperatorMachineAssignmentClosed = "OperatorMachineAssignmentClosed";
+    public const string OperatorQualificationRecorded = "OperatorQualificationRecorded";
+    public const string OperatorQualificationEnded = "OperatorQualificationEnded";
 
     public const string RequestSubmitted = "RequestSubmitted";
     public const string RequestApproved = "RequestApproved";

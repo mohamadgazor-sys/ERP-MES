@@ -15,6 +15,7 @@ public sealed class ShellViewModel : ObservableObject
     public const string StagesKey = "stages";
     public const string DefinitionsKey = "qcmaster";
     public const string MachinesKey = "machines";
+    public const string OperatorsKey = "operators";
     public const string LimitationsKey = "limitations";
 
     private readonly IJalaliDateService _dates;
@@ -37,6 +38,7 @@ public sealed class ShellViewModel : ObservableObject
             new NavigationItem(StagesKey, "مراحل و کنترل کیفیت", true),
             new NavigationItem(DefinitionsKey, "واحدها و انواع مقدار", true),
             new NavigationItem(MachinesKey, "ماشین‌ها و نرخ‌ها", true),
+            new NavigationItem(OperatorsKey, "اپراتورها", true),
             new NavigationItem(LimitationsKey, "محدودیت‌های نسخه نمایشی", true),
         ];
 

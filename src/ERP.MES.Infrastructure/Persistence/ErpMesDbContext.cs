@@ -33,6 +33,12 @@ public sealed class ErpMesDbContext(DbContextOptions<ErpMesDbContext> options) :
 
     public DbSet<Machine> Machines => Set<Machine>();
 
+    public DbSet<Operator> Operators => Set<Operator>();
+
+    public DbSet<OperatorMachineAssignment> OperatorMachineAssignments => Set<OperatorMachineAssignment>();
+
+    public DbSet<OperatorMachineQualification> OperatorMachineQualifications => Set<OperatorMachineQualification>();
+
     public DbSet<MachineHourlyRate> MachineHourlyRates => Set<MachineHourlyRate>();
 
     public DbSet<UnitConversion> UnitConversions => Set<UnitConversion>();
@@ -58,7 +64,7 @@ public sealed class ErpMesDbContext(DbContextOptions<ErpMesDbContext> options) :
     /// <summary>Name of the shadow property that holds the application-managed row version (Decision Log #23).</summary>
     public const string RowVersionPropertyName = "Version";
 
-    private static readonly HashSet<Type> VersionedTypes = [typeof(Customer), typeof(Request), typeof(RequestItem), typeof(ItemStage), typeof(User), typeof(UserCredential), typeof(SystemSetup), typeof(UnitOfMeasure), typeof(UnitConversion), typeof(QuantityType), typeof(ProductionUnit), typeof(Machine)];
+    private static readonly HashSet<Type> VersionedTypes = [typeof(Customer), typeof(Request), typeof(RequestItem), typeof(ItemStage), typeof(User), typeof(UserCredential), typeof(SystemSetup), typeof(UnitOfMeasure), typeof(UnitConversion), typeof(QuantityType), typeof(ProductionUnit), typeof(Machine), typeof(Operator), typeof(OperatorMachineAssignment), typeof(OperatorMachineQualification)];
 
     /// <summary>The row version of a tracked entity of a versioned type (customer, request, request item, item stage).</summary>
     public long GetRowVersion(object entity) => (long)Entry(entity).Property(RowVersionPropertyName).CurrentValue!;

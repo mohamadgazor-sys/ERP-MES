@@ -42,6 +42,12 @@ public enum Permission
     /// </summary>
     MaintainProductionResources,
 
+    /// <summary>
+    /// Read operators, their machine assignments and qualifications. Planning and Management, and Production (supervisors and operators need to see who works where). A labelled
+    /// default, not separately approved; every other department is denied.
+    /// </summary>
+    ViewOperators,
+
     /// <summary>Read production units and machines. Read-only, every active signed-in user (a labelled default).</summary>
     ViewPlanningMasterData,
 
@@ -115,6 +121,7 @@ public static class AuthorizationRules
         // Planning resource master data (Decision Log #82 R2, #89): Planning registers units and machines; every active user reads them; rates are read by their owners and by Warehouse.
         [Permission.MaintainProductionResources] = new([DepartmentCodes.Planning], null),
         [Permission.ViewPlanningMasterData] = new([], null),
+        [Permission.ViewOperators] = new([DepartmentCodes.Planning, DepartmentCodes.Management, DepartmentCodes.Production], null),
         [Permission.ViewMachineRates] = new([DepartmentCodes.Planning, DepartmentCodes.Management, DepartmentCodes.Warehouse], null),
 
         // QC master data is read by every active user (Planning selects from it); only QC changes it (MaintainUnitsOfMeasure, Decision Log #90).

@@ -21,12 +21,12 @@ public class MigrationTests
         // EF Core keeps its own bookkeeping tables (the migration history, and in EF Core 10 a migrations lock); only the application tables are compared.
         Assert.Contains("__EFMigrationsHistory", tables);
         Assert.Equal(
-            new[] { "AuditLog", "Customers", "Departments", "Documents", "ItemStages", "MachineHourlyRates", "Machines", "ProductionUnits", "QcApprovals", "QuantityTypeMembers", "QuantityTypes", "RequestDocumentLinks", "RequestItems", "RequestWorkflowEntries", "Requests", "Roles", "SystemSetup", "UnitConversions", "UnitsOfMeasure", "UserCredentials", "Users" },
+            new[] { "AuditLog", "Customers", "Departments", "Documents", "ItemStages", "MachineHourlyRates", "Machines", "OperatorMachineAssignments", "OperatorMachineQualifications", "Operators", "ProductionUnits", "QcApprovals", "QuantityTypeMembers", "QuantityTypes", "RequestDocumentLinks", "RequestItems", "RequestWorkflowEntries", "Requests", "Roles", "SystemSetup", "UnitConversions", "UnitsOfMeasure", "UserCredentials", "Users" },
             tables.Where(t => !t.StartsWith("__EF", StringComparison.Ordinal)).ToArray());
 
         await using var context = db.NewContext();
         var applied = (await context.Database.GetAppliedMigrationsAsync(TestContext.Current.CancellationToken)).ToArray();
-        Assert.Equal(7, applied.Length);
+        Assert.Equal(8, applied.Length);
         Assert.EndsWith("_InitialCreate", applied[0], StringComparison.Ordinal);
         Assert.EndsWith("_AddAuthentication", applied[1], StringComparison.Ordinal);
         Assert.EndsWith("_SingleWorkTypePerRequest", applied[2], StringComparison.Ordinal);
@@ -34,6 +34,7 @@ public class MigrationTests
         Assert.EndsWith("_AddRequestWorkflowHistory", applied[4], StringComparison.Ordinal);
         Assert.EndsWith("_AddQcMasterData", applied[5], StringComparison.Ordinal);
         Assert.EndsWith("_AddPlanningMachines", applied[6], StringComparison.Ordinal);
+        Assert.EndsWith("_AddOperators", applied[7], StringComparison.Ordinal);
         Assert.Empty(await context.Database.GetPendingMigrationsAsync(TestContext.Current.CancellationToken));
     }
 
@@ -45,7 +46,7 @@ public class MigrationTests
 
         // Fails if the model changed without a new migration, or if the snapshot was edited away from the model.
         Assert.False(context.Database.HasPendingModelChanges());
-        Assert.Equal(7, context.Database.GetMigrations().Count());
+        Assert.Equal(8, context.Database.GetMigrations().Count());
     }
 
     [Fact]
