@@ -7,7 +7,7 @@ using ERP.MES.Domain.Requests;
 
 namespace ERP.MES.Desktop.ViewModels;
 
-public sealed record RequestRow(long RequestId, string RequestNo, string CustomerName, string DateText, string YearText, string Title, string StatusText, int ItemCount);
+public sealed record RequestRow(long RequestId, string RequestNo, string CustomerName, string WorkTypeText, string DateText, string YearText, string Title, string StatusText, int ItemCount);
 
 public sealed record ItemRow(string ItemNo, string PartName, string WorkTypeText, string QuantityText, string PriorityText);
 
@@ -86,7 +86,7 @@ public sealed class RequestsViewModel(
 
     public string DetailLine => _detail is null
         ? string.Empty
-        : $"تاریخ: {dates.FormatDate(_detail.Value.RequestDate)}   |   سال شمسی: {YearText(_detail.Value.JalaliRequestYear)}   |   وضعیت: {Messages.StatusText(_detail.Value.Status)}";
+        : $"تاریخ: {dates.FormatDate(_detail.Value.RequestDate)}   |   سال شمسی: {YearText(_detail.Value.JalaliRequestYear)}   |   وضعیت: {Messages.StatusText(_detail.Value.Status)}   |   نوع کار: {Messages.WorkTypeText(_detail.Value.WorkType)}";
 
     public string DetailTitle => _detail?.Value.Title ?? string.Empty;
 
@@ -99,7 +99,9 @@ public sealed class RequestsViewModel(
     /// <summary>Submitting needs the permission and a request still in CREATED; the Application checks both again.</summary>
     public bool CanSubmit => _capabilities.CanSubmitRequest && _detail?.Value.Status == RequestStatus.Created;
 
-    public bool CanAddItem => _detail is not null && (_capabilities.CanAddMakeItem || _capabilities.CanAddRepairItem);
+    /// <summary>Adding an item needs the permission for the request's one work type (Decision Log #84); the Application checks again.</summary>
+    public bool CanAddItem => _detail is not null
+        && (_detail.Value.WorkType == WorkType.Make ? _capabilities.CanAddMakeItem : _capabilities.CanAddRepairItem);
 
     public bool CanSetPriority => _capabilities.CanSetPriority;
 
@@ -126,12 +128,12 @@ public sealed class RequestsViewModel(
         await RunAsync(() => LoadDetailAsync(row.RequestId, cancellationToken));
     }
 
-    public async Task<bool> CreateAsync(long customerId, string? requestNo, string? dateText, string? title, string? description, CancellationToken cancellationToken = default)
+    public async Task<bool> CreateAsync(long customerId, string? requestNo, WorkType workType, string? dateText, string? title, string? description, CancellationToken cancellationToken = default)
     {
         var saved = false;
         await RunAsync(async () =>
         {
-            var outcome = await requests.CreateAsync(currentUser(), new CreateRequestCommand(customerId, requestNo, dateText, title, description), cancellationToken);
+            var outcome = await requests.CreateAsync(currentUser(), new CreateRequestCommand(customerId, requestNo, workType, dateText, title, description), cancellationToken);
             if (!outcome.Succeeded)
             {
                 await ShowFailureAsync(outcome, cancellationToken);
@@ -180,7 +182,7 @@ public sealed class RequestsViewModel(
         return saved;
     }
 
-    public async Task<bool> AddItemAsync(string? itemNo, string? partName, WorkType workType, string? quantityText, Priority priority, CancellationToken cancellationToken = default)
+    public async Task<bool> AddItemAsync(string? itemNo, string? partName, string? quantityText, Priority priority, CancellationToken cancellationToken = default)
     {
         var saved = false;
         await RunAsync(async () =>
@@ -199,7 +201,7 @@ public sealed class RequestsViewModel(
 
             var id = _detail.Value.Id;
             var outcome = await requests.AddItemAsync(
-                currentUser(), id, _detail.Version, new AddItemCommand(itemNo, partName, workType, quantity, priority), cancellationToken);
+                currentUser(), id, _detail.Version, new AddItemCommand(itemNo, partName, quantity, priority), cancellationToken);
             if (!outcome.Succeeded)
             {
                 await ShowFailureAsync(outcome, cancellationToken, reopen: id);
@@ -256,7 +258,7 @@ public sealed class RequestsViewModel(
         foreach (var r in list.Value!)
         {
             _rows.Add(new RequestRow(
-                r.RequestId, r.RequestNo.Value, r.CustomerName, dates.FormatDate(r.RequestDate), YearText(r.JalaliRequestYear), r.Title ?? string.Empty, Messages.StatusText(r.Status), r.ItemCount));
+                r.RequestId, r.RequestNo.Value, r.CustomerName, Messages.WorkTypeText(r.WorkType), dates.FormatDate(r.RequestDate), YearText(r.JalaliRequestYear), r.Title ?? string.Empty, Messages.StatusText(r.Status), r.ItemCount));
         }
 
         SelectedRequest = _rows.FirstOrDefault(r => r.RequestId == keep);
@@ -294,7 +296,7 @@ public sealed class RequestsViewModel(
         _items.Clear();
         foreach (var item in _detail.Value.Items)
         {
-            _items.Add(new ItemRow(item.ItemNo, item.PartName, Messages.WorkTypeText(item.WorkType), QuantityDisplay(item.RequestedQuantity), item.Priority.PersianName()));
+            _items.Add(new ItemRow(item.ItemNo, item.PartName, Messages.WorkTypeText(_detail.Value.WorkType), QuantityDisplay(item.RequestedQuantity), item.Priority.PersianName()));
         }
 
         SelectedRequest = _rows.FirstOrDefault(r => r.RequestId == requestId) ?? _selected;

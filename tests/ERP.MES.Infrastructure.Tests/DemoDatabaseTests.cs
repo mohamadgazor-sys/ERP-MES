@@ -283,14 +283,10 @@ public class DemoDatabaseTests
         Assert.Equal(6, requests.Count);
         Assert.Equal(6, requests.Select(r => r.Key).Distinct().Count());
         Assert.All(requests, r => Assert.Equal(2, r.Items.Count));
-        Assert.All(requests, r =>
-        {
-            Assert.Contains(r.Items, i => i.WorkType == WorkType.Make);
-            Assert.Contains(r.Items, i => i.WorkType == WorkType.Repair);
-        });
+        // Every request has exactly one work type that its items inherit (Decision Log #84); the sample has three MAKE and three REPAIR requests.
+        Assert.Equal(3, requests.Count(r => r.WorkType == WorkType.Make));
+        Assert.Equal(3, requests.Count(r => r.WorkType == WorkType.Repair));
         Assert.Equal(12, items.Count);
-        Assert.Equal(6, items.Count(i => i.WorkType == WorkType.Make));
-        Assert.Equal(6, items.Count(i => i.WorkType == WorkType.Repair));
         Assert.All(items, i => Assert.InRange(i.Stages.Count, 2, 3));
         Assert.Equal(27, items.Sum(i => i.Stages.Count));
         Assert.Equal(9, items.Sum(i => i.QcApprovals.Count));

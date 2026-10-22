@@ -5,11 +5,11 @@ using ERP.MES.Domain.Requests;
 
 namespace ERP.MES.Application.Requests;
 
-/// <summary>What a person typed to create a request: the customer, the customer's own request number, the request date as Jalali text, and optional texts.</summary>
-public sealed record CreateRequestCommand(long CustomerId, string? RequestNo, string? RequestDateText, string? Title, string? Description);
+/// <summary>What a person typed to create a request: the customer, the customer's own request number, the request's one work type (MAKE or REPAIR, Decision Log #84), the request date as Jalali text, and optional texts.</summary>
+public sealed record CreateRequestCommand(long CustomerId, string? RequestNo, WorkType WorkType, string? RequestDateText, string? Title, string? Description);
 
-/// <summary>What a person typed to add an item. <see cref="Quantity"/> is already a number; see <see cref="QuantityText"/>.</summary>
-public sealed record AddItemCommand(string? ItemNo, string? PartName, WorkType WorkType, decimal Quantity, Priority Priority = Priority.Normal);
+/// <summary>What a person typed to add an item; the item inherits its request's work type. <see cref="Quantity"/> is already a number; see <see cref="QuantityText"/>.</summary>
+public sealed record AddItemCommand(string? ItemNo, string? PartName, decimal Quantity, Priority Priority = Priority.Normal);
 
 /// <summary>A request with its items and the name of its customer, loaded at <see cref="Stored{T}.Version"/>; <see cref="Versions"/> holds the row version of the request and of every item and stage, for the item- and stage-level expected versions (Decision Log #77).</summary>
 public sealed record RequestDetail(Stored<Request> Request, string CustomerName, RequestVersions Versions);
@@ -31,8 +31,8 @@ public sealed record Capabilities(
 }
 
 /// <summary>
-/// Request entry and viewing (Decision Log #34, #75). A mixed MAKE/REPAIR request is built in turn by the departments that own the parts: Central creates the request
-/// and submits it; Drawing adds MAKE items; Planning adds REPAIR items and may add any item. Nobody is allowed more than the approved permission map says, and every
+/// Request entry and viewing (Decision Log #34, #75, #84). A request has one work type (MAKE or REPAIR) and its items inherit it. Central creates the request
+/// and submits it; under the provisional development map Drawing adds MAKE items; Planning adds REPAIR items and may add any item. Nobody is allowed more than the approved permission map says, and every
 /// command reloads the user from the database and checks the permission at the time of the operation (<see cref="CurrentAuthorization"/>). Only the one transition
 /// CREATED to SENT_TO_MANAGEMENT exists; the rest of the status table is an unapproved draft. Updates pass the version the request was loaded at.
 /// </summary>
@@ -126,6 +126,11 @@ public sealed class RequestService(
             return Outcome<Stored<Request>>.Invalid(requestNoError == RequestNoError.Empty ? ValidationIssue.RequestNoRequired : ValidationIssue.RequestNoWhitespace);
         }
 
+        if (!Enum.IsDefined(command.WorkType))
+        {
+            return Outcome<Stored<Request>>.Invalid(ValidationIssue.WorkTypeInvalid);
+        }
+
         if (string.IsNullOrWhiteSpace(command.RequestDateText))
         {
             return Outcome<Stored<Request>>.Invalid(ValidationIssue.RequestDateRequired);
@@ -154,7 +159,7 @@ public sealed class RequestService(
             }
 
             var request = Request.Create(
-                0, customer.Value, requestNo!, requestDate, NullIfBlank(command.Title), NullIfBlank(command.Description), decision.Current!.UserId, now, dates);
+                0, customer.Value, requestNo!, command.WorkType, requestDate, NullIfBlank(command.Title), NullIfBlank(command.Description), decision.Current!.UserId, now, dates);
             var near = await requests.FindCaseInsensitiveNearDuplicatesAsync(request.CustomerId, request.JalaliRequestYear, requestNo!, cancellationToken);
             var stored = await requests.AddAsync(request, cancellationToken);
             return Outcome<Stored<Request>>.Ok(stored, near.Select(n => n.Value).ToList());
@@ -194,17 +199,7 @@ public sealed class RequestService(
             principal,
             [Permission.DefineMakeItems, Permission.DefineRepairItemsAndEditAnyItem, Permission.ChangePlanningPriority],
             cancellationToken);
-        if (set.Current is null || !Enum.IsDefined(command.WorkType))
-        {
-            return set.Current is null
-                ? Outcome<Stored<Request>>.Fail(OperationStatus.NotAuthorized)
-                : Outcome<Stored<Request>>.Invalid(ValidationIssue.WorkTypeInvalid);
-        }
-
-        var mayDefine = command.WorkType == WorkType.Make
-            ? set.Has(Permission.DefineMakeItems) || set.Has(Permission.DefineRepairItemsAndEditAnyItem)
-            : set.Has(Permission.DefineRepairItemsAndEditAnyItem);
-        if (!mayDefine)
+        if (set.Current is null || !(set.Has(Permission.DefineMakeItems) || set.Has(Permission.DefineRepairItemsAndEditAnyItem)))
         {
             return Outcome<Stored<Request>>.Fail(OperationStatus.NotAuthorized);
         }
@@ -244,6 +239,16 @@ public sealed class RequestService(
                 return Outcome<Stored<Request>>.Fail(OperationStatus.NotFound);
             }
 
+            // The item inherits the request's one work type (Decision Log #84); the permission to define it is the one for that type. (Moving item definition to
+            // Planning after the gates, Decision Log #86, is the item-definition phase; the provisional development map of #34 applies until then.)
+            var mayDefine = current.Value.WorkType == WorkType.Make
+                ? set.Has(Permission.DefineMakeItems) || set.Has(Permission.DefineRepairItemsAndEditAnyItem)
+                : set.Has(Permission.DefineRepairItemsAndEditAnyItem);
+            if (!mayDefine)
+            {
+                return Outcome<Stored<Request>>.Fail(OperationStatus.NotAuthorized);
+            }
+
             if (current.Value.Status is RequestStatus.Cancelled or RequestStatus.Closed)
             {
                 return Outcome<Stored<Request>>.Invalid(ValidationIssue.RequestClosedForItems);
@@ -258,7 +263,7 @@ public sealed class RequestService(
             return Outcome<Stored<Request>>.Ok(await requests.UpdateAsync(
                 requestId,
                 expectedVersion,
-                r => r.AddItem(0, command.ItemNo, command.PartName, command.WorkType, command.Quantity, userId, now, command.Priority),
+                r => r.AddItem(0, command.ItemNo, command.PartName, command.Quantity, userId, now, command.Priority),
                 cancellationToken));
         });
     }

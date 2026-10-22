@@ -479,6 +479,9 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
                         .IsConcurrencyToken()
                         .HasColumnType("INTEGER");
 
+                    b.Property<int>("WorkType")
+                        .HasColumnType("INTEGER");
+
                     b.HasKey("Id");
 
                     b.HasIndex("CreatedByUserId");
@@ -524,9 +527,6 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
 
                     b.Property<long>("Version")
                         .IsConcurrencyToken()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("WorkType")
                         .HasColumnType("INTEGER");
 
                     b.HasKey("Id");

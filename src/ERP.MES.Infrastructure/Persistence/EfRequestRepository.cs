@@ -103,6 +103,7 @@ public sealed class EfRequestRepository(IDbContextFactory<ErpMesDbContext> conte
                     r.CustomerId,
                     CustomerName = c.Name,
                     r.RequestNo,
+                    r.WorkType,
                     r.JalaliRequestYear,
                     r.RequestDate,
                     r.Title,
@@ -112,7 +113,7 @@ public sealed class EfRequestRepository(IDbContextFactory<ErpMesDbContext> conte
             .ToListAsync(cancellationToken);
 
         return rows
-            .Select(r => new RequestSummary(r.RequestId, r.CustomerId, r.CustomerName, r.RequestNo, r.JalaliRequestYear, r.RequestDate, r.Title, r.Status, r.ItemCount))
+            .Select(r => new RequestSummary(r.RequestId, r.CustomerId, r.CustomerName, r.RequestNo, r.WorkType, r.JalaliRequestYear, r.RequestDate, r.Title, r.Status, r.ItemCount))
             .ToList();
     }
 

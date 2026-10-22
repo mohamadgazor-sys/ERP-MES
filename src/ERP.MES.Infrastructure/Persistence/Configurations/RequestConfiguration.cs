@@ -21,6 +21,9 @@ public sealed class RequestConfiguration : IEntityTypeConfiguration<Request>
             .IsRequired();
 
         builder.Property(r => r.CustomerId).IsRequired();
+
+        // One authoritative work type per request (Decision Log #84); the items inherit it and have no column of their own.
+        builder.Property(r => r.WorkType).HasConversion<int>().IsRequired();
         builder.Property(r => r.RequestDate).IsRequired();
         builder.Property(r => r.JalaliRequestYear).IsRequired();
         builder.Property(r => r.Title);

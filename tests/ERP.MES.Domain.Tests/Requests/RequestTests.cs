@@ -76,35 +76,48 @@ public class RequestTests
     }
 
     [Fact]
-    public void A_request_may_mix_make_and_repair_items()
+    public void A_request_has_exactly_one_work_type_that_its_items_inherit()
     {
-        var request = RequestFixtures.NewRequest();
+        var make = RequestFixtures.NewRequest("M-1", workType: WorkType.Make);
+        var repair = RequestFixtures.NewRequest("R-1", requestId: 101, workType: WorkType.Repair);
 
-        var make = request.AddMake("1.10", 10);
-        var repair = request.AddRepair("2.10", 4);
+        var first = make.AddRing("1.10", 10);
+        var second = make.AddShaft("2.10", 4);
+        repair.AddRing("1.10", 2);
 
-        Assert.Equal(new[] { WorkType.Make, WorkType.Repair }, request.Items.Select(i => i.WorkType).ToArray());
-        Assert.Equal(new[] { "MAKE", "REPAIR" }, request.Items.Select(i => i.WorkType.Code()).ToArray());
-        Assert.Same(make, request.Items[0]);
-        Assert.Same(repair, request.Items[1]);
+        Assert.Equal(WorkType.Make, make.WorkType);
+        Assert.Equal("MAKE", make.WorkType.Code());
+        Assert.Equal(WorkType.Repair, repair.WorkType);
+        Assert.Equal("REPAIR", repair.WorkType.Code());
+        Assert.Same(first, make.Items[0]);
+        Assert.Same(second, make.Items[1]);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(3)]
+    [InlineData(-1)]
+    public void Creation_rejects_an_unknown_work_type(int value)
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() => RequestFixtures.NewRequest(workType: (WorkType)value));
     }
 
     [Fact]
     public void Item_numbers_are_unique_within_the_request_and_compared_exactly()
     {
         var request = RequestFixtures.NewRequest();
-        request.AddMake("1.10");
+        request.AddRing("1.10");
 
         Assert.True(request.HasItemNo("1.10"));
-        Assert.Throws<InvalidOperationException>(() => request.AddRepair("1.10"));
+        Assert.Throws<InvalidOperationException>(() => request.AddShaft("1.10"));
         Assert.Single(request.Items);
 
         // Different text is a different item number: no truncation, no trimming, no case folding.
         Assert.False(request.HasItemNo("1.1"));
         Assert.False(request.HasItemNo("1.10 "));
-        request.AddMake("1.1");
-        request.AddMake("A-01");
-        request.AddMake("a-01");
+        request.AddRing("1.1");
+        request.AddRing("A-01");
+        request.AddRing("a-01");
         Assert.Equal(4, request.Items.Count);
     }
 
@@ -112,10 +125,10 @@ public class RequestTests
     public void Item_numbers_are_never_parsed_numerically()
     {
         var request = RequestFixtures.NewRequest();
-        request.AddMake("1");
-        request.AddMake("01");
-        request.AddMake("1.0");
-        request.AddMake("1.00");
+        request.AddRing("1");
+        request.AddRing("01");
+        request.AddRing("1.0");
+        request.AddRing("1.00");
 
         Assert.Equal(new[] { "1", "01", "1.0", "1.00" }, request.Items.Select(i => i.ItemNo).ToArray());
     }
@@ -123,7 +136,7 @@ public class RequestTests
     [Fact]
     public void Exact_decimal_quantities_are_kept_without_rounding()
     {
-        var item = RequestFixtures.NewRequest().AddMake("1.10", quantity: 10.123456789m);
+        var item = RequestFixtures.NewRequest().AddRing("1.10", quantity: 10.123456789m);
 
         Assert.Equal(10.123456789m, item.RequestedQuantity);
     }
@@ -133,8 +146,8 @@ public class RequestTests
     {
         var request = RequestFixtures.NewRequest();
 
-        var defaulted = request.AddItem(0, "1.10", "Ring", WorkType.Make, 1, 1, RequestFixtures.Now);
-        var explicitUrgent = request.AddItem(0, "1.20", "Ring", WorkType.Make, 1, 1, RequestFixtures.Now, Priority.Urgent);
+        var defaulted = request.AddItem(0, "1.10", "Ring", 1, 1, RequestFixtures.Now);
+        var explicitUrgent = request.AddItem(0, "1.20", "Ring", 1, 1, RequestFixtures.Now, Priority.Urgent);
 
         Assert.Equal(Priority.Normal, defaulted.Priority);
         Assert.Equal(Priority.Urgent, explicitUrgent.Priority);
@@ -148,10 +161,10 @@ public class RequestTests
     public void Cancelled_and_closed_requests_accept_no_new_items(RequestStatus status)
     {
         var request = RequestFixtures.NewRequest();
-        request.AddMake("1.10");
+        request.AddRing("1.10");
         request.SetStatus(status);
 
-        Assert.Throws<InvalidOperationException>(() => request.AddMake("1.20"));
+        Assert.Throws<InvalidOperationException>(() => request.AddRing("1.20"));
         Assert.Single(request.Items);
     }
 
@@ -185,7 +198,7 @@ public class RequestTests
     {
         var empty = RequestFixtures.NewRequest("A-1");
         var withItem = RequestFixtures.NewRequest("A-2", requestId: 101);
-        withItem.AddMake("1.10");
+        withItem.AddRing("1.10");
         var changedAt = RequestFixtures.Now.AddMinutes(5);
 
         empty.SubmitToManagement(changedAt);
@@ -252,7 +265,7 @@ public class RequestTests
         var request = RequestFixtures.NewRequest();
 
         Assert.Equal(RequestStatus.Created, request.Status);
-        request.AddMake("1.10");
+        request.AddRing("1.10");
         Assert.Single(request.Items);
     }
 
@@ -262,8 +275,8 @@ public class RequestTests
         var first = RequestFixtures.NewRequest("1", requestId: 1);
         var second = RequestFixtures.NewRequest("2", requestId: 2);
 
-        first.AddMake("1.10");
-        second.AddMake("1.10");
+        first.AddRing("1.10");
+        second.AddRing("1.10");
 
         Assert.Single(first.Items);
         Assert.Single(second.Items);
@@ -277,7 +290,7 @@ public class RequestTests
     {
         var request = RequestFixtures.NewRequest();
 
-        Assert.Throws<ArgumentException>(() => request.AddMake(itemNo!));
+        Assert.Throws<ArgumentException>(() => request.AddRing(itemNo!));
         Assert.Empty(request.Items);
     }
 
@@ -288,7 +301,7 @@ public class RequestTests
     {
         var request = RequestFixtures.NewRequest();
 
-        Assert.Throws<ArgumentOutOfRangeException>(() => request.AddMake("1.10", quantity));
+        Assert.Throws<ArgumentOutOfRangeException>(() => request.AddRing("1.10", quantity));
         Assert.Empty(request.Items);
     }
 
@@ -297,10 +310,9 @@ public class RequestTests
     {
         var request = RequestFixtures.NewRequest();
 
-        Assert.Throws<ArgumentException>(() => request.AddItem(0, "1.10", " ", WorkType.Make, 1, 1, RequestFixtures.Now));
-        Assert.Throws<ArgumentOutOfRangeException>(() => request.AddItem(0, "1.10", "Ring", (WorkType)9, 1, 1, RequestFixtures.Now));
-        Assert.Throws<ArgumentOutOfRangeException>(() => request.AddItem(0, "1.10", "Ring", WorkType.Make, 1, 1, RequestFixtures.Now, (Priority)9));
-        Assert.Throws<ArgumentException>(() => request.AddItem(0, "1.10", "Ring", WorkType.Make, 1, 1, new DateTime(2026, 10, 14, 9, 0, 0, DateTimeKind.Local)));
+        Assert.Throws<ArgumentException>(() => request.AddItem(0, "1.10", " ", 1, 1, RequestFixtures.Now));
+        Assert.Throws<ArgumentOutOfRangeException>(() => request.AddItem(0, "1.10", "Ring", 1, 1, RequestFixtures.Now, (Priority)9));
+        Assert.Throws<ArgumentException>(() => request.AddItem(0, "1.10", "Ring", 1, 1, new DateTime(2026, 10, 14, 9, 0, 0, DateTimeKind.Local)));
         Assert.Empty(request.Items);
     }
 
@@ -311,9 +323,9 @@ public class RequestTests
         var number = RequestNo.Create("1");
         var date = new DateOnly(2026, 10, 12);
 
-        Assert.Throws<ArgumentNullException>(() => Request.Create(1, null!, number, date, null, null, 1, RequestFixtures.Now, RequestFixtures.Dates));
-        Assert.Throws<ArgumentNullException>(() => Request.Create(1, customer, null!, date, null, null, 1, RequestFixtures.Now, RequestFixtures.Dates));
-        Assert.Throws<ArgumentNullException>(() => Request.Create(1, customer, number, date, null, null, 1, RequestFixtures.Now, null!));
-        Assert.Throws<ArgumentException>(() => Request.Create(1, customer, number, date, null, null, 1, DateTime.SpecifyKind(RequestFixtures.Now, DateTimeKind.Local), RequestFixtures.Dates));
+        Assert.Throws<ArgumentNullException>(() => Request.Create(1, null!, number, WorkType.Make, date, null, null, 1, RequestFixtures.Now, RequestFixtures.Dates));
+        Assert.Throws<ArgumentNullException>(() => Request.Create(1, customer, null!, WorkType.Make, date, null, null, 1, RequestFixtures.Now, RequestFixtures.Dates));
+        Assert.Throws<ArgumentNullException>(() => Request.Create(1, customer, number, WorkType.Make, date, null, null, 1, RequestFixtures.Now, null!));
+        Assert.Throws<ArgumentException>(() => Request.Create(1, customer, number, WorkType.Make, date, null, null, 1, DateTime.SpecifyKind(RequestFixtures.Now, DateTimeKind.Local), RequestFixtures.Dates));
     }
 }

@@ -11,7 +11,7 @@ public class PersistenceRoundTripTests
 {
     private static readonly DateTime Now = PersistenceTestData.Now;
 
-    private static Task<long> SaveMixedRequestAsync(TempDatabase db) => PersistenceTestData.SeedMixedRequestAsync(db);
+    private static Task<long> SaveMixedRequestAsync(TempDatabase db) => PersistenceTestData.SeedSampleRequestAsync(db);
 
     private static Task<Request> LoadAsync(ErpMesDbContext context, long requestId) =>
         context.Requests
@@ -82,7 +82,7 @@ public class PersistenceRoundTripTests
 
         var items = request.Items.OrderBy(i => i.ItemNo, StringComparer.Ordinal).ToArray();
         Assert.Equal(new[] { "1.10", "2.10" }, items.Select(i => i.ItemNo).ToArray());
-        Assert.Equal(new[] { WorkType.Make, WorkType.Repair }, items.Select(i => i.WorkType).ToArray());
+        Assert.Equal(WorkType.Make, request.WorkType);
         Assert.Equal(new[] { "Ring A", "Shaft B" }, items.Select(i => i.PartName).ToArray());
         Assert.Equal(new[] { Priority.Urgent, Priority.Normal }, items.Select(i => i.Priority).ToArray());
 
@@ -175,7 +175,7 @@ public class PersistenceRoundTripTests
             foreach (var number in numbers)
             {
                 var request = PersistenceTestData.NewRequest(customer, number);
-                request.AddItem(0, number, "Part", WorkType.Make, 1m, 1, Now);
+                request.AddItem(0, number, "Part", 1m, 1, Now);
                 context.Requests.Add(request);
             }
 

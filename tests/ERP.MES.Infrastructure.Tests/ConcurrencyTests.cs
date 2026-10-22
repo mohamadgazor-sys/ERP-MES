@@ -50,7 +50,7 @@ public class ConcurrencyTests
     {
         using var db = new TempDatabase();
         await db.MigrateWithActorsAsync();
-        var requestId = await PersistenceTestData.SeedMixedRequestAsync(db);
+        var requestId = await PersistenceTestData.SeedSampleRequestAsync(db);
 
         await using var first = db.NewContext();
         await using var second = db.NewContext();
@@ -77,7 +77,7 @@ public class ConcurrencyTests
     {
         using var db = new TempDatabase();
         await db.MigrateWithActorsAsync();
-        var requestId = await PersistenceTestData.SeedMixedRequestAsync(db);
+        var requestId = await PersistenceTestData.SeedSampleRequestAsync(db);
 
         await using var first = db.NewContext();
         await using var second = db.NewContext();
@@ -105,7 +105,7 @@ public class ConcurrencyTests
         // changes the stored status directly through EF Core only to prove that the request row carries a working version.
         using var db = new TempDatabase();
         await db.MigrateWithActorsAsync();
-        var requestId = await PersistenceTestData.SeedMixedRequestAsync(db);
+        var requestId = await PersistenceTestData.SeedSampleRequestAsync(db);
 
         await using var first = db.NewContext();
         await using var second = db.NewContext();
@@ -129,7 +129,7 @@ public class ConcurrencyTests
     {
         using var db = new TempDatabase();
         await db.MigrateWithActorsAsync();
-        var requestId = await PersistenceTestData.SeedMixedRequestAsync(db);
+        var requestId = await PersistenceTestData.SeedSampleRequestAsync(db);
 
         Assert.All(new[] { "Customers", "Requests", "RequestItems", "ItemStages" }, table =>
             Assert.All(db.Query($"SELECT Version FROM {table}"), version => Assert.Equal("1", version)));

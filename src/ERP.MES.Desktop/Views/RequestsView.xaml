@@ -24,6 +24,8 @@
                             <ComboBox x:Name="CustomerBox" ItemsSource="{Binding Customers}" DisplayMemberPath="Name" Margin="0,2,0,8" />
                             <TextBlock Text="شمارهٔ درخواست مشتری (بدون تغییر ذخیره می‌شود؛ حروف بزرگ و کوچک متفاوت‌اند)" TextWrapping="Wrap" />
                             <TextBox x:Name="RequestNoBox" FlowDirection="LeftToRight" Margin="0,2,0,8" />
+                            <TextBlock Text="نوع کار درخواست (ساخت یا تعمیر؛ یک نوع برای کل درخواست)" TextWrapping="Wrap" />
+                            <ComboBox x:Name="CreateWorkTypeBox" ItemsSource="{Binding WorkTypes}" DisplayMemberPath="Text" Margin="0,2,0,8" />
                             <TextBlock Text="تاریخ درخواست (شمسی، مثال: ۱۴۰۵/۰۷/۲۰)" />
                             <TextBox x:Name="DateBox" FlowDirection="LeftToRight" Margin="0,2,0,8" />
                         </StackPanel>
@@ -47,6 +49,7 @@
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="شمارهٔ درخواست" Binding="{Binding RequestNo}" Width="130" />
                         <DataGridTextColumn Header="مشتری" Binding="{Binding CustomerName}" Width="*" />
+                        <DataGridTextColumn Header="نوع کار" Binding="{Binding WorkTypeText}" Width="80" />
                         <DataGridTextColumn Header="تاریخ" Binding="{Binding DateText}" Width="100" />
                         <DataGridTextColumn Header="سال شمسی" Binding="{Binding YearText}" Width="80" />
                         <DataGridTextColumn Header="عنوان" Binding="{Binding Title}" Width="*" />
@@ -101,8 +104,6 @@
                                 <TextBox x:Name="QuantityBox" FlowDirection="LeftToRight" Margin="0,2,0,8" />
                             </StackPanel>
                             <StackPanel Grid.Column="1">
-                                <TextBlock Text="نوع کار" />
-                                <ComboBox x:Name="WorkTypeBox" ItemsSource="{Binding WorkTypes}" DisplayMemberPath="Text" SelectedIndex="0" Margin="0,2,0,8" />
                                 <TextBlock Text="اولویت (پیش‌فرض: عادی)" TextWrapping="Wrap" />
                                 <ComboBox x:Name="PriorityBox" ItemsSource="{Binding Priorities}" DisplayMemberPath="Text" Margin="0,2,0,8" />
                                 <Button Content="ثبت آیتم" Padding="12,5" HorizontalAlignment="Left" Click="OnAddItemClick" />

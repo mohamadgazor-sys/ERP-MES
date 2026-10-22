@@ -26,7 +26,7 @@ public class ItemRouteTests
 
         Assert.Equal(new[] { 50m, 30m, 15m }, item.Stages.Select(s => s.PlannedTotalMinutes).ToArray());
 
-        var fraction = RequestFixtures.NewRequest().AddMake("9", quantity: 3m);
+        var fraction = RequestFixtures.NewRequest().AddRing("9", quantity: 3m);
         var stage = fraction.DefineInitialStage("Odd", 0.3333m);
         Assert.Equal(0.9999m, stage.PlannedTotalMinutes);
     }
@@ -34,7 +34,7 @@ public class ItemRouteTests
     [Fact]
     public void The_planned_quantity_defaults_to_the_requested_quantity_and_can_be_set()
     {
-        var item = RequestFixtures.NewRequest().AddMake("1.10", quantity: 12);
+        var item = RequestFixtures.NewRequest().AddRing("1.10", quantity: 12);
 
         var defaulted = item.DefineInitialStage("Turning", 2m);
         var explicitQuantity = item.DefineInitialStage("Grinding", 2m, plannedQuantity: 10m);
@@ -47,7 +47,7 @@ public class ItemRouteTests
     [Fact]
     public void Stage_data_is_validated()
     {
-        var item = RequestFixtures.NewRequest().AddMake();
+        var item = RequestFixtures.NewRequest().AddRing();
 
         Assert.Throws<ArgumentException>(() => item.DefineInitialStage(" ", 1m));
         Assert.Throws<ArgumentOutOfRangeException>(() => item.DefineInitialStage("Turning", 0m));
@@ -74,7 +74,7 @@ public class ItemRouteTests
     [Fact]
     public void Releasing_an_item_without_stages_fails()
     {
-        var item = RequestFixtures.NewRequest().AddMake();
+        var item = RequestFixtures.NewRequest().AddRing();
 
         Assert.Throws<InvalidOperationException>(() => item.ReleaseFirstStage());
     }
@@ -178,7 +178,7 @@ public class ItemRouteTests
     [Fact]
     public void The_initial_route_can_be_defined_stage_by_stage_before_release()
     {
-        var item = RequestFixtures.NewRequest().AddMake("1.10", quantity: 2);
+        var item = RequestFixtures.NewRequest().AddRing("1.10", quantity: 2);
 
         item.DefineInitialStage("Turning", 1m);
         item.DefineInitialStage("Grinding", 1m);
@@ -206,7 +206,7 @@ public class ItemRouteTests
     [Fact]
     public void Initial_definition_is_also_refused_after_the_route_was_completed()
     {
-        var item = RequestFixtures.NewRequest().AddMake("1.10", quantity: 2);
+        var item = RequestFixtures.NewRequest().AddRing("1.10", quantity: 2);
         item.DefineInitialStage("Turning", 1m);
         item.ReleaseFirstStage();
         item.StartStage(1);
@@ -258,8 +258,8 @@ public class ItemRouteTests
     public void Items_of_one_request_have_independent_routes()
     {
         var request = RequestFixtures.NewRequest();
-        var make = request.AddMake("1.10");
-        var repair = request.AddRepair("2.10");
+        var make = request.AddRing("1.10");
+        var repair = request.AddShaft("2.10");
 
         make.DefineInitialStage("Turning", 2m);
         make.DefineInitialStage("Grinding", 2m);

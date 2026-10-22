@@ -1,7 +1,7 @@
 namespace ERP.MES.Domain.Requests;
 
 /// <summary>
-/// One distinguishable item of a request (section 5): item number, part name, work type (MAKE or REPAIR), requested
+/// One distinguishable item of a request (section 5): item number, part name, requested
 /// quantity, priority and its ordered stages.
 ///
 /// The route operations enforce the decided QC gate (section 9.2): stage N + 1 cannot become executable until QC has
@@ -23,7 +23,6 @@ public sealed class RequestItem
         long id,
         string itemNo,
         string partName,
-        WorkType workType,
         decimal requestedQuantity,
         Priority priority,
         long createdByUserId,
@@ -39,11 +38,6 @@ public sealed class RequestItem
             throw new ArgumentException("A part name is required.", nameof(partName));
         }
 
-        if (!Enum.IsDefined(workType))
-        {
-            throw new ArgumentOutOfRangeException(nameof(workType), workType, "Unknown work type.");
-        }
-
         if (requestedQuantity <= 0)
         {
             throw new ArgumentOutOfRangeException(nameof(requestedQuantity), requestedQuantity, "The requested quantity must be greater than zero.");
@@ -57,7 +51,6 @@ public sealed class RequestItem
         Id = id;
         ItemNo = itemNo;
         PartName = partName;
-        WorkType = workType;
         RequestedQuantity = requestedQuantity;
         Priority = priority;
         CreatedByUserId = createdByUserId;
@@ -71,8 +64,6 @@ public sealed class RequestItem
     public string ItemNo { get; }
 
     public string PartName { get; }
-
-    public WorkType WorkType { get; }
 
     public decimal RequestedQuantity { get; }
 

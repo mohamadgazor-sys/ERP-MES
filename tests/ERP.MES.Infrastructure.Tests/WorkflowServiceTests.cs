@@ -81,16 +81,16 @@ public class WorkflowServiceTests
         return outcome.Value!;
     }
 
-    private static async Task<Stored<Request>> RequestAsync(World w, long customerId, string requestNo = "P-565", string date = "1405/07/20")
+    private static async Task<Stored<Request>> RequestAsync(World w, long customerId, string requestNo = "P-565", string date = "1405/07/20", WorkType workType = WorkType.Make)
     {
-        var outcome = await w.Requests.CreateAsync(w.Central, new CreateRequestCommand(customerId, requestNo, date, "Fictional request", null), Token);
+        var outcome = await w.Requests.CreateAsync(w.Central, new CreateRequestCommand(customerId, requestNo, workType, date, "Fictional request", null), Token);
         Assert.True(outcome.Succeeded, outcome.Status + " " + outcome.Issue);
         return outcome.Value!;
     }
 
-    private static AddItemCommand Make(string itemNo = "1.10", Priority priority = Priority.Normal) => new(itemNo, "Ring A", WorkType.Make, 10m, priority);
+    private static AddItemCommand Make(string itemNo = "1.10", Priority priority = Priority.Normal) => new(itemNo, "Ring A", 10m, priority);
 
-    private static AddItemCommand Repair(string itemNo = "2.10", Priority priority = Priority.Normal) => new(itemNo, "Shaft B", WorkType.Repair, 4m, priority);
+    private static AddItemCommand Repair(string itemNo = "2.10", Priority priority = Priority.Normal) => new(itemNo, "Shaft B", 4m, priority);
 
     private static long Count(World w, string table) => long.Parse(w.Fixture.Db.Query("SELECT COUNT(*) FROM " + table).Single(), System.Globalization.CultureInfo.InvariantCulture);
 
@@ -246,7 +246,7 @@ public class WorkflowServiceTests
         using var w = await StartAsync();
         var customer = await CustomerAsync(w);
 
-        var outcome = await w.Requests.CreateAsync(w.Central, new CreateRequestCommand(customer.Value.Id, "wsj-898", "۱۴۰۵/۰۷/۲۰", "Title", "Description"), Token);
+        var outcome = await w.Requests.CreateAsync(w.Central, new CreateRequestCommand(customer.Value.Id, "wsj-898", WorkType.Make, "۱۴۰۵/۰۷/۲۰", "Title", "Description"), Token);
 
         Assert.True(outcome.Succeeded);
         var request = outcome.Value!.Value;
@@ -269,9 +269,9 @@ public class WorkflowServiceTests
         using var w = await StartAsync();
         var customer = await CustomerAsync(w);
 
-        var lastDayOfYear = await w.Requests.CreateAsync(w.Central, new CreateRequestCommand(customer.Value.Id, "N-1", "1404/12/29", null, null), Token);
-        var firstDayOfYear = await w.Requests.CreateAsync(w.Central, new CreateRequestCommand(customer.Value.Id, "N-2", "1405/01/01", null, null), Token);
-        var leapDay = await w.Requests.CreateAsync(w.Central, new CreateRequestCommand(customer.Value.Id, "N-3", "1403/12/30", null, null), Token);
+        var lastDayOfYear = await w.Requests.CreateAsync(w.Central, new CreateRequestCommand(customer.Value.Id, "N-1", WorkType.Make, "1404/12/29", null, null), Token);
+        var firstDayOfYear = await w.Requests.CreateAsync(w.Central, new CreateRequestCommand(customer.Value.Id, "N-2", WorkType.Make, "1405/01/01", null, null), Token);
+        var leapDay = await w.Requests.CreateAsync(w.Central, new CreateRequestCommand(customer.Value.Id, "N-3", WorkType.Make, "1403/12/30", null, null), Token);
 
         Assert.Equal(1404, lastDayOfYear.Value!.Value.JalaliRequestYear);
         Assert.Equal(1405, firstDayOfYear.Value!.Value.JalaliRequestYear);
@@ -287,7 +287,7 @@ public class WorkflowServiceTests
 
         foreach (var user in new[] { w.Planning, w.Drawing, w.Management, w.Qc, w.Admin })
         {
-            var outcome = await w.Requests.CreateAsync(user, new CreateRequestCommand(customer.Value.Id, "X-1", "1405/07/20", null, null), Token);
+            var outcome = await w.Requests.CreateAsync(user, new CreateRequestCommand(customer.Value.Id, "X-1", WorkType.Make, "1405/07/20", null, null), Token);
             Assert.Equal(OperationStatus.NotAuthorized, outcome.Status);
         }
 
@@ -310,7 +310,7 @@ public class WorkflowServiceTests
         using var w = await StartAsync();
         var customer = await CustomerAsync(w);
 
-        var outcome = await w.Requests.CreateAsync(w.Central, new CreateRequestCommand(customer.Value.Id, requestNo, date, null, null), Token);
+        var outcome = await w.Requests.CreateAsync(w.Central, new CreateRequestCommand(customer.Value.Id, requestNo, WorkType.Make, date, null, null), Token);
 
         Assert.Equal(OperationStatus.ValidationFailed, outcome.Status);
         Assert.Equal(expected, outcome.Issue);
@@ -323,9 +323,9 @@ public class WorkflowServiceTests
         using var w = await StartAsync();
         var customer = await CustomerAsync(w);
 
-        var day = await w.Requests.CreateAsync(w.Central, new CreateRequestCommand(customer.Value.Id, "P-1", "1404/12/30", null, null), Token);
-        var month = await w.Requests.CreateAsync(w.Central, new CreateRequestCommand(customer.Value.Id, "P-1", "1405/13/01", null, null), Token);
-        var character = await w.Requests.CreateAsync(w.Central, new CreateRequestCommand(customer.Value.Id, "P-1", "1405-07-20", null, null), Token);
+        var day = await w.Requests.CreateAsync(w.Central, new CreateRequestCommand(customer.Value.Id, "P-1", WorkType.Make, "1404/12/30", null, null), Token);
+        var month = await w.Requests.CreateAsync(w.Central, new CreateRequestCommand(customer.Value.Id, "P-1", WorkType.Make, "1405/13/01", null, null), Token);
+        var character = await w.Requests.CreateAsync(w.Central, new CreateRequestCommand(customer.Value.Id, "P-1", WorkType.Make, "1405-07-20", null, null), Token);
 
         Assert.Equal(JalaliDateError.DayOutOfRange, day.DateError);
         Assert.Equal(JalaliDateError.MonthOutOfRange, month.DateError);
@@ -337,8 +337,8 @@ public class WorkflowServiceTests
     {
         using var w = await StartAsync();
 
-        Assert.Equal(ValidationIssue.CustomerRequired, (await w.Requests.CreateAsync(w.Central, new CreateRequestCommand(0, "P-1", "1405/07/20", null, null), Token)).Issue);
-        var missing = await w.Requests.CreateAsync(w.Central, new CreateRequestCommand(4242, "P-1", "1405/07/20", null, null), Token);
+        Assert.Equal(ValidationIssue.CustomerRequired, (await w.Requests.CreateAsync(w.Central, new CreateRequestCommand(0, "P-1", WorkType.Make, "1405/07/20", null, null), Token)).Issue);
+        var missing = await w.Requests.CreateAsync(w.Central, new CreateRequestCommand(4242, "P-1", WorkType.Make, "1405/07/20", null, null), Token);
         Assert.Equal(OperationStatus.ValidationFailed, missing.Status);
         Assert.Equal(ValidationIssue.CustomerNotFound, missing.Issue);
         Assert.Equal(0, Count(w, "Requests"));
@@ -348,7 +348,7 @@ public class WorkflowServiceTests
 
     private static string CustomerRows(World w) => string.Join("\n", w.Fixture.Db.Query("SELECT Id, Name, IsActive, Version, UpdatedAtUtc FROM Customers ORDER BY Id"));
 
-    private static CreateRequestCommand NewRequestFor(long customerId, string requestNo = "P-1") => new(customerId, requestNo, "1405/07/20", "Title", null);
+    private static CreateRequestCommand NewRequestFor(long customerId, string requestNo = "P-1") => new(customerId, requestNo, WorkType.Make, "1405/07/20", "Title", null);
 
     [Fact]
     public async Task A_request_is_created_for_an_active_customer()
@@ -441,7 +441,7 @@ public class WorkflowServiceTests
         var customers = CustomerRows(w);
         var audit = w.Fixture.AuditActionsInOrder();
 
-        var outcome = await w.Requests.CreateAsync(w.Central, new CreateRequestCommand(customer.Value.Id, "NEW-1", "1405/07/21", "Title", "Description"), Token);
+        var outcome = await w.Requests.CreateAsync(w.Central, new CreateRequestCommand(customer.Value.Id, "NEW-1", WorkType.Make, "1405/07/21", "Title", "Description"), Token);
 
         Assert.False(outcome.Succeeded);
         Assert.Equal(requests, w.Fixture.Db.Query("SELECT Id, CustomerId, RequestNo, Status, Version FROM Requests ORDER BY Id"));
@@ -509,9 +509,9 @@ public class WorkflowServiceTests
         var b = await CustomerAsync(w, "Customer B");
         await RequestAsync(w, a.Value.Id, "P-565", "1405/07/20");
 
-        var duplicate = await w.Requests.CreateAsync(w.Central, new CreateRequestCommand(a.Value.Id, "P-565", "1405/01/02", null, null), Token);
-        var otherYear = await w.Requests.CreateAsync(w.Central, new CreateRequestCommand(a.Value.Id, "P-565", "1404/12/29", null, null), Token);
-        var otherCustomer = await w.Requests.CreateAsync(w.Central, new CreateRequestCommand(b.Value.Id, "P-565", "1405/07/20", null, null), Token);
+        var duplicate = await w.Requests.CreateAsync(w.Central, new CreateRequestCommand(a.Value.Id, "P-565", WorkType.Make, "1405/01/02", null, null), Token);
+        var otherYear = await w.Requests.CreateAsync(w.Central, new CreateRequestCommand(a.Value.Id, "P-565", WorkType.Make, "1404/12/29", null, null), Token);
+        var otherCustomer = await w.Requests.CreateAsync(w.Central, new CreateRequestCommand(b.Value.Id, "P-565", WorkType.Make, "1405/07/20", null, null), Token);
 
         Assert.Equal(OperationStatus.DuplicateRequest, duplicate.Status);
         Assert.True(otherYear.Succeeded);
@@ -526,12 +526,12 @@ public class WorkflowServiceTests
         var customer = await CustomerAsync(w);
         await RequestAsync(w, customer.Value.Id, "wsj-898");
 
-        var outcome = await w.Requests.CreateAsync(w.Central, new CreateRequestCommand(customer.Value.Id, "WSJ-898", "1405/07/20", null, null), Token);
+        var outcome = await w.Requests.CreateAsync(w.Central, new CreateRequestCommand(customer.Value.Id, "WSJ-898", WorkType.Make, "1405/07/20", null, null), Token);
 
         Assert.True(outcome.Succeeded);
         Assert.Equal(new[] { "wsj-898" }, outcome.WarningList);
         Assert.Equal(2, Count(w, "Requests"));
-        Assert.Empty((await w.Requests.CreateAsync(w.Central, new CreateRequestCommand(customer.Value.Id, "other-1", "1405/07/20", null, null), Token)).WarningList);
+        Assert.Empty((await w.Requests.CreateAsync(w.Central, new CreateRequestCommand(customer.Value.Id, "other-1", WorkType.Make, "1405/07/20", null, null), Token)).WarningList);
     }
 
     [Fact]
@@ -540,7 +540,7 @@ public class WorkflowServiceTests
         using var w = await StartAsync();
         var customer = await CustomerAsync(w);
 
-        var outcome = await w.Requests.CreateAsync(w.Central, new CreateRequestCommand(customer.Value.Id, "P-1", "1405/07/20", "  ", ""), Token);
+        var outcome = await w.Requests.CreateAsync(w.Central, new CreateRequestCommand(customer.Value.Id, "P-1", WorkType.Make, "1405/07/20", "  ", ""), Token);
 
         Assert.Null(outcome.Value!.Value.Title);
         Assert.Null(outcome.Value.Value.Description);
@@ -613,53 +613,75 @@ public class WorkflowServiceTests
         Assert.Equal(RequestStatus.Created, (await w.Requests.GetAsync(w.Central, created.Value.Id, Token)).Value!.Request.Value.Status);
     }
 
-    // ---- requests: items, the mixed MAKE/REPAIR workflow ----
+    // ---- requests: one work type per request (Decision Log #84), items, permissions ----
 
     [Fact]
-    public async Task A_mixed_request_is_built_by_drawing_and_planning_in_turn_and_each_item_records_who_added_it()
+    public async Task A_make_request_is_built_by_drawing_and_planning_in_turn_and_each_item_records_who_added_it()
     {
         using var w = await StartAsync();
         var customer = await CustomerAsync(w);
         var created = await RequestAsync(w, customer.Value.Id);
 
-        var make = await w.Requests.AddItemAsync(w.Drawing, created.Value.Id, created.Version, Make("1.10"), Token);
-        var repair = await w.Requests.AddItemAsync(w.Planning, created.Value.Id, make.Value!.Version, Repair("2.10", Priority.Urgent), Token);
+        var first = await w.Requests.AddItemAsync(w.Drawing, created.Value.Id, created.Version, Make("1.10"), Token);
+        var second = await w.Requests.AddItemAsync(w.Planning, created.Value.Id, first.Value!.Version, Make("2.10", Priority.Urgent), Token);
 
-        Assert.True(make.Succeeded);
-        Assert.True(repair.Succeeded);
-        var items = (await w.Restarted().Requests.GetAsync(w.Qc, created.Value.Id, Token)).Value!.Request.Value.Items;
-        Assert.Equal(new[] { WorkType.Make, WorkType.Repair }, items.Select(i => i.WorkType).ToArray());
-        Assert.Equal(new[] { w.Drawing.UserId, w.Planning.UserId }, items.Select(i => i.CreatedByUserId).ToArray());
-        Assert.Equal(new[] { Priority.Normal, Priority.Urgent }, items.Select(i => i.Priority).ToArray());
-        Assert.Equal(new[] { 10m, 4m }, items.Select(i => i.RequestedQuantity).ToArray());
-        Assert.Equal(2, (await w.Requests.ListAsync(w.Central, null, Token)).Value!.Single().ItemCount);
+        Assert.True(first.Succeeded);
+        Assert.True(second.Succeeded);
+        var request = (await w.Restarted().Requests.GetAsync(w.Qc, created.Value.Id, Token)).Value!.Request.Value;
+        Assert.Equal(WorkType.Make, request.WorkType);
+        Assert.Equal(new[] { w.Drawing.UserId, w.Planning.UserId }, request.Items.Select(i => i.CreatedByUserId).ToArray());
+        Assert.Equal(new[] { Priority.Normal, Priority.Urgent }, request.Items.Select(i => i.Priority).ToArray());
+        Assert.Equal(new[] { 10m, 10m }, request.Items.Select(i => i.RequestedQuantity).ToArray());
+        var summary = (await w.Requests.ListAsync(w.Central, null, Token)).Value!.Single();
+        Assert.Equal(2, summary.ItemCount);
+        Assert.Equal(WorkType.Make, summary.WorkType);
     }
 
     [Fact]
-    public async Task Item_permissions_follow_the_approved_map_and_nobody_gets_more()
+    public async Task The_work_type_is_chosen_at_creation_stored_on_the_request_and_must_be_valid()
     {
         using var w = await StartAsync();
         var customer = await CustomerAsync(w);
-        var created = await RequestAsync(w, customer.Value.Id);
-        var id = created.Value.Id;
-        var version = created.Version;
 
-        // Drawing defines MAKE items only.
-        Assert.Equal(OperationStatus.NotAuthorized, (await w.Requests.AddItemAsync(w.Drawing, id, version, Repair("D-R"), Token)).Status);
+        var make = await RequestAsync(w, customer.Value.Id, "T-1", workType: WorkType.Make);
+        var repair = await RequestAsync(w, customer.Value.Id, "T-2", workType: WorkType.Repair);
+        var invalid = await w.Requests.CreateAsync(w.Central, new CreateRequestCommand(customer.Value.Id, "T-3", (WorkType)0, "1405/07/20", null, null), Token);
+
+        Assert.Equal(WorkType.Make, make.Value.WorkType);
+        Assert.Equal(WorkType.Repair, repair.Value.WorkType);
+        Assert.Equal(OperationStatus.ValidationFailed, invalid.Status);
+        Assert.Equal(ValidationIssue.WorkTypeInvalid, invalid.Issue);
+        Assert.Equal(2, Count(w, "Requests"));
+        var types = (await w.Restarted().Requests.ListAsync(w.Central, null, Token)).Value!.ToDictionary(r => r.RequestNo.Value, r => r.WorkType);
+        Assert.Equal(WorkType.Make, types["T-1"]);
+        Assert.Equal(WorkType.Repair, types["T-2"]);
+    }
+
+    [Fact]
+    public async Task Item_permissions_follow_the_provisional_map_for_the_requests_own_work_type_and_nobody_gets_more()
+    {
+        using var w = await StartAsync();
+        var customer = await CustomerAsync(w);
+        var make = await RequestAsync(w, customer.Value.Id, "I-MAKE", workType: WorkType.Make);
+        var repair = await RequestAsync(w, customer.Value.Id, "I-REPAIR", workType: WorkType.Repair);
+
+        // Drawing defines items of MAKE requests only (provisional map #34, until the item-definition phase moves item definition to Planning, #86).
+        Assert.Equal(OperationStatus.NotAuthorized, (await w.Requests.AddItemAsync(w.Drawing, repair.Value.Id, repair.Version, Repair("D-R"), Token)).Status);
         // Central creates and submits requests; it does not define items. Management, QC and Admin have no item permission.
         foreach (var user in new[] { w.Central, w.Management, w.Qc, w.Admin })
         {
-            Assert.Equal(OperationStatus.NotAuthorized, (await w.Requests.AddItemAsync(user, id, version, Make("X-M"), Token)).Status);
-            Assert.Equal(OperationStatus.NotAuthorized, (await w.Requests.AddItemAsync(user, id, version, Repair("X-R"), Token)).Status);
+            Assert.Equal(OperationStatus.NotAuthorized, (await w.Requests.AddItemAsync(user, make.Value.Id, make.Version, Make("X-M"), Token)).Status);
+            Assert.Equal(OperationStatus.NotAuthorized, (await w.Requests.AddItemAsync(user, repair.Value.Id, repair.Version, Repair("X-R"), Token)).Status);
         }
 
-        Assert.Equal(OperationStatus.NotAuthorized, (await w.Requests.AddItemAsync(null, id, version, Make("N"), Token)).Status);
-        Assert.Empty((await w.Requests.GetAsync(w.Central, id, Token)).Value!.Request.Value.Items);
+        Assert.Equal(OperationStatus.NotAuthorized, (await w.Requests.AddItemAsync(null, make.Value.Id, make.Version, Make("N"), Token)).Status);
+        Assert.Empty((await w.Requests.GetAsync(w.Central, make.Value.Id, Token)).Value!.Request.Value.Items);
+        Assert.Empty((await w.Requests.GetAsync(w.Central, repair.Value.Id, Token)).Value!.Request.Value.Items);
 
-        // Planning may create any item.
-        var planningMake = await w.Requests.AddItemAsync(w.Planning, id, version, Make("P-M"), Token);
-        Assert.True(planningMake.Succeeded);
-        Assert.True((await w.Requests.AddItemAsync(w.Planning, id, planningMake.Value!.Version, Repair("P-R"), Token)).Succeeded);
+        // Drawing may define MAKE items; Planning may define items of either type.
+        Assert.True((await w.Requests.AddItemAsync(w.Drawing, make.Value.Id, make.Version, Make("D-M"), Token)).Succeeded);
+        Assert.True((await w.Requests.AddItemAsync(w.Planning, make.Value.Id, (await w.Requests.GetAsync(w.Central, make.Value.Id, Token)).Value!.Request.Version, Make("P-M"), Token)).Succeeded);
+        Assert.True((await w.Requests.AddItemAsync(w.Planning, repair.Value.Id, repair.Version, Repair("P-R"), Token)).Succeeded);
     }
 
     [Fact]
@@ -695,12 +717,11 @@ public class WorkflowServiceTests
         var customer = await CustomerAsync(w);
         var created = await RequestAsync(w, customer.Value.Id);
 
-        var outcome = await w.Requests.AddItemAsync(w.Drawing, created.Value.Id, created.Version, new AddItemCommand(itemNo, partName, WorkType.Make, quantity), Token);
+        var outcome = await w.Requests.AddItemAsync(w.Drawing, created.Value.Id, created.Version, new AddItemCommand(itemNo, partName, quantity), Token);
 
         Assert.Equal(OperationStatus.ValidationFailed, outcome.Status);
         Assert.Equal(expected, outcome.Issue);
         Assert.Equal(0, Count(w, "RequestItems"));
-        Assert.Equal(OperationStatus.ValidationFailed, (await w.Requests.AddItemAsync(w.Drawing, created.Value.Id, created.Version, new AddItemCommand("1", "Ring", (WorkType)0, 1m), Token)).Status);
     }
 
     [Fact]
@@ -711,7 +732,7 @@ public class WorkflowServiceTests
         var first = await RequestAsync(w, customer.Value.Id, "P-1");
         var second = await RequestAsync(w, customer.Value.Id, "P-2");
 
-        var one = await w.Requests.AddItemAsync(w.Drawing, first.Value.Id, first.Version, new AddItemCommand("A-1", "Ring", WorkType.Make, 2.0001m), Token);
+        var one = await w.Requests.AddItemAsync(w.Drawing, first.Value.Id, first.Version, new AddItemCommand("A-1", "Ring", 2.0001m), Token);
         var duplicate = await w.Requests.AddItemAsync(w.Drawing, first.Value.Id, one.Value!.Version, Make("A-1"), Token);
         var otherCase = await w.Requests.AddItemAsync(w.Drawing, first.Value.Id, one.Value.Version, Make("a-1"), Token);
         var otherRequest = await w.Requests.AddItemAsync(w.Drawing, second.Value.Id, second.Version, Make("A-1"), Token);

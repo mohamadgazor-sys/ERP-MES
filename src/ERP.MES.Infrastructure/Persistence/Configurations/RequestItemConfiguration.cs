@@ -16,7 +16,6 @@ public sealed class RequestItemConfiguration : IEntityTypeConfiguration<RequestI
         // Exact, case-sensitive text (binary collation), never parsed or normalised (Domain and Database Specification 5.2; Decision Log #58, G5).
         builder.Property(i => i.ItemNo).UseCollation("BINARY").IsRequired();
         builder.Property(i => i.PartName).IsRequired();
-        builder.Property(i => i.WorkType).HasConversion<int>().IsRequired();
 
         // Exact decimal values; the scale is still open for Milestone 2, so no precision is set and nothing is rounded.
         builder.Property(i => i.RequestedQuantity).IsRequired();

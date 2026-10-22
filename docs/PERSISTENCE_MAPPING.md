@@ -53,7 +53,7 @@ The schema is created only by applying this migration (`SqliteDatabase.MigrateAs
 
 | # | Question | What the code does meanwhile |
 |---|---|---|
-| M1 | Request status, work type and priority are enum integers; the specification mentions controlled status records/codes (reference tables). | Integers; no reference tables. |
+| M1 | Request status, work type (a column of `Requests` since the single-type migration, Decision Log #84) and priority are enum integers; the specification mentions controlled status records/codes (reference tables). | Integers; no reference tables. |
 | M2 | Decimal columns are SQLite text; numeric comparison in SQL (sorting, sums) is not reliable on text. | Exact values round-trip; business queries must not rely on SQL decimal ordering (Decision Log #25). |
 | M3 | `ItemStages` and `QcApprovals` have surrogate keys the Domain does not expose. | Shadow keys; the Domain has no stage or approval identity yet. |
 | M4 | (Resolved) The approved application-managed `Version` column is mapped as a shadow property. | See section 2.1. |

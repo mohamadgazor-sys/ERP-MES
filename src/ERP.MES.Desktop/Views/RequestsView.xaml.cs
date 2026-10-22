@@ -49,7 +49,7 @@ public partial class RequestsView : UserControl
     {
         var customerId = (CustomerBox.SelectedItem as CustomerChoice)?.Id ?? 0;
         var saved = false;
-        await SafeAsync(async () => saved = await _viewModel.CreateAsync(customerId, RequestNoBox.Text, DateBox.Text, TitleBox.Text, DescriptionBox.Text));
+        await SafeAsync(async () => saved = await _viewModel.CreateAsync(customerId, RequestNoBox.Text, (CreateWorkTypeBox.SelectedItem as Choice<WorkType>)?.Value ?? (WorkType)0, DateBox.Text, TitleBox.Text, DescriptionBox.Text));
         if (saved)
         {
             RequestNoBox.Clear();
@@ -62,10 +62,9 @@ public partial class RequestsView : UserControl
 
     private async void OnAddItemClick(object sender, RoutedEventArgs e)
     {
-        var workType = (WorkTypeBox.SelectedItem as Choice<WorkType>)?.Value ?? (WorkType)0;
         var priority = (PriorityBox.SelectedItem as Choice<Priority>)?.Value ?? Priority.Normal;
         var saved = false;
-        await SafeAsync(async () => saved = await _viewModel.AddItemAsync(ItemNoBox.Text, PartNameBox.Text, workType, QuantityBox.Text, priority));
+        await SafeAsync(async () => saved = await _viewModel.AddItemAsync(ItemNoBox.Text, PartNameBox.Text, QuantityBox.Text, priority));
         if (saved)
         {
             ItemNoBox.Clear();

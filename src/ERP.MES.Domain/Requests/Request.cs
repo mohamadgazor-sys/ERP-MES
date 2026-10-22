@@ -5,7 +5,8 @@ namespace ERP.MES.Domain.Requests;
 /// <summary>
 /// The customer request: the central business container (Domain and Database Specification sections 2.1 and 4). It
 /// holds the customer-supplied <see cref="RequestNo"/>, the Jalali request year derived from the request date at
-/// creation, the status and its items, which may mix MAKE and REPAIR work.
+/// creation, the status and its items. A request has exactly one authoritative <see cref="WorkType"/> (MAKE or REPAIR); every item inherits it and mixed-type
+/// requests do not exist (Decision Log #84, which supersedes the per-item work type of #2).
 ///
 /// The only status change offered is the one named by the approved permission "create a request and submit it to
 /// Management" (Decision Log #34, #75): <see cref="SubmitToManagement"/>. The rest of the transition table is an unapproved
@@ -19,6 +20,7 @@ public sealed class Request
         long id,
         long customerId,
         RequestNo requestNo,
+        WorkType workType,
         DateOnly requestDate,
         int jalaliRequestYear,
         string? title,
@@ -29,6 +31,7 @@ public sealed class Request
         Id = id;
         CustomerId = customerId;
         RequestNo = requestNo;
+        WorkType = workType;
         RequestDate = requestDate;
         JalaliRequestYear = jalaliRequestYear;
         Title = title;
@@ -44,6 +47,9 @@ public sealed class Request
     public long CustomerId { get; }
 
     public RequestNo RequestNo { get; }
+
+    /// <summary>The request's one work type, MAKE or REPAIR, chosen at creation. All items inherit it (Decision Log #84).</summary>
+    public WorkType WorkType { get; }
 
     /// <summary>The customer's request date; the source of <see cref="JalaliRequestYear"/>.</summary>
     public DateOnly RequestDate { get; }
@@ -72,6 +78,7 @@ public sealed class Request
         long id,
         Customer customer,
         RequestNo requestNo,
+        WorkType workType,
         DateOnly requestDate,
         string? title,
         string? description,
@@ -82,10 +89,14 @@ public sealed class Request
         ArgumentNullException.ThrowIfNull(customer);
         ArgumentNullException.ThrowIfNull(requestNo);
         ArgumentNullException.ThrowIfNull(dates);
+        if (!Enum.IsDefined(workType))
+        {
+            throw new ArgumentOutOfRangeException(nameof(workType), workType, "Unknown work type.");
+        }
 
         var utc = Customer.RequireUtc(createdAtUtc, nameof(createdAtUtc));
         var year = dates.GetJalaliYear(requestDate);
-        return new Request(id, customer.Id, requestNo, requestDate, year, title, description, createdByUserId, utc);
+        return new Request(id, customer.Id, requestNo, workType, requestDate, year, title, description, createdByUserId, utc);
     }
 
     /// <summary>
@@ -137,7 +148,7 @@ public sealed class Request
         _items.Any(i => string.Equals(i.ItemNo, itemNo, StringComparison.Ordinal));
 
     /// <summary>
-    /// Adds an item. (RequestID, ItemNo) must be unique (section 5.2). A request may mix MAKE and REPAIR items. New
+    /// Adds an item. (RequestID, ItemNo) must be unique (section 5.2). The item inherits the request's work type (Decision Log #84). New
     /// items default to <see cref="Priority.Normal"/> (Decision Log #58).
     ///
     /// Cancelled and closed requests accept no new items. Ordinary item definition belongs before production release,
@@ -150,7 +161,6 @@ public sealed class Request
         long itemId,
         string itemNo,
         string partName,
-        WorkType workType,
         decimal requestedQuantity,
         long createdByUserId,
         DateTime createdAtUtc,
@@ -166,7 +176,7 @@ public sealed class Request
             throw new InvalidOperationException("The request already contains an item with number '" + itemNo + "'.");
         }
 
-        var item = new RequestItem(itemId, itemNo!, partName, workType, requestedQuantity, priority, createdByUserId, createdAtUtc);
+        var item = new RequestItem(itemId, itemNo!, partName, requestedQuantity, priority, createdByUserId, createdAtUtc);
         _items.Add(item);
         UpdatedAtUtc = createdAtUtc;
         return item;
