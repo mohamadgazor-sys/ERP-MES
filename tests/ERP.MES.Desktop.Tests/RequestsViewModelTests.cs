@@ -79,7 +79,8 @@ public class RequestsViewModelTests
         Assert.True(vm.HasDetail);
         Assert.True(vm.HasNoItems);
         Assert.Contains("wsj-898", vm.DetailHeading, StringComparison.Ordinal);
-        Assert.True(vm.CanSubmit);
+        Assert.False(vm.CanSubmit);
+        Assert.True(vm.CanAttachPdf);
 
         var afterRestart = h.RequestsFor(h.Qc, h.Restarted());
         await afterRestart.LoadAsync(Token);
