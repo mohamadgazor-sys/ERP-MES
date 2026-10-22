@@ -52,6 +52,15 @@ public static class AuditActions
     // Request PDF (Decision Log #87). Written in the same transaction as the attachment. The audit text carries the file name and hash, never the content.
     public const string RequestPdfAttached = "RequestPdfAttached";
 
+    // Request lifecycle (Decision Log #29, #82). Written in the same transaction as the status change and the workflow-history entry; the free-text reason stays in the history, not here.
+    public const string RequestSubmitted = "RequestSubmitted";
+    public const string RequestApproved = "RequestApproved";
+    public const string RequestRejected = "RequestRejected";
+    public const string RequestReopened = "RequestReopened";
+    public const string RequestForwardedToDrawing = "RequestForwardedToDrawing";
+    public const string RequestDrawingResultRecorded = "RequestDrawingResultRecorded";
+    public const string RequestSentBackToDrawing = "RequestSentBackToDrawing";
+
     /// <summary>Written on a clean shutdown, on a best-effort basis. A crash, a forced termination or a power loss writes nothing, and nothing is written later to pretend otherwise.</summary>
     public const string ApplicationSessionEnded = "ApplicationSessionEnded";
 }

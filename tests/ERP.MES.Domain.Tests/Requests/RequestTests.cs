@@ -201,8 +201,8 @@ public class RequestTests
         withItem.AddRing("1.10");
         var changedAt = RequestFixtures.Now.AddMinutes(5);
 
-        empty.SubmitToManagement(changedAt);
-        withItem.SubmitToManagement(changedAt);
+        empty.SubmitToManagement(RequestFixtures.Actor, changedAt);
+        withItem.SubmitToManagement(RequestFixtures.Actor, changedAt);
 
         Assert.Equal(RequestStatus.SentToManagement, empty.Status);
         Assert.Equal(RequestStatus.SentToManagement, withItem.Status);
@@ -224,7 +224,7 @@ public class RequestTests
         request.SetStatus(status);
         var updated = request.UpdatedAtUtc;
 
-        Assert.Throws<InvalidOperationException>(() => request.SubmitToManagement(RequestFixtures.Now.AddHours(1)));
+        Assert.Throws<InvalidOperationException>(() => request.SubmitToManagement(RequestFixtures.Actor, RequestFixtures.Now.AddHours(1)));
 
         Assert.Equal(status, request.Status);
         Assert.Equal(updated, request.UpdatedAtUtc);
@@ -235,7 +235,7 @@ public class RequestTests
     {
         var request = RequestFixtures.NewRequest().WithPdf();
 
-        Assert.Throws<ArgumentException>(() => request.SubmitToManagement(DateTime.SpecifyKind(RequestFixtures.Now, DateTimeKind.Unspecified)));
+        Assert.Throws<ArgumentException>(() => request.SubmitToManagement(RequestFixtures.Actor, DateTime.SpecifyKind(RequestFixtures.Now, DateTimeKind.Unspecified)));
 
         Assert.Equal(RequestStatus.Created, request.Status);
     }
@@ -338,7 +338,7 @@ public class RequestTests
         var updated = request.UpdatedAtUtc;
 
         Assert.False(request.HasRequestPdf);
-        Assert.Throws<InvalidOperationException>(() => request.SubmitToManagement(RequestFixtures.Now.AddHours(1)));
+        Assert.Throws<InvalidOperationException>(() => request.SubmitToManagement(RequestFixtures.Actor, RequestFixtures.Now.AddHours(1)));
 
         Assert.Equal(RequestStatus.Created, request.Status);
         Assert.Equal(updated, request.UpdatedAtUtc);

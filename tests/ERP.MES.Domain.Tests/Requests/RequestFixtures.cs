@@ -31,6 +31,8 @@ internal static class RequestFixtures
             Now,
             Dates);
 
+    public static readonly WorkflowActor Actor = new(1, "CENTRAL");
+
     public static byte[] PdfBytes(int size = 64)
     {
         var bytes = new byte[size];

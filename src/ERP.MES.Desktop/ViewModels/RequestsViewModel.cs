@@ -11,6 +11,8 @@ public sealed record RequestRow(long RequestId, string RequestNo, string Custome
 
 public sealed record ItemRow(string ItemNo, string PartName, string WorkTypeText, string QuantityText, string PriorityText);
 
+public sealed record HistoryRow(string DateText, string ActionText, string StatusChangeText, string DepartmentText, string OutcomeText, string NoteText);
+
 public sealed record CustomerChoice(long Id, string Name);
 
 public sealed record Choice<T>(T Value, string Text);
@@ -22,7 +24,7 @@ public sealed record Choice<T>(T Value, string Text);
 /// this screen (demonstration build: items are listed, their routes are not edited).
 /// </summary>
 public sealed class RequestsViewModel(
-    RequestService requests, RequestDocumentService documents, CustomerService customers, IJalaliDateService dates, DigitStyle digitStyle, Func<DateTime> utcNow, Func<Principal> currentUser) : ObservableObject
+    RequestService requests, RequestDocumentService documents, RequestWorkflowService lifecycle, CustomerService customers, IJalaliDateService dates, DigitStyle digitStyle, Func<DateTime> utcNow, Func<Principal> currentUser) : ObservableObject
 {
     private readonly ObservableCollection<RequestRow> _rows = [];
     private readonly ObservableCollection<ItemRow> _items = [];
@@ -35,10 +37,48 @@ public sealed class RequestsViewModel(
     private bool _isLoading;
     private bool _hasLoaded;
     private Capabilities _capabilities = Capabilities.None;
+    private RequestActionCapabilities _actions = RequestActionCapabilities.None;
+    private readonly ObservableCollection<HistoryRow> _history = [];
 
     public ObservableCollection<RequestRow> Requests => _rows;
 
     public ObservableCollection<ItemRow> Items => _items;
+
+    /// <summary>The workflow history of the selected request, oldest first (Domain and Database Specification 4.4).</summary>
+    public ObservableCollection<HistoryRow> History => _history;
+
+    public bool HasHistory => _history.Count > 0;
+
+    public bool HasNoHistory => !HasHistory;
+
+    /// <summary>The controlled Drawing outcomes offered when Drawing returns its result.</summary>
+    public IReadOnlyList<Choice<DrawingOutcome>> DrawingOutcomes { get; } =
+    [
+        new(DrawingOutcome.FullyAccepted, Messages.OutcomeText(DrawingOutcome.FullyAccepted)),
+        new(DrawingOutcome.PartiallyAccepted, Messages.OutcomeText(DrawingOutcome.PartiallyAccepted)),
+        new(DrawingOutcome.Rejected, Messages.OutcomeText(DrawingOutcome.Rejected)),
+        new(DrawingOutcome.MoreInformationNeeded, Messages.OutcomeText(DrawingOutcome.MoreInformationNeeded)),
+        new(DrawingOutcome.ReturnedForCorrection, Messages.OutcomeText(DrawingOutcome.ReturnedForCorrection)),
+    ];
+
+    // Which lifecycle buttons are offered: the Application's answer about the user (from the database) AND the request being in the status the action needs.
+    // The Application checks both again when the action runs.
+    public bool CanApprove => _actions.CanDecide && Status == RequestStatus.SentToManagement;
+
+    public bool CanReject => CanApprove;
+
+    public bool CanReopen => _actions.CanReopen && Status == RequestStatus.MgmtRejectedAtPlanning;
+
+    public bool CanForwardToDrawing => _actions.CanForwardToDrawing && Status == RequestStatus.MgmtApprovedAtPlanning;
+
+    public bool CanRecordDrawingResult => _actions.CanRecordDrawingResult && Status == RequestStatus.UnderDrawingReview;
+
+    public bool CanSendBackToDrawing => _actions.CanForwardToDrawing && Status == RequestStatus.DrawingReturnedToPlanning;
+
+    /// <summary>True when any lifecycle action is offered for the selected request (shows the action panel).</summary>
+    public bool HasWorkflowActions => CanApprove || CanReopen || CanForwardToDrawing || CanRecordDrawingResult || CanSendBackToDrawing;
+
+    private RequestStatus? Status => _detail?.Value.Status;
 
     /// <summary>Active customers a new request can be entered for.</summary>
     public ObservableCollection<CustomerChoice> Customers => _customers;
@@ -221,6 +261,52 @@ public sealed class RequestsViewModel(
         return file;
     }
 
+    public Task<bool> ApproveAsync(CancellationToken cancellationToken = default) =>
+        RunLifecycleAsync((id, version) => lifecycle.ApproveAsync(currentUser(), id, version, cancellationToken), "درخواست تأیید شد و به برنامه‌ریزی می‌رسد.", cancellationToken);
+
+    public Task<bool> RejectAsync(string? reason, CancellationToken cancellationToken = default) =>
+        RunLifecycleAsync((id, version) => lifecycle.RejectAsync(currentUser(), id, version, reason, cancellationToken), "درخواست رد شد.", cancellationToken);
+
+    public Task<bool> ReopenAsync(string? reason, CancellationToken cancellationToken = default) =>
+        RunLifecycleAsync((id, version) => lifecycle.ReopenAsync(currentUser(), id, version, reason, cancellationToken), "درخواست برای تصمیم جدید مدیریت بازگشایی شد.", cancellationToken);
+
+    public Task<bool> ForwardToDrawingAsync(CancellationToken cancellationToken = default) =>
+        RunLifecycleAsync((id, version) => lifecycle.ForwardToDrawingAsync(currentUser(), id, version, cancellationToken), "درخواست به نقشه‌کشی ارسال شد.", cancellationToken);
+
+    public Task<bool> RecordDrawingResultAsync(DrawingOutcome outcome, string? note, CancellationToken cancellationToken = default) =>
+        RunLifecycleAsync((id, version) => lifecycle.RecordDrawingResultAsync(currentUser(), id, version, outcome, note, cancellationToken), "نتیجهٔ نقشه‌کشی ثبت شد و به برنامه‌ریزی بازگشت.", cancellationToken);
+
+    public Task<bool> SendBackToDrawingAsync(string? reason, CancellationToken cancellationToken = default) =>
+        RunLifecycleAsync((id, version) => lifecycle.SendBackToDrawingAsync(currentUser(), id, version, reason, cancellationToken), "درخواست به نقشه‌کشی بازگردانده شد.", cancellationToken);
+
+    // One path for every lifecycle action: the selected request at the version this screen loaded it at; a failure reloads what is true now.
+    private async Task<bool> RunLifecycleAsync(Func<long, long, Task<Outcome<Stored<Request>>>> call, string success, CancellationToken cancellationToken)
+    {
+        var saved = false;
+        await RunAsync(async () =>
+        {
+            if (_detail is null)
+            {
+                Message = Messages.NothingSelected;
+                return;
+            }
+
+            var id = _detail.Value.Id;
+            var outcome = await call(id, _detail.Version);
+            if (!outcome.Succeeded)
+            {
+                await ShowFailureAsync(outcome, cancellationToken, reopen: id);
+                return;
+            }
+
+            saved = true;
+            await ReloadAsync(cancellationToken, keepMessage: true);
+            await LoadDetailAsync(id, cancellationToken, keepMessage: true);
+            Message = success;
+        });
+        return saved;
+    }
+
     public async Task<bool> SubmitAsync(CancellationToken cancellationToken = default)
     {
         var saved = false;
@@ -307,6 +393,7 @@ public sealed class RequestsViewModel(
         }
 
         _capabilities = await requests.GetCapabilitiesAsync(currentUser(), cancellationToken);
+        _actions = await lifecycle.GetCapabilitiesAsync(currentUser(), cancellationToken);
         RaiseCapabilityChanges();
 
         var list = await requests.ListAsync(currentUser(), customerId: null, cancellationToken);
@@ -360,6 +447,20 @@ public sealed class RequestsViewModel(
         _detail = outcome.Value!.Request;
         _detailCustomer = outcome.Value.CustomerName;
         _items.Clear();
+        _history.Clear();
+        foreach (var entry in _detail.Value.WorkflowHistory)
+        {
+            _history.Add(new HistoryRow(
+                dates.FormatDateTime(entry.ActionAtUtc),
+                Messages.ActionText(entry.Action),
+                Messages.StatusText(entry.FromStatus) + " ← " + Messages.StatusText(entry.ToStatus),
+                Messages.DepartmentText(entry.ActionByDepartmentCode),
+                entry.Outcome is { } drawingOutcome ? Messages.OutcomeText(drawingOutcome) : string.Empty,
+                entry.Note ?? string.Empty));
+        }
+
+        OnPropertyChanged(nameof(HasHistory));
+        OnPropertyChanged(nameof(HasNoHistory));
         foreach (var item in _detail.Value.Items)
         {
             _items.Add(new ItemRow(item.ItemNo, item.PartName, Messages.WorkTypeText(_detail.Value.WorkType), QuantityDisplay(item.RequestedQuantity), item.Priority.PersianName()));
@@ -374,6 +475,9 @@ public sealed class RequestsViewModel(
         _detail = null;
         _detailCustomer = string.Empty;
         _items.Clear();
+        _history.Clear();
+        OnPropertyChanged(nameof(HasHistory));
+        OnPropertyChanged(nameof(HasNoHistory));
         RaiseDetailChanges();
     }
 
@@ -381,7 +485,7 @@ public sealed class RequestsViewModel(
     {
         foreach (var name in new[]
                  {
-                     nameof(HasDetail), nameof(DetailHeading), nameof(DetailLine), nameof(DetailTitle), nameof(DetailDescription), nameof(HasNoItems), nameof(CanSubmit), nameof(CanAddItem), nameof(HasPdf), nameof(PdfText), nameof(CanAttachPdf),
+                     nameof(HasDetail), nameof(DetailHeading), nameof(DetailLine), nameof(DetailTitle), nameof(DetailDescription), nameof(HasNoItems), nameof(CanSubmit), nameof(CanAddItem), nameof(HasPdf), nameof(PdfText), nameof(CanAttachPdf), nameof(CanApprove), nameof(CanReject), nameof(CanReopen), nameof(CanForwardToDrawing), nameof(CanRecordDrawingResult), nameof(CanSendBackToDrawing), nameof(HasWorkflowActions),
                  })
         {
             OnPropertyChanged(name);
@@ -390,7 +494,7 @@ public sealed class RequestsViewModel(
 
     private void RaiseCapabilityChanges()
     {
-        foreach (var name in new[] { nameof(CanCreateRequest), nameof(CanSubmit), nameof(CanAddItem), nameof(CanSetPriority), nameof(CanAttachPdf) })
+        foreach (var name in new[] { nameof(CanCreateRequest), nameof(CanSubmit), nameof(CanAddItem), nameof(CanSetPriority), nameof(CanAttachPdf), nameof(CanApprove), nameof(CanReject), nameof(CanReopen), nameof(CanForwardToDrawing), nameof(CanRecordDrawingResult), nameof(CanSendBackToDrawing), nameof(HasWorkflowActions) })
         {
             OnPropertyChanged(name);
         }

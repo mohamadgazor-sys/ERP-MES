@@ -227,7 +227,7 @@ The demonstration (PRs #18-#27) stays as it is until each gap below is closed by
 
 | Area | Demonstration | Intended process | Closed by phase |
 |---|---|---|---|
-| Request lifecycle | Create, submit; no Management decision, forwarding, Drawing review, contract, gates. *(One type per request: implemented, #84. PDF mandatory before submission: implemented, #87.)* | Section 3 | 1b |
+| Request lifecycle | *(Implemented: one type per request #84; PDF before submission #87; Management approve/reject, reopen, forward to Drawing, Drawing result, send back, with workflow history and audit.)* Still missing: contract gate, item definition after the gates, production release gates, clarification threads (D1) | Section 3 | 2b, 4a |
 | Items and stages | Fixed seeded routes; no unit or machine on stages | Planning defines stages with unit and machine; Excel import | 3, 4 |
 | Stage actions | Release/start/submit/approve with no request-status, contract or Management gate [DEMO] | Gates of section 5 | 1, 2, 5 |
 | QC | Whole quantity only | Per-unit accepted / rework / scrap | 5 |

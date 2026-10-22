@@ -91,6 +91,16 @@ Prepare a fictional demonstration database with `demo-init` (see `docs/AUTHENTIC
 
 Fixed seeded routes and the demonstration banner stay visible; stage progression and QC are on the separate page of section F; Excel import and request-detail editing are not part of these screens.
 
+## G. Request lifecycle after submission (Decision Log #29, #82; `docs/REQUEST_STATUS_TRANSITIONS_DRAFT.md`) - not run by a person; covered by automated tests
+
+| # | Step | Expected |
+|---|---|---|
+| G1 | As `demo.manager` is NOT provided; create a Management user with the Manager role (Admin) and sign in. Select a request in "ارسال‌شده به مدیریت" | "تأیید" and "رد (با دلیل)" are offered; a Management user without the Manager role is offered none |
+| G2 | "رد (با دلیل)" with an empty reason, then with a reason | Empty: "دلیل یا توضیح را وارد کنید."; with a reason the status becomes "ردشده توسط مدیریت" and the history shows the reason |
+| G3 | As `demo.planning` (or a Management user): "بازگشایی (با دلیل)" with a reason | Status "ارسال‌شده به مدیریت"; the history has three rows |
+| G4 | Approve; as `demo.planning` "ارسال به نقشه‌کشی"; as `demo.drawing` choose an outcome and "ثبت نتیجهٔ نقشه‌کشی" | A note is required except for "کاملاً پذیرفته شد"; the status becomes "بازگشته از نقشه‌کشی به برنامه‌ریزی"; the history shows outcome, note and department |
+| G5 | As `demo.planning`: "بازگشت به نقشه‌کشی (با دلیل)" | Status "در بررسی نقشه‌کشی" again (a labelled default, not approved) |
+
 ## E. Production overview for Management and Planning (read-only; `docs/PRODUCTION_QUEUE.md`, Decision Log #78) - pending the owner's run
 
 Prepare a fictional demonstration database with `demo-init` (see `docs/AUTHENTICATION.md` section 12). The seeded requests have routes and several stage states.

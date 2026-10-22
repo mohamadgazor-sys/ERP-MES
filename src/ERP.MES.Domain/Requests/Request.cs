@@ -9,14 +9,15 @@ namespace ERP.MES.Domain.Requests;
 /// creation, the status and its items. A request has exactly one authoritative <see cref="WorkType"/> (MAKE or REPAIR); every item inherits it and mixed-type
 /// requests do not exist (Decision Log #84, which supersedes the per-item work type of #2).
 ///
-/// The only status change offered is the one named by the approved permission "create a request and submit it to
-/// Management" (Decision Log #34, #75): <see cref="SubmitToManagement"/>. The rest of the transition table is an unapproved
-/// draft and is not modelled. Contract, workflow history, documents and persistence are outside this type.
+/// The status changes offered are the ones the owner's lifecycle states explicitly (Decision Log #29, #75, #82): submit to Management, Management approves or rejects, a rejected
+/// request is reopened, Planning forwards to Drawing, Drawing returns its result, Planning may send it back. Each creates one <see cref="RequestWorkflowEntry"/>. Cancellation,
+/// closing and everything after the Drawing result (contract, item definition, production) are not modelled yet. Persistence is outside this type.
 /// </summary>
 public sealed class Request
 {
     private readonly List<RequestItem> _items = [];
     private readonly List<RequestDocumentLink> _documentLinks = [];
+    private readonly List<RequestWorkflowEntry> _workflow = [];
 
     private Request(
         long id,
@@ -85,6 +86,9 @@ public sealed class Request
 
     public bool HasRequestPdf => CurrentRequestPdf is not null;
 
+    /// <summary>The request-level workflow history, oldest first. Append-only: every status-changing action adds one entry.</summary>
+    public IReadOnlyList<RequestWorkflowEntry> WorkflowHistory => _workflow;
+
     public static Request Create(
         long id,
         Customer customer,
@@ -111,17 +115,13 @@ public sealed class Request
     }
 
     /// <summary>
-    /// The one request transition of this milestone (Decision Log #75): <c>CREATED</c> to <c>SENT_TO_MANAGEMENT</c>, the "submit to Management" of the approved Central
-    /// action. It is allowed from <c>CREATED</c> only, with or without items (items are defined afterwards by Drawing and Planning). It does not approve the draft
-    /// transition table: approval, rejection, reopening and cancellation are not modelled. The caller (the Application use case) has already checked the permission.
+    /// Central submits the request to Management: <c>CREATED</c> to <c>SENT_TO_MANAGEMENT</c> (Decision Log #75, #87). Allowed from <c>CREATED</c> only, with or without items, and only
+    /// when the request PDF is attached. The caller (the Application use case) has already checked the permission.
     /// </summary>
-    public void SubmitToManagement(DateTime changedAtUtc)
+    public void SubmitToManagement(WorkflowActor actor, DateTime changedAtUtc)
     {
         var utc = Customer.RequireUtc(changedAtUtc, nameof(changedAtUtc));
-        if (Status != RequestStatus.Created)
-        {
-            throw new InvalidOperationException("Only a " + RequestStatus.Created.Code() + " request can be submitted to Management; this one is " + Status.Code() + ".");
-        }
+        RequireStatus(RequestStatus.Created, "submitted to Management");
 
         // Central must attach the request PDF before submitting (Decision Log #87).
         if (!HasRequestPdf)
@@ -129,8 +129,102 @@ public sealed class Request
             throw new InvalidOperationException("The request PDF must be attached before the request is submitted to Management.");
         }
 
-        Status = RequestStatus.SentToManagement;
-        UpdatedAtUtc = utc;
+        Transition(RequestAction.Submit, RequestStatus.SentToManagement, actor, utc, outcome: null, note: null);
+    }
+
+    /// <summary>Management (Manager role) approves: <c>SENT_TO_MANAGEMENT</c> to <c>MGMT_APPROVED_AT_PLANNING</c>.</summary>
+    public void Approve(WorkflowActor actor, DateTime changedAtUtc)
+    {
+        var utc = Customer.RequireUtc(changedAtUtc, nameof(changedAtUtc));
+        RequireStatus(RequestStatus.SentToManagement, "approved");
+        Transition(RequestAction.Approve, RequestStatus.MgmtApprovedAtPlanning, actor, utc, outcome: null, note: null);
+    }
+
+    /// <summary>Management (Manager role) rejects: <c>SENT_TO_MANAGEMENT</c> to <c>MGMT_REJECTED_AT_PLANNING</c>. The reason is mandatory (Decision Log #29).</summary>
+    public void Reject(WorkflowActor actor, string reason, DateTime changedAtUtc)
+    {
+        var utc = Customer.RequireUtc(changedAtUtc, nameof(changedAtUtc));
+        var text = RequireNote(reason, nameof(reason));
+        RequireStatus(RequestStatus.SentToManagement, "rejected");
+        Transition(RequestAction.Reject, RequestStatus.MgmtRejectedAtPlanning, actor, utc, outcome: null, text);
+    }
+
+    /// <summary>Planning or Management reopens a rejected request for a new Management decision: <c>MGMT_REJECTED_AT_PLANNING</c> to <c>SENT_TO_MANAGEMENT</c>. The reason is mandatory and audited (Decision Log #29).</summary>
+    public void Reopen(WorkflowActor actor, string reason, DateTime changedAtUtc)
+    {
+        var utc = Customer.RequireUtc(changedAtUtc, nameof(changedAtUtc));
+        var text = RequireNote(reason, nameof(reason));
+        RequireStatus(RequestStatus.MgmtRejectedAtPlanning, "reopened");
+        Transition(RequestAction.Reopen, RequestStatus.SentToManagement, actor, utc, outcome: null, text);
+    }
+
+    /// <summary>Planning sends an approved request to Drawing: <c>MGMT_APPROVED_AT_PLANNING</c> to <c>UNDER_DRAWING_REVIEW</c>.</summary>
+    public void ForwardToDrawing(WorkflowActor actor, DateTime changedAtUtc)
+    {
+        var utc = Customer.RequireUtc(changedAtUtc, nameof(changedAtUtc));
+        RequireStatus(RequestStatus.MgmtApprovedAtPlanning, "forwarded to Drawing");
+        Transition(RequestAction.ForwardToDrawing, RequestStatus.UnderDrawingReview, actor, utc, outcome: null, note: null);
+    }
+
+    /// <summary>
+    /// Drawing returns its technical result to Planning: <c>UNDER_DRAWING_REVIEW</c> to <c>DRAWING_RETURNED_TO_PLANNING</c>. The outcome is data on the workflow entry. A technical note
+    /// is required for every outcome except a full acceptance (docs/WORKFLOW_REDESIGN.md, a labelled default). The result never depends on material availability (Decision Log #82).
+    /// </summary>
+    public void RecordDrawingResult(WorkflowActor actor, DrawingOutcome outcome, string? note, DateTime changedAtUtc)
+    {
+        var utc = Customer.RequireUtc(changedAtUtc, nameof(changedAtUtc));
+        if (!Enum.IsDefined(outcome))
+        {
+            throw new ArgumentOutOfRangeException(nameof(outcome), outcome, "Unknown Drawing outcome.");
+        }
+
+        var text = outcome == DrawingOutcome.FullyAccepted ? OptionalNote(note, nameof(note)) : RequireNote(note, nameof(note));
+        RequireStatus(RequestStatus.UnderDrawingReview, "given a Drawing result");
+        Transition(RequestAction.RecordDrawingResult, RequestStatus.DrawingReturnedToPlanning, actor, utc, outcome, text);
+    }
+
+    /// <summary>Planning sends a returned request back to Drawing (more information or correction): <c>DRAWING_RETURNED_TO_PLANNING</c> to <c>UNDER_DRAWING_REVIEW</c>. The reason is mandatory (a labelled default, docs/REQUEST_STATUS_TRANSITIONS_DRAFT.md row 9).</summary>
+    public void SendBackToDrawing(WorkflowActor actor, string reason, DateTime changedAtUtc)
+    {
+        var utc = Customer.RequireUtc(changedAtUtc, nameof(changedAtUtc));
+        var text = RequireNote(reason, nameof(reason));
+        RequireStatus(RequestStatus.DrawingReturnedToPlanning, "sent back to Drawing");
+        Transition(RequestAction.SendBackToDrawing, RequestStatus.UnderDrawingReview, actor, utc, outcome: null, text);
+    }
+
+    private void RequireStatus(RequestStatus expected, string what)
+    {
+        if (Status != expected)
+        {
+            throw new InvalidOperationException("Only a " + expected.Code() + " request can be " + what + "; this one is " + Status.Code() + ".");
+        }
+    }
+
+    private static string RequireNote(string? note, string parameterName)
+    {
+        var text = OptionalNote(note, parameterName);
+        return text ?? throw new ArgumentException("A reason or note is required.", parameterName);
+    }
+
+    private static string? OptionalNote(string? note, string parameterName)
+    {
+        if (string.IsNullOrWhiteSpace(note))
+        {
+            return null;
+        }
+
+        var text = note.Trim();
+        return text.Length <= RequestWorkflowEntry.MaxNoteLength
+            ? text
+            : throw new ArgumentException("A reason or note is limited to " + RequestWorkflowEntry.MaxNoteLength + " characters.", parameterName);
+    }
+
+    // The one place where a status changes through a workflow action: the status, the "updated" time and the history entry change together.
+    private void Transition(RequestAction action, RequestStatus to, WorkflowActor actor, DateTime atUtc, DrawingOutcome? outcome, string? note)
+    {
+        _workflow.Add(new RequestWorkflowEntry(action, Status, to, outcome, note, actor, atUtc));
+        Status = to;
+        UpdatedAtUtc = atUtc;
     }
 
     /// <summary>

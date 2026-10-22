@@ -1450,3 +1450,35 @@ Append one dated entry after every substantial session. Do not replace prior ent
 
 ### Recommended exact next action
 - Merge after CI, then phase 1b (request lifecycle: Management decision, forward to Drawing, Drawing result).
+
+---
+
+### Date / session
+- Date: 2026-10-22
+- Claude Code session ID (if useful): session_01UwqjPjBXLd2apjZb2urjds (phase 1b: request lifecycle after submission)
+
+### Goal
+- Implement the owner's lifecycle steps 2-5: Management approves/rejects, a rejected request is reopened, Planning forwards to Drawing, Drawing returns its technical result, with a request workflow history and audit.
+
+### Completed
+- Domain: `RequestAction`, `DrawingOutcome`, `WorkflowActor`, `RequestWorkflowEntry` (append-only), Request transitions `Approve`, `Reject`, `Reopen`, `ForwardToDrawing`, `RecordDrawingResult`, `SendBackToDrawing`; `SubmitToManagement` now records a history entry.
+- Application: `RequestWorkflowService` (permission per action from the database, expected request version, history + audit in one transaction, reasons mandatory, Drawing note rules), audited submit; capabilities for the screen.
+- Persistence: `RequestWorkflowEntries` table (users and requests restricted), migration `AddRequestWorkflowHistory` (no backfill: history starts at the migration), append-only guard in the context.
+- Desktop: action panel (approve, reject, reopen, forward, Drawing result with outcome, send back), reason box and history grid.
+
+### Files changed
+- Source, tests, one migration, documentation. No new package.
+
+### Decisions newly approved
+- None. Labelled defaults used and not approved: send back to Drawing (draft row 9), the permission mapping for forward/send back (Planning's "receives the request" permission), a Drawing note for every outcome except full acceptance. Clarification routing and the effect of unavailable material remain OPEN D1.
+
+### Unresolved questions / risks
+- Cancellation (draft rows 6, 10, 11) is not implemented. Items and permissions for item definition are unchanged (phase 4a).
+- Existing requests that were already beyond `CREATED` have no history entries (the history starts with this migration).
+- WPF screens were not exercised by a person; view-model tests cover the logic.
+
+### Commands/tests actually run and results
+- See the pull request for the final head's Windows CI totals.
+
+### Recommended exact next action
+- Merge after CI, then phase 3a (QC masters: units of measure and quantity types) and 3b (Planning masters).
