@@ -1266,3 +1266,34 @@ Append one dated entry after every substantial session. Do not replace prior ent
 
 ### Recommended exact next action
 - Review, run checklist section F, confirm or change the department mapping; then decide the next milestone (Planning priority edit / Planning positions, QC rejection with accepted/rework/scrap, or the per-unit queue).
+
+---
+
+### Date / session
+- Date: 2026-10-23
+- Claude Code session ID (if useful): session_01UwqjPjBXLd2apjZb2urjds (PR #27 update: owner-approved demo-only permission mapping, Decision Log #80)
+
+### Goal
+- Record the owner's approval of the demo-only stage-action department mapping without finalizing the production authorization matrix, and keep the missing request-status / contract / Management-approval gates explicitly unresolved and labelled.
+
+### Completed
+- Checked `main` (last Decision Log entry #78) and the open PRs (only #27, which holds #79), so the new entry is **#80**.
+- Decision Log #80: release = Planning (`ReleaseStage`), start and submit for QC = Production (`RunStage`), QC approval = QC (`InspectOrCorrectQc`), demo-only; #79 (5) now points to it. The "department mapping" unresolved assumption was removed and replaced by the still-open production eligibility question (request-status transition table; contract / Management approval versus production release) and by the undecided extras (other departments acting, correcting a wrong start).
+- Code comments (no behaviour change) and the Domain Specification 15.4 note now say "approved, demo only"; the stage-work screen note and `docs/STAGE_WORKFLOW_DEMO.md` state that no request-status, contract or Management-approval gate is checked; checklist F19 added.
+
+### Files changed
+- See the pull request. No schema, package or behavioural change.
+
+### Decisions newly approved
+- #80 (owner, demo-only).
+
+### Unresolved questions / risks
+- Request-status transition table and the relationship between contract / Management approval and production release; the demo has no such gate.
+- Whether Management or a supervisor may act on stages; who may correct a wrong start or submission.
+- The WPF layer is compiled but not exercised by unit tests: checklist section F is pending the owner's run.
+
+### Commands/tests actually run and results
+- Not built locally (no SDK). Windows CI results are reported in the pull request.
+
+### Recommended exact next action
+- Run checklist section F, then review and merge PR #27; then decide the production eligibility rules before any production release workflow.

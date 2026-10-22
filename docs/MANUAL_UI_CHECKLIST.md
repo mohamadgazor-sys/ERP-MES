@@ -136,4 +136,4 @@ Prepare a fictional demonstration database with `demo-init` (`docs/AUTHENTICATIO
 | F16 | Close and restart the application; open the page | The new stage states are still there (persisted) | |
 | F17 | Deactivate `demo.production` (administrator tool, `docs/AUTHENTICATION.md`) while that user has the page open; click an enabled button | A red permission message; the list reloads to the denied state; nothing changed | |
 | F18 | Audit (Provisioning/DB tool or a SQLite viewer on the demo database; there is no audit screen yet): `SELECT ActionCode, UserId, TargetId, Summary FROM AuditLog WHERE ActionCode LIKE 'Stage%'` | One row per successful action in order, with the right user, target `itemId/stageNo` and a before -> after summary; none for refused or conflicting clicks; no password or token text | |
-
+| F19 | Demo-only labelling | The note at the top of «مراحل و کنترل کیفیت» says the release-eligibility conditions (request status, contract, Management approval) are not approved and not checked in this demonstration version; a request in any seeded status can be worked on | |

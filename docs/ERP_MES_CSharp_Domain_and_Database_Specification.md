@@ -974,7 +974,7 @@ Items are editable only until production release; afterwards only Planning may c
 
 > **[Approved - Decision Log #78]** **View the read-only production overview** (`ViewProductionQueue`) - active users in Management or Planning; every other department is denied by default. Views of one production unit's queue may get separate permissions later.
 
-> **[Implementation assumption - NOT approved; Decision Log #79]** Demonstration stage flow: **release the first stage** (`ReleaseStage`) - Planning; **start a stage and submit it for QC** (`RunStage`) - Production; **whole-quantity QC approval** - QC (the existing 15.2 row). Derived from Master Specification 1.4A and 25.4; to be confirmed by the owner.
+> **[Approved, DEMO ONLY - Decision Log #80]** Demonstration stage flow: **release the first stage** (`ReleaseStage`) - Planning; **start a stage and submit it for QC** (`RunStage`) - Production; **whole-quantity QC approval** - QC (the existing 15.2 row). This does not finalize the production authorization matrix, and it implements no request-status, contract or Management-approval gate: the request-status transition table and the relationship between contract / Management approval and production release remain unresolved.
 
 ---
 

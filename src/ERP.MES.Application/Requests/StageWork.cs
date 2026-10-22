@@ -56,10 +56,13 @@ public sealed record StageWorkView(IReadOnlyList<ProductionQueueEntry> Entries, 
 /// status model and adds no production transition: there is no QC rejection, rework, scrap, external supply or route editing here.
 ///
 /// Every action: (1) reloads the user from the database and checks the permission (<see cref="Permission.ReleaseStage"/> Planning, <see cref="Permission.RunStage"/> Production,
-/// <see cref="Permission.InspectOrCorrectQc"/> QC - the first two are assumptions to be confirmed, see the enum); (2) names the expected versions of the request row, the item row
+/// <see cref="Permission.InspectOrCorrectQc"/> QC - the demo-only mapping approved in Decision Log #80); (2) names the expected versions of the request row, the item row
 /// and every stage row the action changes or relies on, and passes them to <see cref="IRequestRepository.UpdateRowsAsync(long, RowVersionExpectations, Action{Request}, Func{Request, IReadOnlyList{AuditLogEntry}}, CancellationToken)"/>,
 /// which compares them BEFORE the Domain method runs; (3) lets the Domain validate the transition and the QC gate; (4) saves the change, the append-only QC approval and the audit
 /// entry in ONE transaction. A stale version, an invalid transition or a failure leaves everything unchanged.
+///
+/// DEMO-ONLY: there is no request-status, contract or Management-approval gate here. The request-status transition table and the relationship between contract / Management approval
+/// and production release are unresolved (Decision Log #80), so the production eligibility rules are neither implemented nor approved by this service.
 ///
 /// GUARANTEE (per row, not per aggregate - Decision Log #77): the named rows are protected against a stale view, and every row the change touches is protected until it is saved.
 /// A row of the same request that the action neither names nor changes is not compared.

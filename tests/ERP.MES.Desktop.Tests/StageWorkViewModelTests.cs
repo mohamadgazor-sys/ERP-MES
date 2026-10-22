@@ -242,6 +242,8 @@ public class StageWorkViewModelTests
         Assert.Contains("رد کنترل کیفیت", StageWorkViewModel.Note);
         Assert.Contains("ویرایش مسیر", StageWorkViewModel.Note);
         Assert.Contains("صف عملیاتی رسمی", StageWorkViewModel.Note);
+        Assert.Contains("وضعیت درخواست، قرارداد و تأیید مدیریت", StageWorkViewModel.Note);
+        Assert.Contains("بررسی نمی‌شوند", StageWorkViewModel.Note);
         Assert.Contains("نسخهٔ نمایشی", StageWorkViewModel.Heading);
     }
 
