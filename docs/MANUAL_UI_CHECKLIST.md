@@ -124,6 +124,12 @@ Fixed seeded routes and the demonstration banner stay visible; stage progression
 - J4: Close the assignment and end the qualification; the rows stay (history).
 - J5: As Production or Management the page is read-only; as QC or Warehouse it shows the not-authorized message.
 
+## K. Materials and price per kg (Decision Log #10, #91) - not run by a person; covered by automated tests
+- K1: As Warehouse register a material (code A-Z, digits, `_`, `-`; name; optional grade and form).
+- K2: Select it and add a price in Rial per kg from a Jalali date; add a later one; the history shows both, newest first, in Persian digits.
+- K3: A price dated on or before the latest is refused; the history is never rewritten.
+- K4: Management can add prices but not materials; Planning sees prices but cannot change them; Production and QC see the list without prices.
+
 ## E. Production overview for Management and Planning (read-only; `docs/PRODUCTION_QUEUE.md`, Decision Log #78) - pending the owner's run
 
 Prepare a fictional demonstration database with `demo-init` (see `docs/AUTHENTICATION.md` section 12). The seeded requests have routes and several stage states.

@@ -231,7 +231,7 @@ The demonstration (PRs #18-#27) stays as it is until each gap below is closed by
 | Items and stages | Fixed seeded routes; no unit or machine on stages | Planning defines stages with unit and machine; Excel import | 3, 4 |
 | Stage actions | Release/start/submit/approve with no request-status, contract or Management gate [DEMO] | Gates of section 5 | 1, 2, 5 |
 | QC | Whole quantity only | Per-unit accepted / rework / scrap | 5 |
-| Units / machines / operators | *(Production units, machines with stable codes, the rate history, operators, assignments and qualifications are implemented.)* Materials and Warehouse price not yet | Master data with history | 3b (partly done) |
+| Units / machines / operators | *(Production units, machines with stable codes, the rate history, operators, assignments and qualifications are implemented.)* Materials and the Warehouse price history are implemented too | Master data with history | 3b (partly done) |
 | Queue | Item-level read-only overview, provisional order | Per-unit queue, Planning position, overrides | 5 |
 | Costing / price | None | R4 | 7 |
 | Job reports / KPI / shifts / overtime | None | R5-R8 | 6, 8 |

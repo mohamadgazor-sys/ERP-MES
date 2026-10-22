@@ -120,6 +120,18 @@ public enum ValidationIssue
     /// <summary>A new rate must apply from a date later than the machine's latest rate (history is never rewritten).</summary>
     RateNotLater,
 
+    /// <summary>The material does not exist or is not active.</summary>
+    MaterialInvalid,
+
+    /// <summary>The price must be greater than zero (Rial per kg) and within the sanity bound.</summary>
+    PriceInvalid,
+
+    /// <summary>The price must apply from a date later than the material's latest price.</summary>
+    PriceNotLater,
+
+    /// <summary>The grade or form text is longer than allowed.</summary>
+    MaterialTextTooLong,
+
     /// <summary>The operator's full name is required (at most 200 characters).</summary>
     OperatorNameInvalid,
 

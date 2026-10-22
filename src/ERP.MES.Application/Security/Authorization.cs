@@ -42,6 +42,15 @@ public enum Permission
     /// </summary>
     MaintainProductionResources,
 
+    /// <summary>Maintain the material list (register, change name/grade/form, retire). Warehouse owns it (a labelled default, docs/RAW_MATERIAL_INQUIRY_DESIGN.md U-08).</summary>
+    MaintainMaterials,
+
+    /// <summary>Read the material list. Every active user (Drawing needs it for raw-material inquiries); a labelled default.</summary>
+    ViewMaterials,
+
+    /// <summary>Read material prices per kg: Warehouse and Management (who maintain them) and Planning (cost inputs, docs/COSTING_DESIGN.md). A labelled default.</summary>
+    ViewMaterialPrices,
+
     /// <summary>
     /// Read operators, their machine assignments and qualifications. Planning and Management, and Production (supervisors and operators need to see who works where). A labelled
     /// default, not separately approved; every other department is denied.
@@ -121,6 +130,9 @@ public static class AuthorizationRules
         // Planning resource master data (Decision Log #82 R2, #89): Planning registers units and machines; every active user reads them; rates are read by their owners and by Warehouse.
         [Permission.MaintainProductionResources] = new([DepartmentCodes.Planning], null),
         [Permission.ViewPlanningMasterData] = new([], null),
+        [Permission.MaintainMaterials] = new([DepartmentCodes.Warehouse], null),
+        [Permission.ViewMaterials] = new([], null),
+        [Permission.ViewMaterialPrices] = new([DepartmentCodes.Warehouse, DepartmentCodes.Management, DepartmentCodes.Planning], null),
         [Permission.ViewOperators] = new([DepartmentCodes.Planning, DepartmentCodes.Management, DepartmentCodes.Production], null),
         [Permission.ViewMachineRates] = new([DepartmentCodes.Planning, DepartmentCodes.Management, DepartmentCodes.Warehouse], null),
 

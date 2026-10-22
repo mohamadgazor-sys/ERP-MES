@@ -1,0 +1,70 @@
+<UserControl x:Class="ERP.MES.Desktop.Views.MaterialsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Loaded="OnLoaded">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
+    </UserControl.Resources>
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel>
+            <TextBlock Text="{Binding Message}" TextWrapping="Wrap" Foreground="#9B1C1C" FontWeight="SemiBold" Margin="0,0,0,8" />
+            <TextBlock TextWrapping="Wrap" Foreground="{StaticResource MutedTextBrush}" Margin="0,0,0,8"
+                       Text="انبار فهرست مواد اولیه را نگه می‌دارد؛ انبار و مدیریت قیمت هر کیلوگرم را (ریال) با تاریخ شروع ثبت می‌کنند. قیمت‌ها حذف یا ویرایش نمی‌شوند؛ قیمت جدید با تاریخ بعدی اضافه می‌شود و تاریخچه می‌ماند. برنامه‌ریزی قیمت‌ها را فقط می‌خواند." />
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                <Button Content="بارگذاری مجدد" Padding="10,3" Click="OnReloadClick" />
+                <TextBlock Text="در حال بارگذاری…" Margin="16,0,0,0" VerticalAlignment="Center" Foreground="{StaticResource MutedTextBrush}"
+                           Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibility}}" />
+            </StackPanel>
+
+            <TextBlock Text="مواد اولیه" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource PrimaryBrush}" Margin="0,4,0,6" />
+            <DataGrid ItemsSource="{Binding Materials}" SelectedItem="{Binding SelectedMaterial, Mode=TwoWay}" AutoGenerateColumns="False" IsReadOnly="True"
+                      SelectionMode="Single" HeadersVisibility="Column" CanUserAddRows="False" CanUserDeleteRows="False" MaxHeight="220" Background="{StaticResource CardBrush}">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="کد" Binding="{Binding Code}" Width="110" />
+                    <DataGridTextColumn Header="نام" Binding="{Binding Name}" Width="*" />
+                    <DataGridTextColumn Header="جنس" Binding="{Binding GradeText}" Width="100" />
+                    <DataGridTextColumn Header="شکل" Binding="{Binding FormText}" Width="100" />
+                    <DataGridTextColumn Header="آخرین قیمت" Binding="{Binding LatestPriceText}" Width="*" />
+                    <DataGridTextColumn Header="وضعیت" Binding="{Binding StatusText}" Width="80" />
+                </DataGrid.Columns>
+            </DataGrid>
+            <Border Margin="0,6,0,12" Padding="10" Background="{StaticResource CardBrush}" BorderBrush="{StaticResource BorderBrushSoft}" BorderThickness="1">
+                <StackPanel>
+                    <WrapPanel>
+                        <StackPanel Margin="0,0,12,0"><TextBlock Text="کد (A-Z، رقم، _ و -)" /><TextBox x:Name="CodeBox" Width="150" FlowDirection="LeftToRight" /></StackPanel>
+                        <StackPanel Margin="0,0,12,0"><TextBlock Text="نام" /><TextBox x:Name="NameBox" Width="220" /></StackPanel>
+                        <StackPanel Margin="0,0,12,0"><TextBlock Text="جنس (مثلاً ST37)" /><TextBox x:Name="GradeBox" Width="120" FlowDirection="LeftToRight" /></StackPanel>
+                        <StackPanel Margin="0,0,12,0"><TextBlock Text="شکل (میلگرد، لوله، ورق)" /><TextBox x:Name="FormBox" Width="130" /></StackPanel>
+                    </WrapPanel>
+                    <WrapPanel Margin="0,8,0,0">
+                        <Button Content="ثبت ماده" Padding="12,5" Margin="0,0,8,0" Click="OnAddClick" IsEnabled="{Binding CanMaintain}" />
+                        <Button Content="تغییر مشخصات انتخاب‌شده (از کادرها)" Padding="12,5" Margin="0,0,8,0" Click="OnUpdateClick" IsEnabled="{Binding CanMaintain}" />
+                        <Button Content="غیرفعال کردن" Padding="12,5" Margin="0,0,8,0" Click="OnDeactivateClick" IsEnabled="{Binding CanMaintain}" />
+                        <Button Content="فعال کردن" Padding="12,5" Click="OnActivateClick" IsEnabled="{Binding CanMaintain}" />
+                    </WrapPanel>
+                </StackPanel>
+            </Border>
+
+            <StackPanel Visibility="{Binding CanViewPrices, Converter={StaticResource BoolToVisibility}}">
+                <TextBlock Text="تاریخچهٔ قیمت ماده انتخاب‌شده (ریال بر کیلوگرم)" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource PrimaryBrush}" Margin="0,4,0,6" />
+                <DataGrid ItemsSource="{Binding Prices}" AutoGenerateColumns="False" IsReadOnly="True" HeadersVisibility="Column" CanUserAddRows="False" CanUserDeleteRows="False"
+                          MaxHeight="200" Background="{StaticResource CardBrush}">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="از تاریخ" Binding="{Binding EffectiveFromText}" Width="110" />
+                        <DataGridTextColumn Header="قیمت" Binding="{Binding PriceText}" Width="*" />
+                        <DataGridTextColumn Header="دلیل" Binding="{Binding ReasonText}" Width="*" />
+                    </DataGrid.Columns>
+                </DataGrid>
+                <Border Margin="0,6,0,12" Padding="10" Background="{StaticResource CardBrush}" BorderBrush="{StaticResource BorderBrushSoft}" BorderThickness="1"
+                        Visibility="{Binding CanChangePrices, Converter={StaticResource BoolToVisibility}}">
+                    <WrapPanel>
+                        <StackPanel Margin="0,0,12,0"><TextBlock Text="قیمت (ریال بر کیلوگرم، بدون جداکننده)" /><TextBox x:Name="PriceBox" Width="180" FlowDirection="LeftToRight" /></StackPanel>
+                        <StackPanel Margin="0,0,12,0"><TextBlock Text="از تاریخ (شمسی)" /><TextBox x:Name="PriceDateBox" Width="110" FlowDirection="LeftToRight" /></StackPanel>
+                        <StackPanel Margin="0,0,12,0"><TextBlock Text="دلیل (اختیاری)" /><TextBox x:Name="PriceReasonBox" Width="220" /></StackPanel>
+                        <Button Content="ثبت قیمت برای ماده انتخاب‌شده" Padding="12,5" VerticalAlignment="Bottom" Click="OnAddPriceClick" />
+                    </WrapPanel>
+                </Border>
+            </StackPanel>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>
