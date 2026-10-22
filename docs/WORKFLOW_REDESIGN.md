@@ -236,7 +236,7 @@ The demonstration (PRs #18-#27) stays as it is until each gap below is closed by
 | Costing / price | None | R4 | 7 |
 | Job reports / KPI / shifts / overtime | None | R5-R8 | 6, 8 |
 | Material inquiry | None | R1 | 2 |
-| Quantities | A single decimal on the item | Quantity types | 3 |
+| Quantities | A single decimal on the item. *(QC masters — units, conversions, quantity types — are implemented; selecting them on items is phase 4a.)* | Quantity types | 3a done, 4a |
 
 ## 11. Staged implementation plan
 

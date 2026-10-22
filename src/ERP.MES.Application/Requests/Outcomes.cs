@@ -69,6 +69,39 @@ public enum ValidationIssue
     /// <summary>The Drawing outcome is not one of the controlled outcomes.</summary>
     DrawingOutcomeInvalid,
 
+    /// <summary>The unit or quantity-type code is missing or not 1 to 20 characters of A-Z, 0-9, '_' or '-'.</summary>
+    CodeInvalid,
+
+    /// <summary>A unit or quantity type with this code already exists.</summary>
+    CodeDuplicate,
+
+    /// <summary>A Persian name is required.</summary>
+    NameRequired,
+
+    /// <summary>The unit kind is not one of the controlled kinds.</summary>
+    UnitKindInvalid,
+
+    /// <summary>A unit chosen for a conversion or as a base unit does not exist.</summary>
+    UnitNotFound,
+
+    /// <summary>A conversion needs two different units.</summary>
+    ConversionSameUnit,
+
+    /// <summary>The conversion factor must be positive and not zero.</summary>
+    FactorInvalid,
+
+    /// <summary>A conversion between these two units already exists (the opposite direction is derived automatically).</summary>
+    ConversionDuplicate,
+
+    /// <summary>The base counting unit of a quantity type must be an active unit of kind Count.</summary>
+    BaseUnitInvalid,
+
+    /// <summary>A piece-like quantity type counts at least one base unit.</summary>
+    BaseUnitsInvalid,
+
+    /// <summary>A set needs at least two members, each with a description and at least one base unit.</summary>
+    SetMembersInvalid,
+
     /// <summary>The request cannot be submitted to Management until Central has attached the request PDF (Decision Log #87).</summary>
     RequestPdfRequired,
 

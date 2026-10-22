@@ -1482,3 +1482,65 @@ Append one dated entry after every substantial session. Do not replace prior ent
 
 ### Recommended exact next action
 - Merge after CI, then phase 3a (QC masters: units of measure and quantity types) and 3b (Planning masters).
+
+---
+
+### Date / session
+- Date: 2026-10-22
+- Claude Code session ID (if useful): session_01UwqjPjBXLd2apjZb2urjds (phase 3a: QC masters)
+
+### Goal
+- Implement the QC-owned definitions of units of measure and quantity types as distinct concepts with a controlled mapping to the base counting unit (Decision Log #9, #90).
+
+### Completed
+- Domain (`Domain/Quality`): `UnitOfMeasure`, `UnitKind`, `UnitConversion` + `UnitConversions.TryResolve` (reciprocal derived, no chaining), `QuantityType` (simple types and sets with explicit `QuantityTypeMember`s; immutable mapping), codes `A-Z0-9_-` up to 20 characters.
+- Application: `QcMasterService` (QC-only maintenance with expected versions; read for every active user via the new `ViewQcMasterData` permission), validation issues, `IQcMasterRepository`.
+- Persistence: tables `UnitsOfMeasure`, `UnitConversions`, `QuantityTypes`, `QuantityTypeMembers`; migration `AddQcMasterData` seeds PCS, PAIR, KG, MM, PAIR to PCS = 2 and the types PIECE and PAIR (no creator recorded); unique codes, restricting foreign keys.
+- Desktop: "واحدها و انواع مقدار" page (QC edits, others read).
+
+### Files changed
+- Source, tests, one migration, documentation. No new package.
+
+### Decisions newly approved
+- None. Master-data audit entries are not written yet (they come with the Planning rates); open points of D2/D3 are unchanged.
+
+### Unresolved questions / risks
+- Items do not reference quantity types yet (phase 4a); QC cannot yet see where a definition is used, so retiring a type is unrestricted until then.
+- WPF page not exercised by a person; view-model tests cover the logic.
+
+### Commands/tests actually run and results
+- See the pull request for the final head's Windows CI totals.
+
+### Recommended exact next action
+- Merge after CI, then phase 3b (Planning masters: machines with stable codes, rate history, operators, assignments, qualifications; Warehouse material price).
+
+---
+
+### Date / session
+- Date: 2026-10-22
+- Claude Code session ID (if useful): session_01UwqjPjBXLd2apjZb2urjds (phase 3a: QC masters)
+
+### Goal
+- Implement the QC-owned definitions of units of measure and quantity types as distinct concepts with a controlled mapping to the base counting unit (Decision Log #9, #90).
+
+### Completed
+- Domain (`Domain/Quality`): `UnitOfMeasure`, `UnitKind`, `UnitConversion` + `UnitConversions.TryResolve` (reciprocal derived, no chaining), `QuantityType` (simple types and sets with explicit members; immutable mapping), codes `A-Z0-9_-` up to 20 characters.
+- Application: `QcMasterService` (QC-only maintenance with expected versions; read for every active user via the new `ViewQcMasterData` permission), validation issues, `IQcMasterRepository`.
+- Persistence: tables `UnitsOfMeasure`, `UnitConversions`, `QuantityTypes`, `QuantityTypeMembers`; migration `AddQcMasterData` seeds PCS, PAIR, KG, MM, PAIR to PCS = 2 and the types PIECE and PAIR (no creator recorded); unique codes, restricting foreign keys.
+- Desktop: "واحدها و انواع مقدار" page (QC edits, others read).
+
+### Files changed
+- Source, tests, one migration, documentation. No new package.
+
+### Decisions newly approved
+- None. Master-data audit entries are not written yet (they come with the Planning rates); open points of D2/D3 are unchanged.
+
+### Unresolved questions / risks
+- Items do not reference quantity types yet (phase 4a); retiring a type is unrestricted until then.
+- WPF page not exercised by a person; view-model tests cover the logic.
+
+### Commands/tests actually run and results
+- See the pull request for the final head's Windows CI totals.
+
+### Recommended exact next action
+- Merge after CI, then phase 3b (Planning masters: machines with stable codes, rate history, operators, assignments, qualifications; Warehouse material price).

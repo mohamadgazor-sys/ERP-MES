@@ -101,6 +101,14 @@ Fixed seeded routes and the demonstration banner stay visible; stage progression
 | G4 | Approve; as `demo.planning` "ارسال به نقشه‌کشی"; as `demo.drawing` choose an outcome and "ثبت نتیجهٔ نقشه‌کشی" | A note is required except for "کاملاً پذیرفته شد"; the status becomes "بازگشته از نقشه‌کشی به برنامه‌ریزی"; the history shows outcome, note and department |
 | G5 | As `demo.planning`: "بازگشت به نقشه‌کشی (با دلیل)" | Status "در بررسی نقشه‌کشی" again (a labelled default, not approved) |
 
+## H. QC master data (Decision Log #9, #90) - not run by a person; covered by automated tests
+
+| # | Step | Expected |
+|---|---|---|
+| H1 | As `demo.qc` open "واحدها و انواع مقدار" | Units PCS, PAIR, KG, MM; the conversion "۱ PAIR = 2 PCS" with the derived reverse; quantity types PIECE (1) and PAIR (2) |
+| H2 | As `demo.planning` open the same page | Everything is visible; every change button is disabled |
+| H3 | As QC add a unit, a conversion (typed factor `۱۲`), a quantity type `TRIPLE` (3) and a set with lines such as "شفت: ۱" / "بوش: ۲" | Each appears; the set counts the sum; invalid input gives a specific Persian message |
+
 ## E. Production overview for Management and Planning (read-only; `docs/PRODUCTION_QUEUE.md`, Decision Log #78) - pending the owner's run
 
 Prepare a fictional demonstration database with `demo-init` (see `docs/AUTHENTICATION.md` section 12). The seeded requests have routes and several stage states.

@@ -58,7 +58,7 @@ public class SingleWorkTypeMigrationTests
         Assert.DoesNotContain("WorkType", db.Query("SELECT name FROM pragma_table_info('RequestItems')"));
         Assert.Contains("WorkType", db.Query("SELECT name FROM pragma_table_info('Requests')"));
         Assert.Empty(db.Query("PRAGMA foreign_key_check"));
-        Assert.Equal(5, db.Query("SELECT MigrationId FROM __EFMigrationsHistory").Count);
+        Assert.Equal(6, db.Query("SELECT MigrationId FROM __EFMigrationsHistory").Count);
 
         // The business keys survive the table rebuild.
         Assert.Contains("CustomerId,RequestNo,JalaliRequestYear", db.Query("SELECT group_concat(c.name, ',') FROM pragma_index_list('Requests') l, pragma_index_info(l.name) c WHERE l.\"unique\" = 1 GROUP BY l.name"));
@@ -109,7 +109,7 @@ public class SingleWorkTypeMigrationTests
 
         await SqliteDatabase.MigrateAsync(db.Path, Token);
 
-        Assert.Equal(5, db.Query("SELECT MigrationId FROM __EFMigrationsHistory").Count);
+        Assert.Equal(6, db.Query("SELECT MigrationId FROM __EFMigrationsHistory").Count);
         Assert.Equal("Old customer", db.Query("SELECT Name FROM Customers").Single());
     }
 }

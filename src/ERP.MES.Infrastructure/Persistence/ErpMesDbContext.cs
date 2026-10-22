@@ -1,6 +1,7 @@
 using ERP.MES.Application.Security;
 using ERP.MES.Domain.Documents;
 using ERP.MES.Domain.Identity;
+using ERP.MES.Domain.Quality;
 using ERP.MES.Domain.Requests;
 using Microsoft.EntityFrameworkCore;
 
@@ -25,6 +26,12 @@ public sealed class ErpMesDbContext(DbContextOptions<ErpMesDbContext> options) :
 
     public DbSet<StoredDocument> Documents => Set<StoredDocument>();
 
+    public DbSet<UnitOfMeasure> UnitsOfMeasure => Set<UnitOfMeasure>();
+
+    public DbSet<UnitConversion> UnitConversions => Set<UnitConversion>();
+
+    public DbSet<QuantityType> QuantityTypes => Set<QuantityType>();
+
     public DbSet<RequestDocumentLink> RequestDocumentLinks => Set<RequestDocumentLink>();
 
     public DbSet<RequestWorkflowEntry> RequestWorkflowEntries => Set<RequestWorkflowEntry>();
@@ -44,7 +51,7 @@ public sealed class ErpMesDbContext(DbContextOptions<ErpMesDbContext> options) :
     /// <summary>Name of the shadow property that holds the application-managed row version (Decision Log #23).</summary>
     public const string RowVersionPropertyName = "Version";
 
-    private static readonly HashSet<Type> VersionedTypes = [typeof(Customer), typeof(Request), typeof(RequestItem), typeof(ItemStage), typeof(User), typeof(UserCredential), typeof(SystemSetup)];
+    private static readonly HashSet<Type> VersionedTypes = [typeof(Customer), typeof(Request), typeof(RequestItem), typeof(ItemStage), typeof(User), typeof(UserCredential), typeof(SystemSetup), typeof(UnitOfMeasure), typeof(UnitConversion), typeof(QuantityType)];
 
     /// <summary>The row version of a tracked entity of a versioned type (customer, request, request item, item stage).</summary>
     public long GetRowVersion(object entity) => (long)Entry(entity).Property(RowVersionPropertyName).CurrentValue!;

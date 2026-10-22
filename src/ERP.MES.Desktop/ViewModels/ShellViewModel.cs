@@ -13,6 +13,7 @@ public sealed class ShellViewModel : ObservableObject
     public const string RequestsKey = "requests";
     public const string QueueKey = "queue";
     public const string StagesKey = "stages";
+    public const string DefinitionsKey = "qcmaster";
     public const string LimitationsKey = "limitations";
 
     private readonly IJalaliDateService _dates;
@@ -33,6 +34,7 @@ public sealed class ShellViewModel : ObservableObject
             new NavigationItem(RequestsKey, "درخواست‌ها", true),
             new NavigationItem(QueueKey, "صف تولید", true),
             new NavigationItem(StagesKey, "مراحل و کنترل کیفیت", true),
+            new NavigationItem(DefinitionsKey, "واحدها و انواع مقدار", true),
             new NavigationItem(LimitationsKey, "محدودیت‌های نسخه نمایشی", true),
         ];
 

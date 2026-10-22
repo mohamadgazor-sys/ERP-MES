@@ -1,0 +1,106 @@
+<UserControl x:Class="ERP.MES.Desktop.Views.QcMasterView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Loaded="OnLoaded">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
+    </UserControl.Resources>
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel>
+            <TextBlock Text="{Binding Message}" TextWrapping="Wrap" Foreground="#9B1C1C" FontWeight="SemiBold" Margin="0,0,0,8" />
+            <TextBlock TextWrapping="Wrap" Foreground="{StaticResource MutedTextBrush}" Margin="0,0,0,8"
+                       Text="واحد اندازه‌گیری (مثل کیلوگرم، میلی‌متر، عدد) با «نوع مقدار» (قطعه، جفت، ست) یکی نیست. تعریف‌ها را فقط کنترل کیفیت تغییر می‌دهد؛ همهٔ کاربران می‌توانند آن‌ها را ببینند. هیچ تعریفی حذف نمی‌شود، فقط غیرفعال می‌شود." />
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                <Button Content="بارگذاری مجدد" Padding="10,3" Click="OnReloadClick" />
+                <TextBlock Text="در حال بارگذاری…" Margin="16,0,0,0" VerticalAlignment="Center" Foreground="{StaticResource MutedTextBrush}"
+                           Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibility}}" />
+            </StackPanel>
+
+            <!-- Units of measure -->
+            <TextBlock Text="واحدهای اندازه‌گیری" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource PrimaryBrush}" Margin="0,4,0,6" />
+            <DataGrid ItemsSource="{Binding Units}" SelectedItem="{Binding SelectedUnit, Mode=TwoWay}" AutoGenerateColumns="False" IsReadOnly="True"
+                      SelectionMode="Single" HeadersVisibility="Column" CanUserAddRows="False" CanUserDeleteRows="False" MaxHeight="170" Background="{StaticResource CardBrush}">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="کد" Binding="{Binding Code}" Width="100" />
+                    <DataGridTextColumn Header="نام" Binding="{Binding Name}" Width="*" />
+                    <DataGridTextColumn Header="نوع" Binding="{Binding KindText}" Width="100" />
+                    <DataGridTextColumn Header="وضعیت" Binding="{Binding StatusText}" Width="90" />
+                </DataGrid.Columns>
+            </DataGrid>
+            <Border Margin="0,6,0,12" Padding="10" Background="{StaticResource CardBrush}" BorderBrush="{StaticResource BorderBrushSoft}" BorderThickness="1">
+                <StackPanel>
+                    <WrapPanel>
+                        <StackPanel Margin="0,0,12,0"><TextBlock Text="کد (A-Z، رقم، _ و -)" /><TextBox x:Name="UnitCodeBox" Width="140" FlowDirection="LeftToRight" /></StackPanel>
+                        <StackPanel Margin="0,0,12,0"><TextBlock Text="نام فارسی" /><TextBox x:Name="UnitNameBox" Width="200" /></StackPanel>
+                        <StackPanel Margin="0,0,12,0"><TextBlock Text="نوع" /><ComboBox x:Name="UnitKindBox" ItemsSource="{Binding Kinds}" DisplayMemberPath="Text" Width="120" SelectedIndex="0" /></StackPanel>
+                    </WrapPanel>
+                    <WrapPanel Margin="0,8,0,0">
+                        <Button Content="افزودن واحد" Padding="12,5" Margin="0,0,8,0" Click="OnAddUnitClick" IsEnabled="{Binding CanMaintain}" />
+                        <Button Content="تغییر نام انتخاب‌شده (از کادر نام)" Padding="12,5" Margin="0,0,8,0" Click="OnRenameUnitClick" IsEnabled="{Binding CanMaintain}" />
+                        <Button Content="غیرفعال کردن" Padding="12,5" Margin="0,0,8,0" Click="OnDeactivateUnitClick" IsEnabled="{Binding CanMaintain}" />
+                        <Button Content="فعال کردن" Padding="12,5" Click="OnActivateUnitClick" IsEnabled="{Binding CanMaintain}" />
+                    </WrapPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- Conversions -->
+            <TextBlock Text="تبدیل بین واحدها (تبدیل معکوس خودکار محاسبه می‌شود)" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource PrimaryBrush}" Margin="0,4,0,6" />
+            <DataGrid ItemsSource="{Binding Conversions}" SelectedItem="{Binding SelectedConversion, Mode=TwoWay}" AutoGenerateColumns="False" IsReadOnly="True"
+                      SelectionMode="Single" HeadersVisibility="Column" CanUserAddRows="False" CanUserDeleteRows="False" MaxHeight="150" Background="{StaticResource CardBrush}">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="از" Binding="{Binding FromText}" Width="100" />
+                    <DataGridTextColumn Header="برابر است با" Binding="{Binding ToText}" Width="140" />
+                    <DataGridTextColumn Header="معکوس (خودکار)" Binding="{Binding ReciprocalText}" Width="*" />
+                    <DataGridTextColumn Header="وضعیت" Binding="{Binding StatusText}" Width="90" />
+                </DataGrid.Columns>
+            </DataGrid>
+            <Border Margin="0,6,0,12" Padding="10" Background="{StaticResource CardBrush}" BorderBrush="{StaticResource BorderBrushSoft}" BorderThickness="1">
+                <StackPanel>
+                    <WrapPanel>
+                        <StackPanel Margin="0,0,12,0"><TextBlock Text="هر ۱ واحدِ" /><ComboBox x:Name="FromUnitBox" ItemsSource="{Binding UnitChoices}" DisplayMemberPath="Text" Width="190" /></StackPanel>
+                        <StackPanel Margin="0,0,12,0"><TextBlock Text="برابر است با (ضریب)" /><TextBox x:Name="FactorBox" Width="100" FlowDirection="LeftToRight" /></StackPanel>
+                        <StackPanel Margin="0,0,12,0"><TextBlock Text="از واحدِ" /><ComboBox x:Name="ToUnitBox" ItemsSource="{Binding UnitChoices}" DisplayMemberPath="Text" Width="190" /></StackPanel>
+                    </WrapPanel>
+                    <WrapPanel Margin="0,8,0,0">
+                        <Button Content="افزودن تبدیل" Padding="12,5" Margin="0,0,8,0" Click="OnAddConversionClick" IsEnabled="{Binding CanMaintain}" />
+                        <Button Content="غیرفعال کردن انتخاب‌شده" Padding="12,5" Margin="0,0,8,0" Click="OnDeactivateConversionClick" IsEnabled="{Binding CanMaintain}" />
+                        <Button Content="فعال کردن انتخاب‌شده" Padding="12,5" Click="OnActivateConversionClick" IsEnabled="{Binding CanMaintain}" />
+                    </WrapPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- Quantity types -->
+            <TextBlock Text="انواع مقدار (قطعه، جفت، ست…) و نگاشت به واحد شمارش پایه" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource PrimaryBrush}" Margin="0,4,0,6" />
+            <DataGrid ItemsSource="{Binding QuantityTypes}" SelectedItem="{Binding SelectedType, Mode=TwoWay}" AutoGenerateColumns="False" IsReadOnly="True"
+                      SelectionMode="Single" HeadersVisibility="Column" CanUserAddRows="False" CanUserDeleteRows="False" MaxHeight="170" Background="{StaticResource CardBrush}">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="کد" Binding="{Binding Code}" Width="100" />
+                    <DataGridTextColumn Header="نام" Binding="{Binding Name}" Width="140" />
+                    <DataGridTextColumn Header="واحد پایه" Binding="{Binding BaseUnitText}" Width="90" />
+                    <DataGridTextColumn Header="تعداد واحد پایه" Binding="{Binding BaseUnitsPerType}" Width="110" />
+                    <DataGridTextColumn Header="نگاشت / ترکیب ست" Binding="{Binding MappingText}" Width="*" />
+                    <DataGridTextColumn Header="وضعیت" Binding="{Binding StatusText}" Width="90" />
+                </DataGrid.Columns>
+            </DataGrid>
+            <Border Margin="0,6,0,12" Padding="10" Background="{StaticResource CardBrush}" BorderBrush="{StaticResource BorderBrushSoft}" BorderThickness="1">
+                <StackPanel>
+                    <WrapPanel>
+                        <StackPanel Margin="0,0,12,0"><TextBlock Text="کد" /><TextBox x:Name="TypeCodeBox" Width="140" FlowDirection="LeftToRight" /></StackPanel>
+                        <StackPanel Margin="0,0,12,0"><TextBlock Text="نام فارسی" /><TextBox x:Name="TypeNameBox" Width="180" /></StackPanel>
+                        <StackPanel Margin="0,0,12,0"><TextBlock Text="واحد شمارش پایه" /><ComboBox x:Name="BaseUnitBox" ItemsSource="{Binding BaseUnitChoices}" DisplayMemberPath="Text" Width="190" /></StackPanel>
+                        <StackPanel Margin="0,0,12,0"><TextBlock Text="تعداد واحد پایه (قطعه ۱، جفت ۲)" /><TextBox x:Name="BaseUnitsBox" Width="100" FlowDirection="LeftToRight" /></StackPanel>
+                    </WrapPanel>
+                    <TextBlock Text="ست: هر عضو در یک خط به شکل «شرح: تعداد». ست ترکیب استاندارد ندارد؛ ترکیب هر ست باید صریحاً تعریف شود و تعداد واحد پایهٔ آن مجموع اعضاست (در این حالت کادر بالا نادیده گرفته می‌شود)." TextWrapping="Wrap" Margin="0,8,0,2" FontSize="12" Foreground="{StaticResource MutedTextBrush}" />
+                    <TextBox x:Name="MembersBox" Height="60" TextWrapping="Wrap" AcceptsReturn="True" />
+                    <WrapPanel Margin="0,8,0,0">
+                        <Button Content="افزودن نوع مقدار" Padding="12,5" Margin="0,0,8,0" Click="OnAddTypeClick" IsEnabled="{Binding CanMaintain}" />
+                        <Button Content="تغییر نام انتخاب‌شده (از کادر نام)" Padding="12,5" Margin="0,0,8,0" Click="OnRenameTypeClick" IsEnabled="{Binding CanMaintain}" />
+                        <Button Content="غیرفعال کردن" Padding="12,5" Margin="0,0,8,0" Click="OnDeactivateTypeClick" IsEnabled="{Binding CanMaintain}" />
+                        <Button Content="فعال کردن" Padding="12,5" Click="OnActivateTypeClick" IsEnabled="{Binding CanMaintain}" />
+                    </WrapPanel>
+                    <TextBlock Text="تعریف و نگاشت یک نوع مقدار تغییر نمی‌کند؛ برای نگاشت دیگر، نوع مقدار تازه‌ای تعریف کنید." FontSize="12" Foreground="{StaticResource MutedTextBrush}" Margin="0,6,0,0" />
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

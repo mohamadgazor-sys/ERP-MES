@@ -36,6 +36,7 @@ public class AuthorizationRulesTests
         [Permission.ViewCustomersAndRequests] = ([], null),
 
         // Read-only production overview (Decision Log #78): Management and Planning, any role; every other department is denied.
+        [Permission.ViewQcMasterData] = ([], null),
         [Permission.ViewProductionQueue] = (["MANAGEMENT", "PLANNING"], null),
 
         // Demonstration stage flow (Decision Log #79): demo-only mapping approved by the owner (Decision Log #80), not a finalized production matrix. QC approval uses InspectOrCorrectQc above.
@@ -83,8 +84,8 @@ public class AuthorizationRulesTests
     {
         var allowed = Enum.GetValues<Permission>().Where(p => AuthorizationRules.IsAllowed("SYSTEM", "ADMIN", p)).ToArray();
 
-        // Read-only viewing is open to every active user (Decision Log #75); the only write permission of the Admin role is administering accounts.
-        Assert.Equal(new[] { Permission.AdministerUsers, Permission.ViewCustomersAndRequests }.OrderBy(p => (int)p), allowed.OrderBy(p => (int)p));
+        // Read-only viewing (requests, QC master data) is open to every active user (Decision Log #75, #90); the only write permission of the Admin role is administering accounts.
+        Assert.Equal(new[] { Permission.AdministerUsers, Permission.ViewCustomersAndRequests, Permission.ViewQcMasterData }.OrderBy(p => (int)p), allowed.OrderBy(p => (int)p));
         Assert.False(AuthorizationRules.IsAllowed("PLANNING", "STAFF", Permission.AdministerUsers));
         Assert.False(AuthorizationRules.IsAllowed("MANAGEMENT", "MANAGER", Permission.AdministerUsers));
     }
