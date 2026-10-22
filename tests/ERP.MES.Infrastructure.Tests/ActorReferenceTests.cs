@@ -212,7 +212,7 @@ public class ActorReferenceTests
         // The supported path: the explicit reset builds a new, consistent database and replaces the old one.
         var reset = await DemoDatabase.ResetAsync(db.Path, PersistenceTestData.Dates, db.NextCredentialPath(), SecurityFixture.FastPolicy, Token);
 
-        Assert.Equal(7, reset.AccountsCreated);
+        Assert.Equal(8, reset.AccountsCreated);
         Assert.Equal(2, db.Query("SELECT MigrationId FROM __EFMigrationsHistory").Count);
         Assert.DoesNotContain("Old sample customer", db.Query("SELECT Name FROM Customers"));
         Assert.Equal(3, db.Query("SELECT Id FROM Customers").Count);

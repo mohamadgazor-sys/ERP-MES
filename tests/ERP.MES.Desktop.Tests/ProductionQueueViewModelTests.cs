@@ -198,7 +198,7 @@ public class ProductionQueueViewModelTests
 
     // ---- failure states, with a repository that fails or waits ----
 
-    private sealed class ScriptedRepository : IRequestRepository
+    internal sealed class ScriptedRepository : IRequestRepository
     {
         public Exception? Failure { get; set; }
 
@@ -228,6 +228,10 @@ public class ProductionQueueViewModelTests
         public Task<VersionedRequest?> FindWithVersionsAsync(long requestId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
 
         public Task<VersionedRequest> UpdateRowsAsync(long requestId, RowVersionExpectations expected, Action<Request> change, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+
+        public Task<VersionedRequest> UpdateRowsAsync(
+            long requestId, RowVersionExpectations expected, Action<Request> change, Func<Request, IReadOnlyList<AuditLogEntry>> audit, CancellationToken cancellationToken = default) =>
             throw new NotSupportedException();
     }
 

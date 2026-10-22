@@ -20,7 +20,7 @@ public class ShellViewModelTests
         var shell = Create(SampleUtc);
 
         Assert.Equal(
-            new[] { "dashboard", "customers", "requests", "queue", "qc", "limitations" },
+            new[] { "dashboard", "customers", "requests", "queue", "stages", "limitations" },
             shell.Items.Select(i => i.Key).ToArray());
         Assert.Equal(shell.Items.Count, shell.Items.Select(i => i.Key).Distinct().Count());
     }
@@ -44,7 +44,7 @@ public class ShellViewModelTests
         Assert.True(shell.Items.Single(i => i.Key == ShellViewModel.CustomersKey).IsImplemented);
         Assert.True(shell.Items.Single(i => i.Key == ShellViewModel.RequestsKey).IsImplemented);
         Assert.True(shell.Items.Single(i => i.Key == ShellViewModel.QueueKey).IsImplemented);
-        Assert.False(shell.Items.Single(i => i.Key == "qc").IsImplemented);
+        Assert.True(shell.Items.Single(i => i.Key == ShellViewModel.StagesKey).IsImplemented);
     }
 
     [Fact]

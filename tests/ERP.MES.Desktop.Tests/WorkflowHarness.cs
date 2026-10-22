@@ -53,6 +53,8 @@ internal sealed class WorkflowHarness : IDisposable
 
     public Principal Management { get; private set; } = null!;
 
+    public Principal Production { get; private set; } = null!;
+
     /// <summary>A repository over the harness database, to prepare routes and stage states that no screen creates yet.</summary>
     public EfRequestRepository RequestRepository { get; private set; } = null!;
 
@@ -72,6 +74,7 @@ internal sealed class WorkflowHarness : IDisposable
         h.Drawing = await h.UserAsync("drawing.one", DepartmentCodes.Drawing, cancellationToken);
         h.Qc = await h.UserAsync("qc.one", DepartmentCodes.Qc, cancellationToken);
         h.Management = await h.UserAsync("management.one", DepartmentCodes.Management, cancellationToken);
+        h.Production = await h.UserAsync("production.one", DepartmentCodes.Production, cancellationToken);
         h.RequestRepository = new EfRequestRepository(factory);
         return h;
     }
@@ -91,6 +94,9 @@ internal sealed class WorkflowHarness : IDisposable
         var workflow = services ?? Workflow;
         return new RequestsViewModel(workflow.Requests, workflow.Customers, Dates, DigitStyle.Persian, () => Clock.UtcNow, () => user);
     }
+
+    public StageWorkViewModel StagesFor(Principal user, StageWorkService? service = null) =>
+        new(service ?? Workflow.StageWork, DigitStyle.Persian, () => user);
 
     public ProductionQueueViewModel QueueFor(Principal user, ProductionQueueService? service = null) =>
         new(service ?? Workflow.Queue, Dates, DigitStyle.Persian, () => Clock.UtcNow, () => user);

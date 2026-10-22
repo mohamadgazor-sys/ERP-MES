@@ -37,6 +37,7 @@ public sealed class DemoAccountProvisioner(
         new("demo.drawing", "کاربر نقشه‌کشی" + Fictional, DepartmentCodes.Drawing, RoleCodes.Staff),
         new(QcUsername, "کاربر کنترل کیفیت" + Fictional, DepartmentCodes.Qc, RoleCodes.Staff),
         new("demo.warehouse", "کاربر انبار" + Fictional, DepartmentCodes.Warehouse, RoleCodes.Staff),
+        new("demo.production", "کاربر تولید" + Fictional, DepartmentCodes.Production, RoleCodes.Staff),
     ];
 
     /// <summary>A random password of <see cref="PasswordLength"/> characters from an alphabet without look-alike characters.</summary>
