@@ -77,7 +77,8 @@ The Request No. and Item No. must remain visible in production queues and histor
 
 ## 2.3 Work type exists at item level
 
-> **Design annotation (2026-10-22, Decision Log #82/#83; PROPOSAL, not approved unless stated):** Conflicts with owner lifecycle step 1 (one type per request): U-01, unresolved; this section stays in force.
+> **Superseded/clarified (2026-10-22, Decision Log #84):** WorkType is a property of the request; items inherit it. The text below is kept as history.
+
 
 
 `WorkType` / `WorkTypeID` is authoritative and supports:
@@ -788,7 +789,8 @@ Warehouse v1 is **history/inquiry/receipt oriented**, not a full inventory-manag
 
 ## 13.1 WarehouseInquiry
 
-> **Design annotation (2026-10-22, Decision Log #82/#83; PROPOSAL, not approved unless stated):** Proposed replacement model (inquiry, lines, responses, messages, events): `RAW_MATERIAL_INQUIRY_DESIGN.md`. This section stays in force until approved (U-07..U-10).
+> **Superseded/clarified (2026-10-22, Decision Log #88):** Yes/No per line, request-level inquiry (#86), no reservation or deduction. The text below is kept as history.
+
 
 
 Purpose:
@@ -899,6 +901,9 @@ The actual current rate should come from `MachineHourlyRate` history where appli
 
 ## 14.4 Operator
 
+> **Superseded/clarified (2026-10-22, Decision Log #89):** Planning owns operator registration and operator-machine master assignments. The text below is kept as history.
+
+
 > **Design annotation (2026-10-22, Decision Log #82/#83; PROPOSAL, not approved unless stated):** Proposed: operators need user accounts to submit job reports (U-16); job reports, KPI and overtime entities in `JOB_REPORTS_KPI_AND_OVERTIME_DESIGN.md`.
 
 
@@ -1004,6 +1009,9 @@ Items are editable only until production release; afterwards only Planning may c
 QC owns the UOM master.
 
 ## 16.1 UnitOfMeasure
+
+> **Superseded/clarified (2026-10-22, Decision Log #90):** QC owns UOM and quantity types; Planning selects them for items. The text below is kept as history.
+
 
 > **Design annotation (2026-10-22, Decision Log #82/#83; PROPOSAL, not approved unless stated):** Proposed: a separate QC-owned QuantityType (piece, pair, set) with base units per type, distinct from UOM. See `QC_QUANTITY_MODEL_DESIGN.md` (U-17).
 

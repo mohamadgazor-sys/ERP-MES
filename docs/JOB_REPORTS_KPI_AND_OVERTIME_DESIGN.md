@@ -1,6 +1,6 @@
 # Daily Job Reports, KPI Reporting and Overtime Assignments - Design (R5, R6, R8)
 
-**Status: DESIGN ONLY. Not implemented. PROPOSED items are not approved** (register U-30..U-33, U-37). Rewards and bonuses are decided outside the application ([REQ]; Decision Log #21 keeps the reward formula in Phase 2).
+**Status: DESIGN ONLY. Not implemented.** Approved: the requirements R5, R6, R8 (#82) and #89 (supervisors make only the approved overtime assignments and review their unit's reports; Planning owns machines and assignments). Items marked PROPOSED/DEFAULT are not approved; unit performance metrics are `OWNER_DECISION_PACKET.md` D6, overtime limits and overlapping shifts D5, review/read rows D8. Rewards and bonuses are decided outside the application ([REQ]; Decision Log #21 keeps the reward formula in Phase 2).
 
 ## 1. Purpose
 
@@ -54,7 +54,7 @@ APPROVED --amend(Supervisor or Operator request; new revision; reason)--> SUBMIT
 
 A report is *reported work*. The schedule (PLANNING doc) says who was planned; an overtime assignment (section 8) says who was authorized for extra hours; neither proves work. Where a report conflicts with the schedule (operator on an OFF day or not scheduled) the line is flagged for supervisor decision, not rejected silently. A separate attendance record is not part of this design (U-32 may require it).
 
-## 7. KPI reporting (R6) [PROPOSED, U-33]
+## 7. KPI reporting (R6) [operator hour ranking APPROVED #82; unit metrics OPEN D6]
 
 All KPIs read approved report lines and QC records only; each figure states its source and whether it is actual, planned, accepted, reworked, scrapped or estimated.
 
@@ -78,7 +78,7 @@ There is **no single "best unit" score** and no formula for rewards. Unit compar
 
 **Drill-down:** every figure links to the report lines, then to the report, then to the audit trail. Planning and Management read; supervisors read their own unit [PROP]; operators read their own reports.
 
-## 8. Overtime assignments (R8) [PROPOSED, U-37]
+## 8. Overtime assignments (R8) [assignment by supervisors APPROVED #82/#89; approval and limits OPEN D5]
 
 Overtime is arranged by unit supervisors, so there is an explicit record:
 
@@ -87,10 +87,10 @@ Overtime is arranged by unit supervisors, so there is an explicit record:
 | Id, SupervisorUserId, OperatorId, ProductionUnitId, MachineId, WorkDate, PlannedStart, PlannedEnd, Reason, Status (PROPOSED / APPROVED / CANCELLED / COMPLETED), ApprovedBy, ApprovedAt, ActualMinutesReported (derived from linked report lines), AuditTrail |
 
 Rules:
-1. The supervisor selects the operator and machine code; the operator must be assigned to or qualified on that machine (U-13), else blocked unless Planning overrides with a reason.
+1. The supervisor selects the operator and machine code; the operator must hold the Planning master assignment for that machine; a supervisor cannot assign a machine outside it (#89). A missing qualification gives a warning [DEFAULT].
 2. No overlap with the operator's other assignments or scheduled shift (overtime is outside the normal shift) and no overlap on the machine.
 3. Total planned hours per operator per day / period capped by a configurable limit; staffing capacity may be exceeded only by an approved overtime assignment (PLANNING section 5.5).
-4. Who approves: Planning recommended (existing Friday/extra hours need supervisor approval, #13; whether Planning must also approve is U-37). Unit-supervisor identification: U-16.
+4. Who approves [OPEN D5]: Planning recommended (existing Friday/extra hours need supervisor approval, #13; whether Planning must also approve is U-37). Unit-supervisor identification: U-16.
 5. Actual time is taken from job report lines linked to the assignment (`OvertimeAssignmentId`); the assignment itself never adds hours.
 6. **Assignment does not prove work performed.** Hours enter KPIs and costs only through approved report lines, once, so overtime cannot be double-counted: a line is either linked to an overtime assignment or to the normal shift, not both.
 7. Overtime cost: same machine rate unless a premium is approved (COSTING_DESIGN section 6). Machine-hour costing remains based on reported machine time, independent of the number of attendance hours.

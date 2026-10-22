@@ -136,7 +136,8 @@ The following decisions were explicitly confirmed after reviewing the source spe
 
 ## 1.1 Request and item work classification
 
-> **Design annotation (2026-10-22, Decision Log #82/#83; PROPOSAL, not approved unless stated):** Step 1 of the owner's lifecycle says Central selects exactly one type per request; this section (and Decision Log #2) says WorkType is per item. This text stays in force until the owner decides U-01. See `WORKFLOW_REDESIGN.md` section 2.
+> **Superseded/clarified (2026-10-22, Decision Log #84):** A request has exactly one work type (MAKE or REPAIR); all items inherit it; mixed requests are prohibited. The text below is kept as history.
+
 
 
 The new C# system is **customer-request based**. Internal company requests are **not processed as a request type in v1**.
@@ -197,7 +198,8 @@ The C# system must not require a request to be converted into a project before p
 
 ## 1.3 Contract determination and approval
 
-> **Design annotation (2026-10-22, Decision Log #82/#83; PROPOSAL, not approved unless stated):** The owner's lifecycle says Planning decides the contract for MAKE requests; this section says every request. This text stays in force until U-02 is decided. Warehouse is read-only on contracts (requirement). See `WORKFLOW_REDESIGN.md`.
+> **Superseded/clarified (2026-10-22, Decision Log #85):** Contract determination applies to MAKE requests only; a pure REPAIR request skips it. The text below is kept as history.
+
 
 
 Every customer request must pass a contract-determination check by Planning after Drawing has confirmed the technical doability/capability of the request.
@@ -667,6 +669,9 @@ No incomplete repair item may silently enter production.
 
 # 6. Customer Make Workflow
 
+> **Superseded/clarified (2026-10-22, Decision Log #86):** Planning defines all items and stages after the Management, Drawing and contract gates; Drawing owns feasibility and raw-material inquiries and does not define production stages or MAKE items. The text below is kept as history.
+
+
 ## 6.1 High-level path
 
 ```text
@@ -742,7 +747,8 @@ The system must not hard-code Casting, Ceramic, Tehran, Contractor, or any other
 
 ## 6.4 Warehouse inquiry
 
-> **Design annotation (2026-10-22, Decision Log #82/#83; PROPOSAL, not approved unless stated):** Superseded in intent by the owner's raw-material inquiry requirement R1 (Drawing sends structured lines; Warehouse answers Yes/No per line; full history; availability never approves feasibility). The AVAILABLE/PARTIAL/UNAVAILABLE vocabulary here stays in force until U-09 is decided. See `RAW_MATERIAL_INQUIRY_DESIGN.md`.
+> **Superseded/clarified (2026-10-22, Decision Log #88):** Warehouse answers Yes/No per line with optional notes; no reservation or deduction. The text below is kept as history.
+
 
 
 When internal warehouse availability needs to be checked:
@@ -884,7 +890,8 @@ The exact UX/mechanism for creating a revised route is an implementation item, b
 
 # 9. Production Unit Assignment
 
-> **Design annotation (2026-10-22, Decision Log #82/#83; PROPOSAL, not approved unless stated):** R2 makes Planning own machine codes, operator-machine assignments and stage-to-unit-and-machine assignment; the supervisor-assigns-machine rule here stays in force until U-12. See `PLANNING_RESOURCES_AND_SCHEDULING_DESIGN.md`.
+> **Superseded/clarified (2026-10-22, Decision Log #89):** Planning owns the planned stage-to-unit/machine assignment; supervisors do not change a planned machine; they make approved overtime assignments only. The text below is kept as history.
+
 
 
 Planning assigns stages to Production Units, not normally to individual machines/operators.
@@ -1781,7 +1788,8 @@ are deprecated in the current simplified contract route unless later required, b
 
 # 19. Costing
 
-> **Design annotation (2026-10-22, Decision Log #82/#83; PROPOSAL, not approved unless stated):** R4 requires the structure per-unit total = machining cost of one item + raw-material cost of one item; total = per-unit x produced quantity. Policies (actual vs planned time, rounding, rework/scrap, rate selection) are proposals in `COSTING_DESIGN.md`; the Contract Make route in this section stays in force until U-29.
+> **Design annotation (2026-10-22, Decision Log #82/#91; PROPOSAL except where stated):** R4 requires per-unit total = machining cost of one item + raw-material cost of one item; total = per-unit x produced quantity. Final machining cost uses approved actual job-report time x the applicable machine rate; planned duration is for labelled estimates only (#91, approved). Other policies are proposals in `COSTING_DESIGN.md`; the Contract Make route in this section stays in force until the owner decides D4 (`OWNER_DECISION_PACKET.md`).
+
 
 
 ## 19.0 Currency standard
@@ -1943,6 +1951,9 @@ This is a backlog item, not a reason to invent a different costing model now.
 ---
 
 # 20. Quantity and Unit-of-Measure Model
+
+> **Superseded/clarified (2026-10-22, Decision Log #90):** QC owns UOM and quantity types as distinct concepts with a controlled mapping to the base counting unit; sets define their own composition. The text below is kept as history.
+
 
 > **Design annotation (2026-10-22, Decision Log #82/#83; PROPOSAL, not approved unless stated):** R3 / #83: quantity types are separate from units of measure and QC dispositions are per individual unit for the future workflow. See `QC_QUANTITY_MODEL_DESIGN.md` (U-17..U-21).
 

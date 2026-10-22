@@ -475,6 +475,9 @@ No UI screen should be allowed to directly perform a state-changing database upd
 
 ## 7.1 Request workflow
 
+> **Superseded/clarified (2026-10-22, Decision Log #84-#87):** One type per request, contract determination for MAKE only, Planning defines items after the gates, PDF mandatory before submission. The text below is kept as history.
+
+
 > **Design annotation (2026-10-22, Decision Log #82/#83; PROPOSAL, not approved unless stated):** Owner lifecycle steps 1-12 and proposed later request statuses: `WORKFLOW_REDESIGN.md` section 3 (not approved).
 
 
