@@ -167,6 +167,43 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
                     b.ToTable("UserCredentials", (string)null);
                 });
 
+            modelBuilder.Entity("ERP.MES.Domain.Documents.StoredDocument", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<byte[]>("Content")
+                        .IsRequired()
+                        .HasColumnType("BLOB");
+
+                    b.Property<string>("ContentHash")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("ContentLength")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("UploadedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("UploadedByUserId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UploadedByUserId");
+
+                    b.ToTable("Documents", (string)null);
+                });
+
             modelBuilder.Entity("ERP.MES.Domain.Identity.Department", b =>
                 {
                     b.Property<long>("Id")
@@ -492,6 +529,52 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
                     b.ToTable("Requests", (string)null);
                 });
 
+            modelBuilder.Entity("ERP.MES.Domain.Requests.RequestDocumentLink", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ContentHash")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("ContentLength")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("DocumentId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("LinkedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("LinkedByUserId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("RequestId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("SupersededAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DocumentId");
+
+                    b.HasIndex("LinkedByUserId");
+
+                    b.HasIndex("RequestId", "Type");
+
+                    b.ToTable("RequestDocumentLinks", (string)null);
+                });
+
             modelBuilder.Entity("ERP.MES.Domain.Requests.RequestItem", b =>
                 {
                     b.Property<long>("Id")
@@ -564,6 +647,15 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Documents.StoredDocument", b =>
+                {
+                    b.HasOne("ERP.MES.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("UploadedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("ERP.MES.Domain.Identity.User", b =>
@@ -640,6 +732,29 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("ERP.MES.Domain.Requests.RequestDocumentLink", b =>
+                {
+                    b.HasOne("ERP.MES.Domain.Documents.StoredDocument", "Document")
+                        .WithMany()
+                        .HasForeignKey("DocumentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ERP.MES.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("LinkedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ERP.MES.Domain.Requests.Request", null)
+                        .WithMany("DocumentLinks")
+                        .HasForeignKey("RequestId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Document");
+                });
+
             modelBuilder.Entity("ERP.MES.Domain.Requests.RequestItem", b =>
                 {
                     b.HasOne("ERP.MES.Domain.Identity.User", null)
@@ -657,6 +772,8 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
 
             modelBuilder.Entity("ERP.MES.Domain.Requests.Request", b =>
                 {
+                    b.Navigation("DocumentLinks");
+
                     b.Navigation("Items");
                 });
 

@@ -1,3 +1,4 @@
+using ERP.MES.Domain.Documents;
 using ERP.MES.Application.Persistence;
 using ERP.MES.Application.Security;
 using ERP.MES.Domain.Requests;
@@ -131,6 +132,17 @@ public sealed class EfRequestRepository(IDbContextFactory<ErpMesDbContext> conte
         return new Stored<Request>(request, context.GetRowVersion(request));
     }
 
+    public async Task<StoredDocument?> FindCurrentRequestPdfAsync(long requestId, CancellationToken cancellationToken = default)
+    {
+        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
+        return await (
+                from l in context.RequestDocumentLinks
+                where EF.Property<long>(l, "RequestId") == requestId && l.Type == DocumentType.RequestPdf && l.SupersededAtUtc == null
+                orderby l.Id descending
+                select l.Document)
+            .FirstOrDefaultAsync(cancellationToken);
+    }
+
     public async Task<VersionedRequest?> FindWithVersionsAsync(long requestId, CancellationToken cancellationToken = default)
     {
         await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
@@ -211,6 +223,7 @@ public sealed class EfRequestRepository(IDbContextFactory<ErpMesDbContext> conte
         context.Requests
             .Include(r => r.Items.OrderBy(i => i.Id)).ThenInclude(i => i.Stages.OrderBy(s => s.StageNo))
             .Include(r => r.Items.OrderBy(i => i.Id)).ThenInclude(i => i.QcApprovals.OrderBy(a => EF.Property<long>(a, "Id")))
+            .Include(r => r.DocumentLinks.OrderBy(l => l.Id))
             .AsSplitQuery();
 
     private static Task<bool> KeyExistsAsync(ErpMesDbContext context, long customerId, int jalaliRequestYear, RequestNo requestNo, CancellationToken cancellationToken) =>

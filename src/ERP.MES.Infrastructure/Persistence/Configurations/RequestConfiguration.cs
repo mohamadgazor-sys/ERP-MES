@@ -47,6 +47,12 @@ public sealed class RequestConfiguration : IEntityTypeConfiguration<Request>
         builder.HasMany(r => r.Items).WithOne().HasForeignKey("RequestId").IsRequired().OnDelete(DeleteBehavior.Restrict);
         builder.Navigation(r => r.Items).HasField("_items").UsePropertyAccessMode(PropertyAccessMode.Field);
 
+        // Document links (Decision Log #35, #87): the request owns its links; the binaries are referenced by the links and not loaded with the request.
+        builder.HasMany(r => r.DocumentLinks).WithOne().HasForeignKey("RequestId").IsRequired().OnDelete(DeleteBehavior.Restrict);
+        builder.Navigation(r => r.DocumentLinks).HasField("_documentLinks").UsePropertyAccessMode(PropertyAccessMode.Field);
+        builder.Ignore(r => r.CurrentRequestPdf);
+        builder.Ignore(r => r.HasRequestPdf);
+
         // Business key: Customer + RequestNo + Jalali Request Year (Domain and Database Specification 4.2, 26).
         builder.HasIndex(r => new { r.CustomerId, r.RequestNo, r.JalaliRequestYear }).IsUnique();
     }

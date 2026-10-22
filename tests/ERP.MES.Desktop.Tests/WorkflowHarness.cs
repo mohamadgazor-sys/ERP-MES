@@ -92,7 +92,7 @@ internal sealed class WorkflowHarness : IDisposable
     public RequestsViewModel RequestsFor(Principal user, WorkflowServices? services = null)
     {
         var workflow = services ?? Workflow;
-        return new RequestsViewModel(workflow.Requests, workflow.Customers, Dates, DigitStyle.Persian, () => Clock.UtcNow, () => user);
+        return new RequestsViewModel(workflow.Requests, workflow.Documents, workflow.Customers, Dates, DigitStyle.Persian, () => Clock.UtcNow, () => user);
     }
 
     public StageWorkViewModel StagesFor(Principal user, StageWorkService? service = null) =>

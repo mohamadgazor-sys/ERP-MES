@@ -49,6 +49,9 @@ public static class AuditActions
     public const string StageSubmittedForQc = "StageSubmittedForQc";
     public const string StageQcApproved = "StageQcApproved";
 
+    // Request PDF (Decision Log #87). Written in the same transaction as the attachment. The audit text carries the file name and hash, never the content.
+    public const string RequestPdfAttached = "RequestPdfAttached";
+
     /// <summary>Written on a clean shutdown, on a best-effort basis. A crash, a forced termination or a power loss writes nothing, and nothing is written later to pretend otherwise.</summary>
     public const string ApplicationSessionEnded = "ApplicationSessionEnded";
 }

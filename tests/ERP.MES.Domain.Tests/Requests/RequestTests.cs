@@ -196,8 +196,8 @@ public class RequestTests
     [Fact]
     public void A_created_request_can_be_submitted_to_management_with_or_without_items()
     {
-        var empty = RequestFixtures.NewRequest("A-1");
-        var withItem = RequestFixtures.NewRequest("A-2", requestId: 101);
+        var empty = RequestFixtures.NewRequest("A-1").WithPdf();
+        var withItem = RequestFixtures.NewRequest("A-2", requestId: 101).WithPdf();
         withItem.AddRing("1.10");
         var changedAt = RequestFixtures.Now.AddMinutes(5);
 
@@ -220,7 +220,7 @@ public class RequestTests
     [InlineData(RequestStatus.Closed)]
     public void Only_a_created_request_can_be_submitted_and_nothing_changes_otherwise(RequestStatus status)
     {
-        var request = RequestFixtures.NewRequest();
+        var request = RequestFixtures.NewRequest().WithPdf();
         request.SetStatus(status);
         var updated = request.UpdatedAtUtc;
 
@@ -233,7 +233,7 @@ public class RequestTests
     [Fact]
     public void Submitting_needs_a_utc_time_and_changes_nothing_when_it_is_not()
     {
-        var request = RequestFixtures.NewRequest();
+        var request = RequestFixtures.NewRequest().WithPdf();
 
         Assert.Throws<ArgumentException>(() => request.SubmitToManagement(DateTime.SpecifyKind(RequestFixtures.Now, DateTimeKind.Unspecified)));
 
@@ -327,5 +327,79 @@ public class RequestTests
         Assert.Throws<ArgumentNullException>(() => Request.Create(1, customer, null!, WorkType.Make, date, null, null, 1, RequestFixtures.Now, RequestFixtures.Dates));
         Assert.Throws<ArgumentNullException>(() => Request.Create(1, customer, number, WorkType.Make, date, null, null, 1, RequestFixtures.Now, null!));
         Assert.Throws<ArgumentException>(() => Request.Create(1, customer, number, WorkType.Make, date, null, null, 1, DateTime.SpecifyKind(RequestFixtures.Now, DateTimeKind.Local), RequestFixtures.Dates));
+    }
+
+    // ---- the request PDF (Decision Log #87) ----
+
+    [Fact]
+    public void A_request_without_its_pdf_cannot_be_submitted_and_nothing_changes()
+    {
+        var request = RequestFixtures.NewRequest();
+        var updated = request.UpdatedAtUtc;
+
+        Assert.False(request.HasRequestPdf);
+        Assert.Throws<InvalidOperationException>(() => request.SubmitToManagement(RequestFixtures.Now.AddHours(1)));
+
+        Assert.Equal(RequestStatus.Created, request.Status);
+        Assert.Equal(updated, request.UpdatedAtUtc);
+    }
+
+    [Fact]
+    public void Attaching_a_pdf_links_it_and_makes_it_current()
+    {
+        var request = RequestFixtures.NewRequest();
+        var document = RequestFixtures.NewPdf("order 7.pdf", 200);
+        var at = RequestFixtures.Now.AddMinutes(3);
+
+        var link = request.AttachRequestPdf(document, 5, at);
+
+        Assert.True(request.HasRequestPdf);
+        Assert.Same(link, request.CurrentRequestPdf);
+        Assert.Same(document, link.Document);
+        Assert.Equal("order 7.pdf", link.FileName);
+        Assert.Equal(200, link.ContentLength);
+        Assert.Equal(document.ContentHash, link.ContentHash);
+        Assert.Equal(5, link.LinkedByUserId);
+        Assert.Equal(at, link.LinkedAtUtc);
+        Assert.True(link.IsCurrent);
+        Assert.Equal(at, request.UpdatedAtUtc);
+    }
+
+    [Fact]
+    public void Replacing_the_pdf_supersedes_the_old_link_without_deleting_it()
+    {
+        var request = RequestFixtures.NewRequest();
+        var first = request.AttachRequestPdf(RequestFixtures.NewPdf("one.pdf"), 1, RequestFixtures.Now.AddMinutes(1));
+        var second = request.AttachRequestPdf(RequestFixtures.NewPdf("two.pdf"), 2, RequestFixtures.Now.AddMinutes(2));
+
+        Assert.Equal(2, request.DocumentLinks.Count);
+        Assert.False(first.IsCurrent);
+        Assert.Equal(RequestFixtures.Now.AddMinutes(2), first.SupersededAtUtc);
+        Assert.True(second.IsCurrent);
+        Assert.Same(second, request.CurrentRequestPdf);
+    }
+
+    [Theory]
+    [InlineData(RequestStatus.SentToManagement)]
+    [InlineData(RequestStatus.MgmtApprovedAtPlanning)]
+    [InlineData(RequestStatus.Closed)]
+    public void A_pdf_can_be_attached_only_while_the_request_is_created(RequestStatus status)
+    {
+        var request = RequestFixtures.NewRequest().WithPdf();
+        request.SetStatus(status);
+
+        Assert.Throws<InvalidOperationException>(() => request.AttachRequestPdf(RequestFixtures.NewPdf("late.pdf"), 1, RequestFixtures.Now.AddMinutes(9)));
+
+        Assert.Single(request.DocumentLinks);
+    }
+
+    [Fact]
+    public void Attaching_rejects_missing_arguments_and_non_utc_times()
+    {
+        var request = RequestFixtures.NewRequest();
+
+        Assert.Throws<ArgumentNullException>(() => request.AttachRequestPdf(null!, 1, RequestFixtures.Now));
+        Assert.Throws<ArgumentException>(() => request.AttachRequestPdf(RequestFixtures.NewPdf(), 1, DateTime.SpecifyKind(RequestFixtures.Now, DateTimeKind.Local)));
+        Assert.Empty(request.DocumentLinks);
     }
 }

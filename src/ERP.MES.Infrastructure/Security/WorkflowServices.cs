@@ -7,10 +7,10 @@ using Microsoft.EntityFrameworkCore;
 namespace ERP.MES.Infrastructure.Security;
 
 /// <summary>The customer and request use cases wired to the real repositories, the current-authorization check and the clock. Composition roots (Desktop) and tests create it once per database.</summary>
-public sealed record WorkflowServices(CustomerService Customers, RequestService Requests, ProductionQueueService Queue, StageWorkService StageWork)
+public sealed record WorkflowServices(CustomerService Customers, RequestService Requests, ProductionQueueService Queue, StageWorkService StageWork, RequestDocumentService Documents)
 {
     public static WorkflowServices Create(
-        IDbContextFactory<ErpMesDbContext> contexts, CurrentAuthorization authorization, IJalaliDateService dates, IClock? clock = null, IAuditContext? auditContext = null)
+        IDbContextFactory<ErpMesDbContext> contexts, CurrentAuthorization authorization, IJalaliDateService dates, IClock? clock = null, IAuditContext? auditContext = null, DocumentPolicy? documentPolicy = null)
     {
         ArgumentNullException.ThrowIfNull(contexts);
         ArgumentNullException.ThrowIfNull(authorization);
@@ -23,6 +23,7 @@ public sealed record WorkflowServices(CustomerService Customers, RequestService 
             new CustomerService(customers, authorization, effectiveClock),
             new RequestService(requests, customers, authorization, effectiveClock, dates),
             new ProductionQueueService(requests, authorization),
-            new StageWorkService(requests, authorization, effectiveClock, auditContext ?? new EnvironmentAuditContext()));
+            new StageWorkService(requests, authorization, effectiveClock, auditContext ?? new EnvironmentAuditContext()),
+            new RequestDocumentService(requests, authorization, effectiveClock, auditContext ?? new EnvironmentAuditContext(), documentPolicy ?? DocumentPolicy.Default));
     }
 }

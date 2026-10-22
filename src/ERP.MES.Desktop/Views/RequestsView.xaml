@@ -70,6 +70,11 @@
                     <TextBlock Text="{Binding DetailLine}" Margin="0,4,0,0" TextWrapping="Wrap" />
                     <TextBlock Text="{Binding DetailTitle}" Margin="0,4,0,0" TextWrapping="Wrap" />
                     <TextBlock Text="{Binding DetailDescription}" Margin="0,2,0,0" TextWrapping="Wrap" Foreground="{StaticResource MutedTextBrush}" />
+                    <TextBlock Text="{Binding PdfText}" Margin="0,6,0,0" TextWrapping="Wrap" />
+                    <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                        <Button Content="پیوست یا جایگزینی PDF" Padding="12,5" Margin="0,0,8,0" Click="OnAttachPdfClick" IsEnabled="{Binding CanAttachPdf}" />
+                        <Button Content="مشاهدهٔ PDF" Padding="12,5" Click="OnViewPdfClick" IsEnabled="{Binding HasPdf}" />
+                    </StackPanel>
                     <Button Content="ارسال به مدیریت" Padding="12,5" Margin="0,8,0,8" HorizontalAlignment="Left" Click="OnSubmitClick" IsEnabled="{Binding CanSubmit}" />
                     <TextBlock Text="نسخهٔ نمایشی: تنها تغییر وضعیت پیاده‌سازی‌شده «ارسال به مدیریت» است؛ تأیید، رد و سایر گذارها هنوز تصویب نشده‌اند." FontSize="12"
                                Foreground="{StaticResource MutedTextBrush}" TextWrapping="Wrap" Margin="0,0,0,8" />

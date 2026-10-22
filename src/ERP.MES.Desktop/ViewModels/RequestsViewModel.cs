@@ -22,7 +22,7 @@ public sealed record Choice<T>(T Value, string Text);
 /// this screen (demonstration build: items are listed, their routes are not edited).
 /// </summary>
 public sealed class RequestsViewModel(
-    RequestService requests, CustomerService customers, IJalaliDateService dates, DigitStyle digitStyle, Func<DateTime> utcNow, Func<Principal> currentUser) : ObservableObject
+    RequestService requests, RequestDocumentService documents, CustomerService customers, IJalaliDateService dates, DigitStyle digitStyle, Func<DateTime> utcNow, Func<Principal> currentUser) : ObservableObject
 {
     private readonly ObservableCollection<RequestRow> _rows = [];
     private readonly ObservableCollection<ItemRow> _items = [];
@@ -97,7 +97,18 @@ public sealed class RequestsViewModel(
     public bool CanCreateRequest => _capabilities.CanCreateRequest;
 
     /// <summary>Submitting needs the permission and a request still in CREATED; the Application checks both again.</summary>
-    public bool CanSubmit => _capabilities.CanSubmitRequest && _detail?.Value.Status == RequestStatus.Created;
+    public bool CanSubmit => _capabilities.CanSubmitRequest && _detail?.Value.Status == RequestStatus.Created && HasPdf;
+
+    /// <summary>True when the selected request has its request PDF (Decision Log #87).</summary>
+    public bool HasPdf => _detail?.Value.HasRequestPdf == true;
+
+    /// <summary>The PDF of the selected request in Persian, or the reminder that it is missing.</summary>
+    public string PdfText => _detail?.Value.CurrentRequestPdf is { } pdf
+        ? $"فایل PDF درخواست: {pdf.FileName} ({SizeText(pdf.ContentLength)})"
+        : "فایل PDF درخواست پیوست نشده است؛ پیش از ارسال به مدیریت باید پیوست شود.";
+
+    /// <summary>Attaching (or replacing) the PDF needs the Central permission and a request that has not been submitted yet; the Application checks both again.</summary>
+    public bool CanAttachPdf => _capabilities.CanAttachRequestPdf && _detail?.Value.Status == RequestStatus.Created;
 
     /// <summary>Adding an item needs the permission for the request's one work type (Decision Log #84); the Application checks again.</summary>
     public bool CanAddItem => _detail is not null
@@ -153,6 +164,61 @@ public sealed class RequestsViewModel(
             Message = text;
         });
         return saved;
+    }
+
+    /// <summary>Attaches the chosen file as the request PDF. The file is read by the window; the Application validates the name, size and content.</summary>
+    public async Task<bool> AttachPdfAsync(string? fileName, byte[]? content, CancellationToken cancellationToken = default)
+    {
+        var saved = false;
+        await RunAsync(async () =>
+        {
+            if (_detail is null)
+            {
+                Message = Messages.NothingSelected;
+                return;
+            }
+
+            var id = _detail.Value.Id;
+            var outcome = await documents.AttachRequestPdfAsync(currentUser(), id, _detail.Version, fileName, content, cancellationToken);
+            if (!outcome.Succeeded)
+            {
+                await ShowFailureAsync(outcome, cancellationToken, reopen: id);
+                return;
+            }
+
+            saved = true;
+            await ReloadAsync(cancellationToken, keepMessage: true);
+            await LoadDetailAsync(id, cancellationToken, keepMessage: true);
+            Message = "فایل PDF درخواست پیوست شد.";
+        });
+        return saved;
+    }
+
+    /// <summary>The chosen file is too large even to read; the same message as the Application's size check.</summary>
+    public void ReportPdfTooLarge() => Message = Messages.ForIssue(ValidationIssue.PdfTooLarge, JalaliDateError.None);
+
+    /// <summary>The current PDF of the selected request for viewing, or null with a message.</summary>
+    public async Task<RequestPdfFile?> LoadPdfAsync(CancellationToken cancellationToken = default)
+    {
+        RequestPdfFile? file = null;
+        await RunAsync(async () =>
+        {
+            if (_detail is null)
+            {
+                Message = Messages.NothingSelected;
+                return;
+            }
+
+            var outcome = await documents.GetRequestPdfAsync(currentUser(), _detail.Value.Id, cancellationToken);
+            if (!outcome.Succeeded)
+            {
+                Message = Messages.For(outcome);
+                return;
+            }
+
+            file = outcome.Value;
+        });
+        return file;
     }
 
     public async Task<bool> SubmitAsync(CancellationToken cancellationToken = default)
@@ -315,7 +381,7 @@ public sealed class RequestsViewModel(
     {
         foreach (var name in new[]
                  {
-                     nameof(HasDetail), nameof(DetailHeading), nameof(DetailLine), nameof(DetailTitle), nameof(DetailDescription), nameof(HasNoItems), nameof(CanSubmit), nameof(CanAddItem),
+                     nameof(HasDetail), nameof(DetailHeading), nameof(DetailLine), nameof(DetailTitle), nameof(DetailDescription), nameof(HasNoItems), nameof(CanSubmit), nameof(CanAddItem), nameof(HasPdf), nameof(PdfText), nameof(CanAttachPdf),
                  })
         {
             OnPropertyChanged(name);
@@ -324,7 +390,7 @@ public sealed class RequestsViewModel(
 
     private void RaiseCapabilityChanges()
     {
-        foreach (var name in new[] { nameof(CanCreateRequest), nameof(CanSubmit), nameof(CanAddItem), nameof(CanSetPriority) })
+        foreach (var name in new[] { nameof(CanCreateRequest), nameof(CanSubmit), nameof(CanAddItem), nameof(CanSetPriority), nameof(CanAttachPdf) })
         {
             OnPropertyChanged(name);
         }
@@ -366,4 +432,9 @@ public sealed class RequestsViewModel(
             IsBusy = false;
         }
     }
+
+    private static string SizeText(long bytes) =>
+        bytes >= 1024 * 1024
+            ? (bytes / (1024.0 * 1024.0)).ToString("0.#", System.Globalization.CultureInfo.InvariantCulture) + " مگابایت"
+            : Math.Max(1, (bytes + 1023) / 1024).ToString(System.Globalization.CultureInfo.InvariantCulture) + " کیلوبایت";
 }

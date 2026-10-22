@@ -92,6 +92,31 @@ public class WorkflowServiceTests
 
     private static AddItemCommand Repair(string itemNo = "2.10", Priority priority = Priority.Normal) => new(itemNo, "Shaft B", 4m, priority);
 
+    /// <summary>A small FICTIONAL but valid-looking PDF: the signature line and a trailer. <paramref name="size"/> pads it to an exact number of bytes when given.</summary>
+    private static byte[] PdfBytes(int? size = null)
+    {
+        var head = System.Text.Encoding.ASCII.GetBytes("%PDF-1.4\n% fictional test document\n");
+        var tail = System.Text.Encoding.ASCII.GetBytes("\n%%EOF\n");
+        if (size is null)
+        {
+            return [.. head, .. tail];
+        }
+
+        var bytes = new byte[size.Value];
+        Array.Fill(bytes, (byte)' ');
+        head.AsSpan(0, Math.Min(head.Length, bytes.Length)).CopyTo(bytes);
+        return bytes;
+    }
+
+    /// <summary>Attaches a fictional request PDF as Central (Decision Log #87) and returns the request at its new version.</summary>
+    private static async Task<Stored<Request>> WithPdfAsync(World w, Stored<Request> request, string fileName = "request.pdf")
+    {
+        w.Fixture.Clock.Advance(TimeSpan.FromMinutes(1));
+        var attached = await w.Services.Documents.AttachRequestPdfAsync(w.Central, request.Value.Id, request.Version, fileName, PdfBytes(), Token);
+        Assert.True(attached.Succeeded, attached.Status + " " + attached.Issue);
+        return attached.Value!;
+    }
+
     private static long Count(World w, string table) => long.Parse(w.Fixture.Db.Query("SELECT COUNT(*) FROM " + table).Single(), System.Globalization.CultureInfo.InvariantCulture);
 
     // ---- customers: who may maintain, validation, persistence ----
@@ -475,7 +500,8 @@ public class WorkflowServiceTests
         w.Fixture.Clock.Advance(TimeSpan.FromMinutes(1));
 
         var detail = await w.Requests.GetAsync(w.Qc, created.Value.Id, Token);
-        var item = await w.Requests.AddItemAsync(w.Drawing, created.Value.Id, created.Version, Make("1.10"), Token);
+        var withPdf = await WithPdfAsync(w, created);
+        var item = await w.Requests.AddItemAsync(w.Drawing, created.Value.Id, withPdf.Version, Make("1.10"), Token);
         var submitted = await w.Requests.SubmitToManagementAsync(w.Central, created.Value.Id, item.Value!.Version, Token);
 
         Assert.True(detail.Succeeded);
@@ -583,7 +609,7 @@ public class WorkflowServiceTests
     {
         using var w = await StartAsync();
         var customer = await CustomerAsync(w);
-        var created = await RequestAsync(w, customer.Value.Id);
+        var created = await WithPdfAsync(w, await RequestAsync(w, customer.Value.Id));
 
         var submitted = await w.Requests.SubmitToManagementAsync(w.Central, created.Value.Id, created.Version, Token);
 
@@ -601,7 +627,7 @@ public class WorkflowServiceTests
     {
         using var w = await StartAsync();
         var customer = await CustomerAsync(w);
-        var created = await RequestAsync(w, customer.Value.Id);
+        var created = await WithPdfAsync(w, await RequestAsync(w, customer.Value.Id));
 
         foreach (var user in new[] { w.Planning, w.Drawing, w.Management, w.Qc, w.Admin })
         {
@@ -765,7 +791,7 @@ public class WorkflowServiceTests
     {
         using var w = await StartAsync();
         var customer = await CustomerAsync(w);
-        var created = await RequestAsync(w, customer.Value.Id);
+        var created = await WithPdfAsync(w, await RequestAsync(w, customer.Value.Id));
 
         // Drawing and Planning both opened the request at the same version. (The clock moves on between operations, as it does in real use: the version of the
         // request row changes when the row changes, and a new item changes the request's "updated" time.)
@@ -814,11 +840,11 @@ public class WorkflowServiceTests
         var management = await w.Requests.GetCapabilitiesAsync(w.Management, Token);
         var qc = await w.Requests.GetCapabilitiesAsync(w.Qc, Token);
 
-        Assert.Equal(new Capabilities(true, true, true, true, false, false, false), central);
-        Assert.Equal(new Capabilities(true, true, false, false, true, true, true), planning);
-        Assert.Equal(new Capabilities(true, false, false, false, true, false, false), drawing);
-        Assert.Equal(new Capabilities(true, false, false, false, false, false, true), management);
-        Assert.Equal(new Capabilities(true, false, false, false, false, false, false), qc);
+        Assert.Equal(new Capabilities(true, true, true, true, true, false, false, false), central);
+        Assert.Equal(new Capabilities(true, true, false, false, false, true, true, true), planning);
+        Assert.Equal(new Capabilities(true, false, false, false, false, true, false, false), drawing);
+        Assert.Equal(new Capabilities(true, false, false, false, false, false, false, true), management);
+        Assert.Equal(new Capabilities(true, false, false, false, false, false, false, false), qc);
         Assert.Equal(Capabilities.None, await w.Requests.GetCapabilitiesAsync(null, Token));
 
         await w.Fixture.Services.Accounts.SetActiveAsync(w.Admin, w.Central.UserId, false, Token);

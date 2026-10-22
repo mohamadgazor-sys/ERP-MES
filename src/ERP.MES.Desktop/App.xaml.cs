@@ -128,7 +128,7 @@ public partial class App : System.Windows.Application
         Principal CurrentUser() => session.Principal;
         var pages = new WorkflowPages(
             new CustomersViewModel(workflow.Customers, workflow.Requests, dates, CurrentUser),
-            new RequestsViewModel(workflow.Requests, workflow.Customers, dates, DigitStyle.Persian, () => DateTime.UtcNow, CurrentUser),
+            new RequestsViewModel(workflow.Requests, workflow.Documents, workflow.Customers, dates, DigitStyle.Persian, () => DateTime.UtcNow, CurrentUser),
             new ProductionQueueViewModel(workflow.Queue, dates, DigitStyle.Persian, () => DateTime.UtcNow, CurrentUser),
             new StageWorkViewModel(workflow.StageWork, DigitStyle.Persian, CurrentUser));
 
