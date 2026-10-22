@@ -1297,3 +1297,33 @@ Append one dated entry after every substantial session. Do not replace prior ent
 
 ### Recommended exact next action
 - Run checklist section F, then review and merge PR #27; then decide the production eligibility rules before any production release workflow.
+
+---
+
+### Date / session
+- Date: 2026-10-23
+- Claude Code session ID (if useful): session_01UwqjPjBXLd2apjZb2urjds (PR #27: owner acceptance of the demo stage workflow, Decision Log #81)
+
+### Goal
+- Record the owner's manual Windows acceptance (checklist F1-F18) and confirmation of the demo-only stage-action department mapping, without any functional change.
+
+### Completed
+- Checked `main` (last Decision Log entry #78) and the open PRs (only #27, holding #79 and #80), so the new entry is **#81**. The mapping itself was already recorded as #80; #81 records the owner's acceptance after the manual test and the confirmation of that mapping, and states again that the production request-status, contract and Management-approval gates are not implemented.
+- Documentation only: Decision Log #81 (and a back-reference in #80), `docs/STAGE_WORKFLOW_DEMO.md` status, checklist section F heading (F1-F18 passed, F19 not yet run), PR description.
+
+### Files changed
+- Documentation only. No code, schema, package or behaviour change.
+
+### Decisions newly approved
+- #81 (owner).
+
+### Unresolved questions / risks
+- Request-status transition table; contract / Management approval versus production release (no gate in the demo).
+- Whether Management or a supervisor may act on stages; who corrects a wrong start or submission.
+- Checklist step F19 (demo-only note wording) has not been run by the owner.
+
+### Commands/tests actually run and results
+- Not built locally (no SDK). Windows CI results are reported in the pull request.
+
+### Recommended exact next action
+- Merge PR #27 after review; then decide the production eligibility rules before any production release workflow, or the next milestone (Planning priority edits and Planning positions, QC rejection with accepted/rework/scrap, or the per-unit queue).

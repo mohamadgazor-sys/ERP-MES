@@ -112,7 +112,7 @@ Prepare a fictional demonstration database with `demo-init` (see `docs/AUTHENTIC
 | E13 | An empty database (`demo-init` not run on a fresh `migrate`d file, with a Management or Planning user) | "در حال حاضر آیتمی برای نمایش در صف وجود ندارد." (not an error) | |
 | E14 | Lock the session (Ctrl+L) on the queue and unlock | The same page returns (section C) | |
 
-## F. Stage progression and QC approval (demonstration; `docs/STAGE_WORKFLOW_DEMO.md`, Decision Log #79) - pending the owner's run
+## F. Stage progression and QC approval (demonstration; `docs/STAGE_WORKFLOW_DEMO.md`, Decision Log #79, #80, #81) - F1-F18 passed on Windows (owner); F19 not yet run
 
 Prepare a fictional demonstration database with `demo-init` (`docs/AUTHENTICATION.md` section 12). Accounts used: `demo.planning`, `demo.production` (new), `demo.qc`, `demo.management`, `demo.central`. The seeded routes have 2-3 stages. An easy path: pick an item whose first stage is still planned (the seed has items in several states; the page shows "برنامه‌ریزی‌شده (هنوز آزاد نشده)").
 

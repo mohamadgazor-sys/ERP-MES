@@ -1,6 +1,6 @@
 # Demonstration stage progression and QC approval
 
-Status: implemented for the demonstration build (Decision Log #79; permission mapping approved demo-only in #80). It uses the already-approved demo-only Domain transitions and the existing status model. It adds no production
+Status: implemented for the demonstration build (Decision Log #79; permission mapping approved demo-only in #80; owner's manual Windows test F1-F18 passed and the mapping confirmed in #81). It uses the already-approved demo-only Domain transitions and the existing status model. It adds no production
 transition, no new status and no change to the meaning of an existing one.
 
 ## 1. Actions, states and who may do them
@@ -12,7 +12,7 @@ transition, no new status and no change to the meaning of an existing one.
 | Submit for QC | IN_PROGRESS -> WAITING_QC | Production (`RunStage`) | |
 | QC approval, whole quantity | WAITING_QC -> QC_APPROVED | QC (`InspectOrCorrectQc`) | Appends a `QcApproval` (approver, time, whole planned quantity) and makes the next stage WAITING |
 
-The department mapping is **approved by the owner for the demonstration only** (Decision Log #80). It is not a finalized production authorization matrix: whether other departments may act on stages, and who corrects a wrong start or submission, stay undecided and default-denied. Anything else - QC rejection, rework, scrap, partial quantities, external supply, route editing, scheduling, Excel import - is not here.
+The department mapping is **approved by the owner for the demonstration only** (Decision Log #80, confirmed after the manual test in #81). It is not a finalized production authorization matrix: whether other departments may act on stages, and who corrects a wrong start or submission, stay undecided and default-denied. Anything else - QC rejection, rework, scrap, partial quantities, external supply, route editing, scheduling, Excel import - is not here.
 
 ## Demo-only: no production eligibility gates
 
