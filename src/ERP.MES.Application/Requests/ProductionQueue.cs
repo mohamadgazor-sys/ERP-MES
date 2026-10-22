@@ -48,13 +48,14 @@ public sealed record ProductionQueueEntry(
 public sealed record ProductionQueue(IReadOnlyList<ProductionQueueEntry> Entries);
 
 /// <summary>
-/// The read-only Management production queue (docs/PRODUCTION_QUEUE.md). It lists every item of every request with its request, priority, current stage and QC position,
-/// using the existing request repository; it changes nothing. Access is checked against the user as freshly loaded from the database
+/// The read-only production OVERVIEW for Management and Planning (docs/PRODUCTION_QUEUE.md, Decision Log #78). It lists every item of every request with its request, priority,
+/// current stage and QC position, using the existing request repository; it changes nothing. Access is checked against the user as freshly loaded from the database
 /// (<see cref="Permission.ViewProductionQueue"/>), never against a screen's snapshot.
 ///
-/// DISPLAY ORDER (provisional, deterministic, NOT the queue policy): Planning priority (خیلی فوری, فوری, عادی), then request date (older first), then request id, then
-/// item id. Equal-priority ties and the precedence of Management overrides over later Planning changes are undecided business questions (Decision Log "Unresolved");
-/// this order is only a stable way to list rows and applies no override.
+/// DISPLAY ORDER (provisional, deterministic, NOT the authoritative operational queue order): Planning priority (خیلی فوری, فوری, عادی), then request date (older first), then
+/// request id, then item id. The approved target order of a production unit's queue (operational category IN_PROGRESS, then STOPPED/problem states, then WAITING; then Planning
+/// priority and Planning position; first come first served for equal positions; then planned end and stable identifiers) and the Management override policy are recorded in
+/// Decision Log #78 but need per-unit released-stage queues and Planning-position data that do not exist yet, so none of it is applied here.
 /// </summary>
 public sealed class ProductionQueueService(IRequestRepository requests, CurrentAuthorization authorization)
 {

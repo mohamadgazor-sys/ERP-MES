@@ -25,24 +25,28 @@ public sealed record QueueRow(
     string TotalEstimateText);
 
 /// <summary>
-/// State of the read-only Management production queue. It asks the Application (<see cref="ProductionQueueService"/>), which checks the user's CURRENT permission; this
+/// State of the read-only production overview (Management and Planning). It asks the Application (<see cref="ProductionQueueService"/>), which checks the user's CURRENT permission; this
 /// class decides nothing about access. Loading, empty, permission-denied, conflict and database-error states are explicit, in Persian. The screen has no write action:
 /// no stage change, QC action, priority change or queue-order override exists here (those need decisions that are still open).
 /// </summary>
 public sealed class ProductionQueueViewModel(ProductionQueueService queue, IJalaliDateService dates, DigitStyle digitStyle, Func<DateTime> utcNow, Func<Principal> currentUser) : ObservableObject
 {
-    public const string Heading = "صف تولید (فقط‌خواندنی)";
+    public const string Heading = "نمای کلی تولید (فقط‌خواندنی)";
+
+    public const string OverviewNote =
+        "این صفحه یک نمای کلی فقط‌خواندنی از آیتم‌ها است و صف عملیاتی رسمی واحدهای تولید نیست. هیچ‌چیز در این صفحه تغییر نمی‌کند: تغییر مرحله، کنترل کیفیت، تغییر اولویت و بازنویسی ترتیب در این نسخه وجود ندارد. "
+        + "اطلاعات در لحظهٔ بارگذاری خوانده می‌شود و زنده نیست؛ برای دیدن تغییرات دیگران «بارگذاری دوباره» را بزنید.";
 
     public const string OrderNote =
-        "ترتیب نمایش (موقت و فقط برای نمایش): اولویت برنامه‌ریزی (خیلی فوری، فوری، عادی)، سپس تاریخ درخواست (قدیمی‌تر اول)، سپس شناسهٔ درخواست و شناسهٔ آیتم. "
-        + "قاعدهٔ ترتیب برای اولویت‌های برابر و تقدم بازنویسی مدیریت هنوز تصویب نشده است و در این ترتیب اعمال نشده است.";
+        "ترتیب نمایش موقت است و ترتیب عملیاتی رسمی صف نیست: اولویت برنامه‌ریزی (خیلی فوری، فوری، عادی)، سپس تاریخ درخواست (قدیمی‌تر اول)، سپس شناسهٔ درخواست و شناسهٔ آیتم. "
+        + "ترتیب نهایی صف هر واحد تولید (در حال اجرا، سپس توقف/مشکل‌دار، سپس در انتظار؛ بعد اولویت و موقعیت برنامه‌ریزی، سپس پایان برنامه‌ریزی‌شده) و قاعدهٔ بازنویسی مدیریت تصویب شده‌اند ولی هنوز پیاده‌سازی نشده‌اند و در این فهرست اعمال نمی‌شوند.";
 
     public const string EstimateNote =
         "«مدت پردازش تخمینی» برابر است با دقیقه به ازای هر قطعه × تعداد برنامه‌ریزی‌شده و فقط حجم کار را نشان می‌دهد؛ تاریخ تکمیل نیست و تقویم کاری، صف، ظرفیت ماشین‌ها و توقف‌ها در آن لحاظ نشده است.";
 
     public const string EmptyText = "در حال حاضر آیتمی برای نمایش در صف وجود ندارد.";
-    public const string LoadingText = "در حال بارگذاری صف تولید…";
-    public const string DeniedText = "شما اجازهٔ مشاهدهٔ صف تولید را ندارید. این صفحه فقط برای مدیریت است.";
+    public const string LoadingText = "در حال بارگذاری نمای کلی تولید…";
+    public const string DeniedText = "شما اجازهٔ مشاهدهٔ نمای کلی تولید را ندارید. این صفحه فقط برای مدیریت و برنامه‌ریزی است.";
     public const string ConflictText = "اطلاعات هنگام خواندن توسط کاربر دیگری تغییر کرد. «بارگذاری دوباره» را بزنید.";
     public const string NotFoundText = "بخشی از اطلاعات صف دیگر وجود ندارد. «بارگذاری دوباره» را بزنید.";
     public const string NotAvailableText = "—";

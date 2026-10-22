@@ -35,8 +35,8 @@ public class AuthorizationRulesTests
         [Permission.MaintainCustomers] = (["CENTRAL", "PLANNING"], null),
         [Permission.ViewCustomersAndRequests] = ([], null),
 
-        // Implementation assumption for the read-only production queue (docs/PRODUCTION_QUEUE.md): Management only, any role.
-        [Permission.ViewProductionQueue] = (["MANAGEMENT"], null),
+        // Read-only production overview (Decision Log #78): Management and Planning, any role; every other department is denied.
+        [Permission.ViewProductionQueue] = (["MANAGEMENT", "PLANNING"], null),
     };
 
     [Fact]

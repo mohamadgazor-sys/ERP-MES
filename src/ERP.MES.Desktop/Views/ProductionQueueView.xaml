@@ -9,8 +9,7 @@
     <DockPanel>
         <StackPanel DockPanel.Dock="Top">
             <TextBlock Text="{x:Static vm:ProductionQueueViewModel.Heading}" FontSize="18" FontWeight="SemiBold" Foreground="{StaticResource PrimaryBrush}" />
-            <TextBlock Text="این صفحه فقط نمایش است: تغییر مرحله، تأیید یا رد کنترل کیفیت، تغییر اولویت و بازنویسی ترتیب صف در این نسخه وجود ندارد." Margin="0,2,0,0"
-                       TextWrapping="Wrap" Foreground="{StaticResource MutedTextBrush}" />
+            <TextBlock Text="{x:Static vm:ProductionQueueViewModel.OverviewNote}" Margin="0,2,0,0" TextWrapping="Wrap" Foreground="{StaticResource MutedTextBrush}" />
             <StackPanel Orientation="Horizontal" Margin="0,8,0,8">
                 <Button Content="بارگذاری دوباره" Padding="12,5" Click="OnReloadClick" />
                 <TextBlock Text="{Binding LoadedAtText}" VerticalAlignment="Center" Margin="12,0,0,0" Foreground="{StaticResource MutedTextBrush}" />

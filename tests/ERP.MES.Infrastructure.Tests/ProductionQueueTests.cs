@@ -7,8 +7,8 @@ using ERP.MES.Infrastructure.Security;
 
 namespace ERP.MES.Infrastructure.Tests;
 
-// The read-only Management production queue (docs/PRODUCTION_QUEUE.md) on a real SQLite file with the real authorization. The queue changes nothing; its display order
-// is a provisional, deterministic order and not a queue policy.
+// The read-only production overview for Management and Planning (docs/PRODUCTION_QUEUE.md, Decision Log #78) on a real SQLite file with the real authorization. It changes
+// nothing; its display order is a provisional, deterministic order and not the authoritative operational queue order.
 public class ProductionQueueTests
 {
     private const string InitialPassword = "Staff-Pass-Phrase-2";
@@ -251,14 +251,21 @@ public class ProductionQueueTests
     }
 
     [Fact]
-    public async Task Only_the_management_department_may_view_the_queue_and_nobody_else_gets_any_data()
+    public async Task Management_and_planning_may_view_the_overview_and_every_other_department_is_denied_without_any_data()
     {
         using var w = await StartAsync();
         var request = await RequestAsync(w, await CustomerAsync(w), "R-1", "1405/07/20");
         await AddItemAsync(w, request, "1.10", WorkType.Make, Priority.Normal);
 
-        Assert.True(await w.Services.Queue.CanViewAsync(w.Management, Token));
-        foreach (var user in new[] { w.Central, w.Planning, w.Drawing, w.Qc, w.Admin })
+        foreach (var user in new[] { w.Management, w.Planning })
+        {
+            Assert.True(await w.Services.Queue.CanViewAsync(user, Token));
+            var outcome = await w.Services.Queue.LoadAsync(user, Token);
+            Assert.True(outcome.Succeeded);
+            Assert.Single(outcome.Value!.Entries);
+        }
+
+        foreach (var user in new[] { w.Central, w.Drawing, w.Qc, w.Admin })
         {
             var outcome = await w.Services.Queue.LoadAsync(user, Token);
             Assert.Equal(OperationStatus.NotAuthorized, outcome.Status);
@@ -270,25 +277,44 @@ public class ProductionQueueTests
     }
 
     [Fact]
-    public async Task A_management_user_who_is_deactivated_after_signing_in_loses_access_at_the_next_load()
+    public async Task A_deactivated_management_or_planning_user_loses_access_at_the_next_load()
     {
         using var w = await StartAsync();
         Assert.True((await w.Services.Queue.LoadAsync(w.Management, Token)).Succeeded);
+        Assert.True((await w.Services.Queue.LoadAsync(w.Planning, Token)).Succeeded);
 
         Assert.Equal(AccountStatus.Succeeded, (await w.Fixture.Services.Accounts.SetActiveAsync(w.Admin, w.Management.UserId, false, Token)).Status);
+        Assert.Equal(AccountStatus.Succeeded, (await w.Fixture.Services.Accounts.SetActiveAsync(w.Admin, w.Planning.UserId, false, Token)).Status);
 
         Assert.Equal(OperationStatus.NotAuthorized, (await w.Services.Queue.LoadAsync(w.Management, Token)).Status);
+        Assert.Equal(OperationStatus.NotAuthorized, (await w.Services.Queue.LoadAsync(w.Planning, Token)).Status);
+        Assert.False(await w.Services.Queue.CanViewAsync(w.Planning, Token));
     }
 
     [Fact]
-    public async Task A_snapshot_of_a_management_principal_with_another_department_in_the_database_is_not_trusted()
+    public async Task A_forged_or_stale_principal_is_judged_by_the_persisted_department_not_by_what_it_claims()
     {
         using var w = await StartAsync();
 
-        // The caller holds a principal claiming Management, but the user in the database is a Planning user.
-        var forged = new Principal(w.Planning.UserId, w.Planning.Username, w.Planning.DisplayName, DepartmentCodes.Management, RoleCodes.Manager, false);
+        // The caller holds a principal claiming Management or Planning, but the persisted users are Drawing and QC users.
+        var forgedManagement = new Principal(w.Drawing.UserId, w.Drawing.Username, w.Drawing.DisplayName, DepartmentCodes.Management, RoleCodes.Manager, false);
+        var forgedPlanning = new Principal(w.Qc.UserId, w.Qc.Username, w.Qc.DisplayName, DepartmentCodes.Planning, RoleCodes.Staff, false);
+        // And a stale principal that still says Drawing while the persisted user is Planning is granted what the DATABASE says, not what the snapshot says.
+        var staleButNowPlanning = new Principal(w.Planning.UserId, w.Planning.Username, w.Planning.DisplayName, DepartmentCodes.Drawing, RoleCodes.Staff, false);
 
-        Assert.Equal(OperationStatus.NotAuthorized, (await w.Services.Queue.LoadAsync(forged, Token)).Status);
+        Assert.Equal(OperationStatus.NotAuthorized, (await w.Services.Queue.LoadAsync(forgedManagement, Token)).Status);
+        Assert.Equal(OperationStatus.NotAuthorized, (await w.Services.Queue.LoadAsync(forgedPlanning, Token)).Status);
+        Assert.True((await w.Services.Queue.LoadAsync(staleButNowPlanning, Token)).Succeeded);
+    }
+
+    [Fact]
+    public async Task A_user_whose_password_change_is_still_pending_sees_nothing()
+    {
+        using var w = await StartAsync();
+        await w.Fixture.CreateUserAsync(w.Admin, "planning.pending", InitialPassword, DepartmentCodes.Planning, RoleCodes.Staff, Token);
+        var pending = await w.Fixture.SignInAsync("planning.pending", InitialPassword, Token);
+
+        Assert.Equal(OperationStatus.NotAuthorized, (await w.Services.Queue.LoadAsync(pending, Token)).Status);
     }
 
     [Fact]
@@ -366,6 +392,6 @@ public class ProductionQueueTests
         using var w = await StartAsync();
         var service = new ProductionQueueService(new FailingRepository(new InvalidOperationException("must not be reached")), w.Fixture.Services.Authorization);
 
-        Assert.Equal(OperationStatus.NotAuthorized, (await service.LoadAsync(w.Planning, Token)).Status);
+        Assert.Equal(OperationStatus.NotAuthorized, (await service.LoadAsync(w.Drawing, Token)).Status);
     }
 }

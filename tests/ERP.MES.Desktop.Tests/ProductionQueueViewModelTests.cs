@@ -129,12 +129,12 @@ public class ProductionQueueViewModelTests
     }
 
     [Fact]
-    public async Task Other_departments_get_a_persian_permission_denied_state_and_no_rows()
+    public async Task Departments_other_than_management_and_planning_get_a_persian_permission_denied_state_and_no_rows()
     {
         using var h = await WorkflowHarness.CreateAsync(Token);
         await RequestWithItemsAsync(h, "R-1", ("1.10", WorkType.Make, Priority.Normal, 1m));
 
-        foreach (var user in new[] { h.Central, h.Planning, h.Drawing, h.Qc, h.Admin })
+        foreach (var user in new[] { h.Central, h.Drawing, h.Qc, h.Admin })
         {
             var vm = h.QueueFor(user);
             await vm.LoadAsync(Token);
@@ -147,6 +147,22 @@ public class ProductionQueueViewModelTests
             Assert.Equal(ProductionQueueViewModel.DeniedText, vm.Message);
             Assert.Equal(string.Empty, vm.LoadedAtText);
         }
+    }
+
+    [Fact]
+    public async Task Planning_sees_the_same_overview_as_management()
+    {
+        using var h = await WorkflowHarness.CreateAsync(Token);
+        await RequestWithItemsAsync(h, "R-1", ("1.10", WorkType.Make, Priority.Urgent, 3m));
+        var management = h.QueueFor(h.Management);
+        var planning = h.QueueFor(h.Planning);
+
+        await management.LoadAsync(Token);
+        await planning.LoadAsync(Token);
+
+        Assert.False(planning.IsDenied);
+        Assert.True(planning.ShowRows);
+        Assert.Equal(management.Rows, planning.Rows);
     }
 
     [Fact]
@@ -296,10 +312,15 @@ public class ProductionQueueViewModelTests
     }
 
     [Fact]
-    public void The_screen_states_that_estimates_are_not_dates_and_that_the_order_is_provisional()
+    public void The_screen_states_that_estimates_are_not_dates_that_the_order_is_provisional_and_that_the_page_is_an_overview()
     {
         Assert.Contains("تاریخ تکمیل نیست", ProductionQueueViewModel.EstimateNote);
-        Assert.Contains("هنوز تصویب نشده", ProductionQueueViewModel.OrderNote);
+        Assert.Contains("موقت است", ProductionQueueViewModel.OrderNote);
+        Assert.Contains("ترتیب عملیاتی رسمی", ProductionQueueViewModel.OrderNote);
+        Assert.Contains("هنوز پیاده‌سازی نشده", ProductionQueueViewModel.OrderNote);
+        Assert.Contains("نمای کلی", ProductionQueueViewModel.OverviewNote);
+        Assert.Contains("صف عملیاتی رسمی", ProductionQueueViewModel.OverviewNote);
+        Assert.Contains("زنده نیست", ProductionQueueViewModel.OverviewNote);
         Assert.Contains("فقط‌خواندنی", ProductionQueueViewModel.Heading);
     }
 

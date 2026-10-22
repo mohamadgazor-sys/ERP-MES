@@ -1175,7 +1175,7 @@ Append one dated entry after every substantial session. Do not replace prior ent
 
 ### Completed
 - Verified `main` (merge commits of #19-#25 present; Decision Log #77 present; M8 resolved), SDK 10.0.401, `dotnet-ef` 10.0.13.
-- Application: `ProductionQueueService` (permission check against the freshly loaded user, `ListAsync` + `FindWithVersionsAsync`, documented provisional display order, current stage and QC position, estimates, row versions); new permission `ViewProductionQueue` (Management department only - an UNAPPROVED implementation assumption, flagged in the Decision Log "Unresolved", the Domain specification 15.4 and `docs/PRODUCTION_QUEUE.md`). `WorkflowServices.Queue`.
+- Application: `ProductionQueueService` (permission check against the freshly loaded user, `ListAsync` + `FindWithVersionsAsync`, documented provisional display order, current stage and QC position, estimates, row versions); new permission `ViewProductionQueue` (first Management only as an unapproved assumption; superseded by the entry below: Management and Planning, Decision Log #78). `WorkflowServices.Queue`.
 - Desktop: `ProductionQueueViewModel` and `ProductionQueueView` (Persian RTL, Persian digits, loading / rows / empty / permission-denied / conflict / database-error / unexpected-error states, "بارگذاری دوباره"); the "صف تولید" navigation item is now implemented. No write action exists (a test checks the view model's public surface).
 - Tests: `ProductionQueueTests` (real SQLite: visibility, current stage and QC derivation, estimates, deterministic order and tie-breaks, row versions, permissions incl. deactivated and forged principals, empty, read-only proof, failure statuses), `ProductionQueueViewModelTests` (Persian texts and digits, states, loading, retry, failures), the permission matrix test and the shell navigation test updated.
 - Docs: `docs/PRODUCTION_QUEUE.md` (scope, columns, states, assumption, display order, options T1-T4 and O1-O4 with a recommendation), Decision Log unresolved items, `PERSISTENCE_MAPPING.md`, `MANUAL_UI_CHECKLIST.md` section E.
@@ -1184,11 +1184,10 @@ Append one dated entry after every substantial session. Do not replace prior ent
 - See the pull request. No package, schema or migration change; no persistence contract change.
 
 ### Decisions newly approved
-- None. The queue-order policy (equal priorities, override precedence) and who may view the queue are open and are NOT marked approved.
+- None at the time of this entry; the owner approved the visibility, the target queue order and the override precedence afterwards (next entry, Decision Log #78).
 
 ### Unresolved questions / risks
-- Owner decision needed before any write control: T1-T4 (equal priority) and O1-O4 (override precedence) in `docs/PRODUCTION_QUEUE.md` section 7; recommendation T2 with T1 fallback, and O1 with a review flag.
-- Who may view the queue (Management only for now).
+- Owner decisions on the queue-order policy and the viewing permission were requested (answered in the next entry).
 - The queue loads one request at a time through the existing contracts; a read model is needed for large data. The queue is an item-level overview, not the per-unit queue of released stages, and not live (snapshot + reload).
 - The WPF layer is compiled but not exercised by unit tests: checklist section E is pending the owner's run.
 
@@ -1197,3 +1196,36 @@ Append one dated entry after every substantial session. Do not replace prior ent
 
 ### Recommended exact next action
 - Review and merge; run checklist section E; decide the queue-order policy and the viewing permission; then stage progression and QC approval (using `UpdateRowsAsync`).
+
+---
+
+### Date / session
+- Date: 2026-10-22
+- Claude Code session ID (if useful): session_01UwqjPjBXLd2apjZb2urjds (PR #26 update: approved queue decisions, Decision Log #78)
+
+### Goal
+- Apply the owner's approved queue decisions to PR #26 without adding write controls, schema or per-unit queues.
+
+### Completed
+- Checked `main` (last Decision Log entry #77; PR #26 is the only open PR), so the new entry is **#78**.
+- `ViewProductionQueue` now allows active users of the Management **and Planning** departments; all other departments are denied by default. Tests: permission matrix, both departments allowed, other departments / deactivated users / forged and stale principals / password-change-pending users denied, Planning sees the same overview as Management.
+- The screen is labelled a read-only overview (not the authoritative operational queue), with the provisional display order and the "not live" snapshot note; the Persian permission-denied text names Management and Planning.
+- Decision Log #78 records the approved visibility (implemented), the target unit-queue order (Planning position per released stage, FCFS tie-break, IN_PROGRESS / STOPPED-problem / WAITING categories, then priority, position, planned end, stable identifiers) and the override precedence (stays active until cleared; Planning change preserves both and flags review) as **approved but not implemented**. The "Who may view" bullet was removed from "Unresolved" and the "Queue ordering" bullet was rewritten to the details that remain open (it was one bullet in the file; the earlier diff showed it as a changed line). Domain Specification 15.4, 18.1, 18.2, 32.2, 32.3 and the open-questions list updated.
+- `docs/PRODUCTION_QUEUE.md` and checklist section E updated.
+
+### Files changed
+- See the pull request. No package, schema or migration change; no write control.
+
+### Decisions newly approved
+- #78 (owner, 2026-10-22).
+
+### Unresolved questions / risks
+- Details listed under "Queue ordering" in the Decision Log (stopped/problem state definition, FCFS timestamp, planned-end source, uniqueness of Planning positions, override position semantics and scope, clearing the review flag).
+- The per-unit released-stage queue, Planning positions and overrides are approved targets only; they need production units, stage states and a schema change in later PRs.
+- The WPF layer is compiled but not exercised by unit tests: checklist section E is pending the owner's run.
+
+### Commands/tests actually run and results
+- Not built locally (no SDK). Windows CI results are reported in the pull request.
+
+### Recommended exact next action
+- Review and merge PR #26 after running checklist section E; then stage progression and QC approval using `UpdateRowsAsync`, or the per-unit queue design, as the owner chooses.
