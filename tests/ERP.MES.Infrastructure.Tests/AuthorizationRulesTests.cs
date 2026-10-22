@@ -37,6 +37,10 @@ public class AuthorizationRulesTests
 
         // Read-only production overview (Decision Log #78): Management and Planning, any role; every other department is denied.
         [Permission.ViewProductionQueue] = (["MANAGEMENT", "PLANNING"], null),
+
+        // Demonstration stage flow (Decision Log #79): implementation assumptions from Master Specification 1.4A / 25.4. QC approval uses InspectOrCorrectQc above.
+        [Permission.ReleaseStage] = (["PLANNING"], null),
+        [Permission.RunStage] = (["PRODUCTION"], null),
     };
 
     [Fact]
