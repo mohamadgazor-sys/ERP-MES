@@ -151,7 +151,8 @@ public class StageWorkViewModelTests
         Assert.False(released);
         Assert.True(planning.IsDenied);
         Assert.Empty(planning.Rows);
-        Assert.Equal(StageWorkViewModel.DeniedText, planning.Message);
+        Assert.Equal(Messages.NotAuthorized, planning.Message);   // the refusal is what the user is told; the list behind it is already the denied state
+        Assert.True(planning.IsErrorMessage);
         Assert.Equal(ItemStageStatus.Planned, await StatusAsync(h, request, 1));
     }
 

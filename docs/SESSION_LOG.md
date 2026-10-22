@@ -1229,3 +1229,40 @@ Append one dated entry after every substantial session. Do not replace prior ent
 
 ### Recommended exact next action
 - Review and merge PR #26 after running checklist section E; then stage progression and QC approval using `UpdateRowsAsync`, or the per-unit queue design, as the owner chooses.
+
+---
+
+### Date / session
+- Date: 2026-10-23
+- Claude Code session ID (if useful): session_01UwqjPjBXLd2apjZb2urjds (limited stage progression and QC approval, Decision Log #79)
+
+### Goal
+- Implement the limited, demonstration-only stage progression and whole-quantity QC approval on the fixed seeded routes, with current-authorization checks, per-row expected versions, same-transaction audit and tests. No rejection, rework, scrap, external supply, route editing, overrides or Planning-position controls.
+
+### Completed
+- Verified `main` (merge commits of #19-#26 present; Decision Log #77 and #78 present; M8 resolved; queue visibility and the target order recorded).
+- Application: `StageWorkService` (`PerformAsync` for Release / Start / SubmitForQc / ApproveWholeQuantity, `LoadAsync`, `GetCapabilitiesAsync`, `AvailableFor`), `StageTarget` (ids and every row version the entry was read with); `ProductionQueueEntry` now also carries the request row version and the stage versions; new permissions `ReleaseStage` (Planning) and `RunStage` (Production) as UNAPPROVED implementation assumptions (QC approval uses the existing `InspectOrCorrectQc`); audit codes `StageReleased`, `StageStarted`, `StageSubmittedForQc`, `StageQcApproved`.
+- Persistence: `IRequestRepository.UpdateRowsAsync(..., audit, ...)` adds the audit entries to the same context, so the stage change, the QC approval and the audit row are one transaction. No schema or migration change.
+- Desktop: «مراحل و کنترل کیفیت» page (`StageWorkView`, `StageWorkViewModel`; shared `QueueRowFormatter`), four buttons mirroring the Application's answer, Persian success/failure messages, reload after every action; navigation item replaces the old QC placeholder.
+- Demo data: `demo.production` account added (eight accounts); CI smoke test, tests and docs updated for eight.
+- Tests: `StageWorkflowTests` (real SQLite: full sequence, persistence across contexts, QC gate, per-department authorization, deactivated and forged users, capabilities, invalid and repeated actions, stale request / item / stage / previous / next versions, missing versions, not found, failures leaving no partial change incl. a failing audit row and a competing write, audit entries and no secrets) and `StageWorkViewModelTests`; permission matrix, shell navigation and demo-account tests updated.
+- Docs: Decision Log #79 and an Unresolved item for the department mapping, `docs/STAGE_WORKFLOW_DEMO.md`, Domain Specification 15.4 note, `PRODUCTION_QUEUE.md`, `PERSISTENCE_MAPPING.md`, checklist section F.
+
+### Files changed
+- See the pull request.
+
+### Decisions newly approved
+- None. #79 records the owner's scope and enforcement direction; the Planning/Production department mapping is an assumption to confirm.
+
+### Unresolved questions / risks
+- Department mapping of release / start / submit (Planning / Production) and whether others (Management, a supervisor) may act.
+- No request-status gate: contract / Management-approval gates and the request-status transition table are not approved, so releasing is not blocked by request status.
+- No screen lists the audit entries or a per-stage history (stored and tested).
+- The WPF layer is compiled but not exercised by unit tests: checklist section F is pending the owner's run.
+- A seeded item whose first stage is already beyond PLANNED cannot be used to demonstrate the release step; the demo path must pick a planned item (seed has several states).
+
+### Commands/tests actually run and results
+- Not built locally (no SDK). Windows CI results are reported in the pull request.
+
+### Recommended exact next action
+- Review, run checklist section F, confirm or change the department mapping; then decide the next milestone (Planning priority edit / Planning positions, QC rejection with accepted/rework/scrap, or the per-unit queue).
