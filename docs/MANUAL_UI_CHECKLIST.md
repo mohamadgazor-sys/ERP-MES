@@ -14,7 +14,7 @@ Approved in Decision Log #50 as the check for the shell until a UI-automation ap
 | A4 | Demo banner | Yellow banner at the top says the build is a demonstration with fictional data | |
 | A5 | Navigation | Clicking each item changes the page and the heading; the selected item is highlighted | |
 | A6 | Dashboard | Four tiles; each shows "—" and says no data has been loaded; no invented numbers | |
-| A7 | Placeholder pages | "مشتریان", "درخواست‌ها", "صف تولید", "کنترل کیفیت" each say they are **not implemented yet in this build** | |
+| A7 | Placeholder pages | "کنترل کیفیت" says it is **not implemented yet in this build** ("مشتریان", "درخواست‌ها" and "صف تولید" are real pages, sections D and E) | |
 | A8 | Limitations page | Lists what the demonstration does not include | |
 | A9 | Status bar | Shows the current Jalali date and time with **Persian digits** and 24-hour time, for Iran Standard Time (compare with a trusted Jalali calendar); it updates within about 30 seconds | |
 | A10 | Resize | Shrinking to the minimum size and maximising keep all text readable; no overlap | |
@@ -89,3 +89,26 @@ Prepare a fictional demonstration database with `demo-init` (see `docs/AUTHENTIC
 | D19 | An old request of that now inactive customer | It is still listed and opened; Drawing/Planning can still add items and Central can still submit it | |
 
 Fixed seeded routes and the demonstration banner stay visible; queue stage progression, QC, Excel import and request-detail editing are not part of these screens.
+
+## E. Production overview for Management and Planning (read-only; `docs/PRODUCTION_QUEUE.md`, Decision Log #78) - pending the owner's run
+
+Prepare a fictional demonstration database with `demo-init` (see `docs/AUTHENTICATION.md` section 12). The seeded requests have routes and several stage states.
+
+| # | Step | Expected | OK |
+|---|---|---|---|
+| E1 | Sign in as `demo.management`, open "صف تولید" | Heading "نمای کلی تولید (فقط‌خواندنی)", a note that this is a read-only overview and not the official operational queue, that nothing on the page changes data and that it is a snapshot (not live); "در حال بارگذاری…" briefly, then a grid of items; the time the data was read is shown with Persian digits | |
+| E2 | Look at the layout | Right-to-left; columns read from the right; text is Tahoma; Persian digits in "ردیف", quantities, stage numbers and minutes; request numbers and item numbers are shown exactly as stored (Latin text is not changed) | |
+| E3 | Columns | Request number, customer, request status, item number, part name, type (ساخت/تعمیر), quantity, priority (`عادی`/`فوری`/`خیلی فوری`), current stage ("مرحلهٔ x از y: title"), stage status, QC status, two estimate columns | |
+| E4 | Order | "خیلی فوری" items first, then "فوری", then "عادی"; within a priority the older request date first; the note under the grid says this display order is provisional and not the official queue order, and that the approved final order and the Management override rule are not implemented yet and not applied here | |
+| E5 | Estimates | The estimate headers say "مدت پردازش تخمینی" and "(دقیقه)"; the note says it is not a completion date and ignores calendar, capacity and downtime; no completion date appears anywhere on the page | |
+| E6 | Stage and QC columns | An item whose first stage was approved shows stage 2 and "۱ از ۳ مرحله تأیید شده"; an item waiting for QC shows "در انتظار کنترل کیفیت"; an item with every stage approved shows "همهٔ مراحل تکمیل شد" and "—" for the current-stage estimate; an item without a route shows "مسیر تعریف نشده" | |
+| E7 | No write controls | The page has only "بارگذاری دوباره": no button, menu or cell edits a priority, a stage, a QC result or the order | |
+| E8 | Click "بارگذاری دوباره" | The loading text appears and the grid is replaced by the same rows; the time read is updated | |
+| E9 | Sign in as `demo.planning` and open "صف تولید" | The same overview as for Management (Planning may view it) | |
+| E9b | Sign in as `demo.central`, `demo.drawing`, `demo.qc` (one after another) and open "صف تولید" | "شما اجازهٔ مشاهدهٔ نمای کلی تولید را ندارید. این صفحه فقط برای مدیریت و برنامه‌ریزی است."; no rows; the same for the administrator account and for any other department | |
+| E10 | Copy 1: `demo.management` (or `demo.planning`) on the queue. Copy 2 (administrator, "Provisioning"/test tool): deactivate that user (no user screen yet; use the method in `docs/AUTHENTICATION.md`). Copy 1: "بارگذاری دوباره" | The permission-denied message replaces the rows | |
+| E11 | Add a request and an item in another copy (`demo.central`, `demo.planning`), then "بارگذاری دوباره" as Management | The new item appears in its place in the order (the page is a snapshot until reloaded) | |
+| E12 | Delete or rename the database file while the page is open, then "بارگذاری دوباره" | A Persian database-error message; no rows; no crash or exception window; after restoring the file, "بارگذاری دوباره" works again | |
+| E13 | An empty database (`demo-init` not run on a fresh `migrate`d file, with a Management or Planning user) | "در حال حاضر آیتمی برای نمایش در صف وجود ندارد." (not an error) | |
+| E14 | Lock the session (Ctrl+L) on the queue and unlock | The same page returns (section C) | |
+

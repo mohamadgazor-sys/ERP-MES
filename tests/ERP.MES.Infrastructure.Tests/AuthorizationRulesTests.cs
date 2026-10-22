@@ -34,6 +34,9 @@ public class AuthorizationRulesTests
         // Added by the owner (Decision Log #75): customer maintenance for Central and Planning; read-only viewing for every active user.
         [Permission.MaintainCustomers] = (["CENTRAL", "PLANNING"], null),
         [Permission.ViewCustomersAndRequests] = ([], null),
+
+        // Read-only production overview (Decision Log #78): Management and Planning, any role; every other department is denied.
+        [Permission.ViewProductionQueue] = (["MANAGEMENT", "PLANNING"], null),
     };
 
     [Fact]

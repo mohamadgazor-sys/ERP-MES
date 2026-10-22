@@ -1,7 +1,9 @@
+using ERP.MES.Application.Requests;
 using ERP.MES.Application.Security;
 using ERP.MES.Desktop.ViewModels;
 using ERP.MES.Domain.Calendar;
 using ERP.MES.Domain.Identity;
+using ERP.MES.Infrastructure.Persistence;
 using ERP.MES.Infrastructure.Security;
 using ERP.MES.Infrastructure.Sqlite;
 
@@ -49,6 +51,11 @@ internal sealed class WorkflowHarness : IDisposable
 
     public Principal Qc { get; private set; } = null!;
 
+    public Principal Management { get; private set; } = null!;
+
+    /// <summary>A repository over the harness database, to prepare routes and stage states that no screen creates yet.</summary>
+    public EfRequestRepository RequestRepository { get; private set; } = null!;
+
     public static async Task<WorkflowHarness> CreateAsync(CancellationToken cancellationToken)
     {
         var h = new WorkflowHarness();
@@ -64,6 +71,8 @@ internal sealed class WorkflowHarness : IDisposable
         h.Planning = await h.UserAsync("planning.one", DepartmentCodes.Planning, cancellationToken);
         h.Drawing = await h.UserAsync("drawing.one", DepartmentCodes.Drawing, cancellationToken);
         h.Qc = await h.UserAsync("qc.one", DepartmentCodes.Qc, cancellationToken);
+        h.Management = await h.UserAsync("management.one", DepartmentCodes.Management, cancellationToken);
+        h.RequestRepository = new EfRequestRepository(factory);
         return h;
     }
 
@@ -82,6 +91,9 @@ internal sealed class WorkflowHarness : IDisposable
         var workflow = services ?? Workflow;
         return new RequestsViewModel(workflow.Requests, workflow.Customers, Dates, DigitStyle.Persian, () => Clock.UtcNow, () => user);
     }
+
+    public ProductionQueueViewModel QueueFor(Principal user, ProductionQueueService? service = null) =>
+        new(service ?? Workflow.Queue, Dates, DigitStyle.Persian, () => Clock.UtcNow, () => user);
 
     private async Task<Principal> UserAsync(string name, string department, CancellationToken cancellationToken)
     {

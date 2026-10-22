@@ -35,6 +35,13 @@ public enum Permission
 
     /// <summary>Read the customer list and the request list and details. Not in the original matrix; added by the owner (Decision Log #75): every active signed-in user, read-only.</summary>
     ViewCustomersAndRequests,
+
+    /// <summary>
+    /// Read the read-only production overview (the "production queue" page). Approved by the owner (Decision Log #78) for active users of the Management and Planning
+    /// departments; every other department is denied by default. It grants no write permission: changing priorities, overriding the queue order and stage or QC actions keep
+    /// their own permissions. Views of one production unit's queue may get separate permissions later.
+    /// </summary>
+    ViewProductionQueue,
 }
 
 /// <summary>
@@ -71,6 +78,9 @@ public static class AuthorizationRules
 
         // Read-only access for every active user (an empty department list means any department, no role is required).
         [Permission.ViewCustomersAndRequests] = new([], null),
+
+        // Read-only production overview: Management and Planning (Decision Log #78).
+        [Permission.ViewProductionQueue] = new([DepartmentCodes.Management, DepartmentCodes.Planning], null),
     };
 
     /// <summary>All permissions that have a rule, for tests and documentation.</summary>

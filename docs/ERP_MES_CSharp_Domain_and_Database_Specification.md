@@ -972,6 +972,8 @@ Items are editable only until production release; afterwards only Planning may c
 
 > **[Approved - Decision Log #75]** Added by the owner while building the first screens: **maintain customers** (create, rename, deactivate, reactivate; never delete) - Central or Planning; **view customers and requests** (read-only) - every active signed-in user. A mixed MAKE/REPAIR request is built in turn: Central creates and submits it, Drawing adds MAKE items, Planning adds REPAIR items and may add any item; a priority other than Normal at item entry also needs the permission to change the Planning priority. The only request transition implemented is CREATED to SENT_TO_MANAGEMENT (Central).
 
+> **[Approved - Decision Log #78]** **View the read-only production overview** (`ViewProductionQueue`) - active users in Management or Planning; every other department is denied by default. Views of one production unit's queue may get separate permissions later.
+
 ---
 
 # 16. Unit of Measure Domain
@@ -1075,7 +1077,9 @@ Required audit data:
 - reason;
 - all affected stages/items in that one operation.
 
-**Open interaction rule:** if Planning subsequently changes the priority of an item that is currently included in an active Management override, the system must preserve both facts and avoid silent data loss. The final precedence behavior (whether the override remains fixed, is flagged for review, or recalculates) must be explicitly decided before implementing that edge case.
+> **[Approved - Decision Log #78; not implemented]** A Management override stays active until Management explicitly clears it. If Planning subsequently changes the priority of an item that is covered by an active override, the system preserves both the underlying Planning priority and the active override and flags the override as requiring Management review; it never silently cancels or replaces it. Every override records the actor, timestamp, reason and previous/new order. Open details: absolute position versus "move ahead of row X", item versus stage scope, and how the review flag is cleared.
+
+> **[Approved target - Decision Log #78; not implemented]** Order of a production unit's queue: Planning gives each **released stage** an explicit **Planning position**; equal positions are decided first come, first served. Full order: operational category (IN_PROGRESS, then STOPPED / problem states, then WAITING); then Planning priority; then Planning position; then available planned-end information; then stable identifiers. The current read-only overview (`docs/PRODUCTION_QUEUE.md`) is item-level with a provisional display order and does not apply this.
 
 ## 18.2 Queue display behavior
 
@@ -1598,7 +1602,7 @@ This register distinguishes confirmed business rules from decisions still needin
 
 Priority values are exactly `عادی`, `فوری`, and `خیلی فوری`, mapped to stable codes and ordered from lowest to highest *(see §18 for the authoritative table: `SortOrder` 1 = highest urgency, `VERY_URGENT`; audit X20)*. Planning owns normal priority/order and may update it; the live queue must respond. Multiple stages/items may share a priority. Management may override multiple stages/items in one queue operation. Every override batch and affected stage position must be audited with user, timestamp, old/new order and reason; preserve the underlying Planning priority.
 
-Resolved (Decision Log #58): (a) the normal Planning priority belongs to the `RequestItem`; stages and queue entries inherit it. Still pending within this area: (b) how a later Planning priority edit interacts with an active Management override.
+Resolved (Decision Log #58): (a) the normal Planning priority belongs to the `RequestItem`; stages and queue entries inherit it. (b) How a later Planning priority edit interacts with an active Management override is resolved in Decision Log #78 (the override stays active, both facts are preserved, the override is flagged for Management review); not implemented yet.
 
 ## 32.3 Scheduling calendar — BASE RULES RESOLVED; capacity algorithm pending
 
@@ -1612,7 +1616,7 @@ Confirmed defaults/configuration:
 - Maintenance/PM reports machine downtime (including maintenance and power outage) to Planning; downtime must influence available capacity and schedule recalculation.
 - Planning enters minutes per piece. Estimated stage load = minutes per piece × planned quantity. External stages additionally have expected lead time.
 
-Pending: capacity allocation across multiple eligible machines within a Production Unit, scheduling of a stage before the supervisor assigns a machine, exact queue tie-break after same priority/order, and precedence when Planning changes a row covered by Management's active override.
+Pending: capacity allocation across multiple eligible machines within a Production Unit, scheduling of a stage before the supervisor assigns a machine, and planned-end information for the queue order. (The queue tie-break after equal Planning position and the override precedence are decided in Decision Log #78.)
 
 ## 32.4 Stage route revisions — PARTIALLY RESOLVED
 
@@ -1753,7 +1757,7 @@ The database/domain design is ready for implementation when:
 The older checklist below is superseded by Section 32, Decision Register — Current Status. Confirmed decisions must not be asked again. The remaining design decisions are listed there, particularly:
 
 1. Request-level headline progress formula.
-2. How queue priority is attached (ItemStage versus RequestItem) and how an active Management override interacts with later Planning priority changes.
+2. ~~How queue priority is attached and how an override interacts with later Planning changes~~ - decided (Decision Log #58 and #78); implementation of Planning positions and overrides remains.
 3. Machine-capacity allocation and recalculation rules for the scheduling engine.
 4. Exact downstream-state handling after a route revision.
 5. Final Persian Excel header/value strings and conflict options for active items.
