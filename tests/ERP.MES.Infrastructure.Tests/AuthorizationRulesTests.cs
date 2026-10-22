@@ -37,6 +37,10 @@ public class AuthorizationRulesTests
 
         // Read-only production overview (Decision Log #78): Management and Planning, any role; every other department is denied.
         [Permission.ViewProductionQueue] = (["MANAGEMENT", "PLANNING"], null),
+
+        // Demonstration stage flow (Decision Log #79): demo-only mapping approved by the owner (Decision Log #80), not a finalized production matrix. QC approval uses InspectOrCorrectQc above.
+        [Permission.ReleaseStage] = (["PLANNING"], null),
+        [Permission.RunStage] = (["PRODUCTION"], null),
     };
 
     [Fact]

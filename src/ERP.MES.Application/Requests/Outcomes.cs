@@ -56,6 +56,12 @@ public enum ValidationIssue
 
     /// <summary>A cancelled or closed request accepts no new items.</summary>
     RequestClosedForItems,
+
+    /// <summary>The stage action is not one of the demonstration actions.</summary>
+    StageActionInvalid,
+
+    /// <summary>The caller did not supply the loaded row versions the action relies on; nothing was changed (Decision Log #77).</summary>
+    VersionsMissing,
 }
 
 /// <summary>The result of a command or query: a status, the value on success, and the details of a refusal.</summary>

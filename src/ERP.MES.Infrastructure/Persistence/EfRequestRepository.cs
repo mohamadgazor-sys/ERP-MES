@@ -1,4 +1,5 @@
 using ERP.MES.Application.Persistence;
+using ERP.MES.Application.Security;
 using ERP.MES.Domain.Requests;
 using Microsoft.EntityFrameworkCore;
 
@@ -136,7 +137,18 @@ public sealed class EfRequestRepository(IDbContextFactory<ErpMesDbContext> conte
         return request is null ? null : new VersionedRequest(request, CaptureVersions(context, request));
     }
 
-    public async Task<VersionedRequest> UpdateRowsAsync(long requestId, RowVersionExpectations expected, Action<Request> change, CancellationToken cancellationToken = default)
+    public Task<VersionedRequest> UpdateRowsAsync(long requestId, RowVersionExpectations expected, Action<Request> change, CancellationToken cancellationToken = default) =>
+        UpdateRowsCoreAsync(requestId, expected, change, audit: null, cancellationToken);
+
+    public Task<VersionedRequest> UpdateRowsAsync(
+        long requestId, RowVersionExpectations expected, Action<Request> change, Func<Request, IReadOnlyList<AuditLogEntry>> audit, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(audit);
+        return UpdateRowsCoreAsync(requestId, expected, change, audit, cancellationToken);
+    }
+
+    private async Task<VersionedRequest> UpdateRowsCoreAsync(
+        long requestId, RowVersionExpectations expected, Action<Request> change, Func<Request, IReadOnlyList<AuditLogEntry>>? audit, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(expected);
         ArgumentNullException.ThrowIfNull(change);
@@ -148,6 +160,13 @@ public sealed class EfRequestRepository(IDbContextFactory<ErpMesDbContext> conte
         // Every named row is compared BEFORE the change runs, so a rejected operation has changed nothing, in memory or in the database.
         CheckExpected(context, request, expected);
         change(request);
+
+        // The audit entries are added to the same context, so the change and its audit trail are one transaction.
+        if (audit is not null)
+        {
+            context.AuditLog.AddRange(audit(request));
+        }
+
         await PersistenceSave.SaveAsync(context, cancellationToken);
         return new VersionedRequest(request, CaptureVersions(context, request));
     }

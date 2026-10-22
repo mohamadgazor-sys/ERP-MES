@@ -102,7 +102,13 @@ position is unique per unit; whether an override is an absolute position or "mov
 The page is a **snapshot** read when it opens and when "بارگذاری دوباره" is pressed; it shows the time it was read. It is not live (no push, no automatic refresh). The
 specification asks for a live queue (Architecture 10.2); automatic refresh belongs with the future per-unit queue.
 
-## 9. Not in this PR
+## 9. Stage actions live on a separate page (Decision Log #79)
 
-Planning priority edits, Planning positions, Management overrides, stage transitions, QC approval or rejection, per-unit queues and their schema, planned end, SQL Server,
-automatic refresh, export, filters, sorting by column.
+The overview stays read-only. The demonstration stage actions (release, start, submit for QC, whole-quantity QC approval) are on the separate page "مراحل و کنترل کیفیت", which
+lists the same items and is also open to Production and QC users (who cannot see the overview). It is not the authoritative per-unit operational queue either. See
+`docs/STAGE_WORKFLOW_DEMO.md`.
+
+## 10. Not in this overview
+
+Planning priority edits, Planning positions, Management overrides, QC rejection, per-unit queues and their schema, planned end, SQL Server, automatic refresh, export, filters,
+sorting by column.

@@ -91,6 +91,8 @@ The SQLite project supplies the context factory (`SqliteDatabase.CreateContextFa
 - **What this guarantees, exactly:** each row the caller names is protected against a stale view, and every row the operation touches is protected between load and save. It does not make the request an aggregate-level concurrency unit: a row the caller did not name is not compared with the caller's view, and changes to different rows of one request do not conflict. A stage operation that also changes its item (an approval appends a QC approval, sets the item's update time and releases the next stage) should name the stage, the next stage and the item, or use `RowVersionExpectations.FromLoaded(versions)` for the whole view.
 - No schema or migration change. Tests: `RowVersionTests` (real SQLite files, committed migrations).
 
+**Audited update (Decision Log #79).** `UpdateRowsAsync(requestId, expected, change, audit, ct)` adds the audit entries returned by `audit` to the same context as the change, so a stage change and its `AuditLog` row are one transaction (all or nothing). The per-row concurrency guarantee is unchanged. `docs/STAGE_WORKFLOW_DEMO.md`.
+
 **Read-only queue.** The Management production queue (`docs/PRODUCTION_QUEUE.md`) uses only `ListAsync` and `FindWithVersionsAsync` and writes nothing; its entries carry the item and current-stage row versions for the later `UpdateRowsAsync` actions. A dedicated queue read model is deferred.
 
 **Not included:** authentication, queue read models, audit, a status-transition workflow, SQL Server.

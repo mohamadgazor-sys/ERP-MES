@@ -43,6 +43,12 @@ public static class AuditActions
     public const string SessionUnlocked = "SessionUnlocked";
     public const string SessionUserSwitched = "SessionUserSwitched";
 
+    // Demonstration stage flow (Decision Log #79). Written in the same transaction as the stage change. Nothing here ever carries a password or token.
+    public const string StageReleased = "StageReleased";
+    public const string StageStarted = "StageStarted";
+    public const string StageSubmittedForQc = "StageSubmittedForQc";
+    public const string StageQcApproved = "StageQcApproved";
+
     /// <summary>Written on a clean shutdown, on a best-effort basis. A crash, a forced termination or a power loss writes nothing, and nothing is written later to pretend otherwise.</summary>
     public const string ApplicationSessionEnded = "ApplicationSessionEnded";
 }

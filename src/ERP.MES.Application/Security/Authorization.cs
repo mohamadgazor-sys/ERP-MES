@@ -42,6 +42,18 @@ public enum Permission
     /// their own permissions. Views of one production unit's queue may get separate permissions later.
     /// </summary>
     ViewProductionQueue,
+
+    /// <summary>
+    /// Release a planned stage for production (demonstration flow, Decision Log #79). DEMO-ONLY mapping approved by the owner (Decision Log #80), from Master Specification 1.4A and 25.4
+    /// ("Planning may release production"); it does not finalize the production authorization matrix. Department: Planning.
+    /// </summary>
+    ReleaseStage,
+
+    /// <summary>
+    /// Start a waiting stage and hand it to QC (demonstration flow, Decision Log #79). DEMO-ONLY mapping approved by the owner (Decision Log #80), from Master Specification 25.4
+    /// (production units "record work sessions, deliver completed work to QC"); it does not finalize the production authorization matrix. Department: Production.
+    /// </summary>
+    RunStage,
 }
 
 /// <summary>
@@ -81,6 +93,10 @@ public static class AuthorizationRules
 
         // Read-only production overview: Management and Planning (Decision Log #78).
         [Permission.ViewProductionQueue] = new([DepartmentCodes.Management, DepartmentCodes.Planning], null),
+
+        // Demonstration stage flow (Decision Log #79): DEMO-ONLY mapping approved by the owner (Decision Log #80); not a finalized production matrix. QC approval uses InspectOrCorrectQc.
+        [Permission.ReleaseStage] = new([DepartmentCodes.Planning], null),
+        [Permission.RunStage] = new([DepartmentCodes.Production], null),
     };
 
     /// <summary>All permissions that have a rule, for tests and documentation.</summary>

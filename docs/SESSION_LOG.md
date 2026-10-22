@@ -1229,3 +1229,101 @@ Append one dated entry after every substantial session. Do not replace prior ent
 
 ### Recommended exact next action
 - Review and merge PR #26 after running checklist section E; then stage progression and QC approval using `UpdateRowsAsync`, or the per-unit queue design, as the owner chooses.
+
+---
+
+### Date / session
+- Date: 2026-10-23
+- Claude Code session ID (if useful): session_01UwqjPjBXLd2apjZb2urjds (limited stage progression and QC approval, Decision Log #79)
+
+### Goal
+- Implement the limited, demonstration-only stage progression and whole-quantity QC approval on the fixed seeded routes, with current-authorization checks, per-row expected versions, same-transaction audit and tests. No rejection, rework, scrap, external supply, route editing, overrides or Planning-position controls.
+
+### Completed
+- Verified `main` (merge commits of #19-#26 present; Decision Log #77 and #78 present; M8 resolved; queue visibility and the target order recorded).
+- Application: `StageWorkService` (`PerformAsync` for Release / Start / SubmitForQc / ApproveWholeQuantity, `LoadAsync`, `GetCapabilitiesAsync`, `AvailableFor`), `StageTarget` (ids and every row version the entry was read with); `ProductionQueueEntry` now also carries the request row version and the stage versions; new permissions `ReleaseStage` (Planning) and `RunStage` (Production) as UNAPPROVED implementation assumptions (QC approval uses the existing `InspectOrCorrectQc`); audit codes `StageReleased`, `StageStarted`, `StageSubmittedForQc`, `StageQcApproved`.
+- Persistence: `IRequestRepository.UpdateRowsAsync(..., audit, ...)` adds the audit entries to the same context, so the stage change, the QC approval and the audit row are one transaction. No schema or migration change.
+- Desktop: «مراحل و کنترل کیفیت» page (`StageWorkView`, `StageWorkViewModel`; shared `QueueRowFormatter`), four buttons mirroring the Application's answer, Persian success/failure messages, reload after every action; navigation item replaces the old QC placeholder.
+- Demo data: `demo.production` account added (eight accounts); CI smoke test, tests and docs updated for eight.
+- Tests: `StageWorkflowTests` (real SQLite: full sequence, persistence across contexts, QC gate, per-department authorization, deactivated and forged users, capabilities, invalid and repeated actions, stale request / item / stage / previous / next versions, missing versions, not found, failures leaving no partial change incl. a failing audit row and a competing write, audit entries and no secrets) and `StageWorkViewModelTests`; permission matrix, shell navigation and demo-account tests updated.
+- Docs: Decision Log #79 and an Unresolved item for the department mapping, `docs/STAGE_WORKFLOW_DEMO.md`, Domain Specification 15.4 note, `PRODUCTION_QUEUE.md`, `PERSISTENCE_MAPPING.md`, checklist section F.
+
+### Files changed
+- See the pull request.
+
+### Decisions newly approved
+- None. #79 records the owner's scope and enforcement direction; the Planning/Production department mapping is an assumption to confirm.
+
+### Unresolved questions / risks
+- Department mapping of release / start / submit (Planning / Production) and whether others (Management, a supervisor) may act.
+- No request-status gate: contract / Management-approval gates and the request-status transition table are not approved, so releasing is not blocked by request status.
+- No screen lists the audit entries or a per-stage history (stored and tested).
+- The WPF layer is compiled but not exercised by unit tests: checklist section F is pending the owner's run.
+- A seeded item whose first stage is already beyond PLANNED cannot be used to demonstrate the release step; the demo path must pick a planned item (seed has several states).
+
+### Commands/tests actually run and results
+- Not built locally (no SDK). Windows CI results are reported in the pull request.
+
+### Recommended exact next action
+- Review, run checklist section F, confirm or change the department mapping; then decide the next milestone (Planning priority edit / Planning positions, QC rejection with accepted/rework/scrap, or the per-unit queue).
+
+---
+
+### Date / session
+- Date: 2026-10-23
+- Claude Code session ID (if useful): session_01UwqjPjBXLd2apjZb2urjds (PR #27 update: owner-approved demo-only permission mapping, Decision Log #80)
+
+### Goal
+- Record the owner's approval of the demo-only stage-action department mapping without finalizing the production authorization matrix, and keep the missing request-status / contract / Management-approval gates explicitly unresolved and labelled.
+
+### Completed
+- Checked `main` (last Decision Log entry #78) and the open PRs (only #27, which holds #79), so the new entry is **#80**.
+- Decision Log #80: release = Planning (`ReleaseStage`), start and submit for QC = Production (`RunStage`), QC approval = QC (`InspectOrCorrectQc`), demo-only; #79 (5) now points to it. The "department mapping" unresolved assumption was removed and replaced by the still-open production eligibility question (request-status transition table; contract / Management approval versus production release) and by the undecided extras (other departments acting, correcting a wrong start).
+- Code comments (no behaviour change) and the Domain Specification 15.4 note now say "approved, demo only"; the stage-work screen note and `docs/STAGE_WORKFLOW_DEMO.md` state that no request-status, contract or Management-approval gate is checked; checklist F19 added.
+
+### Files changed
+- See the pull request. No schema, package or behavioural change.
+
+### Decisions newly approved
+- #80 (owner, demo-only).
+
+### Unresolved questions / risks
+- Request-status transition table and the relationship between contract / Management approval and production release; the demo has no such gate.
+- Whether Management or a supervisor may act on stages; who may correct a wrong start or submission.
+- The WPF layer is compiled but not exercised by unit tests: checklist section F is pending the owner's run.
+
+### Commands/tests actually run and results
+- Not built locally (no SDK). Windows CI results are reported in the pull request.
+
+### Recommended exact next action
+- Run checklist section F, then review and merge PR #27; then decide the production eligibility rules before any production release workflow.
+
+---
+
+### Date / session
+- Date: 2026-10-23
+- Claude Code session ID (if useful): session_01UwqjPjBXLd2apjZb2urjds (PR #27: owner acceptance of the demo stage workflow, Decision Log #81)
+
+### Goal
+- Record the owner's manual Windows acceptance (checklist F1-F18) and confirmation of the demo-only stage-action department mapping, without any functional change.
+
+### Completed
+- Checked `main` (last Decision Log entry #78) and the open PRs (only #27, holding #79 and #80), so the new entry is **#81**. The mapping itself was already recorded as #80; #81 records the owner's acceptance after the manual test and the confirmation of that mapping, and states again that the production request-status, contract and Management-approval gates are not implemented.
+- Documentation only: Decision Log #81 (and a back-reference in #80), `docs/STAGE_WORKFLOW_DEMO.md` status, checklist section F heading (F1-F18 passed, F19 not yet run), PR description.
+
+### Files changed
+- Documentation only. No code, schema, package or behaviour change.
+
+### Decisions newly approved
+- #81 (owner).
+
+### Unresolved questions / risks
+- Request-status transition table; contract / Management approval versus production release (no gate in the demo).
+- Whether Management or a supervisor may act on stages; who corrects a wrong start or submission.
+- Checklist step F19 (demo-only note wording) has not been run by the owner.
+
+### Commands/tests actually run and results
+- Not built locally (no SDK). Windows CI results are reported in the pull request.
+
+### Recommended exact next action
+- Merge PR #27 after review; then decide the production eligibility rules before any production release workflow, or the next milestone (Planning priority edits and Planning positions, QC rejection with accepted/rework/scrap, or the per-unit queue).

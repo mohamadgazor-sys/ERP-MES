@@ -369,6 +369,10 @@ public class ProductionQueueTests
 
         public Task<VersionedRequest> UpdateRowsAsync(long requestId, RowVersionExpectations expected, Action<Request> change, CancellationToken cancellationToken = default) =>
             throw new NotSupportedException();
+
+        public Task<VersionedRequest> UpdateRowsAsync(
+            long requestId, RowVersionExpectations expected, Action<Request> change, Func<Request, IReadOnlyList<AuditLogEntry>> audit, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
     }
 
     [Theory]

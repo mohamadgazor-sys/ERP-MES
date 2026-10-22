@@ -14,7 +14,7 @@ Approved in Decision Log #50 as the check for the shell until a UI-automation ap
 | A4 | Demo banner | Yellow banner at the top says the build is a demonstration with fictional data | |
 | A5 | Navigation | Clicking each item changes the page and the heading; the selected item is highlighted | |
 | A6 | Dashboard | Four tiles; each shows "—" and says no data has been loaded; no invented numbers | |
-| A7 | Placeholder pages | "کنترل کیفیت" says it is **not implemented yet in this build** ("مشتریان", "درخواست‌ها" and "صف تولید" are real pages, sections D and E) | |
+| A7 | Pages | No placeholder page is left: "مشتریان", "درخواست‌ها" (section D), "صف تولید" (section E) and «مراحل و کنترل کیفیت» (section F) are real pages; the old "کنترل کیفیت" placeholder item is replaced by «مراحل و کنترل کیفیت» | |
 | A8 | Limitations page | Lists what the demonstration does not include | |
 | A9 | Status bar | Shows the current Jalali date and time with **Persian digits** and 24-hour time, for Iran Standard Time (compare with a trusted Jalali calendar); it updates within about 30 seconds | |
 | A10 | Resize | Shrinking to the minimum size and maximising keep all text readable; no overlap | |
@@ -88,7 +88,7 @@ Prepare a fictional demonstration database with `demo-init` (see `docs/AUTHENTIC
 | D18 | In two copies of the application: copy 1 as `demo.central` on "درخواست‌ها" with a customer selected in the form; copy 2 as `demo.central` or `demo.planning` deactivates that customer ("مشتریان"). In copy 1 press "ثبت درخواست" | "این مشتری غیرفعال است ... درخواستی ثبت نشد ..."; no request is added; the customer list in copy 1 reloads without that customer; the customer is still inactive | |
 | D19 | An old request of that now inactive customer | It is still listed and opened; Drawing/Planning can still add items and Central can still submit it | |
 
-Fixed seeded routes and the demonstration banner stay visible; queue stage progression, QC, Excel import and request-detail editing are not part of these screens.
+Fixed seeded routes and the demonstration banner stay visible; stage progression and QC are on the separate page of section F; Excel import and request-detail editing are not part of these screens.
 
 ## E. Production overview for Management and Planning (read-only; `docs/PRODUCTION_QUEUE.md`, Decision Log #78) - pending the owner's run
 
@@ -112,3 +112,28 @@ Prepare a fictional demonstration database with `demo-init` (see `docs/AUTHENTIC
 | E13 | An empty database (`demo-init` not run on a fresh `migrate`d file, with a Management or Planning user) | "در حال حاضر آیتمی برای نمایش در صف وجود ندارد." (not an error) | |
 | E14 | Lock the session (Ctrl+L) on the queue and unlock | The same page returns (section C) | |
 
+## F. Stage progression and QC approval (demonstration; `docs/STAGE_WORKFLOW_DEMO.md`, Decision Log #79, #80, #81) - F1-F18 passed on Windows (owner); F19 not yet run
+
+Prepare a fictional demonstration database with `demo-init` (`docs/AUTHENTICATION.md` section 12). Accounts used: `demo.planning`, `demo.production` (new), `demo.qc`, `demo.management`, `demo.central`. The seeded routes have 2-3 stages. An easy path: pick an item whose first stage is still planned (the seed has items in several states; the page shows "برنامه‌ریزی‌شده (هنوز آزاد نشده)").
+
+| # | Step | Expected | OK |
+|---|---|---|---|
+| F1 | Sign in as `demo.management`, open «مراحل و کنترل کیفیت» | The items are listed (request, customer, item, type, priority, current stage, stage status, QC position, estimate); the heading says it is a demonstration, the note says only these four actions exist and that it is not the official queue; all four buttons stay disabled even with a row selected | |
+| F2 | Sign in as `demo.central` (or `demo.drawing`), open the page | "شما اجازهٔ مشاهدهٔ مراحل تولید را ندارید."; no rows; no buttons enabled | |
+| F3 | As `demo.planning`, select an item whose current stage is "برنامه‌ریزی‌شده (هنوز آزاد نشده)" | Only «آزادسازی مرحلهٔ اول (برنامه‌ریزی)» is enabled | |
+| F4 | Click it | Green message "مرحلهٔ اول آزاد شد و آمادهٔ اجرا است."; the list reloads; the stage now reads "آمادهٔ اجرا"; the button is disabled again | |
+| F5 | Sign in as `demo.production`, select that item | Only «شروع مرحله (تولید)» is enabled; «ارسال به کنترل کیفیت» is disabled | |
+| F6 | Click «شروع مرحله» | "مرحله شروع شد."; status "در حال اجرا"; now only «ارسال به کنترل کیفیت (تولید)» is enabled | |
+| F7 | Click «ارسال به کنترل کیفیت» | "مرحله برای کنترل کیفیت ارسال شد."; status "در انتظار کنترل کیفیت"; QC column starts with "در انتظار تأیید کنترل کیفیت؛ …"; no Production button is enabled | |
+| F8 | Sign in as `demo.qc`, select the item | Only «تأیید کنترل کیفیت — کل تعداد» is enabled | |
+| F9 | Click it | "تأیید کنترل کیفیت ثبت شد؛ مرحلهٔ ۲ اکنون آمادهٔ اجرا است."; the current stage is now stage 2 "آمادهٔ اجرا"; the QC column shows "۱ از n مرحله تأیید شده"; the button is disabled | |
+| F10 | Gate: as `demo.production`, select an item whose stage 2 is not yet available (its stage 1 is not approved) | The current stage shown is stage 1, never stage 2; stage 2 cannot be started or submitted until QC approved stage 1 | |
+| F11 | Repeat F5-F9 for stage 2 (and stage 3 where present) | After the last approval the row reads "همهٔ مراحل تکمیل شد" with "—" for the current-stage estimate and the green message "تأیید کنترل کیفیت ثبت شد؛ همهٔ مراحل این آیتم تأیید شده است."; no button is enabled | |
+| F12 | Two copies of the application: copy 1 and copy 2 both as `demo.production` on an item whose stage is "آمادهٔ اجرا" (loaded, not refreshed). In copy 1 click «شروع مرحله»; then in copy 2 click «شروع مرحله» | Copy 2 shows the red conflict message ("این آیتم یا مرحله را کاربر دیگری تغییر داده است؛ کاری انجام نشد…"), reloads, and shows "در حال اجرا"; nothing was started twice | |
+| F13 | In copy 1 as `demo.qc` click «تأیید» on a stage waiting for QC; then click it again at once (the row has refreshed: the button is disabled) | The second click is not possible; with two copies the second copy gets the conflict message; exactly one approval is recorded | |
+| F14 | Sign in as `demo.planning` on one copy and `demo.management` on another; release an item in the first, then reload the second page «صف تولید» | The queue overview shows the new stage status after «بارگذاری دوباره» | |
+| F15 | Lock the session (Ctrl+L) on this page and unlock | The same page returns (section C) | |
+| F16 | Close and restart the application; open the page | The new stage states are still there (persisted) | |
+| F17 | Deactivate `demo.production` (administrator tool, `docs/AUTHENTICATION.md`) while that user has the page open; click an enabled button | A red permission message; the list reloads to the denied state; nothing changed | |
+| F18 | Audit (Provisioning/DB tool or a SQLite viewer on the demo database; there is no audit screen yet): `SELECT ActionCode, UserId, TargetId, Summary FROM AuditLog WHERE ActionCode LIKE 'Stage%'` | One row per successful action in order, with the right user, target `itemId/stageNo` and a before -> after summary; none for refused or conflicting clicks; no password or token text | |
+| F19 | Demo-only labelling | The note at the top of «مراحل و کنترل کیفیت» says the release-eligibility conditions (request status, contract, Management approval) are not approved and not checked in this demonstration version; a request in any seeded status can be worked on | |

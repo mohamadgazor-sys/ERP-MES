@@ -1,3 +1,4 @@
+using ERP.MES.Application.Security;
 using ERP.MES.Domain.Requests;
 
 namespace ERP.MES.Application.Persistence;
@@ -50,4 +51,12 @@ public interface IRequestRepository
     /// save), not "the request as the caller last saw it" unless the caller names every row it relied on (see <see cref="RowVersionExpectations.FromLoaded"/>).
     /// </summary>
     Task<VersionedRequest> UpdateRowsAsync(long requestId, RowVersionExpectations expected, Action<Request> change, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Like <see cref="UpdateRowsAsync(long, RowVersionExpectations, Action{Request}, CancellationToken)"/>, and also appends the audit entries that <paramref name="audit"/> returns
+    /// (called after <paramref name="change"/> succeeded, with the changed request) in the SAME transaction: either the change and its audit entries are saved, or neither is. If
+    /// <paramref name="audit"/> throws, nothing is saved. Audit entries are append-only (Decision Log #26, #68).
+    /// </summary>
+    Task<VersionedRequest> UpdateRowsAsync(
+        long requestId, RowVersionExpectations expected, Action<Request> change, Func<Request, IReadOnlyList<AuditLogEntry>> audit, CancellationToken cancellationToken = default);
 }

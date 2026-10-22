@@ -63,7 +63,7 @@ Honest limits of the sample, all inherited from the Domain model (Decision Log #
 
 ## 3a. Demonstration accounts and credentials
 
-A new or reset demonstration database also gets seven fictional accounts, created through the production bootstrap and account use cases, each with a random one-time password written only to a protected credential file outside the repository (`--credentials <file>`, or a default under the user's local application data). `demo-init` on an initialised database creates none; `demo-reset` creates new accounts with new passwords. The commands never print a password. Details, the file protection and the checks: `docs/AUTHENTICATION.md` section 9.
+A new or reset demonstration database also gets eight fictional accounts (including `demo.production` for the stage walkthrough), created through the production bootstrap and account use cases, each with a random one-time password written only to a protected credential file outside the repository (`--credentials <file>`, or a default under the user's local application data). `demo-init` on an initialised database creates none; `demo-reset` creates new accounts with new passwords. The commands never print a password. Details, the file protection and the checks: `docs/AUTHENTICATION.md` section 9.
 
 ## 4. Concurrency (M8) - resolved by Decision Log #77
 

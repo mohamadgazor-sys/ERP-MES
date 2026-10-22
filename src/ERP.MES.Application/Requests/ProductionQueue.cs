@@ -42,7 +42,14 @@ public sealed record ProductionQueueEntry(
     int ApprovedStageCount,
     QueueStage? CurrentStage,
     decimal? TotalEstimatedMinutes,
-    long ItemVersion);
+    long ItemVersion)
+{
+    /// <summary>The request row's version as read (Decision Log #77). A stage action names it as an expected version.</summary>
+    public long RequestVersion { get; init; }
+
+    /// <summary>The row version of every stage of the item as read, by stage number. A stage action names the versions of the stages it changes or relies on.</summary>
+    public IReadOnlyDictionary<int, long> StageVersions { get; init; } = new Dictionary<int, long>();
+}
 
 /// <summary>The queue as read at one moment, already in the documented display order (<see cref="ProductionQueueService.DisplayOrder"/>).</summary>
 public sealed record ProductionQueue(IReadOnlyList<ProductionQueueEntry> Entries);
@@ -70,26 +77,29 @@ public sealed class ProductionQueueService(IRequestRepository requests, CurrentA
             return Outcome<ProductionQueue>.Fail(OperationStatus.NotAuthorized);
         }
 
-        return await CustomerService.GuardAsync(async () =>
-        {
-            var summaries = await requests.ListAsync(customerId: null, cancellationToken);
-            var entries = new List<ProductionQueueEntry>();
-            foreach (var summary in summaries)
-            {
-                var loaded = await requests.FindWithVersionsAsync(summary.RequestId, cancellationToken);
-                if (loaded is null)
-                {
-                    continue;
-                }
+        return await CustomerService.GuardAsync(async () => Outcome<ProductionQueue>.Ok(new ProductionQueue(await ReadEntriesAsync(requests, cancellationToken))));
+    }
 
-                foreach (var item in loaded.Value.Items)
-                {
-                    entries.Add(ToEntry(summary, loaded, item));
-                }
+    /// <summary>Reads every item of every request in the display order. The caller has already checked the permission. Also used by the stage-work screen (<see cref="StageWorkService"/>).</summary>
+    internal static async Task<IReadOnlyList<ProductionQueueEntry>> ReadEntriesAsync(IRequestRepository requests, CancellationToken cancellationToken)
+    {
+        var summaries = await requests.ListAsync(customerId: null, cancellationToken);
+        var entries = new List<ProductionQueueEntry>();
+        foreach (var summary in summaries)
+        {
+            var loaded = await requests.FindWithVersionsAsync(summary.RequestId, cancellationToken);
+            if (loaded is null)
+            {
+                continue;
             }
 
-            return Outcome<ProductionQueue>.Ok(new ProductionQueue(DisplayOrder(entries)));
-        });
+            foreach (var item in loaded.Value.Items)
+            {
+                entries.Add(ToEntry(summary, loaded, item));
+            }
+        }
+
+        return DisplayOrder(entries);
     }
 
     /// <summary>The documented provisional display order; see the class remarks. Every key is a total order and the last key (item id) is unique.</summary>
@@ -132,6 +142,10 @@ public sealed class ProductionQueueService(IRequestRepository requests, CurrentA
             approved,
             queueStage,
             stages.Count == 0 ? null : stages.Sum(s => s.PlannedTotalMinutes),
-            loaded.Versions.ItemVersion(item.Id));
+            loaded.Versions.ItemVersion(item.Id))
+        {
+            RequestVersion = loaded.Versions.Request,
+            StageVersions = stages.ToDictionary(s => s.StageNo, s => loaded.Versions.StageVersion(item.Id, s.StageNo)),
+        };
     }
 }
