@@ -1327,3 +1327,33 @@ Append one dated entry after every substantial session. Do not replace prior ent
 
 ### Recommended exact next action
 - Merge PR #27 after review; then decide the production eligibility rules before any production release workflow, or the next milestone (Planning priority edits and Planning positions, QC rejection with accepted/rework/scrap, or the per-unit queue).
+
+---
+
+### Date / session
+- Date: 2026-10-22
+- Claude Code session ID (if useful): session_01UwqjPjBXLd2apjZb2urjds (design-only PR: workflow redesign, requirements R1-R9)
+
+### Goal
+- Incorporate the owner's additional business requirements (raw-material inquiry, Planning resources, QC quantity types and individual-unit QC, costing, job reports, KPIs, shifts, overtime, 12-step lifecycle) into the specifications as a DESIGN ONLY change.
+
+### Completed
+- Inspected `main` (e4be913, PR #27 merge; last Decision Log entry #81; no open PRs; no earlier workflow-redesign request or PR existed in the repository, so the 12-step lifecycle in the owner's message was treated as the lifecycle already provided).
+- New docs: `WORKFLOW_REDESIGN.md` (lifecycle, state tables, authorization matrix, gap analysis, staged plan, decision register U-01..U-40), `RAW_MATERIAL_INQUIRY_DESIGN.md`, `PLANNING_RESOURCES_AND_SCHEDULING_DESIGN.md`, `QC_QUANTITY_MODEL_DESIGN.md`, `COSTING_DESIGN.md`, `JOB_REPORTS_KPI_AND_OVERTIME_DESIGN.md`.
+- Annotated (not rewritten) the Master, Domain/Database and Architecture specifications; Decision Log #82 (requirements approved; designs not) and #83 (individual-unit QC supersedes the whole-quantity-only limitation for the future workflow; notes appended to #58 and #79), plus an Unresolved pointer.
+
+### Files changed
+- Documentation only. No code, schema, migration, package or behaviour change.
+
+### Decisions newly approved
+- #82 and #83 record the owner's requirements only. No recommendation is approved.
+
+### Unresolved questions / risks
+- U-01..U-40 in `WORKFLOW_REDESIGN.md` section 9 (notably U-01 request type per request vs per item, U-02 contract scope, U-03 who defines MAKE items, U-12 machine assignment authority, U-17 UOM vs quantity type, U-22 chargeable time basis, U-38 meaning of finished/sent).
+- Existing approved decisions that the requirements conflict with remain in force until the owner decides (WORKFLOW_REDESIGN section 2).
+
+### Commands/tests actually run and results
+- Not built locally (no SDK); documentation only. Windows CI results are reported in the pull request.
+
+### Recommended exact next action
+- Owner reviews the design and decides U-01..U-06 first (they gate the lifecycle PR), then authorizes staged PR 1 (QC units and quantity types) or PR 4 (request lifecycle completion).

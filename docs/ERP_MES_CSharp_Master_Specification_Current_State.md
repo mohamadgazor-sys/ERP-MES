@@ -136,6 +136,9 @@ The following decisions were explicitly confirmed after reviewing the source spe
 
 ## 1.1 Request and item work classification
 
+> **Design annotation (2026-10-22, Decision Log #82/#83; PROPOSAL, not approved unless stated):** Step 1 of the owner's lifecycle says Central selects exactly one type per request; this section (and Decision Log #2) says WorkType is per item. This text stays in force until the owner decides U-01. See `WORKFLOW_REDESIGN.md` section 2.
+
+
 The new C# system is **customer-request based**. Internal company requests are **not processed as a request type in v1**.
 
 At item level, `WorkTypeID` is the authoritative classifier:
@@ -193,6 +196,9 @@ The old Access objects `tblProjects`, `tblItems`, `tblProjectStatuses`, `tblProj
 The C# system must not require a request to be converted into a project before production can begin.
 
 ## 1.3 Contract determination and approval
+
+> **Design annotation (2026-10-22, Decision Log #82/#83; PROPOSAL, not approved unless stated):** The owner's lifecycle says Planning decides the contract for MAKE requests; this section says every request. This text stays in force until U-02 is decided. Warehouse is read-only on contracts (requirement). See `WORKFLOW_REDESIGN.md`.
+
 
 Every customer request must pass a contract-determination check by Planning after Drawing has confirmed the technical doability/capability of the request.
 
@@ -736,6 +742,9 @@ The system must not hard-code Casting, Ceramic, Tehran, Contractor, or any other
 
 ## 6.4 Warehouse inquiry
 
+> **Design annotation (2026-10-22, Decision Log #82/#83; PROPOSAL, not approved unless stated):** Superseded in intent by the owner's raw-material inquiry requirement R1 (Drawing sends structured lines; Warehouse answers Yes/No per line; full history; availability never approves feasibility). The AVAILABLE/PARTIAL/UNAVAILABLE vocabulary here stays in force until U-09 is decided. See `RAW_MATERIAL_INQUIRY_DESIGN.md`.
+
+
 When internal warehouse availability needs to be checked:
 
 1. Drawing/Planning creates an inquiry.
@@ -874,6 +883,9 @@ The exact UX/mechanism for creating a revised route is an implementation item, b
 ---
 
 # 9. Production Unit Assignment
+
+> **Design annotation (2026-10-22, Decision Log #82/#83; PROPOSAL, not approved unless stated):** R2 makes Planning own machine codes, operator-machine assignments and stage-to-unit-and-machine assignment; the supervisor-assigns-machine rule here stays in force until U-12. See `PLANNING_RESOURCES_AND_SCHEDULING_DESIGN.md`.
+
 
 Planning assigns stages to Production Units, not normally to individual machines/operators.
 
@@ -1354,6 +1366,9 @@ The old Access repair-only QC table/form remains legacy/reference.
 
 ## 14.4 Partial QC result
 
+> **Design annotation (2026-10-22, Decision Log #82/#83; PROPOSAL, not approved unless stated):** Decision Log #83: QC results at individual-unit / sub-quantity level are required for the future production workflow; the demonstration remains whole-quantity. See `QC_QUANTITY_MODEL_DESIGN.md`.
+
+
 The system must support partial results such as:
 
 ```text
@@ -1594,6 +1609,9 @@ The view should support at least:
 
 # 17. Warehouse
 
+> **Design annotation (2026-10-22, Decision Log #82/#83; PROPOSAL, not approved unless stated):** The owner's lifecycle adds Warehouse cost calculation after final QC and 'finished/sent' only after Management price approval. How this relates to final receipt (17.2) is U-38. See `COSTING_DESIGN.md`.
+
+
 ## 17.1 Warehouse inquiry
 
 Warehouse inquiry is informational.
@@ -1763,6 +1781,9 @@ are deprecated in the current simplified contract route unless later required, b
 
 # 19. Costing
 
+> **Design annotation (2026-10-22, Decision Log #82/#83; PROPOSAL, not approved unless stated):** R4 requires the structure per-unit total = machining cost of one item + raw-material cost of one item; total = per-unit x produced quantity. Policies (actual vs planned time, rounding, rework/scrap, rate selection) are proposals in `COSTING_DESIGN.md`; the Contract Make route in this section stays in force until U-29.
+
+
 ## 19.0 Currency standard
 
 All currency and monetary amounts in the system use **Iranian Rial (IRR)** as the sole canonical currency in v1.
@@ -1923,6 +1944,9 @@ This is a backlog item, not a reason to invent a different costing model now.
 
 # 20. Quantity and Unit-of-Measure Model
 
+> **Design annotation (2026-10-22, Decision Log #82/#83; PROPOSAL, not approved unless stated):** R3 / #83: quantity types are separate from units of measure and QC dispositions are per individual unit for the future workflow. See `QC_QUANTITY_MODEL_DESIGN.md` (U-17..U-21).
+
+
 The system needs to distinguish:
 
 - order quantity
@@ -2026,6 +2050,9 @@ Downtime must not be incorrectly attributed to operator performance when the cau
 ---
 
 # 22. Operator and Unit Performance Reporting
+
+> **Design annotation (2026-10-22, Decision Log #82/#83; PROPOSAL, not approved unless stated):** R5/R6: daily job reports and KPI reporting over any period X-Y with hour-based operator ranking; the 24-day period becomes a preset (U-33). Reward formulas stay Phase 2 (#21). See `JOB_REPORTS_KPI_AND_OVERTIME_DESIGN.md`.
+
 
 ## 22.1 Daily production report
 

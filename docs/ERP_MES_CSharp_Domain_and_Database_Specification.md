@@ -77,6 +77,9 @@ The Request No. and Item No. must remain visible in production queues and histor
 
 ## 2.3 Work type exists at item level
 
+> **Design annotation (2026-10-22, Decision Log #82/#83; PROPOSAL, not approved unless stated):** Conflicts with owner lifecycle step 1 (one type per request): U-01, unresolved; this section stays in force.
+
+
 `WorkType` / `WorkTypeID` is authoritative and supports:
 
 - `MAKE`
@@ -266,6 +269,9 @@ No customer code and no contact fields for now; they are added when a requiremen
 # 5. Request Item Domain
 
 ## 5.1 RequestItem fields
+
+> **Design annotation (2026-10-22, Decision Log #82/#83; PROPOSAL, not approved unless stated):** Proposed additions (not approved): QuantityTypeId, ordered quantity in base units, raw-material weight kg, length mm, diameter mm, material reference. See `PLANNING_RESOURCES_AND_SCHEDULING_DESIGN.md` section 4 and `QC_QUANTITY_MODEL_DESIGN.md`.
+
 
 The canonical RequestItem should include at minimum:
 
@@ -522,6 +528,9 @@ For the first stage:
 
 ## 9.3 Partial quantities
 
+> **Design annotation (2026-10-22, Decision Log #82/#83; PROPOSAL, not approved unless stated):** Decision Log #83: individual-unit QC dispositions are required for the future production workflow. Proposed entities: `QcInspectionLine`, `StageQuantityBalance`; see `QC_QUANTITY_MODEL_DESIGN.md`.
+
+
 Example:
 
 ```text
@@ -718,6 +727,9 @@ Minimum fields:
 
 ## 12.4 CostCalculation
 
+> **Design annotation (2026-10-22, Decision Log #82/#83; PROPOSAL, not approved unless stated):** Proposed formula, policies and snapshot contents: `COSTING_DESIGN.md` (U-22..U-29). Not approved.
+
+
 Applies primarily to customer Repair and non-contract Make routes according to the confirmed architecture.
 
 Minimum fields:
@@ -775,6 +787,9 @@ A new production/QC/cost route is generated as required by the current state aft
 Warehouse v1 is **history/inquiry/receipt oriented**, not a full inventory-management system.
 
 ## 13.1 WarehouseInquiry
+
+> **Design annotation (2026-10-22, Decision Log #82/#83; PROPOSAL, not approved unless stated):** Proposed replacement model (inquiry, lines, responses, messages, events): `RAW_MATERIAL_INQUIRY_DESIGN.md`. This section stays in force until approved (U-07..U-10).
+
 
 Purpose:
 
@@ -865,6 +880,9 @@ The actual master list is configurable.
 
 ## 14.3 Machine
 
+> **Design annotation (2026-10-22, Decision Log #82/#83; PROPOSAL, not approved unless stated):** Proposed: stable immutable machine codes (FCC-06, TCC-12, HUB-01), rate and assignment history, qualification separate from assignment. See `PLANNING_RESOURCES_AND_SCHEDULING_DESIGN.md` (U-13, U-14).
+
+
 Minimum fields:
 
 | Field | Meaning |
@@ -880,6 +898,9 @@ Minimum fields:
 The actual current rate should come from `MachineHourlyRate` history where applicable.
 
 ## 14.4 Operator
+
+> **Design annotation (2026-10-22, Decision Log #82/#83; PROPOSAL, not approved unless stated):** Proposed: operators need user accounts to submit job reports (U-16); job reports, KPI and overtime entities in `JOB_REPORTS_KPI_AND_OVERTIME_DESIGN.md`.
+
 
 Minimum fields:
 
@@ -983,6 +1004,9 @@ Items are editable only until production release; afterwards only Planning may c
 QC owns the UOM master.
 
 ## 16.1 UnitOfMeasure
+
+> **Design annotation (2026-10-22, Decision Log #82/#83; PROPOSAL, not approved unless stated):** Proposed: a separate QC-owned QuantityType (piece, pair, set) with base units per type, distinct from UOM. See `QC_QUANTITY_MODEL_DESIGN.md` (U-17).
+
 
 Minimum fields:
 
@@ -1108,6 +1132,9 @@ Planned Total Processing Minutes = Planned Minutes Per Piece × Planned Quantity
 The planned estimate is separate from actual work-session minutes. External stages additionally use their expected lead time; that lead time is not treated as machining minutes.
 
 ## 19.1 Configurable production calendar
+
+> **Design annotation (2026-10-22, Decision Log #82/#83; PROPOSAL, not approved unless stated):** Proposed: shift templates A-D (C crosses midnight), unit shift working/OFF, staffing capacity, worker schedule and off-days as data. See `PLANNING_RESOURCES_AND_SCHEDULING_DESIGN.md` section 5 (U-34..U-36).
+
 
 The initial factory calendar defaults are:
 
