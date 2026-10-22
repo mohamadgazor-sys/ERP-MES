@@ -1606,3 +1606,32 @@ Append one dated entry after every substantial session. Do not replace prior ent
 
 ### Recommended exact next action
 - Merge after CI, then 3b-iii (materials and Warehouse price per kg).
+
+---
+
+### Date / session
+- Date: 2026-10-22
+- Claude Code session ID (if useful): session_01UwqjPjBXLd2apjZb2urjds (phase 3b-iii: materials and Warehouse price per kg)
+
+### Goal
+- A Warehouse-owned material list and an append-only price-per-kg history in Rial (Decision Log #10, #91; `docs/COSTING_DESIGN.md`).
+
+### Completed
+- Domain (`Domain/Materials`): `Material` (stable immutable code, optional grade and form), `MaterialPrice` (append-only, Rial per kg) and `MaterialPrices.PriceOn`.
+- Application: `MaterialService` - Warehouse maintains the list; Warehouse and Management add prices (existing `ChangeMaterialPricePerKg`); Planning, Warehouse and Management read prices; every active user reads the list. A price must start later than the latest entry; all changes audited in the same transaction.
+- New permissions `MaintainMaterials`, `ViewMaterials`, `ViewMaterialPrices` (labelled defaults: Warehouse owns the list, U-08 recommendation; price-read audience).
+- Persistence: `Materials`, `MaterialPrices`; migration `AddMaterials` (additive).
+- Desktop: "مواد اولیه و قیمت" page.
+
+### Decisions newly approved
+- None.
+
+### Unresolved questions / risks
+- Which date selects the price for a cost (release date or calculation date) stays open (COSTING_DESIGN); `MaterialPrices.PriceOn` takes any date.
+- Items and inquiries do not reference materials yet (phase 2a / 4a).
+
+### Commands/tests actually run and results
+- Local (Linux): non-Desktop tests (Domain 478, Application 5, Infrastructure 490) passed; Desktop LocalLinux subset 119 passed. See the pull request for the final head's Windows CI totals.
+
+### Recommended exact next action
+- Merge after CI, then phase 2b (MAKE contract gate) or 2a (raw-material inquiry), per the staged plan.
