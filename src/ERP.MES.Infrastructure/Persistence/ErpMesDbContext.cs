@@ -27,6 +27,8 @@ public sealed class ErpMesDbContext(DbContextOptions<ErpMesDbContext> options) :
 
     public DbSet<RequestDocumentLink> RequestDocumentLinks => Set<RequestDocumentLink>();
 
+    public DbSet<RequestWorkflowEntry> RequestWorkflowEntries => Set<RequestWorkflowEntry>();
+
     public DbSet<Department> Departments => Set<Department>();
 
     public DbSet<Role> Roles => Set<Role>();
@@ -73,6 +75,12 @@ public sealed class ErpMesDbContext(DbContextOptions<ErpMesDbContext> options) :
         if (ChangeTracker.Entries<AuditLogEntry>().Any(e => e.State is EntityState.Modified or EntityState.Deleted))
         {
             throw new InvalidOperationException("The audit log is append-only: entries cannot be changed or deleted.");
+        }
+
+        // The request workflow history is append-only too: an entry is added with the status change that caused it, never changed or removed.
+        if (ChangeTracker.Entries<RequestWorkflowEntry>().Any(e => e.State is EntityState.Modified or EntityState.Deleted))
+        {
+            throw new InvalidOperationException("The request workflow history is append-only: entries cannot be changed or deleted.");
         }
 
         foreach (var entry in ChangeTracker.Entries().Where(e => VersionedTypes.Contains(e.Metadata.ClrType)).ToList())

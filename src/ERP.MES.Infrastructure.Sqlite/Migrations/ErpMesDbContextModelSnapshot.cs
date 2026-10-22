@@ -622,6 +622,49 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
                     b.ToTable("RequestItems", (string)null);
                 });
 
+            modelBuilder.Entity("ERP.MES.Domain.Requests.RequestWorkflowEntry", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Action")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("ActionAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ActionByDepartmentCode")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("ActionByUserId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("FromStatus")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Note")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("Outcome")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("RequestId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("ToStatus")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ActionByUserId");
+
+                    b.HasIndex("RequestId");
+
+                    b.ToTable("RequestWorkflowEntries", (string)null);
+                });
+
             modelBuilder.Entity("ERP.MES.Application.Security.AuditLogEntry", b =>
                 {
                     b.HasOne("ERP.MES.Domain.Identity.User", null)
@@ -770,11 +813,28 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("ERP.MES.Domain.Requests.RequestWorkflowEntry", b =>
+                {
+                    b.HasOne("ERP.MES.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("ActionByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ERP.MES.Domain.Requests.Request", null)
+                        .WithMany("WorkflowHistory")
+                        .HasForeignKey("RequestId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("ERP.MES.Domain.Requests.Request", b =>
                 {
                     b.Navigation("DocumentLinks");
 
                     b.Navigation("Items");
+
+                    b.Navigation("WorkflowHistory");
                 });
 
             modelBuilder.Entity("ERP.MES.Domain.Requests.RequestItem", b =>

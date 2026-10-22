@@ -60,6 +60,15 @@ public enum ValidationIssue
     /// <summary>The stage action is not one of the demonstration actions.</summary>
     StageActionInvalid,
 
+    /// <summary>A reason (rejection, reopening, sending back) or the Drawing note is required.</summary>
+    ReasonRequired,
+
+    /// <summary>The reason or note is longer than 2000 characters.</summary>
+    ReasonTooLong,
+
+    /// <summary>The Drawing outcome is not one of the controlled outcomes.</summary>
+    DrawingOutcomeInvalid,
+
     /// <summary>The request cannot be submitted to Management until Central has attached the request PDF (Decision Log #87).</summary>
     RequestPdfRequired,
 

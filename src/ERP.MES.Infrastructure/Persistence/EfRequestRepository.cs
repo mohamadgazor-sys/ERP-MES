@@ -224,6 +224,7 @@ public sealed class EfRequestRepository(IDbContextFactory<ErpMesDbContext> conte
             .Include(r => r.Items.OrderBy(i => i.Id)).ThenInclude(i => i.Stages.OrderBy(s => s.StageNo))
             .Include(r => r.Items.OrderBy(i => i.Id)).ThenInclude(i => i.QcApprovals.OrderBy(a => EF.Property<long>(a, "Id")))
             .Include(r => r.DocumentLinks.OrderBy(l => l.Id))
+            .Include(r => r.WorkflowHistory.OrderBy(e => e.Id))
             .AsSplitQuery();
 
     private static Task<bool> KeyExistsAsync(ErpMesDbContext context, long customerId, int jalaliRequestYear, RequestNo requestNo, CancellationToken cancellationToken) =>

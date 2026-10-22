@@ -1,3 +1,4 @@
+using ERP.MES.Domain.Identity;
 using ERP.MES.Application.Requests;
 using ERP.MES.Domain.Calendar;
 using ERP.MES.Domain.Requests;
@@ -47,6 +48,9 @@ public static class Messages
         ValidationIssue.QuantityInvalid => "تعداد باید عددی بزرگ‌تر از صفر باشد.",
         ValidationIssue.WorkTypeInvalid => "نوع کار (ساخت یا تعمیر) را انتخاب کنید.",
         ValidationIssue.PriorityInvalid => "اولویت معتبر نیست.",
+        ValidationIssue.ReasonRequired => "دلیل یا توضیح را وارد کنید.",
+        ValidationIssue.ReasonTooLong => "دلیل یا توضیح بیش از ۲۰۰۰ نویسه است.",
+        ValidationIssue.DrawingOutcomeInvalid => "نتیجهٔ نقشه‌کشی را انتخاب کنید.",
         ValidationIssue.RequestPdfRequired => "پیش از ارسال به مدیریت، فایل PDF درخواست را پیوست کنید.",
         ValidationIssue.PdfEmpty => "فایل انتخاب‌شده خالی است.",
         ValidationIssue.PdfTooLarge => "حجم فایل بیشتر از حد مجاز است (پیش‌فرض ۲۰ مگابایت).",
@@ -67,6 +71,42 @@ public static class Messages
         JalaliDateError.MonthOutOfRange => "ماه تاریخ باید بین ۱ و ۱۲ باشد.",
         JalaliDateError.DayOutOfRange => "روز تاریخ برای این ماه معتبر نیست.",
         _ => "تاریخ معتبر نیست (مثال: ۱۴۰۵/۰۷/۲۰).",
+    };
+
+    public static string ActionText(RequestAction action) => action switch
+    {
+        RequestAction.Submit => "ارسال به مدیریت",
+        RequestAction.Approve => "تأیید مدیریت",
+        RequestAction.Reject => "رد مدیریت",
+        RequestAction.Reopen => "بازگشایی برای تصمیم جدید مدیریت",
+        RequestAction.ForwardToDrawing => "ارسال به نقشه‌کشی",
+        RequestAction.RecordDrawingResult => "نتیجهٔ نقشه‌کشی",
+        RequestAction.SendBackToDrawing => "بازگشت به نقشه‌کشی",
+        _ => string.Empty,
+    };
+
+    public static string OutcomeText(DrawingOutcome outcome) => outcome switch
+    {
+        DrawingOutcome.FullyAccepted => "کاملاً پذیرفته شد",
+        DrawingOutcome.PartiallyAccepted => "بخشی پذیرفته شد",
+        DrawingOutcome.Rejected => "رد شد",
+        DrawingOutcome.MoreInformationNeeded => "نیاز به اطلاعات بیشتر",
+        DrawingOutcome.ReturnedForCorrection => "بازگشت برای اصلاح",
+        _ => string.Empty,
+    };
+
+    public static string DepartmentText(string code) => code switch
+    {
+        DepartmentCodes.Central => "مرکزی",
+        DepartmentCodes.Management => "مدیریت",
+        DepartmentCodes.Planning => "برنامه‌ریزی",
+        DepartmentCodes.Drawing => "نقشه‌کشی",
+        DepartmentCodes.Warehouse => "انبار",
+        DepartmentCodes.Production => "تولید",
+        DepartmentCodes.Qc => "کنترل کیفیت",
+        DepartmentCodes.MaintenancePm => "نگهداری و تعمیرات",
+        DepartmentCodes.System => "سیستم",
+        _ => code,
     };
 
     public static string WorkTypeText(WorkType type) => type == WorkType.Make ? "ساخت" : "تعمیر";

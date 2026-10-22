@@ -100,6 +100,33 @@ public partial class RequestsView : UserControl
         });
     }
 
+    private async void OnApproveClick(object sender, RoutedEventArgs e) => await SafeAsync(() => _viewModel.ApproveAsync());
+
+    private async void OnRejectClick(object sender, RoutedEventArgs e) => await ReasonActionAsync(() => _viewModel.RejectAsync(ReasonBox.Text));
+
+    private async void OnReopenClick(object sender, RoutedEventArgs e) => await ReasonActionAsync(() => _viewModel.ReopenAsync(ReasonBox.Text));
+
+    private async void OnForwardClick(object sender, RoutedEventArgs e) => await SafeAsync(() => _viewModel.ForwardToDrawingAsync());
+
+    private async void OnSendBackClick(object sender, RoutedEventArgs e) => await ReasonActionAsync(() => _viewModel.SendBackToDrawingAsync(ReasonBox.Text));
+
+    private async void OnDrawingResultClick(object sender, RoutedEventArgs e)
+    {
+        var outcome = (OutcomeBox.SelectedItem as Choice<DrawingOutcome>)?.Value ?? (DrawingOutcome)0;
+        await ReasonActionAsync(() => _viewModel.RecordDrawingResultAsync(outcome, ReasonBox.Text));
+    }
+
+    // The reason box is cleared only when the action went through.
+    private async Task ReasonActionAsync(Func<Task<bool>> action)
+    {
+        var saved = false;
+        await SafeAsync(async () => saved = await action());
+        if (saved)
+        {
+            ReasonBox.Clear();
+        }
+    }
+
     private async void OnSubmitClick(object sender, RoutedEventArgs e) => await SafeAsync(() => _viewModel.SubmitAsync());
 
     private async void OnAddItemClick(object sender, RoutedEventArgs e)

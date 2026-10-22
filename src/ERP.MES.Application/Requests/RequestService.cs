@@ -38,7 +38,7 @@ public sealed record Capabilities(
 /// CREATED to SENT_TO_MANAGEMENT exists; the rest of the status table is an unapproved draft. Updates pass the version the request was loaded at.
 /// </summary>
 public sealed class RequestService(
-    IRequestRepository requests, ICustomerRepository customers, CurrentAuthorization authorization, IClock clock, IJalaliDateService dates)
+    IRequestRepository requests, ICustomerRepository customers, CurrentAuthorization authorization, IClock clock, IJalaliDateService dates, IAuditContext auditContext)
 {
     private static readonly Permission[] AllPermissions =
     [
@@ -190,7 +190,16 @@ public sealed class RequestService(
                     return Outcome<Stored<Request>>.Invalid(ValidationIssue.RequestPdfRequired);
                 }
 
-                return Outcome<Stored<Request>>.Ok(await requests.UpdateAsync(requestId, expectedVersion, r => r.SubmitToManagement(now), cancellationToken));
+                var actor = new WorkflowActor(decision.Current!.UserId, decision.Current.DepartmentCode);
+                IReadOnlyList<AuditLogEntry> Audit(Request request) =>
+                [
+                    new AuditLogEntry(
+                        now, actor.UserId, auditContext.MachineName, auditContext.OsUserName, auditContext.DatabaseLogin, AuditActions.RequestSubmitted, "Request",
+                        requestId.ToString(System.Globalization.CultureInfo.InvariantCulture), $"Request {request.RequestNo.Value} submitted to Management: CREATED -> {request.Status.Code()}"),
+                ];
+
+                var saved = await requests.UpdateRowsAsync(requestId, RowVersionExpectations.ForRequest(expectedVersion), r => r.SubmitToManagement(actor, now), Audit, cancellationToken);
+                return Outcome<Stored<Request>>.Ok(new Stored<Request>(saved.Value, saved.Versions.Request));
             });
         }
         catch (InvalidOperationException)

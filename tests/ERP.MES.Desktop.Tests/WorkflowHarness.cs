@@ -55,6 +55,9 @@ internal sealed class WorkflowHarness : IDisposable
 
     public Principal Production { get; private set; } = null!;
 
+    /// <summary>A Management user with the Manager role: the only one who may approve or reject a request (Decision Log #30).</summary>
+    public Principal Manager { get; private set; } = null!;
+
     /// <summary>A repository over the harness database, to prepare routes and stage states that no screen creates yet.</summary>
     public EfRequestRepository RequestRepository { get; private set; } = null!;
 
@@ -75,6 +78,7 @@ internal sealed class WorkflowHarness : IDisposable
         h.Qc = await h.UserAsync("qc.one", DepartmentCodes.Qc, cancellationToken);
         h.Management = await h.UserAsync("management.one", DepartmentCodes.Management, cancellationToken);
         h.Production = await h.UserAsync("production.one", DepartmentCodes.Production, cancellationToken);
+        h.Manager = await h.UserAsync("manager.one", DepartmentCodes.Management, cancellationToken, RoleCodes.Manager);
         h.RequestRepository = new EfRequestRepository(factory);
         return h;
     }
@@ -92,7 +96,7 @@ internal sealed class WorkflowHarness : IDisposable
     public RequestsViewModel RequestsFor(Principal user, WorkflowServices? services = null)
     {
         var workflow = services ?? Workflow;
-        return new RequestsViewModel(workflow.Requests, workflow.Documents, workflow.Customers, Dates, DigitStyle.Persian, () => Clock.UtcNow, () => user);
+        return new RequestsViewModel(workflow.Requests, workflow.Documents, workflow.Lifecycle, workflow.Customers, Dates, DigitStyle.Persian, () => Clock.UtcNow, () => user);
     }
 
     public StageWorkViewModel StagesFor(Principal user, StageWorkService? service = null) =>
@@ -101,9 +105,9 @@ internal sealed class WorkflowHarness : IDisposable
     public ProductionQueueViewModel QueueFor(Principal user, ProductionQueueService? service = null) =>
         new(service ?? Workflow.Queue, Dates, DigitStyle.Persian, () => Clock.UtcNow, () => user);
 
-    private async Task<Principal> UserAsync(string name, string department, CancellationToken cancellationToken)
+    private async Task<Principal> UserAsync(string name, string department, CancellationToken cancellationToken, string role = RoleCodes.Staff)
     {
-        var created = await Security.Accounts.CreateUserAsync(Admin, name, "User " + name, department, RoleCodes.Staff, InitialPassword, cancellationToken);
+        var created = await Security.Accounts.CreateUserAsync(Admin, name, "User " + name, department, role, InitialPassword, cancellationToken);
         Assert.Equal(AccountStatus.Succeeded, created.Status);
         var first = (await Security.Authentication.SignInAsync(name, InitialPassword, cancellationToken)).Principal!;
         Assert.Equal(AccountStatus.Succeeded, (await Security.Accounts.ChangeOwnPasswordAsync(first, InitialPassword, OwnPassword, cancellationToken)).Status);
