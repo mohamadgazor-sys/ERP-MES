@@ -134,7 +134,7 @@ public sealed class ProductionQueueService(IRequestRepository requests, CurrentA
             item.Id,
             item.ItemNo,
             item.PartName,
-            item.WorkType,
+            loaded.Value.WorkType,
             item.RequestedQuantity,
             item.Priority,
             state,

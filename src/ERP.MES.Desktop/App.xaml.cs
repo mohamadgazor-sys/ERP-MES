@@ -67,6 +67,11 @@ public partial class App : System.Windows.Application
             // A database from before sign-in existed: the message says what is wrong and how to replace a demonstration database.
             Fail("پایگاه داده قدیمی است و ارتقا نیافت؛ هیچ تغییری داده نشد:\n" + exception.Message);
         }
+        catch (RequestWorkTypeInvalidException exception)
+        {
+            // A database whose requests mix MAKE and REPAIR items (or have no items): one type per request cannot be derived, so nothing was upgraded.
+            Fail("پایگاه داده قدیمی است و ارتقا نیافت؛ نوع کار (ساخت یا تعمیر) برخی درخواست‌ها مشخص نیست و هیچ تغییری داده نشد:\n" + exception.Message);
+        }
         catch (InvalidAuthenticationPolicyException exception)
         {
             Fail("تنظیمات احراز هویت معتبر نیست؛ برنامه اجرا نمی‌شود:\n" + string.Join("\n", exception.Problems));

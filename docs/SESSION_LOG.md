@@ -1386,3 +1386,34 @@ Append one dated entry after every substantial session. Do not replace prior ent
 
 ### Recommended exact next action
 - Merge PR #28 after CI, then implement phase 1a (single-type requests, PDF before submission).
+
+---
+
+### Date / session
+- Date: 2026-10-22
+- Claude Code session ID (if useful): session_01UwqjPjBXLd2apjZb2urjds (phase 1a: one work type per request, Decision Log #84)
+
+### Goal
+- Implement Decision Log #84: a request has exactly one authoritative work type (MAKE or REPAIR); items inherit it; mixed-type requests are impossible.
+
+### Completed
+- Domain: `Request.WorkType` chosen at creation; `RequestItem` no longer has a type; `AddItem` has no type parameter.
+- Application: `CreateRequestCommand` carries the type (`WorkTypeInvalid` when undefined); `AddItemCommand` has none; the item permission is the one for the request's type (provisional map #34 unchanged until the item-definition phase); `RequestSummary` and the queue entry carry the request's type.
+- Persistence: `Requests.WorkType`; migration `SingleWorkTypePerRequest` moves the column (a request takes the single type of its items; mixed or item-less requests have no derivable type); `SqliteDatabase.MigrateAsync` refuses such a database with `RequestWorkTypeInvalidException` before changing anything (demo databases: use `demo-reset`); the desktop and the demo tool report it.
+- Demo seed: three MAKE and three REPAIR requests (12 items). Desktop: work-type choice on the create form, a type column and detail text, no type on the item form. Tests and the demo/manual-checklist/domain/persistence documents updated.
+
+### Files changed
+- Source, tests, one migration (with designer and snapshot), documentation. No new package.
+
+### Decisions newly approved
+- None (implements #84). The request PDF before submission (#87) is the next PR (phase 1a-ii).
+
+### Unresolved questions / risks
+- Desktop (WPF) tests cannot run on the Linux sandbox; they run on the Windows CI. The WPF screens were not exercised by a person.
+- The migration's NOT NULL step is a second line of defence; the preflight check is the supported path.
+
+### Commands/tests actually run and results
+- Local (Linux, SDK 10.0.113 substituted for the pinned 10.0.401 only on this machine; `global.json` was not committed): Domain 381 passed, Application 5 passed, Infrastructure 413 passed; Desktop tests compile but cannot run here. Authoritative run: Windows CI on the PR head.
+
+### Recommended exact next action
+- Merge after CI, then phase 1a-ii (store the request PDF once, require it before submission).

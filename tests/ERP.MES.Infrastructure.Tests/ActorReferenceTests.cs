@@ -47,7 +47,7 @@ public class ActorReferenceTests
             context.Customers.Add(customer);
             await context.SaveChangesAsync(Token);
 
-            var request = Request.Create(0, customer, RequestNo.Create("R-1"), new DateOnly(2026, 10, 12), null, null, unknownUser, PersistenceTestData.Now, PersistenceTestData.Dates);
+            var request = Request.Create(0, customer, RequestNo.Create("R-1"), WorkType.Make, new DateOnly(2026, 10, 12), null, null, unknownUser, PersistenceTestData.Now, PersistenceTestData.Dates);
             context.Requests.Add(request);
             await Assert.ThrowsAsync<DbUpdateException>(() => context.SaveChangesAsync(Token));
         }
@@ -56,7 +56,7 @@ public class ActorReferenceTests
         {
             var customer = await context.Customers.SingleAsync(Token);
             var request = PersistenceTestData.NewRequest(customer, "R-2");
-            request.AddItem(0, "1.10", "Ring", WorkType.Make, 1m, unknownUser, PersistenceTestData.Now);
+            request.AddItem(0, "1.10", "Ring", 1m, unknownUser, PersistenceTestData.Now);
             context.Requests.Add(request);
             await Assert.ThrowsAsync<DbUpdateException>(() => context.SaveChangesAsync(Token));
         }
@@ -65,7 +65,7 @@ public class ActorReferenceTests
         {
             var customer = await context.Customers.SingleAsync(Token);
             var request = PersistenceTestData.NewRequest(customer, "R-3");
-            var item = request.AddItem(0, "1.10", "Ring", WorkType.Make, 1m, TempDatabase.TestCreatorId, PersistenceTestData.Now);
+            var item = request.AddItem(0, "1.10", "Ring", 1m, TempDatabase.TestCreatorId, PersistenceTestData.Now);
             item.DefineInitialStage("Turning", 1m);
             item.ReleaseFirstStage();
             item.StartStage(1);
@@ -86,7 +86,7 @@ public class ActorReferenceTests
         using var db = new TempDatabase();
         await db.MigrateWithActorsAsync();
 
-        await PersistenceTestData.SeedMixedRequestAsync(db);
+        await PersistenceTestData.SeedSampleRequestAsync(db);
 
         Assert.Equal(new[] { "1" }, db.Query("SELECT COUNT(*) FROM QcApprovals"));
         Assert.Empty(db.Query("PRAGMA foreign_key_check"));
@@ -97,7 +97,7 @@ public class ActorReferenceTests
     {
         using var db = new TempDatabase();
         await db.MigrateWithActorsAsync();
-        await PersistenceTestData.SeedMixedRequestAsync(db);
+        await PersistenceTestData.SeedSampleRequestAsync(db);
 
         Assert.Throws<SqliteException>(() => db.Execute($"DELETE FROM Users WHERE Id = {TempDatabase.TestCreatorId}"));
         Assert.Throws<SqliteException>(() => db.Execute($"DELETE FROM Users WHERE Id = {TempDatabase.TestApproverId}"));
@@ -143,7 +143,7 @@ public class ActorReferenceTests
 
         await SqliteDatabase.MigrateAsync(db.Path, Token);
 
-        Assert.Equal(2, db.Query("SELECT MigrationId FROM __EFMigrationsHistory").Count);
+        Assert.Equal(3, db.Query("SELECT MigrationId FROM __EFMigrationsHistory").Count);
         Assert.Equal("Customers:CreatedByUserId->Users", db.Query("SELECT 'Customers:' || \"from\" || '->' || \"table\" FROM pragma_foreign_key_list('Customers')").Single());
         Assert.Empty(db.Query("PRAGMA foreign_key_check"));
     }
@@ -213,7 +213,7 @@ public class ActorReferenceTests
         var reset = await DemoDatabase.ResetAsync(db.Path, PersistenceTestData.Dates, db.NextCredentialPath(), SecurityFixture.FastPolicy, Token);
 
         Assert.Equal(8, reset.AccountsCreated);
-        Assert.Equal(2, db.Query("SELECT MigrationId FROM __EFMigrationsHistory").Count);
+        Assert.Equal(3, db.Query("SELECT MigrationId FROM __EFMigrationsHistory").Count);
         Assert.DoesNotContain("Old sample customer", db.Query("SELECT Name FROM Customers"));
         Assert.Equal(3, db.Query("SELECT Id FROM Customers").Count);
         Assert.Empty(db.Query("PRAGMA foreign_key_check"));

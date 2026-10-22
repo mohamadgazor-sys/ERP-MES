@@ -11,15 +11,15 @@ public class ProductionQueueViewModelTests
 {
     private static CancellationToken Token => TestContext.Current.CancellationToken;
 
-    private static async Task<long> RequestWithItemsAsync(WorkflowHarness h, string requestNo, params (string ItemNo, WorkType Type, Priority Priority, decimal Quantity)[] items)
+    private static async Task<long> RequestWithItemsAsync(WorkflowHarness h, string requestNo, WorkType type, params (string ItemNo, Priority Priority, decimal Quantity)[] items)
     {
-        var customer = (await h.Workflow.Customers.CreateAsync(h.Central, "مشتری فرضی", Token)).Value!.Value.Id;
-        var request = (await h.Workflow.Requests.CreateAsync(h.Central, new CreateRequestCommand(customer, requestNo, "1405/07/20", null, null), Token)).Value!.Value.Id;
-        foreach (var (itemNo, type, priority, quantity) in items)
+        var customer = (await h.Workflow.Customers.CreateAsync(h.Central, type == WorkType.Make ? "مشتری فرضی" : "مشتری فرضی (تعمیر)", Token)).Value!.Value.Id;
+        var request = (await h.Workflow.Requests.CreateAsync(h.Central, new CreateRequestCommand(customer, requestNo, type, "1405/07/20", null, null), Token)).Value!.Value.Id;
+        foreach (var (itemNo, priority, quantity) in items)
         {
             h.Clock.Advance(TimeSpan.FromMinutes(1));
             var version = (await h.Workflow.Requests.GetAsync(h.Planning, request, Token)).Value!.Request.Version;
-            var added = await h.Workflow.Requests.AddItemAsync(h.Planning, request, version, new AddItemCommand(itemNo, "قطعه " + itemNo, type, quantity, priority), Token);
+            var added = await h.Workflow.Requests.AddItemAsync(h.Planning, request, version, new AddItemCommand(itemNo, "قطعه " + itemNo, quantity, priority), Token);
             Assert.True(added.Succeeded, added.Status + " " + added.Issue);
         }
 
@@ -33,7 +33,8 @@ public class ProductionQueueViewModelTests
     public async Task Management_sees_the_queue_in_persian_with_persian_digits_and_labelled_estimates()
     {
         using var h = await WorkflowHarness.CreateAsync(Token);
-        var request = await RequestWithItemsAsync(h, "wsj-898", ("1.10", WorkType.Make, Priority.Urgent, 10m), ("2.10", WorkType.Repair, Priority.Normal, 4m));
+        var request = await RequestWithItemsAsync(h, "wsj-898", WorkType.Make, ("1.10", Priority.Urgent, 10m));
+        await RequestWithItemsAsync(h, "wsj-899", WorkType.Repair, ("2.10", Priority.Normal, 4m));
         await ChangeItemAsync(h, request, "1.10", i =>
         {
             i.DefineInitialStage("تراشکاری", 5m);
@@ -84,7 +85,7 @@ public class ProductionQueueViewModelTests
     public async Task A_completed_route_is_shown_as_completed_with_no_current_stage_estimate()
     {
         using var h = await WorkflowHarness.CreateAsync(Token);
-        var request = await RequestWithItemsAsync(h, "R-1", ("1.10", WorkType.Make, Priority.Normal, 2m));
+        var request = await RequestWithItemsAsync(h, "R-1", WorkType.Make, ("1.10", Priority.Normal, 2m));
         await ChangeItemAsync(h, request, "1.10", i =>
         {
             i.DefineInitialStage("Only", 2m);
@@ -118,7 +119,7 @@ public class ProductionQueueViewModelTests
     public async Task The_rows_follow_the_documented_order_and_are_numbered_from_one()
     {
         using var h = await WorkflowHarness.CreateAsync(Token);
-        await RequestWithItemsAsync(h, "R-1", ("a", WorkType.Make, Priority.Normal, 1m), ("b", WorkType.Make, Priority.VeryUrgent, 1m), ("c", WorkType.Make, Priority.Normal, 1m));
+        await RequestWithItemsAsync(h, "R-1", WorkType.Make, ("a", Priority.Normal, 1m), ("b", Priority.VeryUrgent, 1m), ("c", Priority.Normal, 1m));
         var vm = h.QueueFor(h.Management);
 
         await vm.LoadAsync(Token);
@@ -132,7 +133,7 @@ public class ProductionQueueViewModelTests
     public async Task Departments_other_than_management_and_planning_get_a_persian_permission_denied_state_and_no_rows()
     {
         using var h = await WorkflowHarness.CreateAsync(Token);
-        await RequestWithItemsAsync(h, "R-1", ("1.10", WorkType.Make, Priority.Normal, 1m));
+        await RequestWithItemsAsync(h, "R-1", WorkType.Make, ("1.10", Priority.Normal, 1m));
 
         foreach (var user in new[] { h.Central, h.Drawing, h.Qc, h.Admin })
         {
@@ -153,7 +154,7 @@ public class ProductionQueueViewModelTests
     public async Task Planning_sees_the_same_overview_as_management()
     {
         using var h = await WorkflowHarness.CreateAsync(Token);
-        await RequestWithItemsAsync(h, "R-1", ("1.10", WorkType.Make, Priority.Urgent, 3m));
+        await RequestWithItemsAsync(h, "R-1", WorkType.Make, ("1.10", Priority.Urgent, 3m));
         var management = h.QueueFor(h.Management);
         var planning = h.QueueFor(h.Planning);
 
@@ -184,7 +185,7 @@ public class ProductionQueueViewModelTests
     public async Task A_user_who_loses_access_gets_the_denied_state_on_the_next_load_and_the_old_rows_disappear()
     {
         using var h = await WorkflowHarness.CreateAsync(Token);
-        await RequestWithItemsAsync(h, "R-1", ("1.10", WorkType.Make, Priority.Normal, 1m));
+        await RequestWithItemsAsync(h, "R-1", WorkType.Make, ("1.10", Priority.Normal, 1m));
         var vm = h.QueueFor(h.Management);
         await vm.LoadAsync(Token);
         Assert.Single(vm.Rows);

@@ -13,7 +13,7 @@ public class RequestRepositoryTests
     private static async Task<(long CustomerId, Stored<Request> Request)> SeedAsync(TempDatabase db)
     {
         var customer = await db.Customers().AddAsync(PersistenceTestData.NewCustomer(), Token);
-        var request = PersistenceTestData.NewMixedRequest(customer.Value);
+        var request = PersistenceTestData.NewSampleRequest(customer.Value);
         var stored = await db.Requests().AddAsync(request, Token);
         return (customer.Value.Id, stored);
     }
@@ -38,7 +38,7 @@ public class RequestRepositoryTests
         Assert.Equal("درخواست فرضی", request.Title);
 
         var items = request.Items.OrderBy(i => i.ItemNo, StringComparer.Ordinal).ToArray();
-        Assert.Equal(new[] { WorkType.Make, WorkType.Repair }, items.Select(i => i.WorkType).ToArray());
+        Assert.Equal(WorkType.Make, request.WorkType);
         Assert.Equal(new[] { 10.123456789m, 4m }, items.Select(i => i.RequestedQuantity).ToArray());
         Assert.Equal(new[] { Priority.Urgent, Priority.Normal }, items.Select(i => i.Priority).ToArray());
         Assert.Equal(
@@ -122,7 +122,7 @@ public class RequestRepositoryTests
         var customer = (await db.Customers().AddAsync(PersistenceTestData.NewCustomer("Customer A"), Token)).Value;
         var other = (await db.Customers().AddAsync(PersistenceTestData.NewCustomer("Customer B"), Token)).Value;
         var older = await db.Requests().AddAsync(PersistenceTestData.NewRequest(customer, "1", new DateOnly(2026, 4, 1), "older"), Token);
-        var newer = await db.Requests().AddAsync(PersistenceTestData.NewMixedRequest(customer), Token);
+        var newer = await db.Requests().AddAsync(PersistenceTestData.NewSampleRequest(customer), Token);
         await db.Requests().AddAsync(PersistenceTestData.NewRequest(other, "2", new DateOnly(2026, 5, 1)), Token);
 
         var all = await db.Requests().ListAsync(null, Token);
@@ -150,7 +150,7 @@ public class RequestRepositoryTests
         // Session 2: a new item, its route, and the repair item's whole route up to QC approval.
         var second = await db.Requests().UpdateAsync(requestId, added.Version, request =>
         {
-            var extra = request.AddItem(0, "3.10", "Bushing C", WorkType.Make, 2m, 1, Now.AddHours(4));
+            var extra = request.AddItem(0, "3.10", "Bushing C", 2m, 1, Now.AddHours(4));
             extra.DefineInitialStage("Turning", 2m);
 
             var repair = request.Items.Single(i => i.ItemNo == "2.10");
@@ -198,16 +198,16 @@ public class RequestRepositoryTests
         var requestId = added.Value.Id;
 
         // Duplicate item number, a stage started out of order, a stage approved before it was submitted, an invalid quantity.
-        await Assert.ThrowsAsync<InvalidOperationException>(() => db.Requests().UpdateAsync(requestId, null, r => r.AddItem(0, "1.10", "Dup", WorkType.Make, 1m, 1, Now), Token));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => db.Requests().UpdateAsync(requestId, null, r => r.AddItem(0, "1.10", "Dup", 1m, 1, Now), Token));
         await Assert.ThrowsAsync<InvalidOperationException>(() => db.Requests().UpdateAsync(requestId, null, r => r.Items.Single(i => i.ItemNo == "1.10").StartStage(3), Token));
         await Assert.ThrowsAsync<InvalidOperationException>(() => db.Requests().UpdateAsync(requestId, null, r => r.Items.Single(i => i.ItemNo == "1.10").ApproveStageWholeQuantity(2, 9, Now), Token));
-        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => db.Requests().UpdateAsync(requestId, null, r => r.AddItem(0, "9.9", "Zero", WorkType.Make, 0m, 1, Now), Token));
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => db.Requests().UpdateAsync(requestId, null, r => r.AddItem(0, "9.9", "Zero", 0m, 1, Now), Token));
 
         // A change that fails after some Domain changes succeeded saves none of them.
         await Assert.ThrowsAsync<InvalidOperationException>(() => db.Requests().UpdateAsync(requestId, null, r =>
         {
-            r.AddItem(0, "5.5", "Would be saved", WorkType.Make, 1m, 1, Now);
-            r.AddItem(0, "5.5", "Duplicate of the previous one", WorkType.Make, 1m, 1, Now);
+            r.AddItem(0, "5.5", "Would be saved", 1m, 1, Now);
+            r.AddItem(0, "5.5", "Duplicate of the previous one", 1m, 1, Now);
         }, Token));
 
         var stored = (await db.Requests().FindAsync(requestId, Token))!.Value;
@@ -226,7 +226,7 @@ public class RequestRepositoryTests
         db.Execute("UPDATE Requests SET Version = Version + 1");
 
         await Assert.ThrowsAsync<ConcurrencyConflictException>(() => db.Requests().UpdateAsync(
-            added.Value.Id, added.Version, r => r.AddItem(0, "7.7", "Late item", WorkType.Make, 1m, 1, Now), Token));
+            added.Value.Id, added.Version, r => r.AddItem(0, "7.7", "Late item", 1m, 1, Now), Token));
         Assert.Equal("2", db.Query("SELECT COUNT(*) FROM RequestItems").Single());
     }
 
@@ -274,7 +274,7 @@ public class RequestRepositoryTests
         foreach (var number in numbers)
         {
             var request = PersistenceTestData.NewRequest(customer, number);
-            request.AddItem(0, number, "Part", WorkType.Make, 1m, 1, Now);
+            request.AddItem(0, number, "Part", 1m, 1, Now);
             await db.Requests().AddAsync(request, Token);
         }
 

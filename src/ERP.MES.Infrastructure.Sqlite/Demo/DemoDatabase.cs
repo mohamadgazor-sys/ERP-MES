@@ -116,6 +116,14 @@ public static class DemoDatabase
                 {
                     await SqliteDatabase.MigrateAsync(path, cancellationToken);
                 }
+                catch (RequestWorkTypeInvalidException exception)
+                {
+                    // A demonstration database from before one-type-per-request existed: its sample requests mix MAKE and REPAIR items.
+                    throw new DemoDatabaseRefusedException(
+                        DemoDatabaseState.Demo,
+                        "Refused to initialise '" + path + "': it holds sample requests whose single work type cannot be determined (" + exception.MixedRequests
+                        + " mixed, " + exception.RequestsWithoutItems + " without items). Nothing was changed. Replace it with the explicit reset: demo-reset <file> --yes.");
+                }
                 catch (ActorReferencesInvalidException exception)
                 {
                     // A demonstration database from before sign-in existed: its sample records refer to a placeholder user that never existed.

@@ -43,6 +43,11 @@ public static class SqliteDatabase
     public const string ActorReferencesMigrationSuffix = "_AddAuthentication";
 
     /// <summary>
+    /// The migration that moves the work type from the items to the request (Decision Log #84). Identified by name so the guard below can run before it is applied.
+    /// </summary>
+    public const string SingleWorkTypeMigrationSuffix = "_SingleWorkTypePerRequest";
+
+    /// <summary>
     /// Applies pending migrations. On a database that is already up to date this changes nothing. A missing file is created (this is the entry point for
     /// IT and for the demonstration tools); the desktop application must use <see cref="MigrateExistingAsync"/>.
     /// If the pending migrations include the actor foreign keys and the database already holds records whose creator or approver is not a user, the migration is
@@ -55,6 +60,11 @@ public static class SqliteDatabase
         if (pending.Any(m => m.EndsWith(ActorReferencesMigrationSuffix, StringComparison.Ordinal)))
         {
             await EnsureActorReferencesAreValidAsync(context, databasePath, cancellationToken);
+        }
+
+        if (pending.Any(m => m.EndsWith(SingleWorkTypeMigrationSuffix, StringComparison.Ordinal)))
+        {
+            await EnsureRequestsHaveOneWorkTypeAsync(context, databasePath, cancellationToken);
         }
 
         await context.Database.MigrateAsync(cancellationToken);
@@ -106,6 +116,39 @@ public static class SqliteDatabase
         }
     }
 
+    // Before the single-work-type migration a request may hold items of both types, or no items at all (then its type cannot be known). Neither is guessed: the
+    // migration is not started and the database stays exactly as it was (Decision Log #84).
+    private static async Task EnsureRequestsHaveOneWorkTypeAsync(ErpMesDbContext context, string databasePath, CancellationToken cancellationToken)
+    {
+        var connection = context.Database.GetDbConnection();
+        await connection.OpenAsync(cancellationToken);
+        try
+        {
+            if (!await TableExistsAsync(connection, "Requests", cancellationToken) || !await TableExistsAsync(connection, "RequestItems", cancellationToken))
+            {
+                return;
+            }
+
+            var mixed = await CountAsync(connection, "SELECT COUNT(*) FROM Requests r WHERE (SELECT COUNT(DISTINCT i.WorkType) FROM RequestItems i WHERE i.RequestId = r.Id) > 1", cancellationToken);
+            var withoutItems = await CountAsync(connection, "SELECT COUNT(*) FROM Requests r WHERE NOT EXISTS (SELECT 1 FROM RequestItems i WHERE i.RequestId = r.Id)", cancellationToken);
+            if (mixed + withoutItems > 0)
+            {
+                throw new RequestWorkTypeInvalidException(Path.GetFullPath(databasePath), mixed, withoutItems);
+            }
+        }
+        finally
+        {
+            await connection.CloseAsync();
+        }
+    }
+
+    private static async Task<long> CountAsync(System.Data.Common.DbConnection connection, string sql, CancellationToken cancellationToken)
+    {
+        await using var command = connection.CreateCommand();
+        command.CommandText = sql;
+        return Convert.ToInt64(await command.ExecuteScalarAsync(cancellationToken), System.Globalization.CultureInfo.InvariantCulture);
+    }
+
     private static async Task<bool> TableExistsAsync(System.Data.Common.DbConnection connection, string table, CancellationToken cancellationToken)
     {
         await using var command = connection.CreateCommand();
@@ -137,4 +180,21 @@ public sealed class ActorReferencesInvalidException(string databasePath, long re
     public string DatabasePath { get; } = databasePath;
 
     public long RecordCount { get; } = recordCount;
+}
+
+/// <summary>
+/// The database holds requests whose work type cannot be derived (Decision Log #84: a request has exactly one type): requests with items of both types, or
+/// requests without items. Nothing is guessed, changed or deleted; the database is left exactly as it was.
+/// </summary>
+public sealed class RequestWorkTypeInvalidException(string databasePath, long mixedRequests, long requestsWithoutItems)
+    : InvalidOperationException(
+        $"The database '{databasePath}' cannot be upgraded: {mixedRequests} request(s) hold both MAKE and REPAIR items and {requestsWithoutItems} request(s) hold no items, "
+        + "so their single work type cannot be determined. Nothing was changed. If this is a demonstration database, replace it with the explicit reset: "
+        + "Provisioning 'demo-reset <file> --yes'. Any other database needs a reviewed data repair by its owner (split each mixed request into two requests; give each empty request a type).")
+{
+    public string DatabasePath { get; } = databasePath;
+
+    public long MixedRequests { get; } = mixedRequests;
+
+    public long RequestsWithoutItems { get; } = requestsWithoutItems;
 }

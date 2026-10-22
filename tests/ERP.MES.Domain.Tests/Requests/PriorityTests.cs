@@ -48,8 +48,8 @@ public class PriorityTests
     public void Several_items_may_share_a_priority_and_planning_can_change_it()
     {
         var request = RequestFixtures.NewRequest();
-        var a = request.AddMake("1.10", priority: Priority.Urgent);
-        var b = request.AddRepair("2.10", priority: Priority.Urgent);
+        var a = request.AddRing("1.10", priority: Priority.Urgent);
+        var b = request.AddShaft("2.10", priority: Priority.Urgent);
 
         Assert.Equal(a.Priority, b.Priority);
 
@@ -66,7 +66,7 @@ public class PriorityTests
     [Fact]
     public void Changing_the_priority_rejects_unknown_values_and_non_utc_times()
     {
-        var item = RequestFixtures.NewRequest().AddMake();
+        var item = RequestFixtures.NewRequest().AddRing();
 
         Assert.Throws<ArgumentOutOfRangeException>(() => item.ChangePriority((Priority)0, RequestFixtures.Now));
         Assert.Throws<ArgumentException>(() => item.ChangePriority(Priority.Urgent, new DateTime(2026, 10, 14, 9, 0, 0, DateTimeKind.Local)));

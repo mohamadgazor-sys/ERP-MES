@@ -71,9 +71,9 @@ public class StageWorkflowTests
     private static async Task<long> SeedAsync(World w, params decimal[] minutesPerPiece)
     {
         var customer = (await w.Services.Customers.CreateAsync(w.Central, "Fictional Customer A", Token)).Value!.Value.Id;
-        var request = (await w.Services.Requests.CreateAsync(w.Central, new CreateRequestCommand(customer, "R-1", "1405/07/20", null, null), Token)).Value!.Value.Id;
+        var request = (await w.Services.Requests.CreateAsync(w.Central, new CreateRequestCommand(customer, "R-1", WorkType.Make, "1405/07/20", null, null), Token)).Value!.Value.Id;
         var version = (await w.Services.Requests.GetAsync(w.Planning, request, Token)).Value!.Request.Version;
-        var added = await w.Services.Requests.AddItemAsync(w.Planning, request, version, new AddItemCommand("1.10", "Ring A", WorkType.Make, 10m, Priority.Normal), Token);
+        var added = await w.Services.Requests.AddItemAsync(w.Planning, request, version, new AddItemCommand("1.10", "Ring A", 10m, Priority.Normal), Token);
         Assert.True(added.Succeeded, added.Status + " " + added.Issue);
         await w.Fixture.Db.Requests().UpdateRowsAsync(
             request,
@@ -419,7 +419,7 @@ public class StageWorkflowTests
         // Another user adds an item: the request row has a new version.
         var current = (await w.Services.Requests.GetAsync(w.Planning, request, Token)).Value!;
         w.Fixture.Clock.Advance(TimeSpan.FromMinutes(1));
-        Assert.True((await w.Services.Requests.AddItemAsync(w.Planning, request, current.Request.Version, new AddItemCommand("2.10", "Shaft B", WorkType.Repair, 1m), Token)).Succeeded);
+        Assert.True((await w.Services.Requests.AddItemAsync(w.Planning, request, current.Request.Version, new AddItemCommand("2.10", "Shaft B", 1m), Token)).Succeeded);
         var before = Snapshot(w);
 
         Assert.Equal(OperationStatus.ConcurrencyConflict, (await w.Stages.PerformAsync(w.Planning, StageAction.Release, stale, Token)).Status);

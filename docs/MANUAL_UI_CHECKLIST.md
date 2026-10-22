@@ -74,13 +74,13 @@ Prepare a fictional demonstration database with `demo-init` (see `docs/AUTHENTIC
 | D5 | Select it, "غیرفعال کردن" | It disappears from the list; tick "نمایش مشتریان غیرفعال" and it shows as "غیرفعال"; "فعال کردن" brings it back; there is no delete button | |
 | D6 | Sign in as `demo.qc` or `demo.drawing` and open "مشتریان" | The list is shown; the buttons are disabled | |
 | D7 | Sign in as `demo.central`, open "درخواست‌ها" | The seeded requests are listed newest first with request number, customer, Jalali date, Jalali year, status and item count | |
-| D8 | Expand "ثبت درخواست جدید": choose a customer, request number `wsj-898`, date `۱۴۰۵/۰۷/۲۰`, a title; "ثبت درخواست" | The request appears with status "ایجادشده"; it is selected below | |
+| D8 | Expand "ثبت درخواست جدید": choose a customer, request number `wsj-898`, **work type "ساخت"** (one type for the whole request, Decision Log #84; leaving it empty is refused with "نوع کار (ساخت یا تعمیر) را انتخاب کنید."), date `۱۴۰۵/۰۷/۲۰`, a title; "ثبت درخواست" | The request appears with status "ایجادشده" and the "نوع کار" column "ساخت"; it is selected below and its detail line shows "نوع کار: ساخت" | |
 | D9 | Enter the same number again for the same customer and year | "درخواستی با همین شماره ... وجود دارد."; nothing is added. Enter `WSJ-898` instead: it is added and a non-blocking warning names `wsj-898` | |
 | D10 | Enter wrong dates: `۱۴۰۵-۰۷-۲۰`, `۱۴۰۴/۱۲/۳۰`, `۱۴۰۵/۱۳/۰۱`, or leave it empty | A specific Persian message each time; nothing is added | |
 | D11 | As `demo.central`, "ارسال به مدیریت" on the new request | Status becomes "ارسال‌شده به مدیریت"; the button is disabled afterwards. There is no approve/reject action (not approved yet) | |
 | D12 | As `demo.central`, look for "افزودن آیتم" | It is disabled: Central does not define items | |
-| D13 | As `demo.drawing`, open the new request, "افزودن آیتم": item `1.10`, part name, quantity `۱۰`, type "ساخت" | The item is listed with "ساخت", quantity `۱۰`, priority "عادی". Trying type "تعمیر" or a priority other than "عادی" is refused with "شما اجازهٔ انجام این کار را ندارید." | |
-| D14 | As `demo.planning`, add item `2.10`, quantity `۲.۵`, type "تعمیر", priority "فوری" | The request now shows one MAKE and one REPAIR item; priority labels are exactly عادی / فوری / خیلی فوری | |
+| D13 | As `demo.drawing`, open the new request, "افزودن آیتم": item `1.10`, part name, quantity `۱۰` (the form has no type field: the item inherits the request's type) | The item is listed with "ساخت" (the request's type), quantity `۱۰`, priority "عادی". A priority other than "عادی" is refused with "شما اجازهٔ انجام این کار را ندارید." | |
+| D14 | As `demo.planning`, add item `2.10`, quantity `۲.۵`, priority "فوری" | The request now shows two items, both "ساخت"; priority labels are exactly عادی / فوری / خیلی فوری | |
 | D15 | Enter a duplicate item number, quantity `0` or letters | A specific Persian message; nothing is added | |
 | D16 | Open the same request in two copies of the application (two users), add an item in the first, then in the second | The second is told the record was changed by another user, the list reloads and shows the first item; adding again then works | |
 | D17 | Lock the session (Ctrl+L) while a request is open, unlock | The same page and selection return (session lifecycle, section C) | |

@@ -8,6 +8,7 @@ public sealed record RequestSummary(
     long CustomerId,
     string CustomerName,
     RequestNo RequestNo,
+    WorkType WorkType,
     int JalaliRequestYear,
     DateOnly RequestDate,
     string? Title,

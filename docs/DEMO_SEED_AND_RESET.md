@@ -45,14 +45,14 @@ Demonstration-only data is recognisable: customer names end with `(نمونه آ
 
 | Request (customer) | Jalali date | Status | Items (type, priority) and route state |
 |---|---|---|---|
-| DEMO-1405-001 (A) | 1405/07/05 | `MGMT_APPROVED_AT_PLANNING` | 1.10 MAKE very urgent: 3 stages, stage 1 QC-approved, stage 2 waiting for QC, stage 3 waiting for previous QC. 1.20 REPAIR urgent: 2 stages, stage 1 in progress |
-| DEMO-1405-002 (A) | 1405/07/12 | `MGMT_APPROVED_AT_PLANNING` | 2.10 MAKE normal: 2 stages, stage 1 waiting for QC. 2.20 REPAIR normal: 2 stages, stage 1 released (waiting) |
-| DEMO-1405-014 (B) | 1405/07/15 | `SENT_TO_MANAGEMENT` | 3.10 MAKE very urgent (3 stages), 3.20 REPAIR normal (2 stages); nothing released |
-| DEMO-1405-015 (B) | 1405/07/18 | `CREATED` | 4.10 MAKE urgent, 4.20 REPAIR normal (2 stages each); nothing released |
-| DEMO-1405-003 (C) | 1405/06/28 | `MGMT_APPROVED_AT_PLANNING` | 5.10 MAKE normal: all 3 stages approved (route completed). 5.20 REPAIR urgent: stage 1 approved, stage 2 released |
-| DEMO-1404-087 (C) | 1404/12/20 | `CLOSED` | 6.10 MAKE, 6.20 REPAIR (normal): both routes completed; a request of the previous Jalali year |
+| DEMO-1405-001 (A) | 1405/07/05 | `MGMT_APPROVED_AT_PLANNING` | **MAKE request.** 1.10 very urgent: 3 stages, stage 1 QC-approved, stage 2 waiting for QC, stage 3 waiting for previous QC. 1.20 urgent: 2 stages, stage 1 in progress |
+| DEMO-1405-002 (A) | 1405/07/12 | `MGMT_APPROVED_AT_PLANNING` | **REPAIR request.** 2.10 normal: 2 stages, stage 1 waiting for QC. 2.20 normal: 2 stages, stage 1 released (waiting) |
+| DEMO-1405-014 (B) | 1405/07/15 | `SENT_TO_MANAGEMENT` | **MAKE request.** 3.10 very urgent (3 stages), 3.20 normal (2 stages); nothing released |
+| DEMO-1405-015 (B) | 1405/07/18 | `CREATED` | **REPAIR request.** 4.10 urgent, 4.20 normal (2 stages each); nothing released |
+| DEMO-1405-003 (C) | 1405/06/28 | `MGMT_APPROVED_AT_PLANNING` | **MAKE request.** 5.10 normal: all 3 stages approved (route completed). 5.20 urgent: stage 1 approved, stage 2 released |
+| DEMO-1404-087 (C) | 1404/12/20 | `CLOSED` | **REPAIR request.** 6.10, 6.20 (normal): both routes completed; a request of the previous Jalali year |
 
-Totals: 3 customers, 6 requests, 12 items (6 MAKE, 6 REPAIR), 27 stages, 9 QC approvals. Stage states: 9 QC approved, 2 waiting for QC, 1 in progress, 2 waiting, 4 planned, 9 waiting for previous QC.
+Totals: 3 customers, 6 requests, 12 items (6 in the three MAKE requests, 6 in the three REPAIR requests; a request has one work type, Decision Log #84), 27 stages, 9 QC approvals. Stage states: 9 QC approved, 2 waiting for QC, 1 in progress, 2 waiting, 4 planned, 9 waiting for previous QC.
 
 Honest limits of the sample, all inherited from the Domain model (Decision Log #57, #58):
 

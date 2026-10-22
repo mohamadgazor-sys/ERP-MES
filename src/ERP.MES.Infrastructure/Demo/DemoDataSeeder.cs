@@ -47,9 +47,9 @@ public sealed class DemoDataSeeder(ICustomerRepository customers, IRequestReposi
     private sealed record StageDef(string Title, decimal MinutesPerPiece);
 
     // Approved: number of leading stages that QC has approved. Next: state of the stage after them (ignored when every stage is approved).
-    private sealed record ItemDef(string ItemNo, string PartName, WorkType Type, decimal Quantity, Priority Priority, StageDef[] Stages, int Approved, StageState Next);
+    private sealed record ItemDef(string ItemNo, string PartName, decimal Quantity, Priority Priority, StageDef[] Stages, int Approved, StageState Next);
 
-    private sealed record RequestDef(int CustomerIndex, string RequestNo, int Year, int Month, int Day, string Title, string Description, RequestStatus Status, ItemDef[] Items);
+    private sealed record RequestDef(int CustomerIndex, string RequestNo, WorkType Type, int Year, int Month, int Day, string Title, string Description, RequestStatus Status, ItemDef[] Items);
 
     private static readonly string[] CustomerNames =
     [
@@ -58,40 +58,40 @@ public sealed class DemoDataSeeder(ICustomerRepository customers, IRequestReposi
         "گروه صنعتی نمونه فرضی ج " + DemoNameSuffix,
     ];
 
-    // Fictional requests: mixed MAKE and REPAIR items, two or three stages per item, a spread of the approved statuses and priorities, and
+    // Fictional requests: each has ONE work type (MAKE or REPAIR; Decision Log #84) that its items inherit, two or three stages per item, a spread of the approved statuses and priorities, and
     // stages at different points of the QC gate (not released, waiting, in progress, waiting for QC, approved). Numbers, names and
     // quantities are invented.
     private static readonly RequestDef[] Requests =
     [
-        new(0, RequestNoPrefix + "1405-001", 1405, 7, 5, TitlePrefix + "ساخت و تعمیر قطعات پمپ", "داده فرضی برای نمایش؛ مشتری و قطعات واقعی نیستند.", RequestStatus.MgmtApprovedAtPlanning,
+        new(0, RequestNoPrefix + "1405-001", WorkType.Make, 1405, 7, 5, TitlePrefix + "ساخت قطعات پمپ", "داده فرضی برای نمایش؛ مشتری و قطعات واقعی نیستند.", RequestStatus.MgmtApprovedAtPlanning,
         [
-            new("1.10", "شفت پمپ", WorkType.Make, 20m, Priority.VeryUrgent, [new("تراشکاری", 5m), new("سنگ‌زنی", 3m), new("پولیش", 1.5m)], 1, StageState.WaitingQc),
-            new("1.20", "بوش فرسوده", WorkType.Repair, 6m, Priority.Urgent, [new("جوشکاری ترمیمی", 12m), new("ماشین‌کاری نهایی", 4m)], 0, StageState.InProgress),
+            new("1.10", "شفت پمپ", 20m, Priority.VeryUrgent, [new("تراشکاری", 5m), new("سنگ‌زنی", 3m), new("پولیش", 1.5m)], 1, StageState.WaitingQc),
+            new("1.20", "بوش برنزی", 6m, Priority.Urgent, [new("جوشکاری ترمیمی", 12m), new("ماشین‌کاری نهایی", 4m)], 0, StageState.InProgress),
         ]),
-        new(0, RequestNoPrefix + "1405-002", 1405, 7, 12, TitlePrefix + "فلنج و گیربکس", "داده فرضی برای نمایش.", RequestStatus.MgmtApprovedAtPlanning,
+        new(0, RequestNoPrefix + "1405-002", WorkType.Repair, 1405, 7, 12, TitlePrefix + "تعمیر فلنج و گیربکس", "داده فرضی برای نمایش.", RequestStatus.MgmtApprovedAtPlanning,
         [
-            new("2.10", "فلنج ورودی", WorkType.Make, 50m, Priority.Normal, [new("برش", 2m), new("سوراخکاری", 1.5m)], 0, StageState.WaitingQc),
-            new("2.20", "پوسته گیربکس", WorkType.Repair, 2m, Priority.Normal, [new("بازرسی و ترمیم", 30m), new("مونتاژ و تست", 20m)], 0, StageState.Waiting),
+            new("2.10", "فلنج ورودی", 50m, Priority.Normal, [new("برش", 2m), new("سوراخکاری", 1.5m)], 0, StageState.WaitingQc),
+            new("2.20", "پوسته گیربکس", 2m, Priority.Normal, [new("بازرسی و ترمیم", 30m), new("مونتاژ و تست", 20m)], 0, StageState.Waiting),
         ]),
-        new(1, RequestNoPrefix + "1405-014", 1405, 7, 15, TitlePrefix + "چرخ‌دنده و غلتک (در انتظار مدیریت)", "داده فرضی برای نمایش؛ هنوز تأیید مدیریت ندارد.", RequestStatus.SentToManagement,
+        new(1, RequestNoPrefix + "1405-014", WorkType.Make, 1405, 7, 15, TitlePrefix + "ساخت چرخ‌دنده و غلتک (در انتظار مدیریت)", "داده فرضی برای نمایش؛ هنوز تأیید مدیریت ندارد.", RequestStatus.SentToManagement,
         [
-            new("3.10", "چرخ‌دنده مارپیچ", WorkType.Make, 100m, Priority.VeryUrgent, [new("تراشکاری", 4m), new("دنده‌زنی", 8m), new("سنگ‌زنی", 5m)], 0, StageState.Planned),
-            new("3.20", "غلتک چاپ", WorkType.Repair, 3m, Priority.Normal, [new("ماشین‌کاری", 15m), new("پرداخت", 10m)], 0, StageState.Planned),
+            new("3.10", "چرخ‌دنده مارپیچ", 100m, Priority.VeryUrgent, [new("تراشکاری", 4m), new("دنده‌زنی", 8m), new("سنگ‌زنی", 5m)], 0, StageState.Planned),
+            new("3.20", "غلتک چاپ", 3m, Priority.Normal, [new("ماشین‌کاری", 15m), new("پرداخت", 10m)], 0, StageState.Planned),
         ]),
-        new(1, RequestNoPrefix + "1405-015", 1405, 7, 18, TitlePrefix + "گلند و میل‌لنگ (تازه ثبت‌شده)", "داده فرضی برای نمایش؛ تازه ثبت شده است.", RequestStatus.Created,
+        new(1, RequestNoPrefix + "1405-015", WorkType.Repair, 1405, 7, 18, TitlePrefix + "تعمیر گلند و میل‌لنگ (تازه ثبت‌شده)", "داده فرضی برای نمایش؛ تازه ثبت شده است.", RequestStatus.Created,
         [
-            new("4.10", "گلند آب‌بندی", WorkType.Make, 200m, Priority.Urgent, [new("تراشکاری", 2m), new("پرداخت", 1m)], 0, StageState.Planned),
-            new("4.20", "میل‌لنگ", WorkType.Repair, 1m, Priority.Normal, [new("سنگ‌زنی", 40m), new("پولیش", 15m)], 0, StageState.Planned),
+            new("4.10", "گلند آب‌بندی", 200m, Priority.Urgent, [new("تراشکاری", 2m), new("پرداخت", 1m)], 0, StageState.Planned),
+            new("4.20", "میل‌لنگ", 1m, Priority.Normal, [new("سنگ‌زنی", 40m), new("پولیش", 15m)], 0, StageState.Planned),
         ]),
-        new(2, RequestNoPrefix + "1405-003", 1405, 6, 28, TitlePrefix + "پین و یاتاقان", "داده فرضی برای نمایش؛ یک قلم مسیر کامل دارد.", RequestStatus.MgmtApprovedAtPlanning,
+        new(2, RequestNoPrefix + "1405-003", WorkType.Make, 1405, 6, 28, TitlePrefix + "ساخت پین و یاتاقان", "داده فرضی برای نمایش؛ یک قلم مسیر کامل دارد.", RequestStatus.MgmtApprovedAtPlanning,
         [
-            new("5.10", "پین اتصال", WorkType.Make, 500m, Priority.Normal, [new("تراشکاری", 1m), new("سنگ‌زنی", 0.8m), new("پولیش", 0.5m)], 3, StageState.Waiting),
-            new("5.20", "یاتاقان ثابت", WorkType.Repair, 8m, Priority.Urgent, [new("ماشین‌کاری", 6m), new("پرداخت", 3m)], 1, StageState.Waiting),
+            new("5.10", "پین اتصال", 500m, Priority.Normal, [new("تراشکاری", 1m), new("سنگ‌زنی", 0.8m), new("پولیش", 0.5m)], 3, StageState.Waiting),
+            new("5.20", "یاتاقان ثابت", 8m, Priority.Urgent, [new("ماشین‌کاری", 6m), new("پرداخت", 3m)], 1, StageState.Waiting),
         ]),
-        new(2, RequestNoPrefix + "1404-087", 1404, 12, 20, TitlePrefix + "درپوش و شفت (سال قبل، بسته‌شده)", "داده فرضی برای نمایش؛ سال شمسی ۱۴۰۴.", RequestStatus.Closed,
+        new(2, RequestNoPrefix + "1404-087", WorkType.Repair, 1404, 12, 20, TitlePrefix + "تعمیر درپوش و شفت (سال قبل، بسته‌شده)", "داده فرضی برای نمایش؛ سال شمسی ۱۴۰۴.", RequestStatus.Closed,
         [
-            new("6.10", "درپوش انتهایی", WorkType.Make, 40m, Priority.Normal, [new("تراشکاری", 3m), new("پرداخت", 1m)], 2, StageState.Planned),
-            new("6.20", "شفت خمیده", WorkType.Repair, 4m, Priority.Normal, [new("صاف‌کاری", 20m), new("ماشین‌کاری", 8m)], 2, StageState.Planned),
+            new("6.10", "درپوش انتهایی", 40m, Priority.Normal, [new("تراشکاری", 3m), new("پرداخت", 1m)], 2, StageState.Planned),
+            new("6.20", "شفت خمیده", 4m, Priority.Normal, [new("صاف‌کاری", 20m), new("ماشین‌کاری", 8m)], 2, StageState.Planned),
         ]),
     ];
 
@@ -142,11 +142,11 @@ public sealed class DemoDataSeeder(ICustomerRepository customers, IRequestReposi
     {
         var createdAt = AtUtc(definition.Year, definition.Month, definition.Day, 0);
         var request = Request.Create(
-            0, customer, RequestNo.Create(definition.RequestNo), requestDate, definition.Title, definition.Description, actors.CreatedByUserId, createdAt, dates);
+            0, customer, RequestNo.Create(definition.RequestNo), definition.Type, requestDate, definition.Title, definition.Description, actors.CreatedByUserId, createdAt, dates);
 
         foreach (var itemDefinition in definition.Items)
         {
-            var item = request.AddItem(0, itemDefinition.ItemNo, itemDefinition.PartName, itemDefinition.Type, itemDefinition.Quantity, actors.CreatedByUserId, createdAt, itemDefinition.Priority);
+            var item = request.AddItem(0, itemDefinition.ItemNo, itemDefinition.PartName, itemDefinition.Quantity, actors.CreatedByUserId, createdAt, itemDefinition.Priority);
             foreach (var stage in itemDefinition.Stages)
             {
                 item.DefineInitialStage(stage.Title, stage.MinutesPerPiece);

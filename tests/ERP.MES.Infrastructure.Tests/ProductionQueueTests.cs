@@ -69,18 +69,18 @@ public class ProductionQueueTests
         return outcome.Value!.Value.Id;
     }
 
-    private static async Task<long> RequestAsync(World w, long customerId, string requestNo, string date)
+    private static async Task<long> RequestAsync(World w, long customerId, string requestNo, string date, WorkType workType = WorkType.Make)
     {
-        var outcome = await w.Services.Requests.CreateAsync(w.Central, new CreateRequestCommand(customerId, requestNo, date, "Fictional request", null), Token);
+        var outcome = await w.Services.Requests.CreateAsync(w.Central, new CreateRequestCommand(customerId, requestNo, workType, date, "Fictional request", null), Token);
         Assert.True(outcome.Succeeded, outcome.Status + " " + outcome.Issue);
         w.Fixture.Clock.Advance(TimeSpan.FromMinutes(1));
         return outcome.Value!.Value.Id;
     }
 
-    private static async Task AddItemAsync(World w, long requestId, string itemNo, WorkType type, Priority priority, decimal quantity = 10m)
+    private static async Task AddItemAsync(World w, long requestId, string itemNo, Priority priority, decimal quantity = 10m)
     {
         var current = (await w.Services.Requests.GetAsync(w.Planning, requestId, Token)).Value!;
-        var added = await w.Services.Requests.AddItemAsync(w.Planning, requestId, current.Request.Version, new AddItemCommand(itemNo, "Part " + itemNo, type, quantity, priority), Token);
+        var added = await w.Services.Requests.AddItemAsync(w.Planning, requestId, current.Request.Version, new AddItemCommand(itemNo, "Part " + itemNo, quantity, priority), Token);
         Assert.True(added.Succeeded, added.Status + " " + added.Issue);
         w.Fixture.Clock.Advance(TimeSpan.FromMinutes(1));
     }
@@ -122,8 +122,9 @@ public class ProductionQueueTests
         using var w = await StartAsync();
         var customer = await CustomerAsync(w, "Fictional Customer A");
         var request = await RequestAsync(w, customer, "wsj-898", "1405/07/20");
-        await AddItemAsync(w, request, "1.10", WorkType.Make, Priority.Urgent, 10m);
-        await AddItemAsync(w, request, "2.10", WorkType.Repair, Priority.Normal, 4m);
+        var repairRequest = await RequestAsync(w, customer, "wsj-899", "1405/07/21", WorkType.Repair);
+        await AddItemAsync(w, request, "1.10", Priority.Urgent, 10m);
+        await AddItemAsync(w, repairRequest, "2.10", Priority.Normal, 4m);
 
         var entries = await LoadAsync(w);
 
@@ -137,6 +138,7 @@ public class ProductionQueueTests
         Assert.Equal(WorkType.Make, make.WorkType);
         Assert.Equal(Priority.Urgent, make.Priority);
         Assert.Equal(10m, make.RequestedQuantity);
+        // The type of an entry is the one authoritative type of its request (Decision Log #84).
         Assert.Equal(WorkType.Repair, entries.Single(e => e.ItemNo == "2.10").WorkType);
         Assert.Equal(Priority.Normal, entries.Single(e => e.ItemNo == "2.10").Priority);
     }
@@ -146,10 +148,10 @@ public class ProductionQueueTests
     {
         using var w = await StartAsync();
         var request = await RequestAsync(w, await CustomerAsync(w), "R-1", "1405/07/20");
-        await AddItemAsync(w, request, "open", WorkType.Make, Priority.Normal, 10m);
-        await AddItemAsync(w, request, "waiting-qc", WorkType.Make, Priority.Normal, 2m);
-        await AddItemAsync(w, request, "done", WorkType.Repair, Priority.Normal, 1m);
-        await AddItemAsync(w, request, "no-route", WorkType.Repair, Priority.Normal, 1m);
+        await AddItemAsync(w, request, "open", Priority.Normal, 10m);
+        await AddItemAsync(w, request, "waiting-qc", Priority.Normal, 2m);
+        await AddItemAsync(w, request, "done", Priority.Normal, 1m);
+        await AddItemAsync(w, request, "no-route", Priority.Normal, 1m);
 
         await DefineRouteAsync(w, request, "open", 5m, 3m, 1.5m);
         await ApproveAsync(w, request, "open", 1);
@@ -195,13 +197,13 @@ public class ProductionQueueTests
         var r1 = await RequestAsync(w, customer, "R-1", "1405/07/20");
         var r2 = await RequestAsync(w, customer, "R-2", "1405/07/10");
         var r3 = await RequestAsync(w, customer, "R-3", "1405/07/10");
-        await AddItemAsync(w, r1, "a", WorkType.Make, Priority.Normal);
-        await AddItemAsync(w, r1, "b", WorkType.Make, Priority.Urgent);
-        await AddItemAsync(w, r1, "f", WorkType.Make, Priority.VeryUrgent);
-        await AddItemAsync(w, r2, "c", WorkType.Make, Priority.Normal);
-        await AddItemAsync(w, r2, "d", WorkType.Make, Priority.Urgent);
-        await AddItemAsync(w, r2, "g", WorkType.Make, Priority.Urgent);
-        await AddItemAsync(w, r3, "e", WorkType.Make, Priority.Urgent);
+        await AddItemAsync(w, r1, "a", Priority.Normal);
+        await AddItemAsync(w, r1, "b", Priority.Urgent);
+        await AddItemAsync(w, r1, "f", Priority.VeryUrgent);
+        await AddItemAsync(w, r2, "c", Priority.Normal);
+        await AddItemAsync(w, r2, "d", Priority.Urgent);
+        await AddItemAsync(w, r2, "g", Priority.Urgent);
+        await AddItemAsync(w, r3, "e", Priority.Urgent);
 
         var first = await LoadAsync(w);
         var second = await LoadAsync(w);
@@ -239,7 +241,7 @@ public class ProductionQueueTests
     {
         using var w = await StartAsync();
         var request = await RequestAsync(w, await CustomerAsync(w), "R-1", "1405/07/20");
-        await AddItemAsync(w, request, "1.10", WorkType.Make, Priority.Normal);
+        await AddItemAsync(w, request, "1.10", Priority.Normal);
         await DefineRouteAsync(w, request, "1.10", 5m, 3m);
 
         var entry = (await LoadAsync(w)).Single();
@@ -255,7 +257,7 @@ public class ProductionQueueTests
     {
         using var w = await StartAsync();
         var request = await RequestAsync(w, await CustomerAsync(w), "R-1", "1405/07/20");
-        await AddItemAsync(w, request, "1.10", WorkType.Make, Priority.Normal);
+        await AddItemAsync(w, request, "1.10", Priority.Normal);
 
         foreach (var user in new[] { w.Management, w.Planning })
         {
@@ -334,7 +336,7 @@ public class ProductionQueueTests
     {
         using var w = await StartAsync();
         var request = await RequestAsync(w, await CustomerAsync(w), "R-1", "1405/07/20");
-        await AddItemAsync(w, request, "1.10", WorkType.Make, Priority.Urgent);
+        await AddItemAsync(w, request, "1.10", Priority.Urgent);
         await DefineRouteAsync(w, request, "1.10", 5m, 3m);
         string[] Snapshot() => w.Fixture.Db.Query(
             "SELECT 'R', Id, Version, UpdatedAtUtc FROM Requests UNION ALL SELECT 'I', Id, Version, UpdatedAtUtc FROM RequestItems "

@@ -14,7 +14,7 @@ public class RowVersionTests
     {
         var db = new TempDatabase();
         await db.MigrateWithActorsAsync();
-        return (db, await PersistenceTestData.SeedMixedRequestAsync(db));
+        return (db, await PersistenceTestData.SeedSampleRequestAsync(db));
     }
 
     private static RequestItem Make(Request request) => request.Items.Single(i => i.ItemNo == "1.10");

@@ -26,9 +26,10 @@ public class MigrationTests
 
         await using var context = db.NewContext();
         var applied = (await context.Database.GetAppliedMigrationsAsync(TestContext.Current.CancellationToken)).ToArray();
-        Assert.Equal(2, applied.Length);
+        Assert.Equal(3, applied.Length);
         Assert.EndsWith("_InitialCreate", applied[0], StringComparison.Ordinal);
         Assert.EndsWith("_AddAuthentication", applied[1], StringComparison.Ordinal);
+        Assert.EndsWith("_SingleWorkTypePerRequest", applied[2], StringComparison.Ordinal);
         Assert.Empty(await context.Database.GetPendingMigrationsAsync(TestContext.Current.CancellationToken));
     }
 
@@ -40,7 +41,7 @@ public class MigrationTests
 
         // Fails if the model changed without a new migration, or if the snapshot was edited away from the model.
         Assert.False(context.Database.HasPendingModelChanges());
-        Assert.Equal(2, context.Database.GetMigrations().Count());
+        Assert.Equal(3, context.Database.GetMigrations().Count());
     }
 
     [Fact]
@@ -181,10 +182,10 @@ public class MigrationTests
             await context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
             var request = PersistenceTestData.NewRequest(customer);
-            request.AddItem(0, "A-01", "Ring", WorkType.Make, 1m, 1, PersistenceTestData.Now);
-            request.AddItem(0, "a-01", "Ring", WorkType.Make, 1m, 1, PersistenceTestData.Now);
-            request.AddItem(0, "1.1", "Ring", WorkType.Make, 1m, 1, PersistenceTestData.Now);
-            request.AddItem(0, "1.10", "Ring", WorkType.Make, 1m, 1, PersistenceTestData.Now).DefineInitialStage("Turning", 1m);
+            request.AddItem(0, "A-01", "Ring", 1m, 1, PersistenceTestData.Now);
+            request.AddItem(0, "a-01", "Ring", 1m, 1, PersistenceTestData.Now);
+            request.AddItem(0, "1.1", "Ring", 1m, 1, PersistenceTestData.Now);
+            request.AddItem(0, "1.10", "Ring", 1m, 1, PersistenceTestData.Now).DefineInitialStage("Turning", 1m);
             context.Requests.Add(request);
             await context.SaveChangesAsync(TestContext.Current.CancellationToken);
         }
@@ -193,8 +194,8 @@ public class MigrationTests
 
         // The domain prevents duplicates; the database must refuse them too if anything bypasses the domain.
         Assert.Throws<SqliteException>(() => db.Execute(
-            "INSERT INTO RequestItems (RequestId, ItemNo, PartName, WorkType, RequestedQuantity, Priority, CreatedByUserId, CreatedAtUtc, UpdatedAtUtc) " +
-            "SELECT RequestId, ItemNo, PartName, WorkType, RequestedQuantity, Priority, CreatedByUserId, CreatedAtUtc, UpdatedAtUtc FROM RequestItems WHERE ItemNo = 'A-01'"));
+            "INSERT INTO RequestItems (RequestId, ItemNo, PartName, RequestedQuantity, Priority, CreatedByUserId, CreatedAtUtc, UpdatedAtUtc) " +
+            "SELECT RequestId, ItemNo, PartName, RequestedQuantity, Priority, CreatedByUserId, CreatedAtUtc, UpdatedAtUtc FROM RequestItems WHERE ItemNo = 'A-01'"));
         Assert.Throws<SqliteException>(() => db.Execute(
             "INSERT INTO ItemStages (RequestItemId, StageNo, StageTitle, PlannedMinutesPerPiece, PlannedQuantity, Status) " +
             "SELECT RequestItemId, StageNo, StageTitle, PlannedMinutesPerPiece, PlannedQuantity, Status FROM ItemStages"));
@@ -205,7 +206,7 @@ public class MigrationTests
     {
         using var db = new TempDatabase();
         await db.MigrateWithActorsAsync();
-        await PersistenceTestData.SeedMixedRequestAsync(db);
+        await PersistenceTestData.SeedSampleRequestAsync(db);
 
         var makeItemId = db.Query("SELECT Id FROM RequestItems WHERE ItemNo = '1.10'").Single();
         var repairItemId = db.Query("SELECT Id FROM RequestItems WHERE ItemNo = '2.10'").Single();

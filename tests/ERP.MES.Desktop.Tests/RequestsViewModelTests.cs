@@ -65,7 +65,7 @@ public class RequestsViewModelTests
         var vm = h.RequestsFor(h.Central);
         await vm.LoadAsync(Token);
 
-        var saved = await vm.CreateAsync(customerId, "wsj-898", DateText, "عنوان نمونه", null, Token);
+        var saved = await vm.CreateAsync(customerId, "wsj-898", WorkType.Make, DateText, "عنوان نمونه", null, Token);
 
         Assert.True(saved);
         Assert.StartsWith("درخواست ثبت شد", vm.Message, StringComparison.Ordinal);
@@ -109,7 +109,7 @@ public class RequestsViewModelTests
             _ => Messages.ForDateError(JalaliDateError.MonthOutOfRange),
         };
 
-        var saved = await vm.CreateAsync(customerId, requestNo, date, null, null, Token);
+        var saved = await vm.CreateAsync(customerId, requestNo, WorkType.Make, date, null, null, Token);
 
         Assert.False(saved);
         Assert.Equal(expected, vm.Message);
@@ -140,14 +140,14 @@ public class RequestsViewModelTests
         var vm = h.RequestsFor(h.Central);
         await vm.LoadAsync(Token);
 
-        Assert.False(await vm.CreateAsync(0, "P-1", DateText, null, null, Token));
+        Assert.False(await vm.CreateAsync(0, "P-1", WorkType.Make, DateText, null, null, Token));
         Assert.Equal(Messages.ForIssue(ValidationIssue.CustomerRequired, JalaliDateError.None), vm.Message);
 
-        Assert.True(await vm.CreateAsync(customerId, "wsj-898", DateText, null, null, Token));
-        Assert.False(await vm.CreateAsync(customerId, "wsj-898", DateText, null, null, Token));
+        Assert.True(await vm.CreateAsync(customerId, "wsj-898", WorkType.Make, DateText, null, null, Token));
+        Assert.False(await vm.CreateAsync(customerId, "wsj-898", WorkType.Make, DateText, null, null, Token));
         Assert.Equal(Messages.Duplicate, vm.Message);
 
-        Assert.True(await vm.CreateAsync(customerId, "WSJ-898", DateText, null, null, Token));
+        Assert.True(await vm.CreateAsync(customerId, "WSJ-898", WorkType.Make, DateText, null, null, Token));
         Assert.Contains("هشدار", vm.Message, StringComparison.Ordinal);
         Assert.Contains("wsj-898", vm.Message, StringComparison.Ordinal);
         Assert.Equal(2, vm.Requests.Count);
@@ -166,7 +166,7 @@ public class RequestsViewModelTests
         var stored = (await h.Workflow.Customers.ListAsync(h.Central, false, Token)).Value!.Single(c => c.Value.Id == leaving);
         Assert.True((await h.Workflow.Customers.SetActiveAsync(h.Planning, leaving, stored.Version, false, Token)).Succeeded);
 
-        var saved = await vm.CreateAsync(leaving, "P-1", DateText, null, null, Token);
+        var saved = await vm.CreateAsync(leaving, "P-1", WorkType.Make, DateText, null, null, Token);
 
         Assert.False(saved);
         Assert.Equal(Messages.ForIssue(ValidationIssue.CustomerInactive, JalaliDateError.None), vm.Message);
@@ -176,7 +176,7 @@ public class RequestsViewModelTests
         Assert.Empty((await h.Workflow.Requests.ListAsync(h.Central, null, Token)).Value!);
 
         // A request for the other, active customer still works.
-        Assert.True(await vm.CreateAsync(staying, "P-1", DateText, null, null, Token));
+        Assert.True(await vm.CreateAsync(staying, "P-1", WorkType.Make, DateText, null, null, Token));
     }
 
     [Fact]
@@ -187,7 +187,7 @@ public class RequestsViewModelTests
         var vm = h.RequestsFor(h.Central);
         await vm.LoadAsync(Token);
 
-        Assert.False(await vm.CreateAsync(4242, "P-1", DateText, null, null, Token));
+        Assert.False(await vm.CreateAsync(4242, "P-1", WorkType.Make, DateText, null, null, Token));
 
         Assert.Equal(Messages.ForIssue(ValidationIssue.CustomerNotFound, JalaliDateError.None), vm.Message);
         Assert.NotEqual(Messages.ForIssue(ValidationIssue.CustomerInactive, JalaliDateError.None), vm.Message);
@@ -202,36 +202,38 @@ public class RequestsViewModelTests
         var vm = h.RequestsFor(h.Planning);
         await vm.LoadAsync(Token);
 
-        Assert.False(await vm.CreateAsync(customerId, "P-1", DateText, null, null, Token));
+        Assert.False(await vm.CreateAsync(customerId, "P-1", WorkType.Make, DateText, null, null, Token));
 
         Assert.Equal(Messages.NotAuthorized, vm.Message);
         Assert.Empty(vm.Requests);
     }
 
     [Fact]
-    public async Task Drawing_and_planning_build_a_mixed_request_in_turn_and_the_items_show_type_quantity_and_priority_labels()
+    public async Task Drawing_and_planning_build_a_make_request_in_turn_and_the_items_show_the_requests_type_quantity_and_priority_labels()
     {
         using var h = await WorkflowHarness.CreateAsync(Token);
         var customerId = await CustomerAsync(h);
         var central = h.RequestsFor(h.Central);
-        await central.CreateAsync(customerId, "P-565", DateText, null, null, Token);
+        await central.CreateAsync(customerId, "P-565", WorkType.Make, DateText, null, null, Token);
         var requestId = central.Requests.Single().RequestId;
+        Assert.Equal("ساخت", central.Requests.Single().WorkTypeText);
 
         var drawing = h.RequestsFor(h.Drawing);
         await drawing.LoadAsync(Token);
         await drawing.SelectAsync(drawing.Requests.Single(), Token);
         Assert.True(drawing.CanAddItem);
-        Assert.True(await drawing.AddItemAsync("1.10", "حلقه", WorkType.Make, "۱۰", Priority.Normal, Token));
+        Assert.True(await drawing.AddItemAsync("1.10", "حلقه", "۱۰", Priority.Normal, Token));
         Assert.Equal("آیتم ثبت شد.", drawing.Message);
 
         var planning = h.RequestsFor(h.Planning);
         await planning.LoadAsync(Token);
         await planning.SelectAsync(planning.Requests.Single(), Token);
         Assert.True(planning.CanSetPriority);
-        Assert.True(await planning.AddItemAsync("2.10", "شفت", WorkType.Repair, "2.5", Priority.Urgent, Token));
+        Assert.True(await planning.AddItemAsync("2.10", "شفت", "2.5", Priority.Urgent, Token));
 
+        // Both items inherit the request's one work type (Decision Log #84).
         Assert.Equal(
-            new[] { new ItemRow("1.10", "حلقه", "ساخت", "۱۰", "عادی"), new ItemRow("2.10", "شفت", "تعمیر", "۲.۵", "فوری") },
+            new[] { new ItemRow("1.10", "حلقه", "ساخت", "۱۰", "عادی"), new ItemRow("2.10", "شفت", "ساخت", "۲.۵", "فوری") },
             planning.Items.ToArray());
         Assert.Equal(2, planning.Requests.Single().ItemCount);
 
@@ -252,12 +254,12 @@ public class RequestsViewModelTests
     {
         using var h = await WorkflowHarness.CreateAsync(Token);
         var customerId = await CustomerAsync(h);
-        await h.RequestsFor(h.Central).CreateAsync(customerId, "P-1", DateText, null, null, Token);
+        await h.RequestsFor(h.Central).CreateAsync(customerId, "P-1", WorkType.Make, DateText, null, null, Token);
         var drawing = h.RequestsFor(h.Drawing);
         await drawing.LoadAsync(Token);
         await drawing.SelectAsync(drawing.Requests.Single(), Token);
 
-        Assert.True(await drawing.AddItemAsync("1.10", "حلقه", WorkType.Make, typed, Priority.Normal, Token));
+        Assert.True(await drawing.AddItemAsync("1.10", "حلقه", typed, Priority.Normal, Token));
 
         Assert.Equal(shown, drawing.Items.Single().QuantityText);
         var restarted = h.RequestsFor(h.Qc, h.Restarted());
@@ -267,23 +269,31 @@ public class RequestsViewModelTests
     }
 
     [Fact]
-    public async Task Drawing_cannot_add_a_repair_item_and_central_cannot_add_items_at_all()
+    public async Task Drawing_cannot_add_items_to_a_repair_request_and_central_cannot_add_items_at_all()
     {
         using var h = await WorkflowHarness.CreateAsync(Token);
         var customerId = await CustomerAsync(h);
         var central = h.RequestsFor(h.Central);
-        await central.CreateAsync(customerId, "P-1", DateText, null, null, Token);
+        await central.CreateAsync(customerId, "P-1", WorkType.Make, DateText, null, null, Token);
+        await central.CreateAsync(customerId, "P-2", WorkType.Repair, DateText, null, null, Token);
         var drawing = h.RequestsFor(h.Drawing);
         await drawing.LoadAsync(Token);
-        await drawing.SelectAsync(drawing.Requests.Single(), Token);
 
-        Assert.False(await drawing.AddItemAsync("2.10", "شفت", WorkType.Repair, "4", Priority.Normal, Token));
+        // A REPAIR request: Drawing holds no permission for its items (provisional map #34), even though the screen offers the form for MAKE requests.
+        await drawing.SelectAsync(drawing.Requests.Single(r => r.RequestNo == "P-2"), Token);
+        Assert.False(drawing.CanAddItem);
+        Assert.False(await drawing.AddItemAsync("2.10", "شفت", "4", Priority.Normal, Token));
         Assert.Equal(Messages.NotAuthorized, drawing.Message);
-        Assert.False(await drawing.AddItemAsync("1.10", "حلقه", WorkType.Make, "4", Priority.Urgent, Token));
+
+        // A MAKE request: Drawing may add Normal-priority items but not set a higher priority.
+        await drawing.SelectAsync(drawing.Requests.Single(r => r.RequestNo == "P-1"), Token);
+        Assert.True(drawing.CanAddItem);
+        Assert.False(await drawing.AddItemAsync("1.10", "حلقه", "4", Priority.Urgent, Token));
         Assert.Equal(Messages.NotAuthorized, drawing.Message);
 
         Assert.False(central.CanAddItem);
-        Assert.False(await central.AddItemAsync("1.10", "حلقه", WorkType.Make, "4", Priority.Normal, Token));
+        await central.SelectAsync(central.Requests.Single(r => r.RequestNo == "P-1"), Token);
+        Assert.False(await central.AddItemAsync("1.10", "حلقه", "4", Priority.Normal, Token));
         Assert.Equal(Messages.NotAuthorized, central.Message);
         Assert.Empty(drawing.Items);
     }
@@ -298,12 +308,12 @@ public class RequestsViewModelTests
     {
         using var h = await WorkflowHarness.CreateAsync(Token);
         var customerId = await CustomerAsync(h);
-        await h.RequestsFor(h.Central).CreateAsync(customerId, "P-1", DateText, null, null, Token);
+        await h.RequestsFor(h.Central).CreateAsync(customerId, "P-1", WorkType.Make, DateText, null, null, Token);
         var drawing = h.RequestsFor(h.Drawing);
         await drawing.LoadAsync(Token);
         await drawing.SelectAsync(drawing.Requests.Single(), Token);
 
-        var saved = await drawing.AddItemAsync(itemNo, partName, WorkType.Make, quantity, Priority.Normal, Token);
+        var saved = await drawing.AddItemAsync(itemNo, partName, quantity, Priority.Normal, Token);
 
         Assert.False(saved);
         Assert.Equal(Messages.ForIssue(expected, JalaliDateError.None), drawing.Message);
@@ -316,13 +326,13 @@ public class RequestsViewModelTests
     {
         using var h = await WorkflowHarness.CreateAsync(Token);
         var customerId = await CustomerAsync(h);
-        await h.RequestsFor(h.Central).CreateAsync(customerId, "P-1", DateText, null, null, Token);
+        await h.RequestsFor(h.Central).CreateAsync(customerId, "P-1", WorkType.Make, DateText, null, null, Token);
         var drawing = h.RequestsFor(h.Drawing);
         await drawing.LoadAsync(Token);
         await drawing.SelectAsync(drawing.Requests.Single(), Token);
-        Assert.True(await drawing.AddItemAsync("1.10", "حلقه", WorkType.Make, "5", Priority.Normal, Token));
+        Assert.True(await drawing.AddItemAsync("1.10", "حلقه", "5", Priority.Normal, Token));
 
-        Assert.False(await drawing.AddItemAsync("1.10", "حلقه دیگر", WorkType.Make, "5", Priority.Normal, Token));
+        Assert.False(await drawing.AddItemAsync("1.10", "حلقه دیگر", "5", Priority.Normal, Token));
 
         Assert.Equal(Messages.ForIssue(ValidationIssue.ItemNoDuplicate, JalaliDateError.None), drawing.Message);
         Assert.Single(drawing.Items);
@@ -334,7 +344,7 @@ public class RequestsViewModelTests
         using var h = await WorkflowHarness.CreateAsync(Token);
         var customerId = await CustomerAsync(h);
         var central = h.RequestsFor(h.Central);
-        await central.CreateAsync(customerId, "P-1", DateText, null, null, Token);
+        await central.CreateAsync(customerId, "P-1", WorkType.Make, DateText, null, null, Token);
         Assert.True(central.CanSubmit);
 
         Assert.True(await central.SubmitAsync(Token));
@@ -353,7 +363,7 @@ public class RequestsViewModelTests
     {
         using var h = await WorkflowHarness.CreateAsync(Token);
         var customerId = await CustomerAsync(h);
-        await h.RequestsFor(h.Central).CreateAsync(customerId, "P-1", DateText, null, null, Token);
+        await h.RequestsFor(h.Central).CreateAsync(customerId, "P-1", WorkType.Make, DateText, null, null, Token);
         var planning = h.RequestsFor(h.Planning);
         await planning.LoadAsync(Token);
         await planning.SelectAsync(planning.Requests.Single(), Token);
@@ -369,7 +379,7 @@ public class RequestsViewModelTests
     {
         using var h = await WorkflowHarness.CreateAsync(Token);
         var customerId = await CustomerAsync(h);
-        await h.RequestsFor(h.Central).CreateAsync(customerId, "P-1", DateText, null, null, Token);
+        await h.RequestsFor(h.Central).CreateAsync(customerId, "P-1", WorkType.Make, DateText, null, null, Token);
         var drawing = h.RequestsFor(h.Drawing);
         var planning = h.RequestsFor(h.Planning);
         await drawing.LoadAsync(Token);
@@ -378,14 +388,14 @@ public class RequestsViewModelTests
         await planning.SelectAsync(planning.Requests.Single(), Token);
 
         h.Clock.Advance(TimeSpan.FromMinutes(1));
-        Assert.True(await drawing.AddItemAsync("1.10", "حلقه", WorkType.Make, "5", Priority.Normal, Token));
-        var saved = await planning.AddItemAsync("2.10", "شفت", WorkType.Repair, "4", Priority.Normal, Token);
+        Assert.True(await drawing.AddItemAsync("1.10", "حلقه", "5", Priority.Normal, Token));
+        var saved = await planning.AddItemAsync("2.10", "شفت", "4", Priority.Normal, Token);
 
         Assert.False(saved);
         Assert.Equal(Messages.Conflict, planning.Message);
         Assert.Equal(new[] { "1.10" }, planning.Items.Select(i => i.ItemNo).ToArray());
 
-        Assert.True(await planning.AddItemAsync("2.10", "شفت", WorkType.Repair, "4", Priority.Normal, Token));
+        Assert.True(await planning.AddItemAsync("2.10", "شفت", "4", Priority.Normal, Token));
         Assert.Equal(new[] { "1.10", "2.10" }, planning.Items.Select(i => i.ItemNo).ToArray());
     }
 
@@ -394,13 +404,13 @@ public class RequestsViewModelTests
     {
         using var h = await WorkflowHarness.CreateAsync(Token);
         var customerId = await CustomerAsync(h);
-        await h.RequestsFor(h.Central).CreateAsync(customerId, "P-1", DateText, null, null, Token);
+        await h.RequestsFor(h.Central).CreateAsync(customerId, "P-1", WorkType.Make, DateText, null, null, Token);
         var drawing = h.RequestsFor(h.Drawing);
         await drawing.LoadAsync(Token);
         await drawing.SelectAsync(drawing.Requests.Single(), Token);
         Assert.Equal(AccountStatus.Succeeded, (await h.Security.Accounts.SetActiveAsync(h.Admin, h.Drawing.UserId, false, Token)).Status);
 
-        var saved = await drawing.AddItemAsync("1.10", "حلقه", WorkType.Make, "5", Priority.Normal, Token);
+        var saved = await drawing.AddItemAsync("1.10", "حلقه", "5", Priority.Normal, Token);
 
         Assert.False(saved);
         Assert.Equal(Messages.NotAuthorized, drawing.Message);
@@ -413,7 +423,7 @@ public class RequestsViewModelTests
         using var h = await WorkflowHarness.CreateAsync(Token);
         var customerId = await CustomerAsync(h);
         var central = h.RequestsFor(h.Central);
-        await central.CreateAsync(customerId, "P-1", DateText, null, null, Token);
+        await central.CreateAsync(customerId, "P-1", WorkType.Make, DateText, null, null, Token);
         Assert.True(central.HasDetail);
 
         await central.SelectAsync(null, Token);
@@ -421,7 +431,7 @@ public class RequestsViewModelTests
         Assert.False(central.CanSubmit);
         Assert.False(await central.SubmitAsync(Token));
         Assert.Equal(Messages.NothingSelected, central.Message);
-        Assert.False(await central.AddItemAsync("1", "x", WorkType.Make, "1", Priority.Normal, Token));
+        Assert.False(await central.AddItemAsync("1", "x", "1", Priority.Normal, Token));
         Assert.Equal(Messages.NothingSelected, central.Message);
     }
 }
