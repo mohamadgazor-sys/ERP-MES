@@ -1,0 +1,105 @@
+<UserControl x:Class="ERP.MES.Desktop.Views.OperatorsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Loaded="OnLoaded">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
+    </UserControl.Resources>
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel>
+            <TextBlock Text="{Binding Message}" TextWrapping="Wrap" Foreground="#9B1C1C" FontWeight="SemiBold" Margin="0,0,0,8" />
+            <TextBlock TextWrapping="Wrap" Foreground="{StaticResource MutedTextBrush}" Margin="0,0,0,8"
+                       Text="برنامه‌ریزی اپراتورها، تخصیص اصلی اپراتور به ماشین و صلاحیت‌ها را ثبت می‌کند؛ سرپرست نمی‌تواند ماشین برنامه‌ریزی‌شده را تغییر دهد. تخصیص به معنای صلاحیت نیست: تخصیص بدون صلاحیت جاری با هشدار ثبت می‌شود. تخصیص‌ها و صلاحیت‌ها حذف یا ویرایش نمی‌شوند؛ فقط بسته/پایان داده می‌شوند و تاریخچه می‌ماند." />
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                <Button Content="بارگذاری مجدد" Padding="10,3" Click="OnReloadClick" />
+                <TextBlock Text="در حال بارگذاری…" Margin="16,0,0,0" VerticalAlignment="Center" Foreground="{StaticResource MutedTextBrush}"
+                           Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibility}}" />
+            </StackPanel>
+
+            <TextBlock Text="اپراتورها" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource PrimaryBrush}" Margin="0,4,0,6" />
+            <DataGrid ItemsSource="{Binding Operators}" SelectedItem="{Binding SelectedOperator, Mode=TwoWay}" AutoGenerateColumns="False" IsReadOnly="True"
+                      SelectionMode="Single" HeadersVisibility="Column" CanUserAddRows="False" CanUserDeleteRows="False" MaxHeight="170" Background="{StaticResource CardBrush}">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="کد اپراتور" Binding="{Binding Code}" Width="110" />
+                    <DataGridTextColumn Header="نام کامل" Binding="{Binding FullName}" Width="*" />
+                    <DataGridTextColumn Header="حساب کاربری" Binding="{Binding AccountText}" Width="100" />
+                    <DataGridTextColumn Header="وضعیت" Binding="{Binding StatusText}" Width="90" />
+                </DataGrid.Columns>
+            </DataGrid>
+            <Border Margin="0,6,0,12" Padding="10" Background="{StaticResource CardBrush}" BorderBrush="{StaticResource BorderBrushSoft}" BorderThickness="1">
+                <StackPanel>
+                    <WrapPanel>
+                        <StackPanel Margin="0,0,12,0"><TextBlock Text="کد اپراتور (A-Z، رقم، _ و -)" /><TextBox x:Name="OperatorCodeBox" Width="150" FlowDirection="LeftToRight" /></StackPanel>
+                        <StackPanel Margin="0,0,12,0"><TextBlock Text="نام کامل" /><TextBox x:Name="OperatorNameBox" Width="240" /></StackPanel>
+                    </WrapPanel>
+                    <WrapPanel Margin="0,8,0,0">
+                        <Button Content="ثبت اپراتور" Padding="12,5" Margin="0,0,8,0" Click="OnRegisterClick" IsEnabled="{Binding CanMaintain}" />
+                        <Button Content="تغییر نام انتخاب‌شده (از کادر نام)" Padding="12,5" Margin="0,0,8,0" Click="OnRenameClick" IsEnabled="{Binding CanMaintain}" />
+                        <Button Content="غیرفعال کردن" Padding="12,5" Margin="0,0,8,0" Click="OnDeactivateClick" IsEnabled="{Binding CanMaintain}" />
+                        <Button Content="فعال کردن" Padding="12,5" Click="OnActivateClick" IsEnabled="{Binding CanMaintain}" />
+                    </WrapPanel>
+                </StackPanel>
+            </Border>
+
+            <TextBlock Text="تخصیص اپراتور به ماشین" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource PrimaryBrush}" Margin="0,4,0,6" />
+            <DataGrid ItemsSource="{Binding Assignments}" SelectedItem="{Binding SelectedAssignment, Mode=TwoWay}" AutoGenerateColumns="False" IsReadOnly="True"
+                      SelectionMode="Single" HeadersVisibility="Column" CanUserAddRows="False" CanUserDeleteRows="False" MaxHeight="200" Background="{StaticResource CardBrush}">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="اپراتور" Binding="{Binding OperatorText}" Width="*" />
+                    <DataGridTextColumn Header="ماشین" Binding="{Binding MachineText}" Width="100" />
+                    <DataGridTextColumn Header="از" Binding="{Binding FromText}" Width="100" />
+                    <DataGridTextColumn Header="تا" Binding="{Binding ToText}" Width="100" />
+                    <DataGridTextColumn Header="اصلی" Binding="{Binding PrimaryText}" Width="70" />
+                    <DataGridTextColumn Header="صلاحیت جاری" Binding="{Binding QualifiedText}" Width="100" />
+                </DataGrid.Columns>
+            </DataGrid>
+            <Border Margin="0,6,0,12" Padding="10" Background="{StaticResource CardBrush}" BorderBrush="{StaticResource BorderBrushSoft}" BorderThickness="1">
+                <StackPanel>
+                    <WrapPanel>
+                        <StackPanel Margin="0,0,12,0"><TextBlock Text="اپراتور" /><ComboBox x:Name="AssignOperatorBox" ItemsSource="{Binding OperatorChoices}" DisplayMemberPath="Text" Width="230" /></StackPanel>
+                        <StackPanel Margin="0,0,12,0"><TextBlock Text="ماشین" /><ComboBox x:Name="AssignMachineBox" ItemsSource="{Binding MachineChoices}" DisplayMemberPath="Text" Width="200" /></StackPanel>
+                        <StackPanel Margin="0,0,12,0"><TextBlock Text="از تاریخ (شمسی)" /><TextBox x:Name="AssignDateBox" Width="110" FlowDirection="LeftToRight" /></StackPanel>
+                        <StackPanel Margin="0,0,12,0"><TextBlock Text="دلیل (اختیاری)" /><TextBox x:Name="AssignReasonBox" Width="200" /></StackPanel>
+                        <CheckBox x:Name="AssignPrimaryBox" Content="اصلی" VerticalAlignment="Bottom" Margin="0,0,12,4" />
+                    </WrapPanel>
+                    <WrapPanel Margin="0,8,0,0">
+                        <StackPanel Margin="0,0,12,0"><TextBlock Text="آخرین روز (برای بستن انتخاب‌شده)" /><TextBox x:Name="CloseDateBox" Width="110" FlowDirection="LeftToRight" /></StackPanel>
+                    </WrapPanel>
+                    <WrapPanel Margin="0,8,0,0">
+                        <Button Content="ثبت تخصیص" Padding="12,5" Margin="0,0,8,0" Click="OnAssignClick" IsEnabled="{Binding CanMaintain}" />
+                        <Button Content="بستن تخصیص انتخاب‌شده" Padding="12,5" Click="OnCloseAssignmentClick" IsEnabled="{Binding CanMaintain}" />
+                    </WrapPanel>
+                </StackPanel>
+            </Border>
+
+            <TextBlock Text="صلاحیت‌ها" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource PrimaryBrush}" Margin="0,4,0,6" />
+            <DataGrid ItemsSource="{Binding Qualifications}" SelectedItem="{Binding SelectedQualification, Mode=TwoWay}" AutoGenerateColumns="False" IsReadOnly="True"
+                      SelectionMode="Single" HeadersVisibility="Column" CanUserAddRows="False" CanUserDeleteRows="False" MaxHeight="200" Background="{StaticResource CardBrush}">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="اپراتور" Binding="{Binding OperatorText}" Width="*" />
+                    <DataGridTextColumn Header="ماشین" Binding="{Binding MachineText}" Width="100" />
+                    <DataGridTextColumn Header="از" Binding="{Binding FromText}" Width="100" />
+                    <DataGridTextColumn Header="تا" Binding="{Binding ToText}" Width="100" />
+                    <DataGridTextColumn Header="توضیح" Binding="{Binding NoteText}" Width="*" />
+                </DataGrid.Columns>
+            </DataGrid>
+            <Border Margin="0,6,0,12" Padding="10" Background="{StaticResource CardBrush}" BorderBrush="{StaticResource BorderBrushSoft}" BorderThickness="1">
+                <StackPanel>
+                    <WrapPanel>
+                        <StackPanel Margin="0,0,12,0"><TextBlock Text="اپراتور" /><ComboBox x:Name="QualOperatorBox" ItemsSource="{Binding OperatorChoices}" DisplayMemberPath="Text" Width="230" /></StackPanel>
+                        <StackPanel Margin="0,0,12,0"><TextBlock Text="ماشین" /><ComboBox x:Name="QualMachineBox" ItemsSource="{Binding MachineChoices}" DisplayMemberPath="Text" Width="200" /></StackPanel>
+                        <StackPanel Margin="0,0,12,0"><TextBlock Text="از تاریخ (شمسی)" /><TextBox x:Name="QualDateBox" Width="110" FlowDirection="LeftToRight" /></StackPanel>
+                        <StackPanel Margin="0,0,12,0"><TextBlock Text="توضیح (اختیاری)" /><TextBox x:Name="QualNoteBox" Width="200" /></StackPanel>
+                    </WrapPanel>
+                    <WrapPanel Margin="0,8,0,0">
+                        <StackPanel Margin="0,0,12,0"><TextBlock Text="آخرین روز (برای پایان انتخاب‌شده)" /><TextBox x:Name="EndQualDateBox" Width="110" FlowDirection="LeftToRight" /></StackPanel>
+                    </WrapPanel>
+                    <WrapPanel Margin="0,8,0,0">
+                        <Button Content="ثبت صلاحیت" Padding="12,5" Margin="0,0,8,0" Click="OnRecordQualificationClick" IsEnabled="{Binding CanMaintain}" />
+                        <Button Content="پایان صلاحیت انتخاب‌شده" Padding="12,5" Click="OnEndQualificationClick" IsEnabled="{Binding CanMaintain}" />
+                    </WrapPanel>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

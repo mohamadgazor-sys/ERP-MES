@@ -1575,3 +1575,34 @@ Append one dated entry after every substantial session. Do not replace prior ent
 
 ### Recommended exact next action
 - Merge after CI, then 3b-ii (operators, operator-machine assignments with history, qualifications) and 3b-iii (materials and Warehouse prices).
+
+---
+
+### Date / session
+- Date: 2026-10-22
+- Claude Code session ID (if useful): session_01UwqjPjBXLd2apjZb2urjds (phase 3b-ii: operators, assignments, qualifications)
+
+### Goal
+- Planning registers operators, assigns them to machines and records qualifications, with history (Decision Log #82 R2, #89).
+
+### Completed
+- Domain: `Operator`, `OperatorMachineAssignment` (closed, never edited), `OperatorMachineQualification` (ended, never edited), `OperatorMachineRules` (assignment does not imply qualification).
+- Application: `OperatorService` (register, rename, activate/deactivate, link to one active user, assign, close assignment, record/end qualification). Planning changes; Planning, Management and Production read (new permission `ViewOperators`, a labelled default). Assigning an operator with no current qualification succeeds with a warning (labelled default). All writes audited in the same transaction; per-row optimistic concurrency.
+- Persistence: tables `Operators` (unique code, at most one operator per user), `OperatorMachineAssignments`, `OperatorMachineQualifications`; migration `AddOperators`.
+- Desktop: "اپراتورها" page.
+
+### Files changed
+- Source, tests, one migration, documentation. No new package.
+
+### Decisions newly approved
+- None. Labelled defaults: `ViewOperators` audience; missing qualification is a warning, not a block.
+
+### Unresolved questions / risks
+- Supervisor behaviour (cannot change planned machine) is enforced by Planning-only maintenance; the supervisor role itself arrives with job reports (6b, D8).
+- WPF page not exercised by a person; view-model tests cover the logic.
+
+### Commands/tests actually run and results
+- Local (Linux): Domain tests 473 passed; Infrastructure tests 483 run before adding the final operator test (one test then fixed, 13 operator tests passed); Desktop LocalLinux subset 115 passed. See the pull request for the final head's Windows CI totals.
+
+### Recommended exact next action
+- Merge after CI, then 3b-iii (materials and Warehouse price per kg).

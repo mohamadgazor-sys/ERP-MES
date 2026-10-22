@@ -117,6 +117,13 @@ Fixed seeded routes and the demonstration banner stay visible; stage progression
 | I2 | Select the machine, enter a rate (`۱۲۰۰۰۰۰`, Rial per hour, no separators) and a start date (`۱۴۰۵/۰۱/۰۱`) | The history shows the rate with Persian digits; a second rate needs a LATER start date |
 | I3 | As `demo.production` open the page | Machines are visible; rates are not; every change button is disabled |
 
+## J. Operators, assignments and qualifications (Decision Log #82 R2, #89) - not run by a person; covered by automated tests
+- J1: As Planning register an operator; the code must be A-Z, digits, `_`, `-`.
+- J2: Assign the operator to a machine from a Jalali date; without a qualification a warning is shown, the assignment is still made.
+- J3: Record a qualification; the assignment row then shows "دارد".
+- J4: Close the assignment and end the qualification; the rows stay (history).
+- J5: As Production or Management the page is read-only; as QC or Warehouse it shows the not-authorized message.
+
 ## E. Production overview for Management and Planning (read-only; `docs/PRODUCTION_QUEUE.md`, Decision Log #78) - pending the owner's run
 
 Prepare a fictional demonstration database with `demo-init` (see `docs/AUTHENTICATION.md` section 12). The seeded requests have routes and several stage states.
