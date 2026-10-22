@@ -1544,3 +1544,34 @@ Append one dated entry after every substantial session. Do not replace prior ent
 
 ### Recommended exact next action
 - Merge after CI, then phase 3b (Planning masters: machines with stable codes, rate history, operators, assignments, qualifications; Warehouse material price).
+
+---
+
+### Date / session
+- Date: 2026-10-22
+- Claude Code session ID (if useful): session_01UwqjPjBXLd2apjZb2urjds (phase 3b-i: Planning machines and rates)
+
+### Goal
+- Planning registers production units and machines with stable codes and keeps the machine hourly-rate history (Decision Log #10, #82 R2, #89).
+
+### Completed
+- Domain (`Domain/Planning`): `ProductionUnit`, `Machine` (code and unit immutable), `MachineHourlyRate` (append-only, Rial per hour) and `MachineRates.RateOn` (rate in force on a work date).
+- Application: `PlanningMasterService` (Planning registers; Planning and Management add rates; Warehouse reads rates; others cannot; every active user reads units and machines), new permissions `MaintainProductionResources`, `ViewPlanningMasterData`, `ViewMachineRates` (the last two labelled defaults), audited adds and rate changes, rate must start later than the machine's latest entry.
+- Persistence: tables `ProductionUnits`, `Machines`, `MachineHourlyRates` (unique codes, one rate per machine and date, restricting foreign keys); migration `AddPlanningMachines`.
+- Desktop: "ماشین‌ها و نرخ‌ها" page.
+
+### Files changed
+- Source, tests, one migration, documentation. No new package.
+
+### Decisions newly approved
+- None. Labelled defaults: Planning owns production units; rate-read audience (Planning, Management, Warehouse).
+
+### Unresolved questions / risks
+- Moving a machine to another unit is not possible (a history-keeping move is not built). Operators, assignments and qualifications are the next PR.
+- Rial rounding and the exact decimal storage type remain open (#33); values are stored exactly.
+
+### Commands/tests actually run and results
+- See the pull request for the final head's Windows CI totals.
+
+### Recommended exact next action
+- Merge after CI, then 3b-ii (operators, operator-machine assignments with history, qualifications) and 3b-iii (materials and Warehouse prices).

@@ -55,6 +55,8 @@ internal sealed class WorkflowHarness : IDisposable
 
     public Principal Production { get; private set; } = null!;
 
+    public Principal Warehouse { get; private set; } = null!;
+
     /// <summary>A Management user with the Manager role: the only one who may approve or reject a request (Decision Log #30).</summary>
     public Principal Manager { get; private set; } = null!;
 
@@ -78,6 +80,7 @@ internal sealed class WorkflowHarness : IDisposable
         h.Qc = await h.UserAsync("qc.one", DepartmentCodes.Qc, cancellationToken);
         h.Management = await h.UserAsync("management.one", DepartmentCodes.Management, cancellationToken);
         h.Production = await h.UserAsync("production.one", DepartmentCodes.Production, cancellationToken);
+        h.Warehouse = await h.UserAsync("warehouse.one", DepartmentCodes.Warehouse, cancellationToken);
         h.Manager = await h.UserAsync("manager.one", DepartmentCodes.Management, cancellationToken, RoleCodes.Manager);
         h.RequestRepository = new EfRequestRepository(factory);
         return h;

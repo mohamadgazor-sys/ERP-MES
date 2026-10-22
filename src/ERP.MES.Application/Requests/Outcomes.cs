@@ -102,6 +102,24 @@ public enum ValidationIssue
     /// <summary>A set needs at least two members, each with a description and at least one base unit.</summary>
     SetMembersInvalid,
 
+    /// <summary>The production unit chosen for a machine does not exist or is not active.</summary>
+    ProductionUnitInvalid,
+
+    /// <summary>The machine does not exist or is not active.</summary>
+    MachineInvalid,
+
+    /// <summary>The hourly rate must be a number greater than zero (Rial per hour).</summary>
+    RateInvalid,
+
+    /// <summary>The date from which a rate applies is required.</summary>
+    EffectiveDateRequired,
+
+    /// <summary>The date from which a rate applies is not a valid Jalali date; the date error says why.</summary>
+    EffectiveDateInvalid,
+
+    /// <summary>A new rate must apply from a date later than the machine's latest rate (history is never rewritten).</summary>
+    RateNotLater,
+
     /// <summary>The request cannot be submitted to Management until Central has attached the request PDF (Decision Log #87).</summary>
     RequestPdfRequired,
 

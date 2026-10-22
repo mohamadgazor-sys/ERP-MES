@@ -18,6 +18,7 @@ internal static class PageFactory
             ShellViewModel.QueueKey => new ProductionQueueView(pages.Queue),
             ShellViewModel.StagesKey => new StageWorkView(pages.Stages),
             ShellViewModel.DefinitionsKey => new QcMasterView(pages.QcMaster),
+            ShellViewModel.MachinesKey => new PlanningMasterView(pages.PlanningMaster),
             ShellViewModel.LimitationsKey => new LimitationsView(),
             _ => new PlaceholderView(item.Title, shell.NotImplementedText),
         };

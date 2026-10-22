@@ -1,0 +1,97 @@
+<UserControl x:Class="ERP.MES.Desktop.Views.PlanningMasterView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Loaded="OnLoaded">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
+    </UserControl.Resources>
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel>
+            <TextBlock Text="{Binding Message}" TextWrapping="Wrap" Foreground="#9B1C1C" FontWeight="SemiBold" Margin="0,0,0,8" />
+            <TextBlock TextWrapping="Wrap" Foreground="{StaticResource MutedTextBrush}" Margin="0,0,0,8"
+                       Text="برنامه‌ریزی واحدهای تولیدی و ماشین‌ها را ثبت می‌کند. کد ماشین (مثل FCC-06، TCC-12، HUB-01) شناسهٔ ثابت است و هرگز تغییر نمی‌کند یا دوباره استفاده نمی‌شود. نرخ ساعتی را برنامه‌ریزی و مدیریت ثبت می‌کنند؛ انبار فقط می‌بیند. نرخ‌ها به ریال در ساعت و به‌صورت تاریخچه ذخیره می‌شوند و هرگز ویرایش یا حذف نمی‌شوند." />
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                <Button Content="بارگذاری مجدد" Padding="10,3" Click="OnReloadClick" />
+                <TextBlock Text="در حال بارگذاری…" Margin="16,0,0,0" VerticalAlignment="Center" Foreground="{StaticResource MutedTextBrush}"
+                           Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibility}}" />
+            </StackPanel>
+
+            <TextBlock Text="واحدهای تولیدی" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource PrimaryBrush}" Margin="0,4,0,6" />
+            <DataGrid ItemsSource="{Binding Units}" SelectedItem="{Binding SelectedUnit, Mode=TwoWay}" AutoGenerateColumns="False" IsReadOnly="True"
+                      SelectionMode="Single" HeadersVisibility="Column" CanUserAddRows="False" CanUserDeleteRows="False" MaxHeight="150" Background="{StaticResource CardBrush}">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="کد" Binding="{Binding Code}" Width="120" />
+                    <DataGridTextColumn Header="نام" Binding="{Binding Name}" Width="*" />
+                    <DataGridTextColumn Header="وضعیت" Binding="{Binding StatusText}" Width="90" />
+                </DataGrid.Columns>
+            </DataGrid>
+            <Border Margin="0,6,0,12" Padding="10" Background="{StaticResource CardBrush}" BorderBrush="{StaticResource BorderBrushSoft}" BorderThickness="1">
+                <StackPanel>
+                    <WrapPanel>
+                        <StackPanel Margin="0,0,12,0"><TextBlock Text="کد" /><TextBox x:Name="UnitCodeBox" Width="140" FlowDirection="LeftToRight" /></StackPanel>
+                        <StackPanel Margin="0,0,12,0"><TextBlock Text="نام فارسی" /><TextBox x:Name="UnitNameBox" Width="220" /></StackPanel>
+                    </WrapPanel>
+                    <WrapPanel Margin="0,8,0,0">
+                        <Button Content="افزودن واحد" Padding="12,5" Margin="0,0,8,0" Click="OnAddUnitClick" IsEnabled="{Binding CanMaintainResources}" />
+                        <Button Content="تغییر نام انتخاب‌شده (از کادر نام)" Padding="12,5" Margin="0,0,8,0" Click="OnRenameUnitClick" IsEnabled="{Binding CanMaintainResources}" />
+                        <Button Content="غیرفعال کردن" Padding="12,5" Margin="0,0,8,0" Click="OnDeactivateUnitClick" IsEnabled="{Binding CanMaintainResources}" />
+                        <Button Content="فعال کردن" Padding="12,5" Click="OnActivateUnitClick" IsEnabled="{Binding CanMaintainResources}" />
+                    </WrapPanel>
+                </StackPanel>
+            </Border>
+
+            <TextBlock Text="ماشین‌ها" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource PrimaryBrush}" Margin="0,4,0,6" />
+            <DataGrid ItemsSource="{Binding Machines}" SelectedItem="{Binding SelectedMachine, Mode=TwoWay}" AutoGenerateColumns="False" IsReadOnly="True"
+                      SelectionMode="Single" HeadersVisibility="Column" CanUserAddRows="False" CanUserDeleteRows="False" MaxHeight="200" Background="{StaticResource CardBrush}">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="کد ماشین" Binding="{Binding Code}" Width="110" />
+                    <DataGridTextColumn Header="نام" Binding="{Binding Name}" Width="*" />
+                    <DataGridTextColumn Header="واحد تولیدی" Binding="{Binding UnitText}" Width="110" />
+                    <DataGridTextColumn Header="آخرین نرخ ساعتی" Binding="{Binding LatestRateText}" Width="*" />
+                    <DataGridTextColumn Header="وضعیت" Binding="{Binding StatusText}" Width="90" />
+                </DataGrid.Columns>
+            </DataGrid>
+            <Border Margin="0,6,0,12" Padding="10" Background="{StaticResource CardBrush}" BorderBrush="{StaticResource BorderBrushSoft}" BorderThickness="1">
+                <StackPanel>
+                    <WrapPanel>
+                        <StackPanel Margin="0,0,12,0"><TextBlock Text="کد ماشین (مثل FCC-06)" /><TextBox x:Name="MachineCodeBox" Width="140" FlowDirection="LeftToRight" /></StackPanel>
+                        <StackPanel Margin="0,0,12,0"><TextBlock Text="نام فارسی" /><TextBox x:Name="MachineNameBox" Width="220" /></StackPanel>
+                        <StackPanel Margin="0,0,12,0"><TextBlock Text="واحد تولیدی" /><ComboBox x:Name="MachineUnitBox" ItemsSource="{Binding UnitChoices}" DisplayMemberPath="Text" Width="220" /></StackPanel>
+                    </WrapPanel>
+                    <WrapPanel Margin="0,8,0,0">
+                        <Button Content="افزودن ماشین" Padding="12,5" Margin="0,0,8,0" Click="OnAddMachineClick" IsEnabled="{Binding CanMaintainResources}" />
+                        <Button Content="تغییر نام انتخاب‌شده (از کادر نام)" Padding="12,5" Margin="0,0,8,0" Click="OnRenameMachineClick" IsEnabled="{Binding CanMaintainResources}" />
+                        <Button Content="غیرفعال کردن" Padding="12,5" Margin="0,0,8,0" Click="OnDeactivateMachineClick" IsEnabled="{Binding CanMaintainResources}" />
+                        <Button Content="فعال کردن" Padding="12,5" Click="OnActivateMachineClick" IsEnabled="{Binding CanMaintainResources}" />
+                    </WrapPanel>
+                    <TextBlock Text="کد و واحد تولیدیِ ماشین پس از ثبت تغییر نمی‌کند؛ ماشین هرگز حذف نمی‌شود، فقط غیرفعال می‌شود." FontSize="12" Foreground="{StaticResource MutedTextBrush}" Margin="0,6,0,0" />
+                </StackPanel>
+            </Border>
+
+            <TextBlock Text="تاریخچهٔ نرخ ساعتی ماشین انتخاب‌شده" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource PrimaryBrush}" Margin="0,4,0,6"
+                       Visibility="{Binding CanViewRates, Converter={StaticResource BoolToVisibility}}" />
+            <StackPanel Visibility="{Binding CanViewRates, Converter={StaticResource BoolToVisibility}}">
+                <DataGrid ItemsSource="{Binding Rates}" AutoGenerateColumns="False" IsReadOnly="True" HeadersVisibility="Column"
+                          CanUserAddRows="False" CanUserDeleteRows="False" MaxHeight="170" Background="{StaticResource CardBrush}">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="ماشین" Binding="{Binding MachineCode}" Width="100" />
+                        <DataGridTextColumn Header="اعمال از تاریخ" Binding="{Binding EffectiveFromText}" Width="130" />
+                        <DataGridTextColumn Header="نرخ" Binding="{Binding RateText}" Width="*" />
+                        <DataGridTextColumn Header="دلیل" Binding="{Binding ReasonText}" Width="*" />
+                    </DataGrid.Columns>
+                </DataGrid>
+                <Border Margin="0,6,0,12" Padding="10" Background="{StaticResource CardBrush}" BorderBrush="{StaticResource BorderBrushSoft}" BorderThickness="1">
+                    <StackPanel>
+                        <WrapPanel>
+                            <StackPanel Margin="0,0,12,0"><TextBlock Text="نرخ (ریال در ساعت، بدون جداکننده)" /><TextBox x:Name="RateBox" Width="160" FlowDirection="LeftToRight" /></StackPanel>
+                            <StackPanel Margin="0,0,12,0"><TextBlock Text="اعمال از تاریخ (شمسی)" /><TextBox x:Name="RateDateBox" Width="130" FlowDirection="LeftToRight" /></StackPanel>
+                            <StackPanel Margin="0,0,12,0"><TextBlock Text="دلیل (اختیاری)" /><TextBox x:Name="RateReasonBox" Width="260" /></StackPanel>
+                        </WrapPanel>
+                        <Button Content="ثبت نرخ برای ماشین انتخاب‌شده" Padding="12,5" Margin="0,8,0,0" HorizontalAlignment="Left" Click="OnAddRateClick" IsEnabled="{Binding CanChangeRates}" />
+                        <TextBlock Text="تاریخ شروع نرخ جدید باید بعد از آخرین نرخ همان ماشین باشد. نرخ هرگز به تومان تبدیل نمی‌شود." FontSize="12" Foreground="{StaticResource MutedTextBrush}" Margin="0,6,0,0" />
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

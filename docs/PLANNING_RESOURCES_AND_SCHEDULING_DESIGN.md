@@ -2,6 +2,8 @@
 
 **Status: DESIGN ONLY. Not implemented.** Approved (#89): Planning owns operator registration, operator-machine master assignments, machine codes and rates (with Management for rates), item specifications, planned stage-to-unit/machine assignment and shift configuration; supervisors make only the approved overtime assignments and cannot change a planned machine or substitute equipment. PROPOSED/DEFAULT items are not approved; overlap and overtime limits are `OWNER_DECISION_PACKET.md` D5.
 
+> **Implementation status:** production units, machines with stable codes and the machine rate history (section 3) are implemented (Planning machines PR). The rate table keeps `EffectiveFrom` only; the end of a rate is the day before the next entry. Operators, assignments, qualifications, item specifications, shifts, off-days, capacity and scheduling are not.
+
 ## 1. Ownership [REQ]
 
 Planning owns: operators, machines and their codes, operator-machine assignments, machine hourly rates (together with Management, [EXISTING] 15.2), item raw-material weight / length / diameter / quantity type selection, stage-to-unit-and-machine assignment, shift templates, unit shifts, off-days, staffing capacity and worker scheduling. QC owns UOM and quantity types (Planning only selects). Warehouse owns raw-material price (Planning cannot edit it).
