@@ -109,6 +109,14 @@ Fixed seeded routes and the demonstration banner stay visible; stage progression
 | H2 | As `demo.planning` open the same page | Everything is visible; every change button is disabled |
 | H3 | As QC add a unit, a conversion (typed factor `۱۲`), a quantity type `TRIPLE` (3) and a set with lines such as "شفت: ۱" / "بوش: ۲" | Each appears; the set counts the sum; invalid input gives a specific Persian message |
 
+## I. Machines and hourly rates (Decision Log #10, #82 R2, #89) - not run by a person; covered by automated tests
+
+| # | Step | Expected |
+|---|---|---|
+| I1 | As `demo.planning` open "ماشین‌ها و نرخ‌ها": add a production unit, then machine `FCC-06` in it | Both are listed; the code cannot be edited afterwards; a duplicate or lower-case code is refused with a Persian message |
+| I2 | Select the machine, enter a rate (`۱۲۰۰۰۰۰`, Rial per hour, no separators) and a start date (`۱۴۰۵/۰۱/۰۱`) | The history shows the rate with Persian digits; a second rate needs a LATER start date |
+| I3 | As `demo.production` open the page | Machines are visible; rates are not; every change button is disabled |
+
 ## E. Production overview for Management and Planning (read-only; `docs/PRODUCTION_QUEUE.md`, Decision Log #78) - pending the owner's run
 
 Prepare a fictional demonstration database with `demo-init` (see `docs/AUTHENTICATION.md` section 12). The seeded requests have routes and several stage states.

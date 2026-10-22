@@ -377,6 +377,127 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
                     b.ToTable("Users", (string)null);
                 });
 
+            modelBuilder.Entity("ERP.MES.Domain.Planning.Machine", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .UseCollation("BINARY");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("CreatedByUserId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("ProductionUnitId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("ProductionUnitId");
+
+                    b.ToTable("Machines", (string)null);
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Planning.MachineHourlyRate", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("ChangedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("ChangedByUserId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateOnly>("EffectiveFrom")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("MachineId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("RatePerHourRial")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Reason")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ChangedByUserId");
+
+                    b.HasIndex("MachineId", "EffectiveFrom")
+                        .IsUnique();
+
+                    b.ToTable("MachineHourlyRates", (string)null);
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Planning.ProductionUnit", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .UseCollation("BINARY");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("CreatedByUserId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.ToTable("ProductionUnits", (string)null);
+                });
+
             modelBuilder.Entity("ERP.MES.Domain.Quality.QuantityType", b =>
                 {
                     b.Property<long>("Id")
@@ -959,6 +1080,45 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
                     b.Navigation("Department");
 
                     b.Navigation("Role");
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Planning.Machine", b =>
+                {
+                    b.HasOne("ERP.MES.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ERP.MES.Domain.Planning.ProductionUnit", null)
+                        .WithMany()
+                        .HasForeignKey("ProductionUnitId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Planning.MachineHourlyRate", b =>
+                {
+                    b.HasOne("ERP.MES.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("ChangedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ERP.MES.Domain.Planning.Machine", null)
+                        .WithMany()
+                        .HasForeignKey("MachineId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Planning.ProductionUnit", b =>
+                {
+                    b.HasOne("ERP.MES.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("ERP.MES.Domain.Quality.QuantityType", b =>

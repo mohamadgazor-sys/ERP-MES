@@ -37,6 +37,21 @@ public enum Permission
     ViewCustomersAndRequests,
 
     /// <summary>
+    /// Register and maintain production units and machines (stable machine codes). Planning owns the resource master data (Decision Log #82 R2, #89); units are a labelled default,
+    /// not separately approved. Rates have their own permission, <see cref="ChangeMachineHourlyRates"/>.
+    /// </summary>
+    MaintainProductionResources,
+
+    /// <summary>Read production units and machines. Read-only, every active signed-in user (a labelled default).</summary>
+    ViewPlanningMasterData,
+
+    /// <summary>
+    /// Read the machine hourly-rate history. Planning and Management (who may change it, Decision Log #10) and Warehouse (which calculates costs from it, Decision Log #82 R4).
+    /// A labelled default, not separately approved; every other department is denied.
+    /// </summary>
+    ViewMachineRates,
+
+    /// <summary>
     /// Read the QC master data (units of measure, conversions, quantity types) that other departments select from, for example Planning when it defines items (Decision Log #90).
     /// Read-only, for every active signed-in user. Changing the definitions stays with <see cref="MaintainUnitsOfMeasure"/> (QC).
     /// </summary>
@@ -96,6 +111,11 @@ public static class AuthorizationRules
 
         // Read-only access for every active user (an empty department list means any department, no role is required).
         [Permission.ViewCustomersAndRequests] = new([], null),
+
+        // Planning resource master data (Decision Log #82 R2, #89): Planning registers units and machines; every active user reads them; rates are read by their owners and by Warehouse.
+        [Permission.MaintainProductionResources] = new([DepartmentCodes.Planning], null),
+        [Permission.ViewPlanningMasterData] = new([], null),
+        [Permission.ViewMachineRates] = new([DepartmentCodes.Planning, DepartmentCodes.Management, DepartmentCodes.Warehouse], null),
 
         // QC master data is read by every active user (Planning selects from it); only QC changes it (MaintainUnitsOfMeasure, Decision Log #90).
         [Permission.ViewQcMasterData] = new([], null),
