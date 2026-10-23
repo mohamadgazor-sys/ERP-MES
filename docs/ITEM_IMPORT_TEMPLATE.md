@@ -25,7 +25,7 @@ The application can write the template itself (page "ورود آیتم‌ها ا
 | `طول (میلی‌متر)` | no | Length in mm; at most 99,999,999.99, at most 2 decimals. |
 | `قطر (میلی‌متر)` | no | Diameter in mm; same limits. |
 | `اولویت` | no | Exactly `عادی`, `فوری` or `خیلی فوری`. Empty = `عادی`. |
-| `مرحله k - عنوان`<br>`مرحله k - دقیقه برای هر قطعه`<br>`مرحله k - کد واحد`<br>`مرحله k - کد ماشین` | no | Up to **5 stages** (k = 1..5), four columns each: title, planned minutes per piece (> 0), code of an **active** production unit, optional code of an **active** machine that belongs to that unit. A stage needs title, minutes and unit; stages must be contiguous (no stage 3 without stage 2). The planned quantity of a stage defaults to the item's quantity. |
+| `مرحله k - عنوان`<br>`مرحله k - دقیقه برای هر قطعه`<br>`مرحله k - کد واحد`<br>`مرحله k - کد ماشین` | no | Stage groups k = 1, 2, 3, …, four columns each. The generated template shows 6 groups; a file may use **up to 20** (a safety limit against runaway files, not a business rule: the Domain has no limit on stages per item, and a route needing more is a documented change of `ItemImportTemplate.MaxStages`). A stage column numbered above the limit is an **error**, never ignored. Each group: title, planned minutes per piece (> 0), code of an **active** production unit, optional code of an **active** machine that belongs to that unit. A stage needs title, minutes and unit; stages must be contiguous (no stage 3 without stage 2). The planned quantity of a stage defaults to the item's quantity. |
 
 For a REPAIR request the specification columns may be empty (a value that is given is still validated).
 
@@ -40,5 +40,5 @@ For a REPAIR request the specification columns may be empty (a value that is giv
 ## Not decided / not built
 
 - Whether the company will use this layout, or a different real workbook, is open (needs the actual workbook).
-- Revision of an item that already has a route; deleting items; more than 5 stages per row; per-row stage quantities different from the item's.
+- Revision of an item that already has a route; deleting items; more than 20 stages per item (safety limit, Decision Log #98); per-row stage quantities different from the item's.
 - Import progress and cancellation for very large files: the reader is bounded (size, expanded size, rows), and 1,000 rows import in seconds, so background processing was not added.

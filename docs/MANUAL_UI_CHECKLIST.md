@@ -211,3 +211,4 @@ Prepare a fictional demonstration database with `demo-init` (`docs/AUTHENTICATIO
 - P3: Change a part name or quantity of an existing item in the file and preview again: the row shows "تعارض" with old ← new values and a Skip/Update choice; "ثبت ورود" stays refused until every conflict has a choice. An item that already has a stage offers only Skip.
 - P4: Commit, then import the same file again: "تغییری لازم نبود… چیزی ذخیره نشد".
 - P5: As any user other than Planning the import buttons are disabled; for a request that has not passed the gates the page refuses with the gate message.
+- P6: A file whose item has 8 stage groups imports all 8 stages in order; a column "مرحله 21 - عنوان" makes the file refuse with a message naming the 20-stage safety limit.

@@ -257,6 +257,7 @@ public static class Messages
             ERP.MES.Application.Imports.ImportIssue.DimensionInvalid => "طول یا قطر نامعتبر است (بزرگ‌تر از صفر، حداکثر ۲ رقم اعشار)" + detail + ".",
             ERP.MES.Application.Imports.ImportIssue.PriorityUnknown => "اولویت باید «عادی»، «فوری» یا «خیلی فوری» باشد" + detail + ".",
             ERP.MES.Application.Imports.ImportIssue.StageIncomplete => "مرحلهٔ " + message.Detail + ": عنوان، دقیقه و کد واحد هر سه لازم است.",
+            ERP.MES.Application.Imports.ImportIssue.StageHeaderBeyondLimit => "ستون «" + message.Detail + "» از حداکثر مجاز مراحل (" + ERP.MES.Application.Imports.ItemImportTemplate.MaxStages + " مرحله) بیشتر است؛ فایل را اصلاح کنید.",
             ERP.MES.Application.Imports.ImportIssue.StageGap => "مرحلهٔ " + message.Detail + " پر شده ولی مرحلهٔ قبل از آن خالی است.",
             ERP.MES.Application.Imports.ImportIssue.StageMinutesInvalid => "مرحلهٔ " + message.Detail + ": دقیقه برای هر قطعه نامعتبر است.",
             ERP.MES.Application.Imports.ImportIssue.StageUnitUnknown => "کد واحد تولیدی وجود ندارد یا فعال نیست" + detail + ".",

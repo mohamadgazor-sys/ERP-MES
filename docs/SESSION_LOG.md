@@ -1779,6 +1779,7 @@ Append one dated entry after every substantial session. Do not replace prior ent
 ### Unresolved questions / risks
 - The company's real workbook has not been seen; the template may need a mapping.
 - Items with a route cannot be revised by import; no background processing for very large files.
+- Review pass before merge (Decision Log #98): the five-stage assumption was replaced by a 20-stage safety limit with an error for columns beyond it; atomic-rollback, numeric-cell and long-route tests added.
 
 ### Commands/tests actually run and results
 - See the pull request for the Linux and Windows CI totals of the final head.

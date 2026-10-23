@@ -512,4 +512,118 @@ public class ItemImportServiceTests
         Assert.Equal(1000, Count(w, "ItemImportRows"));
         Assert.True(watch.Elapsed < TimeSpan.FromSeconds(60), $"took {watch.Elapsed}");
     }
+
+    [Fact]
+    public async Task A_route_can_have_more_than_five_stages_up_to_the_documented_safety_limit_and_a_stage_column_beyond_it_is_an_error()
+    {
+        var (w, id, _) = await ReadyWorldAsync();
+        using var disposeWorld = w;
+        await w.Services.PlanningMaster.AddUnitAsync(w.Planning, "MILLING", "فرزکاری", Token);
+        List<string> headers = [.. H];
+        List<string> cells = [.. MakeRow("1.10")];
+        for (var k = 1; k <= 12; k++)
+        {
+            headers.AddRange([ItemImportTemplate.StageTitle(k), ItemImportTemplate.StageMinutes(k), ItemImportTemplate.StageUnit(k)]);
+            cells.AddRange(["مرحله " + k, "2", "MILLING"]);
+        }
+
+        var result = await CommitAsync(w, id, Writer.Write("S", headers, [cells]));
+
+        Assert.True(result.Succeeded, result.Status + " " + result.Issue);
+        var stages = (await LoadAsync(w, id)).Items.Single().Stages;
+        Assert.Equal(12, stages.Count);
+        Assert.Equal(Enumerable.Range(1, 12).ToArray(), stages.Select(s => s.StageNo).ToArray());
+
+        // Beyond the safety limit the header is an ERROR (the data would otherwise be dropped silently).
+        var tooMany = headers.Concat([ItemImportTemplate.StageTitle(ItemImportTemplate.MaxStages + 1)]).ToList();
+        var preview = await PreviewOkAsync(w, id, Writer.Write("S", tooMany, [[.. MakeRow("1.20"), .. Enumerable.Repeat("", headers.Count - H.Length), "x"]]));
+        Assert.False(preview.CanCommit);
+        Assert.Contains(preview.FileMessages, m => m.IsError && m.Issue == ImportIssue.StageHeaderBeyondLimit);
+    }
+
+    [Fact]
+    public async Task A_failure_while_saving_leaves_no_partial_import_and_the_request_version_unchanged()
+    {
+        var (w, id, version) = await ReadyWorldAsync();
+        using var disposeWorld = w;
+        var repository = new ERP.MES.Infrastructure.Persistence.EfItemImportRepository(w.Fixture.Db.ContextFactory);
+        var (piece, _) = await TypesAsync(w);
+        var material = long.Parse(w.Fixture.Db.Query("SELECT Id FROM Materials LIMIT 1").Single(), System.Globalization.CultureInfo.InvariantCulture);
+        var spec = new ItemSpecification(piece, material, 1m, null, null);
+
+        // Items are added to the aggregate, then the audit builder fails: nothing may reach the database.
+        await Assert.ThrowsAsync<InvalidOperationException>(() => repository.CommitAsync(
+            id,
+            version,
+            r =>
+            {
+                r.DefineItem(0, "A-1", "x", 1m, spec, w.Planning.UserId, DateTime.UtcNow, Priority.Normal);
+                r.DefineItem(0, "A-2", "y", 1m, spec, w.Planning.UserId, DateTime.UtcNow, Priority.Normal);
+            },
+            r => new ERP.MES.Domain.Imports.ItemImport(id, "f.xlsx", "00", w.Planning.UserId, DateTime.UtcNow, []),
+            r => throw new InvalidOperationException("audit failed"),
+            Token));
+
+        Assert.Equal(0, Count(w, "RequestItems"));
+        Assert.Equal(0, Count(w, "ItemImports"));
+        Assert.Equal(version, await VersionAsync(w, id));
+
+        // A failure inside the database save (here: a duplicate item number in the aggregate) also saves nothing.
+        await Assert.ThrowsAnyAsync<Exception>(() => repository.CommitAsync(
+            id,
+            version,
+            r =>
+            {
+                r.DefineItem(0, "B-1", "x", 1m, spec, w.Planning.UserId, DateTime.UtcNow, Priority.Normal);
+                r.DefineItem(0, "B-1", "dup", 1m, spec, w.Planning.UserId, DateTime.UtcNow, Priority.Normal);
+            },
+            r => new ERP.MES.Domain.Imports.ItemImport(id, "f.xlsx", "00", w.Planning.UserId, DateTime.UtcNow, []),
+            r => [],
+            Token));
+        Assert.Equal(0, Count(w, "RequestItems"));
+        Assert.Equal(0, Count(w, "ItemImports"));
+    }
+
+    [Fact]
+    public async Task Numeric_cells_for_quantity_and_weight_are_accepted_but_a_numeric_item_number_and_excess_decimals_are_not()
+    {
+        var (w, id, _) = await ReadyWorldAsync();
+        using var disposeWorld = w;
+        var sheet = "<?xml version=\"1.0\"?><worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\"><sheetData>"
+            + "<row r=\"1\">" + string.Concat(H.Select((h, i) => $"<c r=\"{(char)('A' + i)}1\" t=\"inlineStr\"><is><t>{h}</t></is></c>")) + "</row>"
+            + "<row r=\"2\"><c r=\"A2\" t=\"inlineStr\"><is><t>ساخت</t></is></c><c r=\"B2\" t=\"inlineStr\"><is><t>N-1</t></is></c><c r=\"C2\" t=\"inlineStr\"><is><t>x</t></is></c><c r=\"D2\"><v>12.5</v></c><c r=\"E2\" t=\"inlineStr\"><is><t>PIECE</t></is></c><c r=\"F2\" t=\"inlineStr\"><is><t>ST37-R30</t></is></c><c r=\"G2\"><v>1.2345</v></c></row>"
+            + "<row r=\"3\"><c r=\"A3\" t=\"inlineStr\"><is><t>ساخت</t></is></c><c r=\"B3\"><v>10</v></c><c r=\"C3\" t=\"inlineStr\"><is><t>x</t></is></c><c r=\"D3\"><v>1</v></c><c r=\"E3\" t=\"inlineStr\"><is><t>PIECE</t></is></c><c r=\"F3\" t=\"inlineStr\"><is><t>ST37-R30</t></is></c><c r=\"G3\"><v>1</v></c></row>"
+            + "<row r=\"4\"><c r=\"A4\" t=\"inlineStr\"><is><t>ساخت</t></is></c><c r=\"B4\" t=\"inlineStr\"><is><t>N-3</t></is></c><c r=\"C4\" t=\"inlineStr\"><is><t>x</t></is></c><c r=\"D4\"><v>1</v></c><c r=\"E4\" t=\"inlineStr\"><is><t>PIECE</t></is></c><c r=\"F4\" t=\"inlineStr\"><is><t>ST37-R30</t></is></c><c r=\"G4\"><v>1.23456789</v></c></row>"
+            + "</sheetData></worksheet>";
+        var file = ZipOf(sheet);
+
+        var preview = await PreviewOkAsync(w, id, file);
+
+        Assert.Equal(ImportRowStatus.New, preview.Rows[0].Status);
+        Assert.Equal(ImportRowStatus.Invalid, preview.Rows[1].Status);
+        Assert.Contains(preview.Rows[1].Messages, m => m.Issue == ImportIssue.ItemNoNumeric);
+        Assert.Equal(ImportRowStatus.Invalid, preview.Rows[2].Status);
+        Assert.Contains(preview.Rows[2].Messages, m => m.Issue == ImportIssue.WeightInvalid);
+        Assert.False(preview.CanCommit);
+    }
+
+    private static byte[] ZipOf(string sheetXml)
+    {
+        using var stream = new MemoryStream();
+        using (var zip = new System.IO.Compression.ZipArchive(stream, System.IO.Compression.ZipArchiveMode.Create, leaveOpen: true))
+        {
+            void Add(string name, string content)
+            {
+                using var writer = new StreamWriter(zip.CreateEntry(name).Open(), new System.Text.UTF8Encoding(false));
+                writer.Write(content);
+            }
+
+            Add("[Content_Types].xml", "<?xml version=\"1.0\"?><Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\"/>");
+            Add("xl/workbook.xml", "<?xml version=\"1.0\"?><workbook xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\"><sheets><sheet name=\"S\" sheetId=\"1\" r:id=\"rId1\"/></sheets></workbook>");
+            Add("xl/_rels/workbook.xml.rels", "<?xml version=\"1.0\"?><Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rId1\" Type=\"x\" Target=\"worksheets/sheet1.xml\"/></Relationships>");
+            Add("xl/worksheets/sheet1.xml", sheetXml);
+        }
+
+        return stream.ToArray();
+    }
 }

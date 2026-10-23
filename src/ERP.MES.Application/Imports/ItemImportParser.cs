@@ -42,6 +42,7 @@ public enum ImportIssue
     StageMachineUnknown,
     StageMachineUnitMismatch,
     StagesIgnoredForExistingItem,
+    StageHeaderBeyondLimit,
 }
 
 /// <summary>A message about the file (<see cref="SheetRow"/> null) or a row, with an optional detail (a header name, a stage number, a code, a first row number).</summary>
@@ -104,7 +105,7 @@ public static class ItemImportParser
         }
 
         var columns = new Dictionary<string, int>(StringComparer.Ordinal);
-        var known = ItemImportTemplate.Headers.Select(ItemImportTemplate.Normalize).ToHashSet(StringComparer.Ordinal);
+        var known = ItemImportTemplate.AcceptedHeaders.Select(ItemImportTemplate.Normalize).ToHashSet(StringComparer.Ordinal);
         foreach (var (index, cell) in headerRow.Cells.OrderBy(c => c.Key))
         {
             var name = ItemImportTemplate.Normalize(cell.Text);
@@ -115,7 +116,9 @@ public static class ItemImportParser
 
             if (!known.Contains(name))
             {
-                file.Add(new ImportMessage(null, ImportIssue.HeaderUnknown, cell.Text.Trim(), false));
+                // A stage column above the limit would silently drop part of a route, so it is an error rather than an ignored column.
+                var beyond = ItemImportTemplate.IsStageHeaderBeyondLimit(name);
+                file.Add(new ImportMessage(null, beyond ? ImportIssue.StageHeaderBeyondLimit : ImportIssue.HeaderUnknown, cell.Text.Trim(), beyond));
             }
             else if (!columns.TryAdd(name, index))
             {

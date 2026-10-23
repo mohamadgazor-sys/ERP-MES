@@ -6,11 +6,16 @@ namespace ERP.MES.Application.Imports;
 /// <summary>
 /// The canonical item-import template (docs/ITEM_IMPORT_TEMPLATE.md; Decision Log #16, #97): ONE worksheet, Persian headers matched by NAME (not position), one row per item. It is the
 /// application\'s own layout, designed from the requirements; it is NOT claimed to match any existing company workbook, which has not been inspected. Columns may appear in any order and
-/// unknown columns are ignored with a warning. Stage columns come in groups of four for up to <see cref="MaxStages"/> stages.
+/// unknown columns are ignored with a warning. Stage columns come in groups of four: the generated template shows <see cref="TemplateStages"/> groups, and a file may use up to
+/// <see cref="MaxStages"/> (a safety limit, not a business rule). A stage header beyond that limit is an error, never silently ignored.
 /// </summary>
 public static class ItemImportTemplate
 {
-    public const int MaxStages = 5;
+    /// <summary>Largest stage number a file may use (safety limit; Decision Log #98).</summary>
+    public const int MaxStages = 20;
+
+    /// <summary>How many stage groups the generated template shows.</summary>
+    public const int TemplateStages = 6;
 
     public const string WorkType = "نوع کار";
     public const string ItemNo = "شماره آیتم";
@@ -32,7 +37,10 @@ public static class ItemImportTemplate
     public static string StageMachine(int stage) => $"مرحله {stage} - کد ماشین";
 
     /// <summary>The headers in template order.</summary>
-    public static IReadOnlyList<string> Headers { get; } = BuildHeaders();
+    public static IReadOnlyList<string> Headers { get; } = BuildHeaders(TemplateStages);
+
+    /// <summary>Every header a file may contain (the template headers plus stage groups up to <see cref="MaxStages"/>).</summary>
+    public static IReadOnlyList<string> AcceptedHeaders { get; } = BuildHeaders(MaxStages);
 
     /// <summary>Headers a file must contain (the other columns are optional, though a MAKE item needs the specification columns).</summary>
     public static IReadOnlyList<string> RequiredHeaders { get; } = [ItemNo, PartName, Quantity];
@@ -87,12 +95,19 @@ public static class ItemImportTemplate
         return builder.ToString();
     }
 
+    /// <summary>True when the (normalized) header names a stage column with a number above <see cref="MaxStages"/>.</summary>
+    public static bool IsStageHeaderBeyondLimit(string normalizedHeader)
+    {
+        var match = System.Text.RegularExpressions.Regex.Match(normalizedHeader, @"^مرحله (\d{1,6}) - ", System.Text.RegularExpressions.RegexOptions.CultureInvariant, TimeSpan.FromSeconds(1));
+        return match.Success && int.TryParse(match.Groups[1].Value, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var number) && number > MaxStages;
+    }
+
     public static string PriorityLabel(Priority priority) => priority.PersianName();
 
-    private static IReadOnlyList<string> BuildHeaders()
+    private static IReadOnlyList<string> BuildHeaders(int stages)
     {
         var headers = new List<string> { WorkType, ItemNo, PartName, Quantity, QuantityType, Material, Weight, Length, Diameter, Priority };
-        for (var stage = 1; stage <= MaxStages; stage++)
+        for (var stage = 1; stage <= stages; stage++)
         {
             headers.AddRange([StageTitle(stage), StageMinutes(stage), StageUnit(stage), StageMachine(stage)]);
         }
@@ -105,7 +120,7 @@ public static class ItemImportTemplate
         params (string Title, string Minutes, string Unit, string Machine)[] stages)
     {
         var cells = new List<string> { workType, itemNo, partName, quantity, typeCode, materialCode, weight, length, diameter, priority };
-        for (var i = 0; i < MaxStages; i++)
+        for (var i = 0; i < TemplateStages; i++)
         {
             if (i < stages.Length)
             {
