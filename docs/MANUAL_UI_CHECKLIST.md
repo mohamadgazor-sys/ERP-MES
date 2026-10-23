@@ -243,3 +243,10 @@ Prepare a fictional demonstration database with `demo-init` (`docs/AUTHENTICATIO
 - T3: As the unit's supervisor approve a report or return it with a reason; the operator edits the same report and resubmits. Planning can review only when the unit has no supervisor (the status then says so); nobody reviews their own report.
 - T4: As Planning, "Undo start/submission" is available only with a reason and only before QC decided; operators cannot act for each other.
 - T5: Management, Planning and the supervisor read reports; other departments see a denied page.
+
+## U. Overtime assignments and limits (Decision Log #89, #95 D5, #103) - not run by a person; covered by automated tests
+- U1: As Planning open "اضافه‌کاری": the page says the limits are not defined; approving anything is refused until daily and weekly limits (minutes) are saved.
+- U2: As a unit supervisor propose overtime (operator, machine of the unit, Jalali date, HH:mm start and end, reason); overlap with the planned shift, an absence, another overtime or a machine booked by someone else is refused with a message; a supervisor cannot propose for themselves or for another unit.
+- U3: As Planning approve within the limits (status "تأییدشده") or see "خارج از سقف؛ در انتظار مدیریت" when the daily or weekly limit is exceeded; reject needs a reason.
+- U4: As Management approve or reject (with a reason) what waits for Management; Planning cannot push it through.
+- U5: Cancel with a reason (Planning or the proposing supervisor); the slot becomes free again. Operators see only their own assignments, other departments see a denied page.

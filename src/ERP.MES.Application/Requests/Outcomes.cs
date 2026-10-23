@@ -377,6 +377,27 @@ public enum ValidationIssue
 
     /// <summary>The user chosen for a designation does not exist, is inactive or is not a Production user.</summary>
     DesignationUserInvalid,
+
+    /// <summary>Only the designated supervisor of the unit proposes overtime for it, and nobody proposes overtime for themselves.</summary>
+    OvertimeNotSupervisor,
+
+    /// <summary>Planning has not configured the overtime limits yet, so overtime cannot be approved (no limit is invented).</summary>
+    OvertimeLimitsNotConfigured,
+
+    /// <summary>The limits are not valid (daily 1 to 1440 minutes, weekly at least the daily limit and at most 10080 minutes).</summary>
+    OvertimeLimitsInvalid,
+
+    /// <summary>The overtime is not valid (times, up to 12 hours in whole minutes, or a reason of 1 to 300 characters is missing).</summary>
+    OvertimeInvalid,
+
+    /// <summary>The operator is absent on a day of the overtime.</summary>
+    OvertimeOperatorAbsent,
+
+    /// <summary>The overtime overlaps the operator's planned shift (overtime is outside the normal shift) or another overtime of the operator.</summary>
+    OvertimeOperatorOverlap,
+
+    /// <summary>The machine is booked in that time by another operator's shift or overtime.</summary>
+    OvertimeMachineBusy,
 }
 
 /// <summary>The result of a command or query: a status, the value on success, and the details of a refusal.</summary>

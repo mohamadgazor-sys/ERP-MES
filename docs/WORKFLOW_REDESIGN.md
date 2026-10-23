@@ -260,7 +260,7 @@ Each PR is small, keeps the demo working until replaced, carries tests, a Decisi
 | 5b | Quantity-level QC (inspection lines, balances, rework loop, next-stage eligibility) | #92, #101 | 3a, 4a, 5a | D2, D3; done (labelled defaults in #101; QC corrections not built) |
 | 6a | Planning calendar: shift templates A-D, unit shifts, OFF days, capacity, worker schedule | R7, #100 | 3b | D5 (overlap); done (labelled defaults in #100; downtime still open) |
 | 6b | Daily job reports and supervisor review | R5, #102 | 3b, 4a, 6a | D8; done (labelled defaults in #102; amendment and late limit not built) |
-| 6c | Overtime assignments | R8 | 6a, 6b | D5 |
+| 6c | Overtime assignments | R8, #103 | 6a, 6b | D5; done (labelled defaults in #103; report-line link deferred to phase 8) |
 | 7 | Costing, Management price approval, Warehouse completion | #91, R4 | 3b, 5b, 6b | D3, D4, D7 |
 | 8 | KPI reporting | R6 | 6b, 5b | D6 |
 | 9 | End-to-end integration, demo hardening, SQL Server test pass (#25), retire the demo stage flow | | all | none |

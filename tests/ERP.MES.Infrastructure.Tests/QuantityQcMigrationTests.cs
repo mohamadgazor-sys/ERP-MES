@@ -39,7 +39,7 @@ public class QuantityQcMigrationTests
         Assert.Empty(db.Query("SELECT * FROM QcInspectionLines"));
         Assert.Empty(db.Query("SELECT * FROM ShortfallDecisions"));
         Assert.Empty(db.Query("PRAGMA foreign_key_check"));
-        Assert.Equal(18, db.Query("SELECT MigrationId FROM __EFMigrationsHistory").Count);
+        Assert.Equal(19, db.Query("SELECT MigrationId FROM __EFMigrationsHistory").Count);
 
         var keys = new List<string>();
         foreach (var table in new[] { "QcInspectionLines", "ShortfallDecisions" })
