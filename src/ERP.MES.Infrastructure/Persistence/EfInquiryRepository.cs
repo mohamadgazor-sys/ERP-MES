@@ -82,6 +82,8 @@ public sealed class EfInquiryRepository(IDbContextFactory<ErpMesDbContext> conte
     private static IQueryable<RawMaterialInquiry> Load(ErpMesDbContext context) =>
         context.RawMaterialInquiries
             .Include(i => i.Lines.OrderBy(l => l.LineNo)).ThenInclude(l => l.Responses.OrderBy(r => r.Id))
+            .Include(i => i.Lines.OrderBy(l => l.LineNo)).ThenInclude(l => l.Dispositions.OrderBy(d => d.Id))
+            .Include(i => i.Lines.OrderBy(l => l.LineNo)).ThenInclude(l => l.SupplyRoutes.OrderBy(r => r.Id))
             .Include(i => i.History.OrderBy(h => h.Id))
             .AsSplitQuery();
 }

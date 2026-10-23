@@ -6,9 +6,9 @@ using ERP.MES.Domain.Requests;
 namespace ERP.MES.Application.Requests;
 
 /// <summary>What the signed-in user may do with raw-material inquiries, for enabling buttons (the Application's answer; every command checks again).</summary>
-public sealed record InquiryCapabilities(bool CanView, bool CanManage, bool CanAnswer)
+public sealed record InquiryCapabilities(bool CanView, bool CanManage, bool CanAnswer, bool CanRecordSupplyRoute)
 {
-    public static InquiryCapabilities None { get; } = new(false, false, false);
+    public static InquiryCapabilities None { get; } = new(false, false, false, false);
 }
 
 /// <summary>The values of one inquiry line as entered. Dimensions in millimetres; null = not applicable for this form.</summary>
@@ -23,14 +23,14 @@ public sealed record InquiryLineInput(
 /// </summary>
 public sealed class InquiryService(IInquiryRepository inquiries, IQcMasterRepository qc, CurrentAuthorization authorization, IClock clock, IAuditContext auditContext)
 {
-    private static readonly Permission[] AllPermissions = [Permission.ViewRawMaterialInquiries, Permission.ManageRawMaterialInquiries, Permission.AnswerRawMaterialInquiry];
+    private static readonly Permission[] AllPermissions = [Permission.ViewRawMaterialInquiries, Permission.ManageRawMaterialInquiries, Permission.AnswerRawMaterialInquiry, Permission.RecordInquirySupplyRoute];
 
     public async Task<InquiryCapabilities> GetCapabilitiesAsync(Principal? principal, CancellationToken cancellationToken = default)
     {
         var set = await authorization.EvaluateAsync(principal, AllPermissions, cancellationToken);
         return set.Current is null
             ? InquiryCapabilities.None
-            : new InquiryCapabilities(set.Has(Permission.ViewRawMaterialInquiries), set.Has(Permission.ManageRawMaterialInquiries), set.Has(Permission.AnswerRawMaterialInquiry));
+            : new InquiryCapabilities(set.Has(Permission.ViewRawMaterialInquiries), set.Has(Permission.ManageRawMaterialInquiries), set.Has(Permission.AnswerRawMaterialInquiry), set.Has(Permission.RecordInquirySupplyRoute));
     }
 
     public async Task<Outcome<IReadOnlyList<InquiryRequestItem>>> ListRequestsAsync(Principal? principal, CancellationToken cancellationToken = default)
@@ -221,6 +221,83 @@ public sealed class InquiryService(IInquiryRepository inquiries, IQcMasterReposi
         return await RunAsync(() => inquiries.UpdateAsync(
             inquiryId, expectedVersion, (inquiry, _) => inquiry.Answer(lineNo, answer, note, actor, now),
             (inquiry, requestNo) => [Audit(decision.Current!, now, AuditActions.InquiryAnswered, inquiry.RequestId, $"Request {requestNo}: inquiry round {inquiry.RoundNo}, line {lineNo}: answered {answer}")],
+            cancellationToken));
+    }
+
+    /// <summary>
+    /// Drawing records what it does about a line Warehouse answered No (owner decision D1, Decision Log #95): revised in a new round (the later round of the same request must exist and not be
+    /// cancelled), recorded as a condition of the technical result, or returned unchanged. A note is required for the last two. Nothing rejects the request.
+    /// </summary>
+    public async Task<Outcome<Stored<RawMaterialInquiry>>> RecordDispositionAsync(
+        Principal? principal, long inquiryId, long expectedVersion, int lineNo, DispositionKind kind, string? note, long? newRoundInquiryId, CancellationToken cancellationToken = default)
+    {
+        var decision = await authorization.CheckAsync(principal, Permission.ManageRawMaterialInquiries, cancellationToken);
+        if (!decision.IsAllowed)
+        {
+            return Outcome<Stored<RawMaterialInquiry>>.Fail(OperationStatus.NotAuthorized);
+        }
+
+        if (!Enum.IsDefined(kind) || (kind != DispositionKind.RevisedInNewRound && string.IsNullOrWhiteSpace(note))
+            || (kind == DispositionKind.RevisedInNewRound && newRoundInquiryId is null))
+        {
+            return Outcome<Stored<RawMaterialInquiry>>.Invalid(ValidationIssue.DispositionInvalid);
+        }
+
+        if (NoteIssue(note, required: false) is var issue && issue != ValidationIssue.None)
+        {
+            return Outcome<Stored<RawMaterialInquiry>>.Invalid(issue);
+        }
+
+        var (actor, now) = Who(decision);
+        return await RunOutcomeAsync(async () =>
+        {
+            if (kind == DispositionKind.RevisedInNewRound)
+            {
+                var current = await inquiries.FindAsync(inquiryId, cancellationToken);
+                var next = await inquiries.FindAsync(newRoundInquiryId!.Value, cancellationToken);
+                if (current is null)
+                {
+                    return Outcome<Stored<RawMaterialInquiry>>.Fail(OperationStatus.NotFound);
+                }
+
+                if (next is null || next.Inquiry.Value.RequestId != current.Inquiry.Value.RequestId || next.Inquiry.Value.RoundNo <= current.Inquiry.Value.RoundNo
+                    || next.Inquiry.Value.Status == InquiryStatus.Cancelled)
+                {
+                    return Outcome<Stored<RawMaterialInquiry>>.Invalid(ValidationIssue.DispositionInvalid);
+                }
+            }
+
+            return Outcome<Stored<RawMaterialInquiry>>.Ok(await inquiries.UpdateAsync(
+                inquiryId, expectedVersion, (inquiry, _) => inquiry.RecordDisposition(lineNo, kind, note, newRoundInquiryId, actor, now),
+                (inquiry, requestNo) => [Audit(decision.Current!, now, AuditActions.InquiryDispositionRecorded, inquiry.RequestId, $"Request {requestNo}: inquiry round {inquiry.RoundNo}, line {lineNo}: disposition {kind} recorded")],
+                cancellationToken));
+        });
+    }
+
+    /// <summary>Planning records the supply route (a note, and whether it is an external purchase) for a line answered No.</summary>
+    public async Task<Outcome<Stored<RawMaterialInquiry>>> RecordSupplyRouteAsync(
+        Principal? principal, long inquiryId, long expectedVersion, int lineNo, string? note, bool externalPurchase, CancellationToken cancellationToken = default)
+    {
+        var decision = await authorization.CheckAsync(principal, Permission.RecordInquirySupplyRoute, cancellationToken);
+        if (!decision.IsAllowed)
+        {
+            return Outcome<Stored<RawMaterialInquiry>>.Fail(OperationStatus.NotAuthorized);
+        }
+
+        if (string.IsNullOrWhiteSpace(note))
+        {
+            return Outcome<Stored<RawMaterialInquiry>>.Invalid(ValidationIssue.SupplyRouteInvalid);
+        }
+
+        if (NoteIssue(note, required: false) is var issue && issue != ValidationIssue.None)
+        {
+            return Outcome<Stored<RawMaterialInquiry>>.Invalid(issue);
+        }
+
+        var (actor, now) = Who(decision);
+        return await RunAsync(() => inquiries.UpdateAsync(
+            inquiryId, expectedVersion, (inquiry, _) => inquiry.RecordSupplyRoute(lineNo, note, externalPurchase, actor, now),
+            (inquiry, requestNo) => [Audit(decision.Current!, now, AuditActions.InquirySupplyRouteRecorded, inquiry.RequestId, $"Request {requestNo}: inquiry round {inquiry.RoundNo}, line {lineNo}: supply route recorded" + (externalPurchase ? " (external purchase)" : string.Empty))],
             cancellationToken));
     }
 

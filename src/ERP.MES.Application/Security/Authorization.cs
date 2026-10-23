@@ -48,8 +48,23 @@ public enum Permission
     /// <summary>Answer the lines of a raw-material inquiry Yes or No. Warehouse (Decision Log #88).</summary>
     AnswerRawMaterialInquiry,
 
-    /// <summary>Read raw-material inquiries and answers: Drawing and Warehouse. Read access for Planning and Management is owner decision D8 and stays denied until decided.</summary>
+    /// <summary>Read raw-material inquiries, answers, dispositions and history: Drawing and Warehouse, and Planning and Management read-only (owner decision D8, Decision Log #95). Reading grants no right to edit or answer.</summary>
     ViewRawMaterialInquiries,
+
+    /// <summary>Planning records the supply route for a line Warehouse answered No (owner decision D1, Decision Log #95).</summary>
+    RecordInquirySupplyRoute,
+
+    /// <summary>Drawing asks Planning a clarification question while it reviews a request, and closes its own questions (owner decision D1).</summary>
+    AskDrawingClarification,
+
+    /// <summary>Planning answers Drawing's clarification questions (owner decision D1).</summary>
+    AnswerDrawingClarification,
+
+    /// <summary>Read clarification questions and answers: Drawing and Planning.</summary>
+    ViewDrawingClarifications,
+
+    /// <summary>Read the production-gate state of a request (Management/Drawing/contract/inquiry/clarification gates): Planning, Management, Drawing, Warehouse.</summary>
+    ViewProductionGates,
 
     /// <summary>
     /// Read contracts, their versions, PDFs and decision history. Planning and Management (who act on them) and Warehouse (read-only, Decision Log #85). Every other department is denied.
@@ -146,7 +161,12 @@ public static class AuthorizationRules
         [Permission.ViewPlanningMasterData] = new([], null),
         [Permission.ManageRawMaterialInquiries] = new([DepartmentCodes.Drawing], null),
         [Permission.AnswerRawMaterialInquiry] = new([DepartmentCodes.Warehouse], null),
-        [Permission.ViewRawMaterialInquiries] = new([DepartmentCodes.Drawing, DepartmentCodes.Warehouse], null),
+        [Permission.ViewRawMaterialInquiries] = new([DepartmentCodes.Drawing, DepartmentCodes.Warehouse, DepartmentCodes.Planning, DepartmentCodes.Management], null),
+        [Permission.RecordInquirySupplyRoute] = new([DepartmentCodes.Planning], null),
+        [Permission.AskDrawingClarification] = new([DepartmentCodes.Drawing], null),
+        [Permission.AnswerDrawingClarification] = new([DepartmentCodes.Planning], null),
+        [Permission.ViewDrawingClarifications] = new([DepartmentCodes.Drawing, DepartmentCodes.Planning], null),
+        [Permission.ViewProductionGates] = new([DepartmentCodes.Planning, DepartmentCodes.Management, DepartmentCodes.Drawing, DepartmentCodes.Warehouse], null),
         [Permission.ViewContracts] = new([DepartmentCodes.Planning, DepartmentCodes.Management, DepartmentCodes.Warehouse], null),
         [Permission.MaintainMaterials] = new([DepartmentCodes.Warehouse], null),
         [Permission.ViewMaterials] = new([], null),

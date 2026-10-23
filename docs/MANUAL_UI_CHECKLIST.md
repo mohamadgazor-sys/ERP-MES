@@ -145,6 +145,13 @@ Fixed seeded routes and the demonstration banner stay visible; stage progression
 - M4: The request status never changes; nothing is reserved. Planning, Management, QC, Central and Production see the page empty with the not-authorized message (read access waits for decision D8).
 - M5: There is no clarification thread and no action after a "No" yet (decision D1).
 
+## N. Clarifications, No-answer dispositions and the release gate (Decision Log #95) - not run by a person; covered by automated tests
+- N1: As Drawing, on a request under Drawing review, ask a question (page "پرسش‌های نقشه‌کشی"); as Planning, see it listed and answer it; as Drawing, close it. The request status stays "under Drawing review" throughout.
+- N2: On "استعلام مواد اولیه", after Warehouse answered "خیر", the line shows "بدون تکلیف (مانع آزادسازی)"; as Drawing choose "اصلاح در دور جدید" (after opening a later round), "ثبت به‌عنوان شرط" or "بازگشت بدون تغییر" (the last two need a note). The gate line lists the remaining blockers.
+- N3: As Planning, record the supply route for the line (note required; tick "خرید بیرونی" for an external purchase). It does not replace Drawing's disposition.
+- N4: Planning and Management can open the inquiry page and read everything, but every action button is disabled; QC, Central and Production see nothing.
+- N5: Only Drawing can cancel an inquiry (reason required); only Drawing can close its own question.
+
 ## E. Production overview for Management and Planning (read-only; `docs/PRODUCTION_QUEUE.md`, Decision Log #78) - pending the owner's run
 
 Prepare a fictional demonstration database with `demo-init` (see `docs/AUTHENTICATION.md` section 12). The seeded requests have routes and several stage states.

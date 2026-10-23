@@ -68,6 +68,10 @@ public static class Messages
         ValidationIssue.EffectiveDateRequired => "تاریخ شروع اعمال نرخ را وارد کنید.",
         ValidationIssue.EffectiveDateInvalid => "تاریخ شروع اعمال نرخ معتبر نیست (مثال: ۱۴۰۵/۰۷/۲۰).",
         ValidationIssue.RateNotLater => "تاریخ شروع نرخ جدید باید بعد از آخرین نرخ ثبت‌شدهٔ این ماشین باشد؛ تاریخچه بازنویسی نمی‌شود.",
+        ValidationIssue.ClarificationTextInvalid => "متن را وارد کنید (حداکثر ۲۰۰۰ نویسه).",
+        ValidationIssue.ClarificationRequestState => "پرسش توضیحی فقط هنگام بررسی نقشه‌کشی ثبت می‌شود.",
+        ValidationIssue.DispositionInvalid => "برای «ثبت به‌عنوان شرط» و «بازگشت بدون تغییر» توضیح لازم است؛ برای «اصلاح در دور جدید» باید دور بعدیِ همین درخواست (لغو‌نشده) انتخاب شود.",
+        ValidationIssue.SupplyRouteInvalid => "مسیر تأمین (توضیح) را وارد کنید.",
         ValidationIssue.InquiryRequestState => "استعلام مواد اولیه فقط هنگام بررسی نقشه‌کشی یا پس از بازگشت از نقشه‌کشی ممکن است.",
         ValidationIssue.InquiryLineInvalid => "جنس و شکل ماده الزامی است (حداکثر ۱۰۰ نویسه)؛ ابعاد در صورت ورود باید بزرگ‌تر از صفر باشد.",
         ValidationIssue.InquiryNoLines => "پیش از ارسال، دست‌کم یک ردیف ماده اضافه کنید.",
@@ -158,7 +162,31 @@ public static class Messages
         ERP.MES.Domain.Inquiries.InquiryAction.Answered => "پاسخ انبار",
         ERP.MES.Domain.Inquiries.InquiryAction.AnswerChanged => "تغییر پاسخ انبار",
         ERP.MES.Domain.Inquiries.InquiryAction.Closed => "بستن پس از بررسی",
+        ERP.MES.Domain.Inquiries.InquiryAction.DispositionRecorded => "تعیین تکلیف پاسخ «خیر» (نقشه‌کشی)",
+        ERP.MES.Domain.Inquiries.InquiryAction.SupplyRouteRecorded => "ثبت مسیر تأمین (برنامه‌ریزی)",
         _ => "لغو",
+    };
+
+    public static string ClarificationStatusText(ERP.MES.Domain.Inquiries.ClarificationStatus status) => status switch
+    {
+        ERP.MES.Domain.Inquiries.ClarificationStatus.Open => "باز؛ منتظر پاسخ برنامه‌ریزی",
+        ERP.MES.Domain.Inquiries.ClarificationStatus.Answered => "پاسخ داده شده؛ منتظر بستن توسط نقشه‌کشی",
+        _ => "بسته‌شده",
+    };
+
+    public static string DispositionKindText(ERP.MES.Domain.Inquiries.DispositionKind kind) => kind switch
+    {
+        ERP.MES.Domain.Inquiries.DispositionKind.RevisedInNewRound => "اصلاح در دور جدید",
+        ERP.MES.Domain.Inquiries.DispositionKind.RecordedAsCondition => "ثبت به‌عنوان شرط نتیجهٔ فنی",
+        _ => "بازگشت نتیجه بدون تغییر",
+    };
+
+    public static string GateBlockerText(ERP.MES.Application.Requests.GateBlocker blocker) => blocker switch
+    {
+        ERP.MES.Application.Requests.GateBlocker.DefinitionGate => "دروازهٔ مدیریت/نقشه‌کشی/قرارداد برقرار نیست",
+        ERP.MES.Application.Requests.GateBlocker.InquiryLinesUnanswered => "ردیف‌های بی‌پاسخ استعلام مواد اولیه",
+        ERP.MES.Application.Requests.GateBlocker.NoAnswerWithoutDisposition => "پاسخ «خیر» بدون تعیین تکلیف نقشه‌کشی",
+        _ => "پرسش توضیحی نقشه‌کشی بسته نشده است",
     };
 
     public static string ContractStatusText(ERP.MES.Domain.Contracts.ContractStatus status) => status switch

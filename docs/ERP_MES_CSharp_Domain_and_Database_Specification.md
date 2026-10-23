@@ -789,6 +789,8 @@ A new production/QC/cost route is generated as required by the current state aft
 
 Warehouse v1 is **history/inquiry/receipt oriented**, not a full inventory-management system.
 
+> **[Decision Log #88, #94, #95]** Implemented as `RawMaterialInquiries` (per request and round), `RawMaterialInquiryLines`, append-only `RawMaterialInquiryResponses` (Yes/No), `RawMaterialInquiryDispositions` (Drawing, per No answer), `RawMaterialInquirySupplyRoutes` (Planning), `RawMaterialInquiryHistory`, and request-level `DrawingClarifications`. The AVAILABLE/PARTIAL/UNAVAILABLE vocabulary below is superseded by Yes/No.
+
 ## 13.1 WarehouseInquiry
 
 > **Superseded/clarified (2026-10-22, Decision Log #88):** Yes/No per line, request-level inquiry (#86), no reservation or deduction. The text below is kept as history.

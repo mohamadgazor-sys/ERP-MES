@@ -43,7 +43,7 @@ public class ContractMigrationTests
         }
 
         Assert.Empty(db.Query("PRAGMA foreign_key_check"));
-        Assert.Equal(11, db.Query("SELECT MigrationId FROM __EFMigrationsHistory").Count);
+        Assert.Equal(12, db.Query("SELECT MigrationId FROM __EFMigrationsHistory").Count);
         await using var check = db.NewContext();
         Assert.False(check.Database.HasPendingModelChanges());
     }

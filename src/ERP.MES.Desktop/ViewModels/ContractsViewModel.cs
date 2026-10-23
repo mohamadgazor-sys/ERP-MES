@@ -19,14 +19,14 @@ public sealed record ContractHistoryRow(string DateText, string ActionText, stri
 /// command is checked again there. A rejection returns the contract to Planning for a new version (a PROVISIONAL default routing). Approval is shown in this list to Planning and Warehouse;
 /// there is no separate notification mechanism yet.
 /// </summary>
-public sealed class ContractsViewModel(ContractService service, IJalaliDateService dates, Func<Principal> currentUser) : ObservableObject
+public sealed class ContractsViewModel(ContractService service, RequestGateService gates, IJalaliDateService dates, Func<Principal> currentUser) : ObservableObject
 {
     private readonly ObservableCollection<ContractListRow> _rows = [];
     private readonly ObservableCollection<ContractVersionRow> _versions = [];
     private readonly ObservableCollection<ContractHistoryRow> _history = [];
     private ContractCapabilities _capabilities = ContractCapabilities.None;
     private ContractDetail? _detail;
-    private RequestGateReadiness? _readiness;
+    private ProductionGateStatus? _readiness;
     private ContractListRow? _selected;
     private string _message = string.Empty;
     private bool _isBusy;
@@ -70,8 +70,12 @@ public sealed class ContractsViewModel(ContractService service, IJalaliDateServi
 
     public string GateLine => _readiness is null
         ? string.Empty
-        : (_readiness.ManagementDrawingAndContractGatesSatisfied ? "دروازه‌های مدیریت، نقشه‌کشی و قرارداد برقرار است" : "مانع: " + Messages.DefinitionBlockText(_readiness.Block))
-            + " — توجه: بررسی مواد اولیه و تعریف اقلام هنوز پیاده‌سازی نشده و این به معنای آزادسازی تولید نیست.";
+        : (_readiness.Satisfied
+            ? "دروازه‌های مدیریت، نقشه‌کشی، قرارداد، استعلام مواد و پرسش‌ها برقرار است"
+            : "مانع: " + (_readiness.DefinitionBlock != ERP.MES.Domain.Contracts.DefinitionBlock.None
+                ? Messages.DefinitionBlockText(_readiness.DefinitionBlock)
+                : string.Join("؛ ", _readiness.Blockers.Select(Messages.GateBlockerText))))
+        + " — توجه: بررسی تعریف اقلام هنوز پیاده‌سازی نشده و این به معنای آزادسازی تولید نیست.";
 
     public bool CanView => _capabilities.CanView;
 
@@ -237,7 +241,7 @@ public sealed class ContractsViewModel(ContractService service, IJalaliDateServi
     private async Task LoadDetailAsync(long requestId, CancellationToken cancellationToken)
     {
         var detail = await service.GetAsync(currentUser(), requestId, cancellationToken);
-        var readiness = await service.GetReadinessAsync(currentUser(), requestId, cancellationToken);
+        var readiness = await gates.GetAsync(currentUser(), requestId, cancellationToken);
         if (!detail.Succeeded)
         {
             ClearDetail();

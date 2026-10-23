@@ -1,12 +1,16 @@
 # Owner Decision Packet - Remaining Genuinely Open Decisions
 
-**Status:** all items are OPEN. Each recommendation is a **recommended default, not approved**. Nothing here is implemented. Everything else previously open (U-01..U-40) is answered by your decisions #84-#92, by existing decisions, or covered by a labelled low-risk default listed in `WORKFLOW_REDESIGN.md` section 9. Implementation of phases not listed under "Blocks" is not stopped by this packet.
+**Status (updated 2026-10-23): ALL EIGHT ITEMS ARE OWNER-APPROVED as recommended (Decision Log #95), with the boundaries recorded there.** The question text below is kept unchanged as the record of what was asked; where it says "open", "recommended default" or "not approved", read it as superseded by #95. Implementation status: D1 and the D8 inquiry-read row are implemented (Phase 2a-ii); the other items are applied in the phase named under each "Blocks" line (D2/D3 phase 5b and 7, D4/D7 phase 7, D5 phases 6a and 6c, D6 phase 8, remaining D8 rows phases 5a, 6b and 8).
+
+**Original status text (history):** all items were OPEN. Each recommendation was a **recommended default, not approved**. Nothing here was implemented. Everything else previously open (U-01..U-40) is answered by your decisions #84-#92, by existing decisions, or covered by a labelled low-risk default listed in `WORKFLOW_REDESIGN.md` section 9. Implementation of phases not listed under "Blocks" is not stopped by this packet.
 
 Reply per item with the letter of the option (or your own rule). Until you answer, the blocked phase builds only the parts that do not depend on the answer.
 
 ---
 
 ## D1 - Drawing clarification and unavailable raw material
+
+**Decision: APPROVED 2026-10-23 as recommended (options A, A, yes) - Decision Log #95. Implemented in Phase 2a-ii.**
 
 **Choice 1 - who answers a Drawing clarification request, and where does the request sit meanwhile?**
 
@@ -32,6 +36,8 @@ Reply per item with the letter of the option (or your own rule). Until you answe
 
 ## D2 - Is physical-piece identity needed beyond base-unit quantity records?
 
+**Decision: APPROVED 2026-10-23 as recommended (option A) - Decision Log #95. Applied in phase 5b.**
+
 | Option | Consequences |
 |---|---|
 | **A (recommended)** **No.** QC records "n base units: accepted / rework / scrap" per item and stage, traced to the decision and user. A pair is 2 base pieces; "one of a pair is scrap" is 1 scrap piece. | Simplest correct design; cannot say *which* physical member was scrapped. |
@@ -43,6 +49,8 @@ Reply per item with the letter of the option (or your own rule). Until you answe
 ---
 
 ## D3 - How rework and scrap affect production totals and cost
+
+**Decision: APPROVED 2026-10-23 as recommended (A, no automatic replacement, no overproduction without a raised ordered quantity, accepted base units) - Decision Log #95. Applied in phases 5b and 7.**
 
 **Choice 1 - cost treatment of scrap and rework time:**
 
@@ -64,6 +72,8 @@ Reply per item with the letter of the option (or your own rule). Until you answe
 
 ## D4 - Contract price versus calculated internal cost
 
+**Decision: APPROVED 2026-10-23 as recommended (option A) - Decision Log #95. Applied in phase 7.**
+
 | Option | Consequences |
 |---|---|
 | **A (recommended)** **REPAIR and MAKE without a contract:** the calculated cost (approved actual time x rate + material) is proposed to Management, who approves or changes the price. **MAKE with an approved contract:** the contract amount is the price; the calculated cost is shown for information (margin visible); no second price calculation, as in Master 19.1. | Matches existing Master 19.1; Management still sees cost vs contract. |
@@ -75,6 +85,8 @@ Reply per item with the letter of the option (or your own rule). Until you answe
 ---
 
 ## D5 - Overtime approval limits and overlapping shift assignments
+
+**Decision: APPROVED 2026-10-23 as recommended (option A); no numeric limits invented - Planning configures them before overtime approval can be used - Decision Log #95. Applied in phases 6a and 6c.**
 
 **Choice 1 - overtime:**
 
@@ -94,6 +106,8 @@ You must also supply the **numeric limits** (or say "Planning configures them"),
 
 ## D6 - Production-unit performance metrics
 
+**Decision: APPROVED 2026-10-23 as recommended, overtime included but shown separately - Decision Log #95. Applied in phase 8.**
+
 R6 fixes operator ranking (valid reported hours, with deterministic tie-break) and forbids a single composite "best unit". The unit metrics need definitions. Recommended default set, each shown separately and labelled actual/planned/accepted/rework/scrap/estimated:
 
 1. Productive hours (approved report time minus downtime).
@@ -111,6 +125,8 @@ Questions: do overtime hours count in productive hours and utilization (recommen
 
 ## D7 - Warehouse receipt, finished/sent status and customer dispatch
 
+**Decision: APPROVED 2026-10-23 as recommended (option A) - Decision Log #95. Applied in phase 7.**
+
 Your lifecycle ends with Warehouse "marking the item finished/sent" after price approval; earlier specifications (Master 17.2) have a **final warehouse receipt** as the physical completion.
 
 | Option | Consequences |
@@ -124,6 +140,8 @@ Your lifecycle ends with Warehouse "marking the item finished/sent" after price 
 ---
 
 ## D8 - Authorization rows not settled by your requirements
+
+**Decision: APPROVED 2026-10-23 as recommended, with the explicit rules of Decision Log #95. Inquiry read access implemented in Phase 2a-ii; other rows applied with their phases.**
 
 Rows (all denied until you decide); my recommendation in brackets:
 

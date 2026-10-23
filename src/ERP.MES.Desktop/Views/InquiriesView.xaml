@@ -40,6 +40,7 @@
 
             <StackPanel Visibility="{Binding HasInquiry, Converter={StaticResource BoolToVisibility}}" Margin="0,12,0,0">
                 <TextBlock Text="{Binding InquiryHeading}" FontSize="16" FontWeight="SemiBold" />
+                <TextBlock Text="{Binding GateText}" TextWrapping="Wrap" Foreground="{StaticResource MutedTextBrush}" Margin="0,2,0,0" />
                 <DataGrid ItemsSource="{Binding Lines}" SelectedItem="{Binding SelectedLine, Mode=TwoWay}" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single"
                           HeadersVisibility="Column" CanUserAddRows="False" CanUserDeleteRows="False" MaxHeight="220" Margin="0,6,0,0" Background="{StaticResource CardBrush}">
                     <DataGrid.Columns>
@@ -50,6 +51,8 @@
                         <DataGridTextColumn Header="پاسخ انبار" Binding="{Binding AnswerText}" Width="110" />
                         <DataGridTextColumn Header="توضیح انبار" Binding="{Binding AnswerNoteText}" Width="*" />
                         <DataGridTextColumn Header="پاسخ‌دهنده" Binding="{Binding ResponderText}" Width="*" />
+                        <DataGridTextColumn Header="تکلیف نقشه‌کشی" Binding="{Binding DispositionText}" Width="*" />
+                        <DataGridTextColumn Header="مسیر تأمین" Binding="{Binding SupplyRouteText}" Width="*" />
                     </DataGrid.Columns>
                 </DataGrid>
 
@@ -84,6 +87,17 @@
                             <Button Content="پاسخ «خیر» به ردیف انتخاب‌شده" Padding="12,5" Margin="0,0,8,0" Click="OnNoClick" IsEnabled="{Binding CanAnswer}" />
                             <Button Content="بستن پس از بررسی" Padding="12,5" Margin="0,0,8,0" Click="OnCloseClick" IsEnabled="{Binding CanClose}" />
                             <Button Content="لغو استعلام" Padding="12,5" Click="OnCancelClick" IsEnabled="{Binding CanCancel}" />
+                        </WrapPanel>
+                        <TextBlock Text="تعیین تکلیف پاسخ «خیر» (نقشه‌کشی؛ ردیف را انتخاب کنید) و مسیر تأمین (برنامه‌ریزی)" FontWeight="SemiBold" Margin="0,10,0,4" />
+                        <WrapPanel>
+                            <ComboBox x:Name="RoundBox" ItemsSource="{Binding RoundChoices}" DisplayMemberPath="Text" Width="110" Margin="0,0,8,0" ToolTip="دور جدید (برای اصلاح در دور جدید)" />
+                            <Button Content="اصلاح در دور جدید" Padding="12,5" Margin="0,0,8,0" Click="OnDisposeRevisedClick" IsEnabled="{Binding CanDispose}" />
+                            <Button Content="ثبت به‌عنوان شرط نتیجهٔ فنی (توضیح الزامی)" Padding="12,5" Margin="0,0,8,0" Click="OnDisposeConditionClick" IsEnabled="{Binding CanDispose}" />
+                            <Button Content="بازگشت بدون تغییر (توضیح الزامی)" Padding="12,5" Margin="0,0,8,0" Click="OnDisposeUnchangedClick" IsEnabled="{Binding CanDispose}" />
+                        </WrapPanel>
+                        <WrapPanel Margin="0,6,0,0">
+                            <CheckBox x:Name="ExternalBox" Content="خرید بیرونی" VerticalAlignment="Center" Margin="0,0,10,0" />
+                            <Button Content="ثبت مسیر تأمین (توضیح الزامی)" Padding="12,5" Click="OnSupplyRouteClick" IsEnabled="{Binding CanRecordSupplyRoute}" />
                         </WrapPanel>
                     </StackPanel>
                 </Border>

@@ -13,6 +13,22 @@ public enum InquiryStatus
     Cancelled,
 }
 
+/// <summary>
+/// What Drawing does about a line Warehouse answered No (owner decision D1, Decision Log #95). Nothing rejects the request automatically; production release waits until every No has a
+/// valid disposition.
+/// </summary>
+public enum DispositionKind
+{
+    /// <summary>Drawing revised the lines and opened a new round; the new round is linked.</summary>
+    RevisedInNewRound = 1,
+
+    /// <summary>The shortage is recorded as a condition in the technical result; the condition text is the note.</summary>
+    RecordedAsCondition,
+
+    /// <summary>Drawing returns its result unchanged and says why in the note.</summary>
+    ReturnedUnchanged,
+}
+
 /// <summary>Warehouse's answer to one line (Decision Log #88): Yes or No only. Availability is information; it reserves and deducts nothing and does not decide feasibility.</summary>
 public enum InquiryAnswer
 {
@@ -30,6 +46,8 @@ public enum InquiryAction
     AnswerChanged,
     Closed,
     Cancelled,
+    DispositionRecorded,
+    SupplyRouteRecorded,
 }
 
 /// <summary>Thrown when the request's status does not allow raw-material inquiries (they are raised while Drawing reviews, or after Drawing returned the request).</summary>
@@ -86,6 +104,12 @@ public sealed class RawMaterialInquiry
     public IReadOnlyList<InquiryHistoryEntry> History => _history;
 
     public bool IsOpen => Status is InquiryStatus.Sent or InquiryStatus.PartiallyAnswered or InquiryStatus.Answered;
+
+    /// <summary>Lines of a sent, not cancelled inquiry that still have no answer. They block production release (owner decision D1).</summary>
+    public int UnansweredLineCount => Status is InquiryStatus.Sent or InquiryStatus.PartiallyAnswered ? _lines.Count(l => l.CurrentResponse is null) : 0;
+
+    /// <summary>Lines whose current answer is No and that have no valid disposition yet. A cancelled inquiry still counts: cancelling cannot make a No disappear.</summary>
+    public int PendingDispositionCount => Status == InquiryStatus.Draft ? 0 : _lines.Count(l => l.NeedsDisposition);
 
     /// <summary>Lines that have a current answer, among all lines.</summary>
     public int AnsweredLineCount => _lines.Count(l => l.CurrentResponse is not null);
@@ -176,6 +200,59 @@ public sealed class RawMaterialInquiry
         Add(changed ? InquiryAction.AnswerChanged : InquiryAction.Answered, from, Status, lineNo, answer, text, actor, utc);
     }
 
+    /// <summary>
+    /// Drawing records what it does about a line whose current answer is No: revised in a new round, recorded as a condition of the technical result, or returned unchanged. The disposition
+    /// belongs to that answer: a later change of the answer makes it stale (a new No needs a new disposition). A note is required for a condition and for an unchanged return.
+    /// </summary>
+    public void RecordDisposition(int lineNo, DispositionKind kind, string? note, long? newRoundInquiryId, WorkflowActor actor, DateTime atUtc)
+    {
+        var utc = Customer.RequireUtc(atUtc, nameof(atUtc));
+        if (Status == InquiryStatus.Draft)
+        {
+            throw new InvalidOperationException("A draft has no answers to dispose of.");
+        }
+
+        if (!Enum.IsDefined(kind))
+        {
+            throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unknown disposition.");
+        }
+
+        var line = _lines.FirstOrDefault(l => l.LineNo == lineNo) ?? throw new InvalidOperationException("The inquiry has no such line.");
+        if (!line.NeedsDisposition)
+        {
+            throw new InvalidOperationException("The line has no current No answer that still needs a disposition.");
+        }
+
+        var text = CleanNote(note, required: kind != DispositionKind.RevisedInNewRound);
+        if (kind == DispositionKind.RevisedInNewRound && newRoundInquiryId is null)
+        {
+            throw new ArgumentException("The new round must be named.", nameof(newRoundInquiryId));
+        }
+
+        line.AddDisposition(kind, text, kind == DispositionKind.RevisedInNewRound ? newRoundInquiryId : null, actor, utc);
+        Add(InquiryAction.DispositionRecorded, Status, Status, lineNo, null, text, actor, utc);
+    }
+
+    /// <summary>Planning records the supply route for a line answered No (for example an external purchase). Informational; it does not replace the Drawing disposition.</summary>
+    public void RecordSupplyRoute(int lineNo, string? note, bool externalPurchase, WorkflowActor actor, DateTime atUtc)
+    {
+        var utc = Customer.RequireUtc(atUtc, nameof(atUtc));
+        if (Status == InquiryStatus.Draft)
+        {
+            throw new InvalidOperationException("A draft has no answers.");
+        }
+
+        var line = _lines.FirstOrDefault(l => l.LineNo == lineNo) ?? throw new InvalidOperationException("The inquiry has no such line.");
+        if (line.CurrentResponse is not { Answer: InquiryAnswer.No, Id: > 0 })
+        {
+            throw new InvalidOperationException("A supply route is recorded for a line whose current answer is No.");
+        }
+
+        var text = CleanNote(note, required: true);
+        line.AddSupplyRoute(text!, externalPurchase, actor, utc);
+        Add(InquiryAction.SupplyRouteRecorded, Status, Status, lineNo, null, text, actor, utc);
+    }
+
     /// <summary>Drawing reviews the answers and closes the inquiry. Only a fully answered inquiry can be closed. Closing does not decide anything about the request.</summary>
     public void Close(string? note, WorkflowActor actor, DateTime atUtc)
     {
@@ -242,6 +319,8 @@ public sealed class RawMaterialInquiryLine
     public const int MaxTextLength = 100;
 
     private readonly List<RawMaterialInquiryResponse> _responses = [];
+    private readonly List<InquiryLineDisposition> _dispositions = [];
+    private readonly List<InquirySupplyRoute> _supplyRoutes = [];
 
     private RawMaterialInquiryLine()
     {
@@ -303,6 +382,36 @@ public sealed class RawMaterialInquiryLine
     /// <summary>The latest response, or null while the line is unanswered.</summary>
     public RawMaterialInquiryResponse? CurrentResponse => _responses.LastOrDefault();
 
+    /// <summary>All dispositions, oldest first. Append-only.</summary>
+    public IReadOnlyList<InquiryLineDisposition> Dispositions => _dispositions;
+
+    /// <summary>All supply-route records, oldest first. Append-only.</summary>
+    public IReadOnlyList<InquirySupplyRoute> SupplyRoutes => _supplyRoutes;
+
+    /// <summary>The disposition that belongs to the CURRENT answer; null when there is none (an earlier answer's disposition is stale).</summary>
+    public InquiryLineDisposition? CurrentDisposition =>
+        CurrentResponse is { Id: > 0 } current ? _dispositions.LastOrDefault(d => d.ResponseId == current.Id) : null;
+
+    public InquirySupplyRoute? CurrentSupplyRoute =>
+        CurrentResponse is { Id: > 0 } current ? _supplyRoutes.LastOrDefault(r => r.ResponseId == current.Id) : null;
+
+    /// <summary>True when the current answer is a saved No without a disposition for it.</summary>
+    public bool NeedsDisposition => CurrentResponse is { Answer: InquiryAnswer.No } && CurrentDisposition is null;
+
+    internal void AddDisposition(DispositionKind kind, string? note, long? newRoundInquiryId, WorkflowActor actor, DateTime atUtc)
+    {
+        var current = CurrentResponse;
+        if (current is null || current.Id <= 0)
+        {
+            throw new InvalidOperationException("The current answer is not saved yet.");
+        }
+
+        _dispositions.Add(new InquiryLineDisposition(current.Id, kind, note, newRoundInquiryId, actor, atUtc));
+    }
+
+    internal void AddSupplyRoute(string note, bool externalPurchase, WorkflowActor actor, DateTime atUtc) =>
+        _supplyRoutes.Add(new InquirySupplyRoute(CurrentResponse!.Id, note, externalPurchase, actor, atUtc));
+
     internal void AddResponse(InquiryAnswer answer, string? note, WorkflowActor actor, DateTime atUtc) =>
         _responses.Add(new RawMaterialInquiryResponse(answer, note, actor, atUtc));
 
@@ -347,6 +456,78 @@ public sealed class RawMaterialInquiryResponse
     public string RespondedByDepartmentCode { get; }
 
     public DateTime RespondedAtUtc { get; }
+}
+
+/// <summary>Drawing's disposition of a No answer. Append-only; tied to the answer (response) it answers.</summary>
+public sealed class InquiryLineDisposition
+{
+    private InquiryLineDisposition()
+    {
+        DecidedByDepartmentCode = string.Empty;
+    }
+
+    internal InquiryLineDisposition(long responseId, DispositionKind kind, string? note, long? newRoundInquiryId, WorkflowActor actor, DateTime atUtc)
+    {
+        ResponseId = responseId;
+        Kind = kind;
+        Note = note;
+        NewRoundInquiryId = newRoundInquiryId;
+        DecidedByUserId = actor.UserId;
+        DecidedByDepartmentCode = actor.DepartmentCode;
+        DecidedAtUtc = atUtc;
+    }
+
+    public long Id { get; }
+
+    /// <summary>The Warehouse response this disposition answers.</summary>
+    public long ResponseId { get; }
+
+    public DispositionKind Kind { get; }
+
+    public string? Note { get; }
+
+    /// <summary>For <see cref="DispositionKind.RevisedInNewRound"/>: the inquiry that carries the revised lines.</summary>
+    public long? NewRoundInquiryId { get; }
+
+    public long DecidedByUserId { get; }
+
+    public string DecidedByDepartmentCode { get; }
+
+    public DateTime DecidedAtUtc { get; }
+}
+
+/// <summary>Planning's supply-route note for a No answer (for example an external purchase). Append-only.</summary>
+public sealed class InquirySupplyRoute
+{
+    private InquirySupplyRoute()
+    {
+        Note = string.Empty;
+        DecidedByDepartmentCode = string.Empty;
+    }
+
+    internal InquirySupplyRoute(long responseId, string note, bool externalPurchase, WorkflowActor actor, DateTime atUtc)
+    {
+        ResponseId = responseId;
+        Note = note;
+        ExternalPurchase = externalPurchase;
+        DecidedByUserId = actor.UserId;
+        DecidedByDepartmentCode = actor.DepartmentCode;
+        DecidedAtUtc = atUtc;
+    }
+
+    public long Id { get; }
+
+    public long ResponseId { get; }
+
+    public string Note { get; }
+
+    public bool ExternalPurchase { get; }
+
+    public long DecidedByUserId { get; }
+
+    public string DecidedByDepartmentCode { get; }
+
+    public DateTime DecidedAtUtc { get; }
 }
 
 /// <summary>One row of the inquiry history. Append-only.</summary>

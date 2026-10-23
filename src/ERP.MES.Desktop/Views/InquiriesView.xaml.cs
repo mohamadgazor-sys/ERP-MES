@@ -64,6 +64,18 @@ public partial class InquiriesView : UserControl
 
     private async void OnSendClick(object sender, RoutedEventArgs e) => await SafeAsync(() => _viewModel.SendAsync());
 
+    private async void OnDisposeRevisedClick(object sender, RoutedEventArgs e) =>
+        await NoteActionAsync(() => _viewModel.DisposeSelectedLineAsync(ERP.MES.Domain.Inquiries.DispositionKind.RevisedInNewRound, NoteBox.Text, (RoundBox.SelectedItem as Choice<long>)?.Value));
+
+    private async void OnDisposeConditionClick(object sender, RoutedEventArgs e) =>
+        await NoteActionAsync(() => _viewModel.DisposeSelectedLineAsync(ERP.MES.Domain.Inquiries.DispositionKind.RecordedAsCondition, NoteBox.Text, null));
+
+    private async void OnDisposeUnchangedClick(object sender, RoutedEventArgs e) =>
+        await NoteActionAsync(() => _viewModel.DisposeSelectedLineAsync(ERP.MES.Domain.Inquiries.DispositionKind.ReturnedUnchanged, NoteBox.Text, null));
+
+    private async void OnSupplyRouteClick(object sender, RoutedEventArgs e) =>
+        await NoteActionAsync(() => _viewModel.RecordSupplyRouteAsync(NoteBox.Text, ExternalBox.IsChecked == true));
+
     private async void OnYesClick(object sender, RoutedEventArgs e) => await NoteActionAsync(() => _viewModel.AnswerSelectedLineAsync(true, NoteBox.Text));
 
     private async void OnNoClick(object sender, RoutedEventArgs e) => await NoteActionAsync(() => _viewModel.AnswerSelectedLineAsync(false, NoteBox.Text));

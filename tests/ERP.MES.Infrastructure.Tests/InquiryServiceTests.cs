@@ -290,23 +290,25 @@ public class InquiryServiceTests
             Assert.Equal(OperationStatus.NotAuthorized, (await w.Inquiries.AnswerAsync(user, sent.Value.Id, sent.Version, 1, InquiryAnswer.Yes, null, Token)).Status);
         }
 
-        // Read access for Planning and Management is owner decision D8: denied for now.
-        foreach (var reader in new[] { w.Drawing, w.Warehouse })
+        // Planning and Management read inquiries (owner decision D8, #95) but cannot edit, send, cancel, close or answer them (checked above).
+        foreach (var reader in new[] { w.Drawing, w.Warehouse, w.Planning, w.Manager })
         {
             Assert.True((await w.Inquiries.ListRequestsAsync(reader, Token)).Succeeded);
             Assert.True((await w.Inquiries.GetAsync(reader, sent.Value.Id, Token)).Succeeded);
             Assert.True((await w.Inquiries.ListForRequestAsync(reader, id, Token)).Succeeded);
         }
 
-        foreach (var other in new Principal?[] { w.Planning, w.Manager, w.Qc, w.Central, w.Production, null })
+        foreach (var other in new Principal?[] { w.Qc, w.Central, w.Production, null })
         {
             Assert.Equal(OperationStatus.NotAuthorized, (await w.Inquiries.ListRequestsAsync(other, Token)).Status);
             Assert.Equal(OperationStatus.NotAuthorized, (await w.Inquiries.GetAsync(other, sent.Value.Id, Token)).Status);
             Assert.Equal(InquiryCapabilities.None, await w.Inquiries.GetCapabilitiesAsync(other, Token));
         }
 
-        Assert.Equal(new InquiryCapabilities(true, true, false), await w.Inquiries.GetCapabilitiesAsync(w.Drawing, Token));
-        Assert.Equal(new InquiryCapabilities(true, false, true), await w.Inquiries.GetCapabilitiesAsync(w.Warehouse, Token));
+        Assert.Equal(new InquiryCapabilities(true, true, false, false), await w.Inquiries.GetCapabilitiesAsync(w.Drawing, Token));
+        Assert.Equal(new InquiryCapabilities(true, false, true, false), await w.Inquiries.GetCapabilitiesAsync(w.Warehouse, Token));
+        Assert.Equal(new InquiryCapabilities(true, false, false, true), await w.Inquiries.GetCapabilitiesAsync(w.Planning, Token));
+        Assert.Equal(new InquiryCapabilities(true, false, false, false), await w.Inquiries.GetCapabilitiesAsync(w.Manager, Token));
         Assert.Equal(0, Count(w, "RawMaterialInquiryResponses"));
     }
 

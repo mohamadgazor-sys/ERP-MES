@@ -13,7 +13,7 @@ public class ContractsViewModelTests
 
     private static byte[] Pdf(string text = "fictional") => System.Text.Encoding.ASCII.GetBytes("%PDF-1.4\n% " + text + "\n%%EOF\n");
 
-    private static ContractsViewModel For(WorkflowHarness h, Principal user) => new(h.Workflow.Contracts, h.Dates, () => user);
+    private static ContractsViewModel For(WorkflowHarness h, Principal user) => new(h.Workflow.Contracts, h.Workflow.Gates, h.Dates, () => user);
 
     private static async Task<long> ReturnedMakeRequestAsync(WorkflowHarness h, string requestNo = "C-1")
     {

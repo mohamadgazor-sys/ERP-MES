@@ -1,6 +1,6 @@
 # Raw-Material Availability Inquiry - Design (R1)
 
-**Status: PARTLY IMPLEMENTED (Decision Log #94): inquiries, lines, Yes/No answers, history, send/close/cancel. NOT implemented, waiting for owner decision D1: clarification thread, effect of "No", disposition and release gate.** Approved: Drawing owns the inquiries (#86); Warehouse answers **Yes or No** per line with optional notes; the inquiry records availability only and reserves or deducts nothing (#88); it belongs to the request. Everything marked PROPOSED/DEFAULT is not approved; routing after "No" and clarification are `OWNER_DECISION_PACKET.md` D1.
+**Status: IMPLEMENTED (Decision Log #94, #95): inquiries, lines, Yes/No answers, history, send/close/cancel, Drawing's disposition of No answers, Planning's supply route, clarification questions to Planning, and the release gate (`RequestGateService`). Owner decision D1 is APPROVED (#95). Read access: Drawing, Warehouse, Planning, Management (read-only).** Not built: dedicated per-line clarification messages (a clarification is a request-level question to Planning), and the link of lines to the material list. Approved: Drawing owns the inquiries (#86); Warehouse answers **Yes or No** per line with optional notes; the inquiry records availability only and reserves or deducts nothing (#88); it belongs to the request. Everything marked PROPOSED/DEFAULT is not approved; routing after "No" and clarification are `OWNER_DECISION_PACKET.md` D1.
 
 ## 1. Purpose and boundaries
 
@@ -57,7 +57,7 @@ DRAFT|SENT|PARTIALLY_ANSWERED|CLARIFICATION_REQUESTED|ANSWERED --cancel(Drawing,
 
 Default deny; Planning and Management read access is OPEN D8.
 
-## 6. What happens when a material is unavailable [OPEN D1 - recommended default shown; not approved]
+## 6. What happens when a material is unavailable [APPROVED D1, Decision Log #95; implemented]
 
 Availability is information; it never decides the outcome. Recommended routing:
 

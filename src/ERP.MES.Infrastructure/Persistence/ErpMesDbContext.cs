@@ -48,6 +48,12 @@ public sealed class ErpMesDbContext(DbContextOptions<ErpMesDbContext> options) :
 
     public DbSet<RawMaterialInquiryLine> RawMaterialInquiryLines => Set<RawMaterialInquiryLine>();
 
+    public DbSet<InquiryLineDisposition> RawMaterialInquiryDispositions => Set<InquiryLineDisposition>();
+
+    public DbSet<InquirySupplyRoute> RawMaterialInquirySupplyRoutes => Set<InquirySupplyRoute>();
+
+    public DbSet<DrawingClarification> DrawingClarifications => Set<DrawingClarification>();
+
     public DbSet<RawMaterialInquiryResponse> RawMaterialInquiryResponses => Set<RawMaterialInquiryResponse>();
 
     public DbSet<InquiryHistoryEntry> RawMaterialInquiryHistory => Set<InquiryHistoryEntry>();
@@ -87,7 +93,7 @@ public sealed class ErpMesDbContext(DbContextOptions<ErpMesDbContext> options) :
     /// <summary>Name of the shadow property that holds the application-managed row version (Decision Log #23).</summary>
     public const string RowVersionPropertyName = "Version";
 
-    private static readonly HashSet<Type> VersionedTypes = [typeof(Customer), typeof(Request), typeof(RequestItem), typeof(ItemStage), typeof(User), typeof(UserCredential), typeof(SystemSetup), typeof(UnitOfMeasure), typeof(UnitConversion), typeof(QuantityType), typeof(ProductionUnit), typeof(Machine), typeof(RawMaterialInquiry), typeof(RequestContract), typeof(ContractVersion), typeof(Material), typeof(Operator), typeof(OperatorMachineAssignment), typeof(OperatorMachineQualification)];
+    private static readonly HashSet<Type> VersionedTypes = [typeof(Customer), typeof(Request), typeof(RequestItem), typeof(ItemStage), typeof(User), typeof(UserCredential), typeof(SystemSetup), typeof(UnitOfMeasure), typeof(UnitConversion), typeof(QuantityType), typeof(ProductionUnit), typeof(Machine), typeof(RawMaterialInquiry), typeof(DrawingClarification), typeof(RequestContract), typeof(ContractVersion), typeof(Material), typeof(Operator), typeof(OperatorMachineAssignment), typeof(OperatorMachineQualification)];
 
     /// <summary>The row version of a tracked entity of a versioned type (customer, request, request item, item stage).</summary>
     public long GetRowVersion(object entity) => (long)Entry(entity).Property(RowVersionPropertyName).CurrentValue!;
@@ -128,7 +134,9 @@ public sealed class ErpMesDbContext(DbContextOptions<ErpMesDbContext> options) :
 
         // Inquiry answers and history are append-only as well.
         if (ChangeTracker.Entries<InquiryHistoryEntry>().Any(e => e.State is EntityState.Modified or EntityState.Deleted)
-            || ChangeTracker.Entries<RawMaterialInquiryResponse>().Any(e => e.State is EntityState.Modified or EntityState.Deleted))
+            || ChangeTracker.Entries<RawMaterialInquiryResponse>().Any(e => e.State is EntityState.Modified or EntityState.Deleted)
+            || ChangeTracker.Entries<InquiryLineDisposition>().Any(e => e.State is EntityState.Modified or EntityState.Deleted)
+            || ChangeTracker.Entries<InquirySupplyRoute>().Any(e => e.State is EntityState.Modified or EntityState.Deleted))
         {
             throw new InvalidOperationException("The inquiry answers and history are append-only: entries cannot be changed or deleted.");
         }

@@ -27,6 +27,8 @@ public sealed class RawMaterialInquiryConfiguration : IEntityTypeConfiguration<R
         builder.Property(i => i.UpdatedAtUtc).IsRequired();
         builder.Ignore(i => i.IsOpen);
         builder.Ignore(i => i.AnsweredLineCount);
+        builder.Ignore(i => i.UnansweredLineCount);
+        builder.Ignore(i => i.PendingDispositionCount);
         builder.Property<long>(ErpMesDbContext.RowVersionPropertyName).IsConcurrencyToken().IsRequired();
 
         // A draft line can be removed before the inquiry is sent (the Domain allows it only then), so removal is a real delete of a line that was never sent.
@@ -61,6 +63,13 @@ public sealed class RawMaterialInquiryLineConfiguration : IEntityTypeConfigurati
 
         builder.HasMany(l => l.Responses).WithOne().HasForeignKey("LineId").IsRequired().OnDelete(DeleteBehavior.Restrict);
         builder.Navigation(l => l.Responses).HasField("_responses").UsePropertyAccessMode(PropertyAccessMode.Field);
+        builder.HasMany(l => l.Dispositions).WithOne().HasForeignKey("LineId").IsRequired().OnDelete(DeleteBehavior.Restrict);
+        builder.Navigation(l => l.Dispositions).HasField("_dispositions").UsePropertyAccessMode(PropertyAccessMode.Field);
+        builder.HasMany(l => l.SupplyRoutes).WithOne().HasForeignKey("LineId").IsRequired().OnDelete(DeleteBehavior.Restrict);
+        builder.Navigation(l => l.SupplyRoutes).HasField("_supplyRoutes").UsePropertyAccessMode(PropertyAccessMode.Field);
+        builder.Ignore(l => l.CurrentDisposition);
+        builder.Ignore(l => l.CurrentSupplyRoute);
+        builder.Ignore(l => l.NeedsDisposition);
     }
 }
 
@@ -99,5 +108,77 @@ public sealed class InquiryHistoryEntryConfiguration : IEntityTypeConfiguration<
         builder.HasOne<User>().WithMany().HasForeignKey(e => e.ActionByUserId).IsRequired().OnDelete(DeleteBehavior.Restrict);
         builder.Property(e => e.ActionByDepartmentCode).IsRequired();
         builder.Property(e => e.ActionAtUtc).IsRequired();
+    }
+}
+
+/// <summary>Drawing's dispositions of No answers. Append-only; each belongs to one Warehouse response.</summary>
+public sealed class InquiryLineDispositionConfiguration : IEntityTypeConfiguration<InquiryLineDisposition>
+{
+    public void Configure(EntityTypeBuilder<InquiryLineDisposition> builder)
+    {
+        builder.ToTable("RawMaterialInquiryDispositions");
+        builder.HasKey(d => d.Id);
+        builder.Property(d => d.Id).ValueGeneratedOnAdd();
+        builder.Property(d => d.ResponseId).IsRequired();
+        builder.HasOne<RawMaterialInquiryResponse>().WithMany().HasForeignKey(d => d.ResponseId).IsRequired().OnDelete(DeleteBehavior.Restrict);
+        builder.Property(d => d.Kind).HasConversion<int>().IsRequired();
+        builder.Property(d => d.Note);
+        builder.Property(d => d.NewRoundInquiryId);
+        builder.HasOne<RawMaterialInquiry>().WithMany().HasForeignKey(d => d.NewRoundInquiryId).IsRequired(false).OnDelete(DeleteBehavior.Restrict);
+        builder.Property(d => d.DecidedByUserId).IsRequired();
+        builder.HasOne<User>().WithMany().HasForeignKey(d => d.DecidedByUserId).IsRequired().OnDelete(DeleteBehavior.Restrict);
+        builder.Property(d => d.DecidedByDepartmentCode).IsRequired();
+        builder.Property(d => d.DecidedAtUtc).IsRequired();
+    }
+}
+
+/// <summary>Planning's supply-route notes for No answers. Append-only.</summary>
+public sealed class InquirySupplyRouteConfiguration : IEntityTypeConfiguration<InquirySupplyRoute>
+{
+    public void Configure(EntityTypeBuilder<InquirySupplyRoute> builder)
+    {
+        builder.ToTable("RawMaterialInquirySupplyRoutes");
+        builder.HasKey(r => r.Id);
+        builder.Property(r => r.Id).ValueGeneratedOnAdd();
+        builder.Property(r => r.ResponseId).IsRequired();
+        builder.HasOne<RawMaterialInquiryResponse>().WithMany().HasForeignKey(r => r.ResponseId).IsRequired().OnDelete(DeleteBehavior.Restrict);
+        builder.Property(r => r.Note).IsRequired();
+        builder.Property(r => r.ExternalPurchase).IsRequired();
+        builder.Property(r => r.DecidedByUserId).IsRequired();
+        builder.HasOne<User>().WithMany().HasForeignKey(r => r.DecidedByUserId).IsRequired().OnDelete(DeleteBehavior.Restrict);
+        builder.Property(r => r.DecidedByDepartmentCode).IsRequired();
+        builder.Property(r => r.DecidedAtUtc).IsRequired();
+    }
+}
+
+/// <summary>Drawing's clarification questions to Planning. Each fact is written once; the row is the history.</summary>
+public sealed class DrawingClarificationConfiguration : IEntityTypeConfiguration<DrawingClarification>
+{
+    public void Configure(EntityTypeBuilder<DrawingClarification> builder)
+    {
+        builder.ToTable("DrawingClarifications");
+        builder.HasKey(c => c.Id);
+        builder.Property(c => c.Id).ValueGeneratedOnAdd();
+        builder.Property(c => c.RequestId).IsRequired();
+        builder.HasOne<Request>().WithMany().HasForeignKey(c => c.RequestId).IsRequired().OnDelete(DeleteBehavior.Restrict);
+        builder.HasIndex(c => c.RequestId);
+        builder.Property(c => c.Question).IsRequired();
+        builder.Property(c => c.Status).HasConversion<int>().IsRequired();
+        builder.Property(c => c.AskedByUserId).IsRequired();
+        builder.HasOne<User>().WithMany().HasForeignKey(c => c.AskedByUserId).IsRequired().OnDelete(DeleteBehavior.Restrict);
+        builder.Property(c => c.AskedByDepartmentCode).IsRequired();
+        builder.Property(c => c.AskedAtUtc).IsRequired();
+        builder.Property(c => c.Answer);
+        builder.Property(c => c.AnsweredByUserId);
+        builder.HasOne<User>().WithMany().HasForeignKey(c => c.AnsweredByUserId).IsRequired(false).OnDelete(DeleteBehavior.Restrict);
+        builder.Property(c => c.AnsweredByDepartmentCode);
+        builder.Property(c => c.AnsweredAtUtc);
+        builder.Property(c => c.CloseNote);
+        builder.Property(c => c.ClosedByUserId);
+        builder.HasOne<User>().WithMany().HasForeignKey(c => c.ClosedByUserId).IsRequired(false).OnDelete(DeleteBehavior.Restrict);
+        builder.Property(c => c.ClosedAtUtc);
+        builder.Property(c => c.UpdatedAtUtc).IsRequired();
+        builder.Ignore(c => c.IsResolved);
+        builder.Property<long>(ErpMesDbContext.RowVersionPropertyName).IsConcurrencyToken().IsRequired();
     }
 }
