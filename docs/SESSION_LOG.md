@@ -1666,3 +1666,32 @@ Append one dated entry after every substantial session. Do not replace prior ent
 
 ### Recommended exact next action
 - Merge after CI, then phase 2a (raw-material inquiry entities and Warehouse answers; routing after "No" stays behind D1) or 4a.
+
+---
+
+### Date / session
+- Date: 2026-10-23
+- Claude Code session ID (if useful): session_01UwqjPjBXLd2apjZb2urjds (phase 2a: raw-material inquiries)
+
+### Goal
+- Drawing asks Warehouse whether raw materials are available; Warehouse answers each line Yes or No (Decision Log #86, #88) - the parts that do not depend on owner decision D1.
+
+### Completed
+- Domain (`Domain/Inquiries`): `RawMaterialInquiry` with lines, append-only responses and history; request-status precondition.
+- Application: `InquiryService`; permissions `ManageRawMaterialInquiries` (Drawing), `AnswerRawMaterialInquiry` (Warehouse), `ViewRawMaterialInquiries` (Drawing, Warehouse); audit codes; validation issues.
+- Persistence: `RawMaterialInquiries`, `RawMaterialInquiryLines`, `RawMaterialInquiryResponses`, `RawMaterialInquiryHistory`; migration `AddRawMaterialInquiries` (additive).
+- Desktop: "استعلام مواد اولیه" page.
+
+### Decisions newly approved
+- None. Labelled defaults are listed in Decision Log #94.
+
+### Unresolved questions / risks
+- D1 (clarification routing, effect of "No", result with an open inquiry) blocks the clarification thread, the disposition record and the production-release gate.
+- D8 row 1 (Planning/Management read) is denied until decided; Planning therefore cannot yet see the material picture the design wants on the Drawing result.
+- Lines use free-text grade/form, not the Warehouse material list.
+
+### Commands/tests actually run and results
+- See the pull request for the Linux and Windows CI totals of the final head.
+
+### Recommended exact next action
+- Merge after CI. Then phase 4a (item definition by Planning) is the next independent phase; it needs the answers to the questions listed in the final report of this session.

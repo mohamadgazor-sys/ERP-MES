@@ -120,6 +120,18 @@ public enum ValidationIssue
     /// <summary>A new rate must apply from a date later than the machine's latest rate (history is never rewritten).</summary>
     RateNotLater,
 
+    /// <summary>The request is not in Drawing review or returned from Drawing, so raw-material inquiries are not possible.</summary>
+    InquiryRequestState,
+
+    /// <summary>A material line needs a grade and a form (at most 100 characters each); dimensions, when given, must be greater than zero.</summary>
+    InquiryLineInvalid,
+
+    /// <summary>An inquiry needs at least one line before it is sent.</summary>
+    InquiryNoLines,
+
+    /// <summary>The answer must be Yes or No.</summary>
+    InquiryAnswerInvalid,
+
     /// <summary>A REPAIR request has no contract workflow (Decision Log #85).</summary>
     ContractNotApplicable,
 

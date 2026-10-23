@@ -138,6 +138,13 @@ Fixed seeded routes and the demonstration banner stay visible; stage progression
 - L5: Management approves; the list shows "تأیید شده" to Planning and Warehouse. Warehouse sees everything but all action buttons are disabled.
 - L6: Provisional: the rejection routing (back to Planning for a new version) is a default, not an approved rule.
 
+## M. Raw-material inquiries (Decision Log #86, #88, #94) - not run by a person; covered by automated tests
+- M1: As Drawing, select a request under Drawing review or returned from Drawing, create an inquiry, add lines (grade, form, dimensions optional, quantity and unit), send.
+- M2: As Warehouse, answer each line Yes or No with a note; the status moves to partly answered, then answered. Change an answer: both answers stay in the history.
+- M3: As Drawing, close after review, or cancel with a reason (refused without one); open a new round after a cancel.
+- M4: The request status never changes; nothing is reserved. Planning, Management, QC, Central and Production see the page empty with the not-authorized message (read access waits for decision D8).
+- M5: There is no clarification thread and no action after a "No" yet (decision D1).
+
 ## E. Production overview for Management and Planning (read-only; `docs/PRODUCTION_QUEUE.md`, Decision Log #78) - pending the owner's run
 
 Prepare a fictional demonstration database with `demo-init` (see `docs/AUTHENTICATION.md` section 12). The seeded requests have routes and several stage states.

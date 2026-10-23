@@ -2,6 +2,7 @@ using ERP.MES.Application.Security;
 using ERP.MES.Domain.Contracts;
 using ERP.MES.Domain.Documents;
 using ERP.MES.Domain.Identity;
+using ERP.MES.Domain.Inquiries;
 using ERP.MES.Domain.Materials;
 using ERP.MES.Domain.Planning;
 using ERP.MES.Domain.Quality;
@@ -43,6 +44,14 @@ public sealed class ErpMesDbContext(DbContextOptions<ErpMesDbContext> options) :
 
     public DbSet<ContractHistoryEntry> ContractHistory => Set<ContractHistoryEntry>();
 
+    public DbSet<RawMaterialInquiry> RawMaterialInquiries => Set<RawMaterialInquiry>();
+
+    public DbSet<RawMaterialInquiryLine> RawMaterialInquiryLines => Set<RawMaterialInquiryLine>();
+
+    public DbSet<RawMaterialInquiryResponse> RawMaterialInquiryResponses => Set<RawMaterialInquiryResponse>();
+
+    public DbSet<InquiryHistoryEntry> RawMaterialInquiryHistory => Set<InquiryHistoryEntry>();
+
     public DbSet<Material> Materials => Set<Material>();
 
     public DbSet<MaterialPrice> MaterialPrices => Set<MaterialPrice>();
@@ -78,7 +87,7 @@ public sealed class ErpMesDbContext(DbContextOptions<ErpMesDbContext> options) :
     /// <summary>Name of the shadow property that holds the application-managed row version (Decision Log #23).</summary>
     public const string RowVersionPropertyName = "Version";
 
-    private static readonly HashSet<Type> VersionedTypes = [typeof(Customer), typeof(Request), typeof(RequestItem), typeof(ItemStage), typeof(User), typeof(UserCredential), typeof(SystemSetup), typeof(UnitOfMeasure), typeof(UnitConversion), typeof(QuantityType), typeof(ProductionUnit), typeof(Machine), typeof(RequestContract), typeof(ContractVersion), typeof(Material), typeof(Operator), typeof(OperatorMachineAssignment), typeof(OperatorMachineQualification)];
+    private static readonly HashSet<Type> VersionedTypes = [typeof(Customer), typeof(Request), typeof(RequestItem), typeof(ItemStage), typeof(User), typeof(UserCredential), typeof(SystemSetup), typeof(UnitOfMeasure), typeof(UnitConversion), typeof(QuantityType), typeof(ProductionUnit), typeof(Machine), typeof(RawMaterialInquiry), typeof(RequestContract), typeof(ContractVersion), typeof(Material), typeof(Operator), typeof(OperatorMachineAssignment), typeof(OperatorMachineQualification)];
 
     /// <summary>The row version of a tracked entity of a versioned type (customer, request, request item, item stage).</summary>
     public long GetRowVersion(object entity) => (long)Entry(entity).Property(RowVersionPropertyName).CurrentValue!;
@@ -115,6 +124,13 @@ public sealed class ErpMesDbContext(DbContextOptions<ErpMesDbContext> options) :
         if (ChangeTracker.Entries<RequestWorkflowEntry>().Any(e => e.State is EntityState.Modified or EntityState.Deleted))
         {
             throw new InvalidOperationException("The request workflow history is append-only: entries cannot be changed or deleted.");
+        }
+
+        // Inquiry answers and history are append-only as well.
+        if (ChangeTracker.Entries<InquiryHistoryEntry>().Any(e => e.State is EntityState.Modified or EntityState.Deleted)
+            || ChangeTracker.Entries<RawMaterialInquiryResponse>().Any(e => e.State is EntityState.Modified or EntityState.Deleted))
+        {
+            throw new InvalidOperationException("The inquiry answers and history are append-only: entries cannot be changed or deleted.");
         }
 
         // The contract history is append-only as well.
