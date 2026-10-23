@@ -31,6 +31,7 @@ internal static class PageFactory
             ShellViewModel.QcInspectionKey => new QcInspectionView(pages.QcInspection),
             ShellViewModel.JobReportsKey => new JobReportsView(pages.JobReports),
             ShellViewModel.OvertimeKey => new OvertimeView(pages.Overtime),
+            ShellViewModel.CostingKey => new CostingView(pages.Costing),
             ShellViewModel.LimitationsKey => new LimitationsView(),
             _ => new PlaceholderView(item.Title, shell.NotImplementedText),
         };

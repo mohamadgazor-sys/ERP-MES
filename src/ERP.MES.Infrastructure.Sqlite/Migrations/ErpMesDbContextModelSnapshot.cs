@@ -358,6 +358,179 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
                     b.ToTable("Contracts", (string)null);
                 });
 
+            modelBuilder.Entity("ERP.MES.Domain.Costing.ItemCostCalculation", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("AcceptedBaseUnits")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CalculatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("CalculatedByUserId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("ConsumedBaseUnits")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Formula")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("MachiningTotalRial")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long?>("MaterialId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long?>("MaterialPriceId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("MaterialTotalRial")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateOnly?>("PriceDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("RequestItemId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("SequenceNo")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("TotalRial")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("UnitCostRial")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CalculatedByUserId");
+
+                    b.HasIndex("MaterialId");
+
+                    b.HasIndex("MaterialPriceId");
+
+                    b.HasIndex("RequestItemId", "SequenceNo")
+                        .IsUnique();
+
+                    b.ToTable("ItemCostCalculations", (string)null);
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Costing.ItemCostLine", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("AmountRial")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("CalculationId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long?>("JobReportLineId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Kind")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("LineNo")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long?>("MachineId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("Minutes")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long?>("RateId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("UnitPriceRial")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal?>("WeightKg")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateOnly?>("WorkDate")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CalculationId");
+
+                    b.HasIndex("JobReportLineId");
+
+                    b.HasIndex("MachineId");
+
+                    b.ToTable("ItemCostLines", (string)null);
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Costing.ItemPriceDecision", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("ApprovedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long?>("ApprovedByUserId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal?>("ApprovedPriceRial")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Basis")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("CalculationId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ContractReference")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal?>("ProposedPriceRial")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Reason")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("RequestItemId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("SubmittedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long?>("SubmittedByUserId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ApprovedByUserId");
+
+                    b.HasIndex("CalculationId")
+                        .IsUnique();
+
+                    b.HasIndex("RequestItemId");
+
+                    b.HasIndex("SubmittedByUserId");
+
+                    b.ToTable("ItemPriceDecisions", (string)null);
+                });
+
             modelBuilder.Entity("ERP.MES.Domain.Documents.StoredDocument", b =>
                 {
                     b.Property<long>("Id")
@@ -2829,6 +3002,77 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("ERP.MES.Domain.Costing.ItemCostCalculation", b =>
+                {
+                    b.HasOne("ERP.MES.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("CalculatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ERP.MES.Domain.Materials.Material", null)
+                        .WithMany()
+                        .HasForeignKey("MaterialId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("ERP.MES.Domain.Materials.MaterialPrice", null)
+                        .WithMany()
+                        .HasForeignKey("MaterialPriceId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("ERP.MES.Domain.Requests.RequestItem", null)
+                        .WithMany()
+                        .HasForeignKey("RequestItemId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Costing.ItemCostLine", b =>
+                {
+                    b.HasOne("ERP.MES.Domain.Costing.ItemCostCalculation", null)
+                        .WithMany("Lines")
+                        .HasForeignKey("CalculationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ERP.MES.Domain.Reporting.JobReportLine", null)
+                        .WithMany()
+                        .HasForeignKey("JobReportLineId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("ERP.MES.Domain.Planning.Machine", null)
+                        .WithMany()
+                        .HasForeignKey("MachineId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Costing.ItemPriceDecision", b =>
+                {
+                    b.HasOne("ERP.MES.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("ApprovedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("ERP.MES.Domain.Costing.ItemCostCalculation", "Calculation")
+                        .WithMany()
+                        .HasForeignKey("CalculationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ERP.MES.Domain.Requests.RequestItem", null)
+                        .WithMany()
+                        .HasForeignKey("RequestItemId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ERP.MES.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("SubmittedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Calculation");
+                });
+
             modelBuilder.Entity("ERP.MES.Domain.Documents.StoredDocument", b =>
                 {
                     b.HasOne("ERP.MES.Domain.Identity.User", null)
@@ -3655,6 +3899,11 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
                     b.Navigation("History");
 
                     b.Navigation("Versions");
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Costing.ItemCostCalculation", b =>
+                {
+                    b.Navigation("Lines");
                 });
 
             modelBuilder.Entity("ERP.MES.Domain.Imports.ItemImport", b =>

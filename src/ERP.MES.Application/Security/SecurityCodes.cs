@@ -62,6 +62,9 @@ public static class AuditActions
     public const string JobReportApproved = "JobReportApproved";
     public const string JobReportReturned = "JobReportReturned";
     public const string StageCorrected = "StageCorrected";
+    public const string ItemCostCalculated = "ItemCostCalculated";
+    public const string ItemPriceSubmitted = "ItemPriceSubmitted";
+    public const string ItemPriceApproved = "ItemPriceApproved";
     public const string OvertimeProposed = "OvertimeProposed";
     public const string OvertimePlanningDecided = "OvertimePlanningDecided";
     public const string OvertimeManagementDecided = "OvertimeManagementDecided";

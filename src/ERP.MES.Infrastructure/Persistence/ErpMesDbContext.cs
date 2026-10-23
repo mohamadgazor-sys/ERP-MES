@@ -1,3 +1,4 @@
+using ERP.MES.Domain.Costing;
 using ERP.MES.Application.Security;
 using ERP.MES.Domain.Contracts;
 using ERP.MES.Domain.Documents;
@@ -74,6 +75,12 @@ public sealed class ErpMesDbContext(DbContextOptions<ErpMesDbContext> options) :
 
     public DbSet<OvertimeAssignment> OvertimeAssignments => Set<OvertimeAssignment>();
 
+    public DbSet<ItemCostCalculation> ItemCostCalculations => Set<ItemCostCalculation>();
+
+    public DbSet<ItemCostLine> ItemCostLines => Set<ItemCostLine>();
+
+    public DbSet<ItemPriceDecision> ItemPriceDecisions => Set<ItemPriceDecision>();
+
     public DbSet<QueueOverride> QueueOverrides => Set<QueueOverride>();
 
     public DbSet<QueueOverrideHistoryEntry> QueueOverrideHistory => Set<QueueOverrideHistoryEntry>();
@@ -133,7 +140,7 @@ public sealed class ErpMesDbContext(DbContextOptions<ErpMesDbContext> options) :
     /// <summary>Name of the shadow property that holds the application-managed row version (Decision Log #23).</summary>
     public const string RowVersionPropertyName = "Version";
 
-    private static readonly HashSet<Type> VersionedTypes = [typeof(Customer), typeof(Request), typeof(RequestItem), typeof(ItemStage), typeof(User), typeof(UserCredential), typeof(SystemSetup), typeof(UnitOfMeasure), typeof(UnitConversion), typeof(QuantityType), typeof(ProductionUnit), typeof(Machine), typeof(RawMaterialInquiry), typeof(DrawingClarification), typeof(RequestContract), typeof(ContractVersion), typeof(Material), typeof(Operator), typeof(OperatorMachineAssignment), typeof(OperatorMachineQualification), typeof(QueueOverride), typeof(UserUnitDesignation), typeof(ShiftTemplate), typeof(WeeklyWorkday), typeof(CalendarException), typeof(UnitShift), typeof(OperatorOffDay), typeof(WorkerSchedule), typeof(DailyJobReport), typeof(OvertimeLimits), typeof(OvertimeAssignment)];
+    private static readonly HashSet<Type> VersionedTypes = [typeof(Customer), typeof(Request), typeof(RequestItem), typeof(ItemStage), typeof(User), typeof(UserCredential), typeof(SystemSetup), typeof(UnitOfMeasure), typeof(UnitConversion), typeof(QuantityType), typeof(ProductionUnit), typeof(Machine), typeof(RawMaterialInquiry), typeof(DrawingClarification), typeof(RequestContract), typeof(ContractVersion), typeof(Material), typeof(Operator), typeof(OperatorMachineAssignment), typeof(OperatorMachineQualification), typeof(QueueOverride), typeof(UserUnitDesignation), typeof(ShiftTemplate), typeof(WeeklyWorkday), typeof(CalendarException), typeof(UnitShift), typeof(OperatorOffDay), typeof(WorkerSchedule), typeof(DailyJobReport), typeof(OvertimeLimits), typeof(OvertimeAssignment), typeof(ItemPriceDecision)];
 
     /// <summary>The row version of a tracked entity of a versioned type (customer, request, request item, item stage).</summary>
     public long GetRowVersion(object entity) => (long)Entry(entity).Property(RowVersionPropertyName).CurrentValue!;
@@ -199,6 +206,12 @@ public sealed class ErpMesDbContext(DbContextOptions<ErpMesDbContext> options) :
         if (ChangeTracker.Entries<JobReportEvent>().Any(e => e.State is EntityState.Modified or EntityState.Deleted))
         {
             throw new InvalidOperationException("The job report events are append-only: entries cannot be changed or deleted.");
+        }
+
+        // Cost snapshots and their lines are immutable (Decision Log #104): a recalculation adds a new snapshot.
+        if (ChangeTracker.Entries().Any(e => e.Entity is ItemCostCalculation or ItemCostLine && e.State is EntityState.Modified or EntityState.Deleted))
+        {
+            throw new InvalidOperationException("Cost snapshots are append-only: entries cannot be changed or deleted.");
         }
 
         // The queue override history is append-only as well.

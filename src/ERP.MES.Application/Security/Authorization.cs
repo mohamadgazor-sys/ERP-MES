@@ -144,6 +144,15 @@ public enum Permission
     /// <summary>Read overtime assignments: Planning and Management all, supervisors their unit's, operators their own (Decision Log #103).</summary>
     ViewOvertime,
 
+    /// <summary>Calculate an item's cost from approved report time, machine rates and the material price, and submit it for the price decision (Warehouse; Decision Log #91, #104).</summary>
+    CalculateItemCost,
+
+    /// <summary>Approve or change the price of an item (Management alone; Decision Log #91, #95 D4, #104).</summary>
+    ApproveItemPrice,
+
+    /// <summary>Read cost snapshots and price decisions (Warehouse, Planning, Management; Decision Log #104).</summary>
+    ViewItemCosts,
+
     /// <summary>Correct an erroneous stage start or submission with a reason (Planning; Decision Log #95 D8, #102).</summary>
     CorrectStageAction,
 
@@ -243,6 +252,9 @@ public static class AuthorizationRules
         [Permission.ReviewJobReports] = new([DepartmentCodes.Production, DepartmentCodes.Planning], null),
         [Permission.ViewJobReports] = new([DepartmentCodes.Production, DepartmentCodes.Planning, DepartmentCodes.Management], null),
         [Permission.CorrectStageAction] = new([DepartmentCodes.Planning], null),
+        [Permission.CalculateItemCost] = new([DepartmentCodes.Warehouse], null),
+        [Permission.ApproveItemPrice] = new([DepartmentCodes.Management], null),
+        [Permission.ViewItemCosts] = new([DepartmentCodes.Warehouse, DepartmentCodes.Planning, DepartmentCodes.Management], null),
         [Permission.ProposeOvertime] = new([DepartmentCodes.Production], null),
         [Permission.DecideOvertime] = new([DepartmentCodes.Planning], null),
         [Permission.DecideOvertimeBeyondLimits] = new([DepartmentCodes.Management], null),

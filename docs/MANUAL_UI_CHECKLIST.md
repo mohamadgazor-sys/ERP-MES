@@ -250,3 +250,9 @@ Prepare a fictional demonstration database with `demo-init` (`docs/AUTHENTICATIO
 - U3: As Planning approve within the limits (status "تأییدشده") or see "خارج از سقف؛ در انتظار مدیریت" when the daily or weekly limit is exceeded; reject needs a reason.
 - U4: As Management approve or reject (with a reason) what waits for Management; Planning cannot push it through.
 - U5: Cancel with a reason (Planning or the proposing supervisor); the slot becomes free again. Operators see only their own assignments, other departments see a denied page.
+
+## V. Item cost and price (docs/COSTING_DESIGN.md; Decision Log #91, #95 D3/D4, #104) - not run by a person; covered by automated tests
+- V1: Open "هزینه و قیمت" as Warehouse: only items with all stages QC-approved are listed. "محاسبهٔ هزینه" without approved report time, a machine rate or a material price is refused and names the gap (machine/material and Jalali date).
+- V2: After the rates and the price exist, calculate: the detail lines show every report line with minutes x rate and the material (kg x price), the total and the unit cost over the accepted base units. Submit the price to Management.
+- V3: As Management approve the proposal, or change it (reason mandatory); for a contract item ("(قرارداد)") enter the contract amount and contract number - they are mandatory.
+- V4: Recalculate after a rate change: a new snapshot appears and the older decision can no longer be decided. Planning reads only; other departments see a denied page.
