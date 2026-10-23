@@ -315,6 +315,34 @@ public sealed class Request
     }
 
     /// <summary>
+    /// Revises an existing item's definition (Excel import "update", Decision Log #97) under the same specification rules as <see cref="DefineItem"/>. Returns false when nothing changed.
+    /// An item that already has stages or a QC approval cannot be revised this way (<see cref="InvalidOperationException"/>).
+    /// </summary>
+    public bool ReviseItem(string itemNo, string partName, decimal requestedQuantity, Priority priority, ItemSpecification specification, DateTime changedAtUtc)
+    {
+        ArgumentNullException.ThrowIfNull(specification);
+        var problem = specification.Check(WorkType);
+        if (problem != SpecificationProblem.None)
+        {
+            throw new ItemSpecificationException(problem);
+        }
+
+        if (Status is RequestStatus.Cancelled or RequestStatus.Closed)
+        {
+            throw new InvalidOperationException("A " + Status.Code() + " request accepts no item changes.");
+        }
+
+        var item = _items.FirstOrDefault(i => string.Equals(i.ItemNo, itemNo, StringComparison.Ordinal)) ?? throw new InvalidOperationException("The request has no item with number '" + itemNo + "'.");
+        var changed = item.ReviseDefinition(partName, requestedQuantity, priority, specification, changedAtUtc);
+        if (changed)
+        {
+            UpdatedAtUtc = changedAtUtc;
+        }
+
+        return changed;
+    }
+
+    /// <summary>
     /// Adds an item. (RequestID, ItemNo) must be unique (section 5.2). The item inherits the request's work type (Decision Log #84). New
     /// items default to <see cref="Priority.Normal"/> (Decision Log #58).
     ///

@@ -29,7 +29,7 @@ public class AuthorizationRulesTests
         [Permission.ReopenRejectedRequest] = (["PLANNING", "MANAGEMENT"], null),
         [Permission.DefineMakeItems] = (["PLANNING"], null),
         [Permission.DefineRepairItemsAndEditAnyItem] = (["PLANNING"], null),
-        [Permission.ImportItemsFromExcel] = (["PLANNING", "DRAWING"], null),
+        [Permission.ImportItemsFromExcel] = (["PLANNING"], null),
 
         // Added by the owner (Decision Log #75): customer maintenance for Central and Planning; read-only viewing for every active user.
         [Permission.MaintainCustomers] = (["CENTRAL", "PLANNING"], null),

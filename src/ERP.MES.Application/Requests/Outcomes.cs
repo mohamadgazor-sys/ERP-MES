@@ -120,6 +120,24 @@ public enum ValidationIssue
     /// <summary>A new rate must apply from a date later than the machine's latest rate (history is never rewritten).</summary>
     RateNotLater,
 
+    /// <summary>No file was given, or it is empty.</summary>
+    ImportFileMissing,
+
+    /// <summary>The file is larger than 20 MB.</summary>
+    ImportFileTooLarge,
+
+    /// <summary>The file differs from the one that was previewed.</summary>
+    ImportFileChanged,
+
+    /// <summary>The file has errors (in the file or in rows) and cannot be imported.</summary>
+    ImportHasErrors,
+
+    /// <summary>A conflicting row has no explicit choice (skip or update).</summary>
+    ImportDecisionMissing,
+
+    /// <summary>The choice is not allowed for that row (a locked item cannot be updated).</summary>
+    ImportDecisionInvalid,
+
     /// <summary>The Management, Drawing, contract, inquiry or clarification gates are not satisfied, so items cannot be defined yet.</summary>
     ItemGateNotSatisfied,
 

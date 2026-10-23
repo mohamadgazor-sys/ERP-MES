@@ -568,6 +568,65 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
                     b.ToTable("Users", (string)null);
                 });
 
+            modelBuilder.Entity("ERP.MES.Domain.Imports.ItemImport", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("FileHash")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("ImportedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("ImportedByUserId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("RequestId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ImportedByUserId");
+
+                    b.HasIndex("RequestId");
+
+                    b.ToTable("ItemImports", (string)null);
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Imports.ItemImportRow", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("ItemImportId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ItemNo")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .UseCollation("BINARY");
+
+                    b.Property<int>("Outcome")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("SheetRowNo")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ItemImportId");
+
+                    b.ToTable("ItemImportRows", (string)null);
+                });
+
             modelBuilder.Entity("ERP.MES.Domain.Inquiries.DrawingClarification", b =>
                 {
                     b.Property<long>("Id")
@@ -1919,6 +1978,30 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
                     b.Navigation("Role");
                 });
 
+            modelBuilder.Entity("ERP.MES.Domain.Imports.ItemImport", b =>
+                {
+                    b.HasOne("ERP.MES.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("ImportedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ERP.MES.Domain.Requests.Request", null)
+                        .WithMany()
+                        .HasForeignKey("RequestId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Imports.ItemImportRow", b =>
+                {
+                    b.HasOne("ERP.MES.Domain.Imports.ItemImport", null)
+                        .WithMany("Rows")
+                        .HasForeignKey("ItemImportId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("ERP.MES.Domain.Inquiries.DrawingClarification", b =>
                 {
                     b.HasOne("ERP.MES.Domain.Identity.User", null)
@@ -2364,6 +2447,11 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
                     b.Navigation("History");
 
                     b.Navigation("Versions");
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Imports.ItemImport", b =>
+                {
+                    b.Navigation("Rows");
                 });
 
             modelBuilder.Entity("ERP.MES.Domain.Inquiries.RawMaterialInquiry", b =>

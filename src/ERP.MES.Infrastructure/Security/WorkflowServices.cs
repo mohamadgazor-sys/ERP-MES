@@ -1,8 +1,10 @@
+using ERP.MES.Application.Imports;
 using ERP.MES.Application.Planning;
 using ERP.MES.Application.Quality;
 using ERP.MES.Application.Requests;
 using ERP.MES.Application.Security;
 using ERP.MES.Domain.Calendar;
+using ERP.MES.Infrastructure.Imports;
 using ERP.MES.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -10,7 +12,7 @@ namespace ERP.MES.Infrastructure.Security;
 
 /// <summary>The customer and request use cases wired to the real repositories, the current-authorization check and the clock. Composition roots (Desktop) and tests create it once per database.</summary>
 public sealed record WorkflowServices(
-    CustomerService Customers, RequestService Requests, ProductionQueueService Queue, StageWorkService StageWork, RequestDocumentService Documents, RequestWorkflowService Lifecycle, QcMasterService QcMaster, PlanningMasterService PlanningMaster, OperatorService Operators, MaterialService Materials, ContractService Contracts, InquiryService Inquiries, ClarificationService Clarifications, RequestGateService Gates, ItemDefinitionService ItemDefinition)
+    CustomerService Customers, RequestService Requests, ProductionQueueService Queue, StageWorkService StageWork, RequestDocumentService Documents, RequestWorkflowService Lifecycle, QcMasterService QcMaster, PlanningMasterService PlanningMaster, OperatorService Operators, MaterialService Materials, ContractService Contracts, InquiryService Inquiries, ClarificationService Clarifications, RequestGateService Gates, ItemDefinitionService ItemDefinition, ItemImportService ItemImport)
 {
     public static WorkflowServices Create(
         IDbContextFactory<ErpMesDbContext> contexts, CurrentAuthorization authorization, IJalaliDateService dates, IClock? clock = null, IAuditContext? auditContext = null, DocumentPolicy? documentPolicy = null)
@@ -38,6 +40,7 @@ public sealed record WorkflowServices(
             new InquiryService(new EfInquiryRepository(contexts), new EfQcMasterRepository(contexts), authorization, effectiveClock, auditContext ?? new EnvironmentAuditContext()),
             new ClarificationService(new EfClarificationRepository(contexts), authorization, effectiveClock, auditContext ?? new EnvironmentAuditContext()),
             gates,
-            new ItemDefinitionService(requests, new EfQcMasterRepository(contexts), new EfMaterialRepository(contexts), new EfPlanningMasterRepository(contexts), gates, authorization, effectiveClock, auditContext ?? new EnvironmentAuditContext()));
+            new ItemDefinitionService(requests, new EfQcMasterRepository(contexts), new EfMaterialRepository(contexts), new EfPlanningMasterRepository(contexts), gates, authorization, effectiveClock, auditContext ?? new EnvironmentAuditContext()),
+            new ItemImportService(requests, new EfItemImportRepository(contexts), new EfQcMasterRepository(contexts), new EfMaterialRepository(contexts), new EfPlanningMasterRepository(contexts), new XlsxWorkbookReader(), gates, authorization, effectiveClock, auditContext ?? new EnvironmentAuditContext()));
     }
 }
