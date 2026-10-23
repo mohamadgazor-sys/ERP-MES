@@ -16,7 +16,7 @@ public class UnitQueueViewModelTests
     private static byte[] Pdf() => System.Text.Encoding.ASCII.GetBytes("%PDF-1.4\n% fictional\n%%EOF\n");
 
     private static UnitQueueViewModel For(WorkflowHarness h, Principal user) =>
-        new(h.Workflow.UnitQueue, h.Workflow.StageWork, h.Workflow.UnitDesignations, DigitStyle.Persian, () => user);
+        new(h.Workflow.UnitQueue, h.Workflow.StageWork, h.Workflow.UnitDesignations, h.Dates, DigitStyle.Persian, () => user);
 
     /// <summary>A request that passed Management and Drawing; for MAKE also the contract decision (not required).</summary>
     private static async Task<long> ReadyAsync(WorkflowHarness h, WorkType type, string requestNo)

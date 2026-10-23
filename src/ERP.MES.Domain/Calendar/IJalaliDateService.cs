@@ -60,6 +60,16 @@ public interface IJalaliDateService
     /// <exception cref="ArgumentOutOfRangeException">The result is outside the supported range.</exception>
     string FormatDateTime(DateTime utcTimestamp);
 
+    /// <summary>
+    /// Converts a local wall-clock date and time in the display time zone to the UTC timestamp to store (Decision Log #73, Q5). A local time that does not exist or occurs twice is rejected.
+    /// </summary>
+    /// <exception cref="ArgumentException">The local time does not exist or is ambiguous in the display time zone.</exception>
+    DateTime LocalToUtc(DateOnly date, TimeOnly time);
+
+    /// <summary>The local wall-clock date and time (display time zone) of a stored UTC timestamp.</summary>
+    /// <exception cref="ArgumentException"><paramref name="utcTimestamp"/> is not <see cref="DateTimeKind.Utc"/>.</exception>
+    (DateOnly Date, TimeOnly Time) UtcToLocal(DateTime utcTimestamp);
+
     /// <summary>Parses user text such as "1405/07/19" (Latin, Persian or Arabic-Indic digits; surrounding white space is ignored, Decision Log #73).</summary>
     bool TryParseDate(string? text, out JalaliDate date, out JalaliDateError error);
 

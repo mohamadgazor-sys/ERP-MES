@@ -57,6 +57,17 @@ public static class AuditActions
     public const string ProductionUnitAdded = "ProductionUnitAdded";
     public const string MachineAdded = "MachineAdded";
     public const string MachineRateChanged = "MachineRateChanged";
+    public const string ShiftTemplateAdded = "ShiftTemplateAdded";
+    public const string ShiftTemplateChanged = "ShiftTemplateChanged";
+    public const string WeeklyWorkdayChanged = "WeeklyWorkdayChanged";
+    public const string CalendarExceptionAdded = "CalendarExceptionAdded";
+    public const string CalendarExceptionCancelled = "CalendarExceptionCancelled";
+    public const string UnitShiftAdded = "UnitShiftAdded";
+    public const string UnitShiftChanged = "UnitShiftChanged";
+    public const string OperatorOffDayAdded = "OperatorOffDayAdded";
+    public const string OperatorOffDayCancelled = "OperatorOffDayCancelled";
+    public const string WorkerScheduled = "WorkerScheduled";
+    public const string WorkerScheduleCancelled = "WorkerScheduleCancelled";
     public const string QueuePositionsSet = "QueuePositionsSet";
     public const string QueueOverrideSet = "QueueOverrideSet";
     public const string QueueOverrideMoved = "QueueOverrideMoved";

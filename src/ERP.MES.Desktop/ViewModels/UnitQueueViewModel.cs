@@ -33,13 +33,13 @@ public sealed record DesignationDisplayRow(DesignationRow Row, string StatusText
 /// overrides, and relays commands (reorder, priority, override, stop, start, submit, release, designations). Authorization, unit scoping, gates, expected row versions and the audit are
 /// the Application's; the buttons only mirror what it reported and are enforced again there. A stale view is reported as a conflict and the queue is reloaded.
 /// </summary>
-public sealed class UnitQueueViewModel(UnitQueueService queue, StageWorkService work, UnitDesignationService designations, DigitStyle digitStyle, Func<Principal> currentUser) : ObservableObject
+public sealed class UnitQueueViewModel(UnitQueueService queue, StageWorkService work, UnitDesignationService designations, IJalaliDateService dates, DigitStyle digitStyle, Func<Principal> currentUser) : ObservableObject
 {
     public const string Heading = "صف عملیاتی واحدهای تولید";
 
     public const string Note =
         "ترتیب هر صف: نخست وضعیت (در حال اجرا، متوقف/مشکل‌دار، در انتظار)؛ سپس جایگزینی مدیریت (تا زمانی که مدیریت آن را برندارد پابرجاست)؛ سپس اولویت برنامه‌ریزی (خیلی فوری، فوری، عادی)، جایگاه برنامه‌ریزی و در تساوی، زودتر آماده‌شده زودتر. "
-        + "پایان برنامه‌ریزی‌شده بدون تقویم کاری (فاز ۶a) محاسبه نمی‌شود و نشان داده نمی‌شود. مرحله‌های آزادنشده یا منتظر کنترل کیفیت در بخش «در انتظار آزادسازی» با دلیل می‌آیند و قابل اجرا نیستند.";
+        + "«پایان برنامه‌ریزی‌شده» پیش‌بینی است: واحد صف را به ترتیب و فقط در شیفت‌های کاری خودش (الگوی هفته، تعطیلی‌ها، استراحت) انجام می‌دهد؛ پیشرفت قبلی، خرابی ماشین و تأمین بیرونی هنوز در آن نیست و بدون شیفت تعریف‌شده نشان داده نمی‌شود. مرحله‌های آزادنشده یا منتظر کنترل کیفیت در بخش «در انتظار آزادسازی» با دلیل می‌آیند و قابل اجرا نیستند.";
 
     public const string DeniedText = "شما اجازهٔ مشاهدهٔ صف واحدهای تولید را ندارید.";
     public const string NoUnitText = "هیچ واحدی برای نمایش وجود ندارد. کاربر تولید فقط واحدهایی را می‌بیند که به او منصوب شده است.";
@@ -401,7 +401,7 @@ public sealed class UnitQueueViewModel(UnitQueueService queue, StageWorkService 
         e.OverrideRank is { } rank
             ? $"جایگزینی مدیریت (رتبهٔ {Digits(rank)}): {e.OverrideReason}" + (e.OverrideNeedsReview ? " — نیازمند بازبینی مدیریت: " + e.OverrideReviewNote : string.Empty)
             : string.Empty,
-        e.PlannedEndUtc is null ? "—" : e.PlannedEndUtc.Value.ToString("u", CultureInfo.InvariantCulture));
+        e.PlannedEndUtc is null ? "—" : dates.FormatDateTime(e.PlannedEndUtc.Value));
 
     private string Digits(int value) => Digits(value.ToString(CultureInfo.InvariantCulture));
 

@@ -1,6 +1,7 @@
 using ERP.MES.Application.Persistence;
 using ERP.MES.Application.Requests;
 using ERP.MES.Application.Security;
+using ERP.MES.Domain.Calendar;
 using ERP.MES.Domain.Identity;
 using ERP.MES.Domain.Production;
 using ERP.MES.Domain.Requests;
@@ -24,6 +25,8 @@ public sealed class UnitQueueService(
     IUnitQueueRepository store,
     IPlanningMasterRepository planning,
     RequestGateService gates,
+    ISchedulingRepository scheduling,
+    IJalaliDateService dates,
     CurrentAuthorization authorization,
     IClock clock,
     IAuditContext auditContext)
@@ -549,10 +552,58 @@ public sealed class UnitQueueService(
             }
         }
 
-        var ordered = UnitQueueOrdering.Sort(queue);
+        var ordered = await ForecastAsync(unitId, UnitQueueOrdering.Sort(queue), cancellationToken);
         var pendingOrdered = pending
             .OrderBy(e => e.Priority.SortOrder()).ThenBy(e => e.RequestDate).ThenBy(e => e.RequestId).ThenBy(e => e.ItemId).ThenBy(e => e.StageNo).ToList();
         return new Built(new UnitQueue(unit, ordered, pendingOrdered, completed, ordered.Count(e => e.OverrideNeedsReview)));
+    }
+
+    /// <summary>
+    /// PLANNED END (a forecast, Decision Log #100): the unit works through its actionable queue entries one after another in queue order, starting now, only in its working intervals (weekly pattern,
+    /// holidays, the shifts the unit runs, breaks excluded). An entry's duration is its planned minutes per piece x quantity; progress already made is not known (job reports come with 6b), so a
+    /// stage in progress counts in full. Stopped, blocked and closed entries get no planned end and do not hold up the others. Capacity is not multiplied (how headcount scales throughput is not decided),
+    /// downtime and external lead time are not yet part of the forecast. Null when the unit runs no shift or the work does not fit a year.
+    /// </summary>
+    private async Task<IReadOnlyList<UnitQueueEntry>> ForecastAsync(long unitId, IReadOnlyList<UnitQueueEntry> ordered, CancellationToken cancellationToken)
+    {
+        var calendar = (await scheduling.LoadConfigurationAsync(cancellationToken)).ToCalendar();
+        if (!calendar.HasShifts(unitId))
+        {
+            return ordered;
+        }
+
+        var (date, time) = dates.UtcToLocal(clock.UtcNow);
+        var cursor = date.ToDateTime(time);
+        var result = new List<UnitQueueEntry>(ordered.Count);
+        var exhausted = false;
+        foreach (var entry in ordered)
+        {
+            if (exhausted || entry.Block != QueueBlock.None)
+            {
+                result.Add(entry);
+                continue;
+            }
+
+            var end = calendar.AddWorkingMinutes(unitId, cursor, entry.EstimatedMinutes);
+            if (end is not { } finished)
+            {
+                exhausted = true;
+                result.Add(entry);
+                continue;
+            }
+
+            cursor = finished;
+            try
+            {
+                result.Add(entry with { PlannedEndUtc = dates.LocalToUtc(DateOnly.FromDateTime(finished), TimeOnly.FromDateTime(finished)) });
+            }
+            catch (ArgumentException)
+            {
+                result.Add(entry);
+            }
+        }
+
+        return result;
     }
 
     private async Task<IReadOnlyList<UnitInfo>> VisibleUnitsAsync(Principal user, CancellationToken cancellationToken)

@@ -297,6 +297,48 @@ public enum ValidationIssue
     /// <summary>The user is not designated to the stage's production unit.</summary>
     StageUnitNotDesignated,
 
+    /// <summary>The shift code is already used by another template.</summary>
+    ShiftCodeDuplicate,
+
+    /// <summary>The shift times are not valid (equal start and end, or a break outside the shift).</summary>
+    ShiftTimesInvalid,
+
+    /// <summary>The unit already runs that shift.</summary>
+    UnitShiftExists,
+
+    /// <summary>The shift overlaps another shift of the unit and Planning has not marked the overlap explicitly.</summary>
+    UnitShiftOverlapNotMarked,
+
+    /// <summary>Capacity needs 1 &lt;= maximum &lt;= 1000 and 0 &lt;= minimum &lt;= maximum.</summary>
+    CapacityInvalid,
+
+    /// <summary>An active exception of the same date and scope already exists.</summary>
+    CalendarExceptionExists,
+
+    /// <summary>A reason (1 to 300 characters) is required.</summary>
+    CalendarReasonRequired,
+
+    /// <summary>The unit does not run this shift (or the shift or unit-shift is inactive).</summary>
+    ScheduleUnitShiftNotConfigured,
+
+    /// <summary>The unit's shift does not work on that date (weekly pattern, holiday or exception).</summary>
+    ScheduleDayOff,
+
+    /// <summary>The operator has an off-day on that date.</summary>
+    ScheduleOperatorAbsent,
+
+    /// <summary>The operator already has an overlapping shift occurrence on that day (a worker is never planned in two overlapping occurrences).</summary>
+    ScheduleWorkerOverlap,
+
+    /// <summary>The unit-shift already has its maximum number of operators on that date.</summary>
+    ScheduleCapacityExceeded,
+
+    /// <summary>The machine is already booked by another operator at an overlapping time and no handover overlap is recorded.</summary>
+    ScheduleMachineBusy,
+
+    /// <summary>The handover overlap is not valid (needs a machine, a note and 1 to 480 minutes not shorter than the overlap).</summary>
+    HandoverInvalid,
+
     /// <summary>The user chosen for a designation does not exist, is inactive or is not a Production user.</summary>
     DesignationUserInvalid,
 }

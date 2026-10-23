@@ -62,6 +62,8 @@ public class AuthorizationRulesTests
         [Permission.OrderUnitQueue] = (["PLANNING"], null),
         [Permission.ManageStageHold] = (["PLANNING", "PRODUCTION"], null),
         [Permission.ManageUnitDesignations] = (["PLANNING"], null),
+        [Permission.ViewCalendar] = (["MANAGEMENT", "PLANNING", "PRODUCTION"], null),
+        [Permission.ScheduleWorkers] = (["PLANNING"], null),
     };
 
     [Fact]

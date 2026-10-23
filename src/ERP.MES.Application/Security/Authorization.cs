@@ -123,6 +123,12 @@ public enum Permission
     /// <summary>Stop a released stage because of a problem, and resume it (Planning, and Production for their own unit; Decision Log #99).</summary>
     ManageStageHold,
 
+    /// <summary>Read the working calendar, shifts, capacity and the worker schedule (Planning, Management and Production; Decision Log #100).</summary>
+    ViewCalendar,
+
+    /// <summary>Plan operators on unit shifts and record their off-days (Planning; Decision Log #100).</summary>
+    ScheduleWorkers,
+
     /// <summary>Designate Production users to production units (labelled default: Planning; Decision Log #99).</summary>
     ManageUnitDesignations,
 
@@ -200,6 +206,8 @@ public static class AuthorizationRules
         [Permission.OrderUnitQueue] = new([DepartmentCodes.Planning], null),
         [Permission.ManageStageHold] = new([DepartmentCodes.Planning, DepartmentCodes.Production], null),
         [Permission.ManageUnitDesignations] = new([DepartmentCodes.Planning], null),
+        [Permission.ViewCalendar] = new([DepartmentCodes.Planning, DepartmentCodes.Management, DepartmentCodes.Production], null),
+        [Permission.ScheduleWorkers] = new([DepartmentCodes.Planning], null),
         [Permission.RunStage] = new([DepartmentCodes.Production], null),
     };
 

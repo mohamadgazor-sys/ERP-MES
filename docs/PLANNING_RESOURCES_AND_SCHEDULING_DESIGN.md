@@ -4,7 +4,7 @@
 
 > **Decision update (2026-10-23):** D5 (supervisor creates, Planning approves, Management outside configured limits, no invented limits, overlap rules) was APPROVED on 2026-10-23 (Decision Log #95); the "[OPEN D5]" markers below are superseded.
 
-> **Implementation status:** production units, machines with stable codes and the machine rate history (section 3) are implemented (Planning machines PR). The rate table keeps `EffectiveFrom` only; the end of a rate is the day before the next entry. Operators, assignments, qualifications, item specifications, shifts, off-days, capacity and scheduling are not.
+> **Implementation status:** production units, machines with stable codes and the machine rate history (section 3) are implemented (Planning machines PR). The rate table keeps `EffectiveFrom` only; the end of a rate is the day before the next entry. Operators, assignments, qualifications and item specifications were built in later phases. **Phase 6a (Decision Log #100) implemented sections 5.1 to 5.5:** shift templates, the weekly pattern, calendar exceptions, unit shifts with capacity, operator off-days, the worker schedule with the D5 rules and the calendar-based planned-end forecast; downtime, effective-dated capacity and how capacity scales throughput (U-36) are not built.
 
 ## 1. Ownership [REQ]
 
