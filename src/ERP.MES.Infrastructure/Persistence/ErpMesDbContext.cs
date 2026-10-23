@@ -29,6 +29,10 @@ public sealed class ErpMesDbContext(DbContextOptions<ErpMesDbContext> options) :
 
     public DbSet<ItemStage> ItemStages => Set<ItemStage>();
 
+    public DbSet<QcInspectionLine> QcInspectionLines => Set<QcInspectionLine>();
+
+    public DbSet<ShortfallDecision> ShortfallDecisions => Set<ShortfallDecision>();
+
     public DbSet<QcApproval> QcApprovals => Set<QcApproval>();
 
     public DbSet<StoredDocument> Documents => Set<StoredDocument>();
@@ -171,6 +175,13 @@ public sealed class ErpMesDbContext(DbContextOptions<ErpMesDbContext> options) :
             || ChangeTracker.Entries<ItemImportRow>().Any(e => e.State is EntityState.Modified or EntityState.Deleted))
         {
             throw new InvalidOperationException("The item-import log is append-only: entries cannot be changed or deleted.");
+        }
+
+        // QC inspection lines and shortfall decisions are append-only as well.
+        if (ChangeTracker.Entries<QcInspectionLine>().Any(e => e.State is EntityState.Modified or EntityState.Deleted)
+            || ChangeTracker.Entries<ShortfallDecision>().Any(e => e.State is EntityState.Modified or EntityState.Deleted))
+        {
+            throw new InvalidOperationException("The QC inspection lines and shortfall decisions are append-only: entries cannot be changed or deleted.");
         }
 
         // The queue override history is append-only as well.

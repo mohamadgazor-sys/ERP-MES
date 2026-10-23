@@ -229,3 +229,10 @@ Prepare a fictional demonstration database with `demo-init` (`docs/AUTHENTICATIO
 - R4: Record a company holiday for a day that already has planned operators: the screen says how many rows became inconsistent; the rows stay and are flagged. Record an operator absence the same way.
 - R5: On "صف واحدهای تولید" the planned-end column shows a date and time for actionable rows of a unit that runs a shift, and "—" for a unit without a shift, a stopped row or a blocked row.
 - R6: As Management or Production open the page: everything is read-only; as Drawing, Central, QC or Warehouse the page is denied.
+
+## S. Quantity-level QC (Decision Log #92, #95 D2/D3, #101) - not run by a person; covered by automated tests
+- S1: Take a pair-quantity item through a unit stage to "ارسال به کنترل کیفیت". As QC open "بازرسی کنترل کیفیت": the stage shows its input in base units (10 pairs = 20) and 20 awaiting.
+- S2: As QC enter accepted / rework / scrap counts with a reason for rework and scrap: more than the awaiting units, a zero count or a missing reason is refused with a specific message.
+- S3: Rework: the stage returns to production for exactly the reworked units (the unit queue shows "بازکاری: n واحد پایه"); after resubmission QC decides only those units.
+- S4: Scrap: when everything is decided the stage waits for "کسری". QC cannot decide it; Management presses "پذیرش کسری" or Planning presses "ثبت سفارش جایگزین" with a note; then the stage is approved and the next stage gets only the accepted units.
+- S5: Other departments see a denied page; Planning and Management read the worklist and history without being able to inspect.

@@ -257,7 +257,7 @@ Each PR is small, keeps the demo working until replaced, carries tests, a Decisi
 | 4a | Item definition and stage planning (spec fields, stage->unit/machine, release gates) | #86, #89, #95, #96 | 1b, 2b, 3a, 3b | none; done (manual workflow; Excel is 4b) |
 | 4b | Excel import (template, preview, validation, transactional commit, conflict choice) | #16, #97 | 4a | none; done (own template, docs/ITEM_IMPORT_TEMPLATE.md; not matched to a company workbook) |
 | 5a | Per-unit queues (Planning position, categories, overrides with review flag) | #78, #99 | 4a | none; done (labelled defaults in #99) |
-| 5b | Quantity-level QC (inspection lines, balances, rework loop, next-stage eligibility) | #92 | 3a, 4a, 5a | D2, D3 |
+| 5b | Quantity-level QC (inspection lines, balances, rework loop, next-stage eligibility) | #92, #101 | 3a, 4a, 5a | D2, D3; done (labelled defaults in #101; QC corrections not built) |
 | 6a | Planning calendar: shift templates A-D, unit shifts, OFF days, capacity, worker schedule | R7, #100 | 3b | D5 (overlap); done (labelled defaults in #100; downtime still open) |
 | 6b | Daily job reports and supervisor review | R5 | 3b, 4a, 6a | D8 |
 | 6c | Overtime assignments | R8 | 6a, 6b | D5 |

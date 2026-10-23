@@ -123,6 +123,15 @@ public enum Permission
     /// <summary>Stop a released stage because of a problem, and resume it (Planning, and Production for their own unit; Decision Log #99).</summary>
     ManageStageHold,
 
+    /// <summary>Read the QC worklist, stage quantity balances and inspection history (QC, Planning and Management; Decision Log #101).</summary>
+    ViewQcInspections,
+
+    /// <summary>Management explicitly accepts a shortfall created by scrap (Decision Log #95 D3, #101).</summary>
+    AcceptShortfall,
+
+    /// <summary>Planning records that replacement production was ordered for a shortfall; nothing is ordered automatically (Decision Log #95 D3, #101).</summary>
+    OrderShortfallReplacement,
+
     /// <summary>Read the working calendar, shifts, capacity and the worker schedule (Planning, Management and Production; Decision Log #100).</summary>
     ViewCalendar,
 
@@ -206,6 +215,9 @@ public static class AuthorizationRules
         [Permission.OrderUnitQueue] = new([DepartmentCodes.Planning], null),
         [Permission.ManageStageHold] = new([DepartmentCodes.Planning, DepartmentCodes.Production], null),
         [Permission.ManageUnitDesignations] = new([DepartmentCodes.Planning], null),
+        [Permission.ViewQcInspections] = new([DepartmentCodes.Qc, DepartmentCodes.Planning, DepartmentCodes.Management], null),
+        [Permission.AcceptShortfall] = new([DepartmentCodes.Management], null),
+        [Permission.OrderShortfallReplacement] = new([DepartmentCodes.Planning], null),
         [Permission.ViewCalendar] = new([DepartmentCodes.Planning, DepartmentCodes.Management, DepartmentCodes.Production], null),
         [Permission.ScheduleWorkers] = new([DepartmentCodes.Planning], null),
         [Permission.RunStage] = new([DepartmentCodes.Production], null),

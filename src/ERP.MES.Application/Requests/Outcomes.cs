@@ -297,6 +297,21 @@ public enum ValidationIssue
     /// <summary>The user is not designated to the stage's production unit.</summary>
     StageUnitNotDesignated,
 
+    /// <summary>The inspection decisions are not valid (none, a non-positive count, or a reason missing for rework or scrap).</summary>
+    InspectionEntriesInvalid,
+
+    /// <summary>More base units were decided than are awaiting QC at this stage.</summary>
+    InspectionExceedsAwaiting,
+
+    /// <summary>The stage has no whole number of base units, so only the demonstration's whole-quantity approval can apply.</summary>
+    StageNotCountable,
+
+    /// <summary>A stage planned in a production unit is inspected by quantity; the whole-quantity approval is not available for it.</summary>
+    UseQuantityInspection,
+
+    /// <summary>A note or reference (1 to 300 characters) is required for the shortfall decision.</summary>
+    ShortfallNoteRequired,
+
     /// <summary>The shift code is already used by another template.</summary>
     ShiftCodeDuplicate,
 

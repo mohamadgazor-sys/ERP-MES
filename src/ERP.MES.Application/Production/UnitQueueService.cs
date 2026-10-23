@@ -531,6 +531,7 @@ public sealed class UnitQueueService(
                             ItemStageStatus.Planned => QueueBlock.NotReleased,
                             ItemStageStatus.WaitingPreviousQc => QueueBlock.WaitingPreviousQc,
                             ItemStageStatus.WaitingQc => QueueBlock.WaitingQc,
+                            ItemStageStatus.WaitingShortfallDecision => QueueBlock.WaitingShortfallDecision,
                             _ => stage.IsStopped ? QueueBlock.StageStopped : QueueBlock.None,
                         };
                     QueueCategory? category = !released ? null : stage.IsStopped ? QueueCategory.Stopped : stage.Status == ItemStageStatus.InProgress ? QueueCategory.InProgress : QueueCategory.Waiting;
@@ -545,6 +546,7 @@ public sealed class UnitQueueService(
                         ItemVersion = loaded.Versions.ItemVersion(item.Id),
                         StageVersion = versions[stage.StageNo],
                         OverrideVersion = stored?.Version,
+                        ReworkBaseUnits = stage.ReworkBaseUnits,
                         StageVersions = versions,
                     };
                     (released ? queue : pending).Add(entry);

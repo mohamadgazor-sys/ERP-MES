@@ -1728,8 +1728,21 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
+                    b.Property<long>("AcceptedBaseUnits")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(0L);
+
                     b.Property<DateTime?>("AvailableSinceUtc")
                         .HasColumnType("TEXT");
+
+                    b.Property<long>("AwaitingQcBaseUnits")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(0L);
+
+                    b.Property<long?>("InputBaseUnits")
+                        .HasColumnType("INTEGER");
 
                     b.Property<long?>("MachineId")
                         .HasColumnType("INTEGER");
@@ -1748,6 +1761,16 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
 
                     b.Property<long>("RequestItemId")
                         .HasColumnType("INTEGER");
+
+                    b.Property<long>("ReworkBaseUnits")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(0L);
+
+                    b.Property<long>("ScrapBaseUnits")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(0L);
 
                     b.Property<int>("StageNo")
                         .HasColumnType("INTEGER");
@@ -1811,6 +1834,46 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
                     b.HasIndex("RequestItemId", "StageNo");
 
                     b.ToTable("QcApprovals", (string)null);
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Requests.QcInspectionLine", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("BaseUnits")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("DecidedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("DecidedByUserId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Disposition")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("InspectionId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Reason")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("RequestItemId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("StageNo")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DecidedByUserId");
+
+                    b.HasIndex("RequestItemId", "StageNo");
+
+                    b.ToTable("QcInspectionLines", (string)null);
                 });
 
             modelBuilder.Entity("ERP.MES.Domain.Requests.Request", b =>
@@ -1920,6 +1983,11 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
+                    b.Property<int>("BaseUnitsPerUnit")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(1);
+
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("TEXT");
 
@@ -2021,6 +2089,43 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
                     b.HasIndex("RequestId");
 
                     b.ToTable("RequestWorkflowEntries", (string)null);
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Requests.ShortfallDecision", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("DecidedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("DecidedByUserId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Kind")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Note")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("RequestItemId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("ShortfallBaseUnits")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("StageNo")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DecidedByUserId");
+
+                    b.HasIndex("RequestItemId", "StageNo");
+
+                    b.ToTable("ShortfallDecisions", (string)null);
                 });
 
             modelBuilder.Entity("ERP.MES.Domain.Scheduling.CalendarException", b =>
@@ -2938,6 +3043,22 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("ERP.MES.Domain.Requests.QcInspectionLine", b =>
+                {
+                    b.HasOne("ERP.MES.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("DecidedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ERP.MES.Domain.Requests.ItemStage", null)
+                        .WithMany()
+                        .HasForeignKey("RequestItemId", "StageNo")
+                        .HasPrincipalKey("RequestItemId", "StageNo")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("ERP.MES.Domain.Requests.Request", b =>
                 {
                     b.HasOne("ERP.MES.Domain.Identity.User", null)
@@ -3012,6 +3133,22 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
                     b.HasOne("ERP.MES.Domain.Requests.Request", null)
                         .WithMany("WorkflowHistory")
                         .HasForeignKey("RequestId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Requests.ShortfallDecision", b =>
+                {
+                    b.HasOne("ERP.MES.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("DecidedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ERP.MES.Domain.Requests.ItemStage", null)
+                        .WithMany()
+                        .HasForeignKey("RequestItemId", "StageNo")
+                        .HasPrincipalKey("RequestItemId", "StageNo")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });
