@@ -42,6 +42,11 @@ public enum Permission
     /// </summary>
     MaintainProductionResources,
 
+    /// <summary>
+    /// Read contracts, their versions, PDFs and decision history. Planning and Management (who act on them) and Warehouse (read-only, Decision Log #85). Every other department is denied.
+    /// </summary>
+    ViewContracts,
+
     /// <summary>Maintain the material list (register, change name/grade/form, retire). Warehouse owns it (a labelled default, docs/RAW_MATERIAL_INQUIRY_DESIGN.md U-08).</summary>
     MaintainMaterials,
 
@@ -130,6 +135,7 @@ public static class AuthorizationRules
         // Planning resource master data (Decision Log #82 R2, #89): Planning registers units and machines; every active user reads them; rates are read by their owners and by Warehouse.
         [Permission.MaintainProductionResources] = new([DepartmentCodes.Planning], null),
         [Permission.ViewPlanningMasterData] = new([], null),
+        [Permission.ViewContracts] = new([DepartmentCodes.Planning, DepartmentCodes.Management, DepartmentCodes.Warehouse], null),
         [Permission.MaintainMaterials] = new([DepartmentCodes.Warehouse], null),
         [Permission.ViewMaterials] = new([], null),
         [Permission.ViewMaterialPrices] = new([DepartmentCodes.Warehouse, DepartmentCodes.Management, DepartmentCodes.Planning], null),

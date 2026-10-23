@@ -21,6 +21,7 @@ internal static class PageFactory
             ShellViewModel.MachinesKey => new PlanningMasterView(pages.PlanningMaster),
             ShellViewModel.OperatorsKey => new OperatorsView(pages.Operators),
             ShellViewModel.MaterialsKey => new MaterialsView(pages.Materials),
+            ShellViewModel.ContractsKey => new ContractsView(pages.Contracts),
             ShellViewModel.LimitationsKey => new LimitationsView(),
             _ => new PlaceholderView(item.Title, shell.NotImplementedText),
         };

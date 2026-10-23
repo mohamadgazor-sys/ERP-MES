@@ -57,6 +57,14 @@ public static class AuditActions
     public const string ProductionUnitAdded = "ProductionUnitAdded";
     public const string MachineAdded = "MachineAdded";
     public const string MachineRateChanged = "MachineRateChanged";
+    public const string ContractRequirementDecided = "ContractRequirementDecided";
+    public const string ContractRequirementChanged = "ContractRequirementChanged";
+    public const string ContractDraftSaved = "ContractDraftSaved";
+    public const string ContractPdfAttached = "ContractPdfAttached";
+    public const string ContractSubmitted = "ContractSubmitted";
+    public const string ContractApproved = "ContractApproved";
+    public const string ContractRejected = "ContractRejected";
+    public const string ContractRevisionStarted = "ContractRevisionStarted";
     public const string MaterialAdded = "MaterialAdded";
     public const string MaterialChanged = "MaterialChanged";
     public const string MaterialPriceChanged = "MaterialPriceChanged";
