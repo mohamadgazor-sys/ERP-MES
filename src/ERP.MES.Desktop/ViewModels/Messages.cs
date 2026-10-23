@@ -68,6 +68,10 @@ public static class Messages
         ValidationIssue.EffectiveDateRequired => "تاریخ شروع اعمال نرخ را وارد کنید.",
         ValidationIssue.EffectiveDateInvalid => "تاریخ شروع اعمال نرخ معتبر نیست (مثال: ۱۴۰۵/۰۷/۲۰).",
         ValidationIssue.RateNotLater => "تاریخ شروع نرخ جدید باید بعد از آخرین نرخ ثبت‌شدهٔ این ماشین باشد؛ تاریخچه بازنویسی نمی‌شود.",
+        ValidationIssue.InquiryRequestState => "استعلام مواد اولیه فقط هنگام بررسی نقشه‌کشی یا پس از بازگشت از نقشه‌کشی ممکن است.",
+        ValidationIssue.InquiryLineInvalid => "جنس و شکل ماده الزامی است (حداکثر ۱۰۰ نویسه)؛ ابعاد در صورت ورود باید بزرگ‌تر از صفر باشد.",
+        ValidationIssue.InquiryNoLines => "پیش از ارسال، دست‌کم یک ردیف ماده اضافه کنید.",
+        ValidationIssue.InquiryAnswerInvalid => "پاسخ باید «بله» یا «خیر» باشد.",
         ValidationIssue.ContractNotApplicable => "برای درخواست تعمیر مرحلهٔ قرارداد وجود ندارد.",
         ValidationIssue.ContractRequestNotReturned => "درخواست باید پس از تأیید مدیریت و بررسی نقشه‌کشی در وضعیت «بازگشته از نقشه‌کشی به برنامه‌ریزی» باشد.",
         ValidationIssue.ContractDrawingNotAccepted => "نتیجهٔ نقشه‌کشی باید «پذیرفته‌شده» یا «پذیرفته‌شده بخشی» باشد.",
@@ -133,6 +137,28 @@ public static class Messages
         DrawingOutcome.MoreInformationNeeded => "نیاز به اطلاعات بیشتر",
         DrawingOutcome.ReturnedForCorrection => "بازگشت برای اصلاح",
         _ => string.Empty,
+    };
+
+    public static string InquiryStatusText(ERP.MES.Domain.Inquiries.InquiryStatus status) => status switch
+    {
+        ERP.MES.Domain.Inquiries.InquiryStatus.Draft => "پیش‌نویس",
+        ERP.MES.Domain.Inquiries.InquiryStatus.Sent => "ارسال‌شده به انبار",
+        ERP.MES.Domain.Inquiries.InquiryStatus.PartiallyAnswered => "بخشی پاسخ داده شده",
+        ERP.MES.Domain.Inquiries.InquiryStatus.Answered => "پاسخ داده شده",
+        ERP.MES.Domain.Inquiries.InquiryStatus.Closed => "بسته‌شده",
+        _ => "لغوشده",
+    };
+
+    public static string InquiryActionText(ERP.MES.Domain.Inquiries.InquiryAction action) => action switch
+    {
+        ERP.MES.Domain.Inquiries.InquiryAction.Created => "ایجاد",
+        ERP.MES.Domain.Inquiries.InquiryAction.LineAdded => "افزودن ردیف",
+        ERP.MES.Domain.Inquiries.InquiryAction.LineRemoved => "حذف ردیف از پیش‌نویس",
+        ERP.MES.Domain.Inquiries.InquiryAction.Sent => "ارسال به انبار",
+        ERP.MES.Domain.Inquiries.InquiryAction.Answered => "پاسخ انبار",
+        ERP.MES.Domain.Inquiries.InquiryAction.AnswerChanged => "تغییر پاسخ انبار",
+        ERP.MES.Domain.Inquiries.InquiryAction.Closed => "بستن پس از بررسی",
+        _ => "لغو",
     };
 
     public static string ContractStatusText(ERP.MES.Domain.Contracts.ContractStatus status) => status switch

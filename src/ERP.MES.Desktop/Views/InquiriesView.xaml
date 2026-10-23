@@ -1,0 +1,104 @@
+<UserControl x:Class="ERP.MES.Desktop.Views.InquiriesView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Loaded="OnLoaded">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
+    </UserControl.Resources>
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel>
+            <TextBlock Text="{Binding Message}" TextWrapping="Wrap" Foreground="#9B1C1C" FontWeight="SemiBold" Margin="0,0,0,8" />
+            <TextBlock TextWrapping="Wrap" Foreground="{StaticResource MutedTextBrush}" Margin="0,0,0,8"
+                       Text="نقشه‌کشی ردیف‌های مادهٔ اولیه را برای انبار ارسال می‌کند؛ انبار برای هر ردیف «بله» یا «خیر» می‌گوید. این استعلام فقط اطلاع‌رسانی است: چیزی رزرو یا کسر نمی‌شود، وضعیت درخواست را تغییر نمی‌دهد و دربارهٔ امکان‌پذیری فنی تصمیم نمی‌گیرد. اقدام پس از «خیر» و پرسش و پاسخ توضیحی هنوز تصمیم‌گیری نشده و در این صفحه نیست." />
+            <Button Content="بارگذاری مجدد" Padding="10,3" HorizontalAlignment="Left" Click="OnReloadClick" Margin="0,0,0,8" />
+
+            <TextBlock Text="درخواست‌ها" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource PrimaryBrush}" Margin="0,4,0,6" />
+            <DataGrid ItemsSource="{Binding Requests}" SelectedItem="{Binding SelectedRequest, Mode=TwoWay}" SelectionChanged="OnRequestSelected" AutoGenerateColumns="False" IsReadOnly="True"
+                      SelectionMode="Single" HeadersVisibility="Column" CanUserAddRows="False" CanUserDeleteRows="False" MaxHeight="180" Background="{StaticResource CardBrush}">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="شمارهٔ درخواست" Binding="{Binding RequestNo}" Width="140" />
+                    <DataGridTextColumn Header="مشتری" Binding="{Binding CustomerName}" Width="*" />
+                    <DataGridTextColumn Header="وضعیت درخواست" Binding="{Binding RequestStatusText}" Width="*" />
+                    <DataGridTextColumn Header="استعلام" Binding="{Binding InquiryText}" Width="*" />
+                </DataGrid.Columns>
+            </DataGrid>
+
+            <TextBlock Text="دورهای استعلام این درخواست" FontWeight="SemiBold" Margin="0,10,0,4" />
+            <DataGrid ItemsSource="{Binding Inquiries}" SelectedItem="{Binding SelectedInquiry, Mode=TwoWay}" SelectionChanged="OnInquirySelected" AutoGenerateColumns="False" IsReadOnly="True"
+                      SelectionMode="Single" HeadersVisibility="Column" CanUserAddRows="False" CanUserDeleteRows="False" MaxHeight="130" Background="{StaticResource CardBrush}">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="دور" Binding="{Binding RoundNo}" Width="60" />
+                    <DataGridTextColumn Header="وضعیت" Binding="{Binding StatusText}" Width="*" />
+                    <DataGridTextColumn Header="ردیف‌ها" Binding="{Binding LineCount}" Width="80" />
+                    <DataGridTextColumn Header="پاسخ‌داده‌شده" Binding="{Binding AnsweredCount}" Width="110" />
+                </DataGrid.Columns>
+            </DataGrid>
+            <WrapPanel Margin="0,6,0,0">
+                <TextBox x:Name="CreateNoteBox" Width="260" Margin="0,0,8,0" ToolTip="توضیح (اختیاری)" />
+                <Button Content="استعلام جدید برای درخواست انتخاب‌شده" Padding="12,5" Click="OnCreateClick" IsEnabled="{Binding CanCreate}" />
+            </WrapPanel>
+
+            <StackPanel Visibility="{Binding HasInquiry, Converter={StaticResource BoolToVisibility}}" Margin="0,12,0,0">
+                <TextBlock Text="{Binding InquiryHeading}" FontSize="16" FontWeight="SemiBold" />
+                <DataGrid ItemsSource="{Binding Lines}" SelectedItem="{Binding SelectedLine, Mode=TwoWay}" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single"
+                          HeadersVisibility="Column" CanUserAddRows="False" CanUserDeleteRows="False" MaxHeight="220" Margin="0,6,0,0" Background="{StaticResource CardBrush}">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="ردیف" Binding="{Binding LineNo}" Width="55" />
+                        <DataGridTextColumn Header="جنس / شکل" Binding="{Binding MaterialText}" Width="*" />
+                        <DataGridTextColumn Header="ابعاد" Binding="{Binding DimensionsText}" Width="*" />
+                        <DataGridTextColumn Header="مقدار" Binding="{Binding QuantityText}" Width="110" />
+                        <DataGridTextColumn Header="پاسخ انبار" Binding="{Binding AnswerText}" Width="110" />
+                        <DataGridTextColumn Header="توضیح انبار" Binding="{Binding AnswerNoteText}" Width="*" />
+                        <DataGridTextColumn Header="پاسخ‌دهنده" Binding="{Binding ResponderText}" Width="*" />
+                    </DataGrid.Columns>
+                </DataGrid>
+
+                <Border Margin="0,8,0,0" Padding="10" Background="{StaticResource CardBrush}" BorderBrush="{StaticResource BorderBrushSoft}" BorderThickness="1">
+                    <StackPanel>
+                        <TextBlock Text="افزودن ردیف (نقشه‌کشی؛ فقط در پیش‌نویس) — ابعاد خالی = غیرقابل‌اجرا" FontWeight="SemiBold" />
+                        <WrapPanel Margin="0,6,0,0">
+                            <StackPanel Margin="0,0,10,0"><TextBlock Text="جنس (مثلاً ST37)" /><TextBox x:Name="GradeBox" Width="110" FlowDirection="LeftToRight" /></StackPanel>
+                            <StackPanel Margin="0,0,10,0"><TextBlock Text="شکل (میلگرد، لوله، ورق)" /><TextBox x:Name="FormBox" Width="120" /></StackPanel>
+                            <StackPanel Margin="0,0,10,0"><TextBlock Text="قطر (mm)" /><TextBox x:Name="DiameterBox" Width="80" FlowDirection="LeftToRight" /></StackPanel>
+                            <StackPanel Margin="0,0,10,0"><TextBlock Text="طول (mm)" /><TextBox x:Name="LengthBox" Width="80" FlowDirection="LeftToRight" /></StackPanel>
+                            <StackPanel Margin="0,0,10,0"><TextBlock Text="بعد دیگر" /><TextBox x:Name="OtherBox" Width="110" /></StackPanel>
+                            <StackPanel Margin="0,0,10,0"><TextBlock Text="مقدار" /><TextBox x:Name="QuantityBox" Width="80" FlowDirection="LeftToRight" /></StackPanel>
+                            <StackPanel Margin="0,0,10,0"><TextBlock Text="واحد" /><ComboBox x:Name="UnitBox" ItemsSource="{Binding UnitChoices}" DisplayMemberPath="Text" Width="150" /></StackPanel>
+                            <StackPanel Margin="0,0,10,0"><TextBlock Text="استاندارد" /><TextBox x:Name="StandardBox" Width="110" FlowDirection="LeftToRight" /></StackPanel>
+                            <StackPanel Margin="0,0,10,0"><TextBlock Text="توضیح" /><TextBox x:Name="RemarksBox" Width="160" /></StackPanel>
+                        </WrapPanel>
+                        <WrapPanel Margin="0,8,0,0">
+                            <Button Content="افزودن ردیف" Padding="12,5" Margin="0,0,8,0" Click="OnAddLineClick" IsEnabled="{Binding CanEditLines}" />
+                            <Button Content="حذف ردیف انتخاب‌شده" Padding="12,5" Margin="0,0,8,0" Click="OnRemoveLineClick" IsEnabled="{Binding CanEditLines}" />
+                            <Button Content="ارسال به انبار" Padding="12,5" Click="OnSendClick" IsEnabled="{Binding CanSend}" />
+                        </WrapPanel>
+                    </StackPanel>
+                </Border>
+
+                <Border Margin="0,8,0,0" Padding="10" Background="{StaticResource CardBrush}" BorderBrush="{StaticResource BorderBrushSoft}" BorderThickness="1">
+                    <StackPanel>
+                        <TextBlock Text="توضیح یا دلیل (لغو: الزامی)" />
+                        <TextBox x:Name="NoteBox" Width="420" HorizontalAlignment="Left" />
+                        <WrapPanel Margin="0,8,0,0">
+                            <Button Content="پاسخ «بله» به ردیف انتخاب‌شده" Padding="12,5" Margin="0,0,8,0" Click="OnYesClick" IsEnabled="{Binding CanAnswer}" />
+                            <Button Content="پاسخ «خیر» به ردیف انتخاب‌شده" Padding="12,5" Margin="0,0,8,0" Click="OnNoClick" IsEnabled="{Binding CanAnswer}" />
+                            <Button Content="بستن پس از بررسی" Padding="12,5" Margin="0,0,8,0" Click="OnCloseClick" IsEnabled="{Binding CanClose}" />
+                            <Button Content="لغو استعلام" Padding="12,5" Click="OnCancelClick" IsEnabled="{Binding CanCancel}" />
+                        </WrapPanel>
+                    </StackPanel>
+                </Border>
+
+                <TextBlock Text="تاریخچه" FontWeight="SemiBold" Margin="0,12,0,4" />
+                <DataGrid ItemsSource="{Binding History}" AutoGenerateColumns="False" IsReadOnly="True" HeadersVisibility="Column" CanUserAddRows="False" CanUserDeleteRows="False" MaxHeight="200" Background="{StaticResource CardBrush}">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="زمان" Binding="{Binding DateText}" Width="150" />
+                        <DataGridTextColumn Header="اقدام" Binding="{Binding ActionText}" Width="*" />
+                        <DataGridTextColumn Header="ردیف" Binding="{Binding LineText}" Width="80" />
+                        <DataGridTextColumn Header="واحد" Binding="{Binding DepartmentText}" Width="100" />
+                        <DataGridTextColumn Header="توضیح" Binding="{Binding NoteText}" Width="*" />
+                    </DataGrid.Columns>
+                </DataGrid>
+            </StackPanel>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

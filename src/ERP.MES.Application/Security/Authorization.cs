@@ -42,6 +42,15 @@ public enum Permission
     /// </summary>
     MaintainProductionResources,
 
+    /// <summary>Create, fill, send, close and cancel raw-material inquiries. Drawing owns them (Decision Log #86).</summary>
+    ManageRawMaterialInquiries,
+
+    /// <summary>Answer the lines of a raw-material inquiry Yes or No. Warehouse (Decision Log #88).</summary>
+    AnswerRawMaterialInquiry,
+
+    /// <summary>Read raw-material inquiries and answers: Drawing and Warehouse. Read access for Planning and Management is owner decision D8 and stays denied until decided.</summary>
+    ViewRawMaterialInquiries,
+
     /// <summary>
     /// Read contracts, their versions, PDFs and decision history. Planning and Management (who act on them) and Warehouse (read-only, Decision Log #85). Every other department is denied.
     /// </summary>
@@ -135,6 +144,9 @@ public static class AuthorizationRules
         // Planning resource master data (Decision Log #82 R2, #89): Planning registers units and machines; every active user reads them; rates are read by their owners and by Warehouse.
         [Permission.MaintainProductionResources] = new([DepartmentCodes.Planning], null),
         [Permission.ViewPlanningMasterData] = new([], null),
+        [Permission.ManageRawMaterialInquiries] = new([DepartmentCodes.Drawing], null),
+        [Permission.AnswerRawMaterialInquiry] = new([DepartmentCodes.Warehouse], null),
+        [Permission.ViewRawMaterialInquiries] = new([DepartmentCodes.Drawing, DepartmentCodes.Warehouse], null),
         [Permission.ViewContracts] = new([DepartmentCodes.Planning, DepartmentCodes.Management, DepartmentCodes.Warehouse], null),
         [Permission.MaintainMaterials] = new([DepartmentCodes.Warehouse], null),
         [Permission.ViewMaterials] = new([], null),

@@ -235,7 +235,7 @@ The demonstration (PRs #18-#27) stays as it is until each gap below is closed by
 | Queue | Item-level read-only overview, provisional order | Per-unit queue, Planning position, overrides | 5 |
 | Costing / price | None | R4 | 7 |
 | Job reports / KPI / shifts / overtime | None | R5-R8 | 6, 8 |
-| Material inquiry | None | R1 | 2 |
+| Material inquiry | *(Implemented: inquiries, lines, Yes/No answers, history, send/close/cancel, #94.)* Clarification thread, effect of "No", disposition and release gate wait for D1; Planning/Management read waits for D8 | R1 | 2 |
 | Quantities | A single decimal on the item. *(QC masters — units, conversions, quantity types — are implemented; selecting them on items is phase 4a.)* | Quantity types | 3a done, 4a |
 
 ## 11. Staged implementation plan
@@ -246,7 +246,7 @@ Each PR is small, keeps the demo working until replaced, carries tests, a Decisi
 |---|---|---|---|---|
 | 1a | Single-type requests (model, mapping, migration, Excel/demo adjustments), PDF-before-submit | #84, #87 | - | none |
 | 1b | Request lifecycle: Management decision, forward to Drawing, Drawing result, status history, reopen | #29, #82 | 1a | none (clarification route uses [DEFAULT]) |
-| 2a | Raw-material inquiry (Drawing, Warehouse Yes/No, history, clarification) | #86, #88 | 1b | D1 for the routing after "No"; build entities and answers first |
+| 2a | Raw-material inquiry (Drawing, Warehouse Yes/No, history, clarification) | #86, #88 | 1b | D1 for the routing after "No"; entities, answers, history built (#94); clarification, "No" routing and release gate still wait for D1 |
 | 2b | MAKE contract gate (Planning decides, submit/approve/reject, Warehouse read-only, notification) | #85, #93 | 1b | none | done; rejection routing PROVISIONAL, notification derived from state |
 | 3a | QC masters: UOM, conversions, quantity types with base mapping and explicit set composition | #90 | - | none |
 | 3b | Planning masters: operators, machine codes, rate history, master assignments, qualifications; Warehouse material master and price history | #89 | - | none |

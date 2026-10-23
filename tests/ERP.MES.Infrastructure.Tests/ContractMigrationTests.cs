@@ -18,8 +18,9 @@ public class ContractMigrationTests
         await using (var context = db.NewContext())
         {
             var all = context.Database.GetMigrations().ToList();
-            previous = all[^2];
-            Assert.EndsWith("_AddContractGate", all[^1], StringComparison.Ordinal);
+            var index = all.FindIndex(m => m.EndsWith("_AddContractGate", StringComparison.Ordinal));
+            Assert.True(index > 0);
+            previous = all[index - 1];
             await context.GetService<IMigrator>().MigrateAsync(previous, Token);
         }
 
@@ -42,7 +43,7 @@ public class ContractMigrationTests
         }
 
         Assert.Empty(db.Query("PRAGMA foreign_key_check"));
-        Assert.Equal(10, db.Query("SELECT MigrationId FROM __EFMigrationsHistory").Count);
+        Assert.Equal(11, db.Query("SELECT MigrationId FROM __EFMigrationsHistory").Count);
         await using var check = db.NewContext();
         Assert.False(check.Database.HasPendingModelChanges());
     }

@@ -568,6 +568,178 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
                     b.ToTable("Users", (string)null);
                 });
 
+            modelBuilder.Entity("ERP.MES.Domain.Inquiries.InquiryHistoryEntry", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Action")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("ActionAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ActionByDepartmentCode")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("ActionByUserId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("Answer")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("FromStatus")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("InquiryId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("LineNo")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Note")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("ToStatus")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ActionByUserId");
+
+                    b.HasIndex("InquiryId");
+
+                    b.ToTable("RawMaterialInquiryHistory", (string)null);
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Inquiries.RawMaterialInquiry", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("CreatedByUserId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Note")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("RequestId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("RoundNo")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("RequestId", "RoundNo")
+                        .IsUnique();
+
+                    b.ToTable("RawMaterialInquiries", (string)null);
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Inquiries.RawMaterialInquiryLine", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal?>("DiameterMm")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("InquiryId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal?>("LengthMm")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("LineNo")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("MaterialForm")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("MaterialGrade")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("OtherDimension")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("QuantityUnitId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Remarks")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("RequiredQuantity")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("StandardOrSpec")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("QuantityUnitId");
+
+                    b.HasIndex("InquiryId", "LineNo")
+                        .IsUnique();
+
+                    b.ToTable("RawMaterialInquiryLines", (string)null);
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Inquiries.RawMaterialInquiryResponse", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Answer")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("LineId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Note")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("RespondedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RespondedByDepartmentCode")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("RespondedByUserId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LineId");
+
+                    b.HasIndex("RespondedByUserId");
+
+                    b.ToTable("RawMaterialInquiryResponses", (string)null);
+                });
+
             modelBuilder.Entity("ERP.MES.Domain.Materials.Material", b =>
                 {
                     b.Property<long>("Id")
@@ -1567,6 +1739,66 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
                     b.Navigation("Role");
                 });
 
+            modelBuilder.Entity("ERP.MES.Domain.Inquiries.InquiryHistoryEntry", b =>
+                {
+                    b.HasOne("ERP.MES.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("ActionByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ERP.MES.Domain.Inquiries.RawMaterialInquiry", null)
+                        .WithMany("History")
+                        .HasForeignKey("InquiryId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Inquiries.RawMaterialInquiry", b =>
+                {
+                    b.HasOne("ERP.MES.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ERP.MES.Domain.Requests.Request", null)
+                        .WithMany()
+                        .HasForeignKey("RequestId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Inquiries.RawMaterialInquiryLine", b =>
+                {
+                    b.HasOne("ERP.MES.Domain.Inquiries.RawMaterialInquiry", null)
+                        .WithMany("Lines")
+                        .HasForeignKey("InquiryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("ERP.MES.Domain.Quality.UnitOfMeasure", null)
+                        .WithMany()
+                        .HasForeignKey("QuantityUnitId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Inquiries.RawMaterialInquiryResponse", b =>
+                {
+                    b.HasOne("ERP.MES.Domain.Inquiries.RawMaterialInquiryLine", null)
+                        .WithMany("Responses")
+                        .HasForeignKey("LineId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ERP.MES.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("RespondedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("ERP.MES.Domain.Materials.Material", b =>
                 {
                     b.HasOne("ERP.MES.Domain.Identity.User", null)
@@ -1860,6 +2092,18 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
                     b.Navigation("History");
 
                     b.Navigation("Versions");
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Inquiries.RawMaterialInquiry", b =>
+                {
+                    b.Navigation("History");
+
+                    b.Navigation("Lines");
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Inquiries.RawMaterialInquiryLine", b =>
+                {
+                    b.Navigation("Responses");
                 });
 
             modelBuilder.Entity("ERP.MES.Domain.Quality.QuantityType", b =>
