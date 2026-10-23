@@ -68,6 +68,12 @@ public static class Messages
         ValidationIssue.EffectiveDateRequired => "تاریخ شروع اعمال نرخ را وارد کنید.",
         ValidationIssue.EffectiveDateInvalid => "تاریخ شروع اعمال نرخ معتبر نیست (مثال: ۱۴۰۵/۰۷/۲۰).",
         ValidationIssue.RateNotLater => "تاریخ شروع نرخ جدید باید بعد از آخرین نرخ ثبت‌شدهٔ این ماشین باشد؛ تاریخچه بازنویسی نمی‌شود.",
+        ValidationIssue.ImportFileMissing => "فایل اکسل را انتخاب کنید.",
+        ValidationIssue.ImportFileTooLarge => "حجم فایل بیش از ۲۰ مگابایت است.",
+        ValidationIssue.ImportFileChanged => "فایل با فایلِ پیش‌نمایش‌شده فرق دارد؛ دوباره پیش‌نمایش بگیرید.",
+        ValidationIssue.ImportHasErrors => "فایل خطا دارد و ثبت نمی‌شود؛ خطاها را در فایل اصلاح و دوباره پیش‌نمایش بگیرید. هیچ تغییری ذخیره نشد.",
+        ValidationIssue.ImportDecisionMissing => "برای هر ردیفِ دارای تعارض باید «رد کردن» یا «به‌روزرسانی» را انتخاب کنید. هیچ تغییری ذخیره نشد.",
+        ValidationIssue.ImportDecisionInvalid => "آیتمی که مسیر مرحله یا تأیید کنترل کیفیت دارد با ورود از اکسل به‌روز نمی‌شود؛ فقط «رد کردن» ممکن است.",
         ValidationIssue.ItemGateNotSatisfied => "هنوز دروازه‌ها برقرار نیست؛ تعریف آیتم پس از تأیید مدیریت، نتیجهٔ پذیرفتهٔ نقشه‌کشی، تصمیم قرارداد (برای ساخت)، پاسخ استعلام‌ها و بسته شدن پرسش‌ها ممکن است.",
         ValidationIssue.ItemSpecificationIncomplete => "برای آیتم ساخت، نوع تعداد، ماده و وزن (کیلوگرم برای هر واحد پایه) الزامی است.",
         ValidationIssue.WeightInvalid => "وزن باید بزرگ‌تر از صفر، حداکثر ۹۹٬۹۹۹٬۹۹۹٫۹۹۹۹ کیلوگرم و با حداکثر ۴ رقم اعشار باشد.",
@@ -197,6 +203,69 @@ public static class Messages
         ERP.MES.Application.Requests.GateBlocker.NoAnswerWithoutDisposition => "پاسخ «خیر» بدون تعیین تکلیف نقشه‌کشی",
         _ => "پرسش توضیحی نقشه‌کشی بسته نشده است",
     };
+
+    public static string ImportRowStatusText(ERP.MES.Application.Imports.ImportRowStatus status) => status switch
+    {
+        ERP.MES.Application.Imports.ImportRowStatus.New => "جدید",
+        ERP.MES.Application.Imports.ImportRowStatus.Unchanged => "بدون تغییر",
+        ERP.MES.Application.Imports.ImportRowStatus.Conflict => "تعارض؛ انتخاب لازم است",
+        ERP.MES.Application.Imports.ImportRowStatus.Locked => "تعارض؛ قفل (فقط رد کردن)",
+        _ => "خطا",
+    };
+
+    public static string ImportFieldText(ERP.MES.Application.Imports.ImportField field) => field switch
+    {
+        ERP.MES.Application.Imports.ImportField.PartName => "نام قطعه",
+        ERP.MES.Application.Imports.ImportField.Quantity => "تعداد",
+        ERP.MES.Application.Imports.ImportField.Priority => "اولویت",
+        ERP.MES.Application.Imports.ImportField.QuantityType => "نوع تعداد",
+        ERP.MES.Application.Imports.ImportField.Material => "ماده",
+        ERP.MES.Application.Imports.ImportField.Weight => "وزن",
+        ERP.MES.Application.Imports.ImportField.Length => "طول",
+        _ => "قطر",
+    };
+
+    public static string ImportMessageText(ERP.MES.Application.Imports.ImportMessage message)
+    {
+        var detail = message.Detail is null ? string.Empty : " (" + message.Detail + ")";
+        return message.Issue switch
+        {
+            ERP.MES.Application.Imports.ImportIssue.FileNotXlsx => "فایل، اکسل با پسوند xlsx نیست (فایل xls قدیمی یا CSV پذیرفته نمی‌شود).",
+            ERP.MES.Application.Imports.ImportIssue.FileTooLarge => "فایل یا محتوای بازشدهٔ آن بیش از حد مجاز است.",
+            ERP.MES.Application.Imports.ImportIssue.FileCorrupt => "فایل آسیب‌دیده است یا ساختار آن خوانده نمی‌شود.",
+            ERP.MES.Application.Imports.ImportIssue.NoWorksheet => "فایل برگهٔ کاری ندارد.",
+            ERP.MES.Application.Imports.ImportIssue.TooManyRows => "تعداد ردیف‌ها از حد مجاز (۵۰۰۰) بیشتر است.",
+            ERP.MES.Application.Imports.ImportIssue.HeaderRowMissing => "ردیف عنوان ستون‌ها پیدا نشد.",
+            ERP.MES.Application.Imports.ImportIssue.HeaderMissing => "ستون الزامی پیدا نشد" + detail + ".",
+            ERP.MES.Application.Imports.ImportIssue.HeaderDuplicate => "عنوان ستون تکراری است" + detail + ".",
+            ERP.MES.Application.Imports.ImportIssue.HeaderUnknown => "ستون ناشناخته نادیده گرفته شد" + detail + ".",
+            ERP.MES.Application.Imports.ImportIssue.MoreThanOneWorksheet => "فایل بیش از یک برگه دارد؛ فقط برگهٔ اول خوانده شد.",
+            ERP.MES.Application.Imports.ImportIssue.NoDataRows => "فایل ردیف داده ندارد.",
+            ERP.MES.Application.Imports.ImportIssue.ItemNoMissing => "شمارهٔ آیتم خالی است.",
+            ERP.MES.Application.Imports.ImportIssue.ItemNoNumeric => "شمارهٔ آیتم باید سلول متنی باشد (سلول عددی «1.10» را به 1.1 تبدیل می‌کند)" + detail + ".",
+            ERP.MES.Application.Imports.ImportIssue.ItemNoDuplicate => "شمارهٔ آیتم در فایل تکراری است؛ اولین بار در ردیف " + message.Detail + ".",
+            ERP.MES.Application.Imports.ImportIssue.PartNameMissing => "نام قطعه خالی است.",
+            ERP.MES.Application.Imports.ImportIssue.QuantityInvalid => "تعداد باید عددی بزرگ‌تر از صفر باشد" + detail + ".",
+            ERP.MES.Application.Imports.ImportIssue.WorkTypeUnknown => "نوع کار باید «ساخت» یا «تعمیر» باشد" + detail + ".",
+            ERP.MES.Application.Imports.ImportIssue.WorkTypeMismatch => "نوع کار ردیف با نوع کار درخواست یکی نیست؛ درخواست نوع واحد دارد" + detail + ".",
+            ERP.MES.Application.Imports.ImportIssue.QuantityTypeMissing => "کد نوع تعداد برای آیتم ساخت الزامی است.",
+            ERP.MES.Application.Imports.ImportIssue.QuantityTypeUnknown => "کد نوع تعداد وجود ندارد یا فعال نیست" + detail + ".",
+            ERP.MES.Application.Imports.ImportIssue.MaterialMissing => "کد ماده برای آیتم ساخت الزامی است.",
+            ERP.MES.Application.Imports.ImportIssue.MaterialUnknown => "کد ماده وجود ندارد یا فعال نیست" + detail + ".",
+            ERP.MES.Application.Imports.ImportIssue.WeightMissing => "وزن برای آیتم ساخت الزامی است.",
+            ERP.MES.Application.Imports.ImportIssue.WeightInvalid => "وزن نامعتبر است (بزرگ‌تر از صفر، حداکثر ۴ رقم اعشار)" + detail + ".",
+            ERP.MES.Application.Imports.ImportIssue.DimensionInvalid => "طول یا قطر نامعتبر است (بزرگ‌تر از صفر، حداکثر ۲ رقم اعشار)" + detail + ".",
+            ERP.MES.Application.Imports.ImportIssue.PriorityUnknown => "اولویت باید «عادی»، «فوری» یا «خیلی فوری» باشد" + detail + ".",
+            ERP.MES.Application.Imports.ImportIssue.StageIncomplete => "مرحلهٔ " + message.Detail + ": عنوان، دقیقه و کد واحد هر سه لازم است.",
+            ERP.MES.Application.Imports.ImportIssue.StageHeaderBeyondLimit => "ستون «" + message.Detail + "» از حداکثر مجاز مراحل (" + ERP.MES.Application.Imports.ItemImportTemplate.MaxStages + " مرحله) بیشتر است؛ فایل را اصلاح کنید.",
+            ERP.MES.Application.Imports.ImportIssue.StageGap => "مرحلهٔ " + message.Detail + " پر شده ولی مرحلهٔ قبل از آن خالی است.",
+            ERP.MES.Application.Imports.ImportIssue.StageMinutesInvalid => "مرحلهٔ " + message.Detail + ": دقیقه برای هر قطعه نامعتبر است.",
+            ERP.MES.Application.Imports.ImportIssue.StageUnitUnknown => "کد واحد تولیدی وجود ندارد یا فعال نیست" + detail + ".",
+            ERP.MES.Application.Imports.ImportIssue.StageMachineUnknown => "کد ماشین وجود ندارد یا فعال نیست" + detail + ".",
+            ERP.MES.Application.Imports.ImportIssue.StageMachineUnitMismatch => "ماشین به واحد انتخاب‌شده تعلق ندارد" + detail + ".",
+            _ => "آیتم از قبل وجود دارد؛ ستون‌های مرحله فقط برای آیتم جدید اعمال می‌شود و مرحله‌های موجود حفظ می‌شود.",
+        };
+    }
 
     public static string ContractStatusText(ERP.MES.Domain.Contracts.ContractStatus status) => status switch
     {

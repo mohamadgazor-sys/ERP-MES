@@ -255,7 +255,7 @@ Each PR is small, keeps the demo working until replaced, carries tests, a Decisi
 | 3a | QC masters: UOM, conversions, quantity types with base mapping and explicit set composition | #90 | - | none |
 | 3b | Planning masters: operators, machine codes, rate history, master assignments, qualifications; Warehouse material master and price history | #89 | - | none |
 | 4a | Item definition and stage planning (spec fields, stage->unit/machine, release gates) | #86, #89, #95, #96 | 1b, 2b, 3a, 3b | none; done (manual workflow; Excel is 4b) |
-| 4b | Excel import (template, preview, validation, transactional commit, conflict choice) | #16 | 4a | none |
+| 4b | Excel import (template, preview, validation, transactional commit, conflict choice) | #16, #97 | 4a | none; done (own template, docs/ITEM_IMPORT_TEMPLATE.md; not matched to a company workbook) |
 | 5a | Per-unit queues (Planning position, categories, overrides with review flag) | #78 | 4a | none |
 | 5b | Quantity-level QC (inspection lines, balances, rework loop, next-stage eligibility) | #92 | 3a, 4a, 5a | D2, D3 |
 | 6a | Planning calendar: shift templates A-D, unit shifts, OFF days, capacity, worker schedule | R7 | 3b | D5 (overlap) |
@@ -268,6 +268,8 @@ Each PR is small, keeps the demo working until replaced, carries tests, a Decisi
 Order: 1a, 1b, 3a and 3b (independent), 2b, 2a, 4a, 4b, 5a, 6a, 5b, 6b, 6c, 7, 8, 9. A PR that needs an open decision builds only the parts not affected, or waits.
 
 ## 12. Excel import
+
+**Status (phase 4b, Decision Log #97): implemented** with the application's own canonical template (`docs/ITEM_IMPORT_TEMPLATE.md`); the text below is the original design, and where it differs (gates instead of a `READY_FOR_DEFINITION` status; locked items can only be skipped; no background processing) the Decision Log entry and the template document win.
 
 [EXISTING #16] plus #84 and #86. One worksheet, Persian headers, about 1,000 items, preview, validation, transactional import, manual conflict choice.
 

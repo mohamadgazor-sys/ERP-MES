@@ -25,6 +25,7 @@ internal static class PageFactory
             ShellViewModel.InquiriesKey => new InquiriesView(pages.Inquiries),
             ShellViewModel.ClarificationsKey => new ClarificationsView(pages.Clarifications),
             ShellViewModel.ItemDefinitionKey => new ItemDefinitionView(pages.ItemDefinition),
+            ShellViewModel.ItemImportKey => new ItemImportView(pages.ItemImport),
             ShellViewModel.LimitationsKey => new LimitationsView(),
             _ => new PlaceholderView(item.Title, shell.NotImplementedText),
         };

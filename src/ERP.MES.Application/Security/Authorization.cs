@@ -150,7 +150,7 @@ public static class AuthorizationRules
         [Permission.ReopenRejectedRequest] = new([DepartmentCodes.Planning, DepartmentCodes.Management], null),
         [Permission.DefineMakeItems] = new([DepartmentCodes.Planning], null),
         [Permission.DefineRepairItemsAndEditAnyItem] = new([DepartmentCodes.Planning], null),
-        [Permission.ImportItemsFromExcel] = new([DepartmentCodes.Planning, DepartmentCodes.Drawing], null),
+        [Permission.ImportItemsFromExcel] = new([DepartmentCodes.Planning], null),
         [Permission.MaintainCustomers] = new([DepartmentCodes.Central, DepartmentCodes.Planning], null),
 
         // Read-only access for every active user (an empty department list means any department, no role is required).

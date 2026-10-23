@@ -2,6 +2,7 @@ using ERP.MES.Application.Security;
 using ERP.MES.Domain.Contracts;
 using ERP.MES.Domain.Documents;
 using ERP.MES.Domain.Identity;
+using ERP.MES.Domain.Imports;
 using ERP.MES.Domain.Inquiries;
 using ERP.MES.Domain.Materials;
 using ERP.MES.Domain.Planning;
@@ -43,6 +44,10 @@ public sealed class ErpMesDbContext(DbContextOptions<ErpMesDbContext> options) :
     public DbSet<ContractDocumentLink> ContractDocumentLinks => Set<ContractDocumentLink>();
 
     public DbSet<ContractHistoryEntry> ContractHistory => Set<ContractHistoryEntry>();
+
+    public DbSet<ItemImport> ItemImports => Set<ItemImport>();
+
+    public DbSet<ItemImportRow> ItemImportRows => Set<ItemImportRow>();
 
     public DbSet<RawMaterialInquiry> RawMaterialInquiries => Set<RawMaterialInquiry>();
 
@@ -139,6 +144,13 @@ public sealed class ErpMesDbContext(DbContextOptions<ErpMesDbContext> options) :
             || ChangeTracker.Entries<InquirySupplyRoute>().Any(e => e.State is EntityState.Modified or EntityState.Deleted))
         {
             throw new InvalidOperationException("The inquiry answers and history are append-only: entries cannot be changed or deleted.");
+        }
+
+        // The item-import log is append-only as well.
+        if (ChangeTracker.Entries<ItemImport>().Any(e => e.State is EntityState.Modified or EntityState.Deleted)
+            || ChangeTracker.Entries<ItemImportRow>().Any(e => e.State is EntityState.Modified or EntityState.Deleted))
+        {
+            throw new InvalidOperationException("The item-import log is append-only: entries cannot be changed or deleted.");
         }
 
         // The contract history is append-only as well.

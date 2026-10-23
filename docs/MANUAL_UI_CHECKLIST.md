@@ -204,3 +204,11 @@ Prepare a fictional demonstration database with `demo-init` (`docs/AUTHENTICATIO
 | F17 | Deactivate `demo.production` (administrator tool, `docs/AUTHENTICATION.md`) while that user has the page open; click an enabled button | A red permission message; the list reloads to the denied state; nothing changed | |
 | F18 | Audit (Provisioning/DB tool or a SQLite viewer on the demo database; there is no audit screen yet): `SELECT ActionCode, UserId, TargetId, Summary FROM AuditLog WHERE ActionCode LIKE 'Stage%'` | One row per successful action in order, with the right user, target `itemId/stageNo` and a before -> after summary; none for refused or conflicting clicks; no password or token text | |
 | F19 | Demo-only labelling | The note at the top of «مراحل و کنترل کیفیت» says the release-eligibility conditions (request status, contract, Management approval) are not approved and not checked in this demonstration version; a request in any seeded status can be worked on | |
+
+## P. Excel item import (Decision Log #16, #97) - not run by a person; covered by automated tests
+- P1: As Planning open "ورود آیتم‌ها از اکسل", click "ذخیرهٔ قالب نمونه (xlsx)" and open the file in Excel: Persian headers, right-to-left sheet, two fictional example rows.
+- P2: Select a request whose gates hold, choose a filled-in file: the preview shows counts (new / unchanged / conflict / error) and, per row, the worksheet row number and messages. A file with an error cannot be committed.
+- P3: Change a part name or quantity of an existing item in the file and preview again: the row shows "تعارض" with old ← new values and a Skip/Update choice; "ثبت ورود" stays refused until every conflict has a choice. An item that already has a stage offers only Skip.
+- P4: Commit, then import the same file again: "تغییری لازم نبود… چیزی ذخیره نشد".
+- P5: As any user other than Planning the import buttons are disabled; for a request that has not passed the gates the page refuses with the gate message.
+- P6: A file whose item has 8 stage groups imports all 8 stages in order; a column "مرحله 21 - عنوان" makes the file refuse with a message naming the 20-stage safety limit.

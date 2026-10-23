@@ -1756,3 +1756,33 @@ Append one dated entry after every substantial session. Do not replace prior ent
 
 ### Recommended exact next action
 - Merge after CI, then 4b: write the canonical import template and its column documentation, then the Excel import (preview, validation, transactional commit, conflict choice).
+
+---
+
+### Date / session
+- Date: 2026-10-23
+- Claude Code session ID (if useful): session_01UwqjPjBXLd2apjZb2urjds (phase 4b: Excel item import)
+
+### Goal
+- Import items (and optional stages) from an Excel file with preview, validation, explicit conflict choice and one transaction (Decision Log #16, #97).
+
+### Completed
+- Domain log entities `ItemImport`/`ItemImportRow`; Application template, parser, `ItemImportService`; own bounded `.xlsx` reader and writer; EF repository, configurations, migration `AddItemImportLog`.
+- `ImportItemsFromExcel` is Planning's only; gates enforced in the use case.
+- Desktop page "ورود آیتم‌ها از اکسل" (template download, preview grid, per-row Skip/Update, commit).
+- `docs/ITEM_IMPORT_TEMPLATE.md` (own canonical template, no company-workbook claim), Decision Log #97, checklist P.
+- Tests: reader/writer (round trip, zip bomb, DTD, non-xlsx, numeric cells), parser, service (preview writes nothing, create, idempotence, conflict skip/update, locked, stages, invalid rows, permissions, gates, stale principal, stale version/file, REPAIR, 1,000 rows), migration upgrade, view model. The round-trip tests found and fixed a reader defect (rows after the first cell were lost).
+
+### Decisions newly approved
+- None beyond #95; labelled defaults are listed in #97.
+
+### Unresolved questions / risks
+- The company's real workbook has not been seen; the template may need a mapping.
+- Items with a route cannot be revised by import; no background processing for very large files.
+- Review pass before merge (Decision Log #98): the five-stage assumption was replaced by a 20-stage safety limit with an error for columns beyond it; atomic-rollback, numeric-cell and long-route tests added.
+
+### Commands/tests actually run and results
+- See the pull request for the Linux and Windows CI totals of the final head.
+
+### Recommended exact next action
+- Merge after CI, then 5a (per-unit queues; user-to-unit designation).

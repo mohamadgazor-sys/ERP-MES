@@ -77,24 +77,24 @@ public sealed class RequestItem
     /// <summary>Customer/request item identifier, short text such as "1.10" or "A-01". Stored and compared exactly as given.</summary>
     public string ItemNo { get; }
 
-    public string PartName { get; }
+    public string PartName { get; private set; }
 
-    public decimal RequestedQuantity { get; }
+    public decimal RequestedQuantity { get; private set; }
 
     /// <summary>The QC-owned quantity type the quantity is expressed in (Decision Log #90); null for an item without a specification (REPAIR where not applicable, or an item of the simplified demonstration).</summary>
-    public long? QuantityTypeId { get; }
+    public long? QuantityTypeId { get; private set; }
 
     /// <summary>The Warehouse material the item is made of.</summary>
-    public long? MaterialId { get; }
+    public long? MaterialId { get; private set; }
 
     /// <summary>Kilograms of raw material per base unit (decimal 12,4).</summary>
-    public decimal? WeightKgPerBaseUnit { get; }
+    public decimal? WeightKgPerBaseUnit { get; private set; }
 
     /// <summary>Millimetres (decimal 10,2).</summary>
-    public decimal? LengthMm { get; }
+    public decimal? LengthMm { get; private set; }
 
     /// <summary>Millimetres (decimal 10,2).</summary>
-    public decimal? DiameterMm { get; }
+    public decimal? DiameterMm { get; private set; }
 
     /// <summary>Planning-controlled priority. Its storage location (item or stage) is still pending confirmation (section 18); the item field of section 5.1 is used and stages carry none.</summary>
     public Priority Priority { get; private set; }
@@ -111,6 +111,54 @@ public sealed class RequestItem
 
     /// <summary>True when every stage of a non-empty route has been approved by QC.</summary>
     public bool IsRouteCompleted => _stages.Count > 0 && _stages.All(s => s.Status == ItemStageStatus.QcApproved);
+
+    /// <summary>True while the definition may still be revised: the item has no stages and no QC approval (a defined route is locked; its controlled revision is not built).</summary>
+    public bool IsDefinitionRevisable => _stages.Count == 0 && _qcApprovals.Count == 0;
+
+    /// <summary>
+    /// Revises the item definition (Excel import "update" choice, Decision Log #16, #97): part name, quantity, priority and specification. Allowed only while
+    /// <see cref="IsDefinitionRevisable"/>. The caller validated the specification for the request's work type; the item number never changes.
+    /// </summary>
+    internal bool ReviseDefinition(string partName, decimal requestedQuantity, Priority priority, ItemSpecification specification, DateTime changedAtUtc)
+    {
+        if (!IsDefinitionRevisable)
+        {
+            throw new InvalidOperationException("An item with a defined route or a QC approval cannot be revised by import; the controlled revision is not implemented.");
+        }
+
+        if (string.IsNullOrWhiteSpace(partName))
+        {
+            throw new ArgumentException("A part name is required.", nameof(partName));
+        }
+
+        if (requestedQuantity <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(requestedQuantity), requestedQuantity, "The requested quantity must be greater than zero.");
+        }
+
+        if (!Enum.IsDefined(priority))
+        {
+            throw new ArgumentOutOfRangeException(nameof(priority), priority, "Unknown priority.");
+        }
+
+        var utc = Customer.RequireUtc(changedAtUtc, nameof(changedAtUtc));
+        var changed = partName != PartName || requestedQuantity != RequestedQuantity || priority != Priority || specification.QuantityTypeId != QuantityTypeId
+            || specification.MaterialId != MaterialId || specification.WeightKgPerBaseUnit != WeightKgPerBaseUnit || specification.LengthMm != LengthMm || specification.DiameterMm != DiameterMm;
+        PartName = partName;
+        RequestedQuantity = requestedQuantity;
+        Priority = priority;
+        QuantityTypeId = specification.QuantityTypeId;
+        MaterialId = specification.MaterialId;
+        WeightKgPerBaseUnit = specification.WeightKgPerBaseUnit;
+        LengthMm = specification.LengthMm;
+        DiameterMm = specification.DiameterMm;
+        if (changed)
+        {
+            UpdatedAtUtc = utc;
+        }
+
+        return changed;
+    }
 
     /// <summary>Changes the Planning priority. Several items may share a priority. Returns false when nothing changed.</summary>
     public bool ChangePriority(Priority priority, DateTime changedAtUtc)
