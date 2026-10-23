@@ -250,7 +250,7 @@ public class ItemRouteTests
     public void Stage_status_codes_follow_the_specification_names()
     {
         Assert.Equal(
-            new[] { "PLANNED", "WAITING_PREVIOUS_QC", "WAITING", "IN_PROGRESS", "WAITING_QC", "QC_APPROVED" },
+            new[] { "PLANNED", "WAITING_PREVIOUS_QC", "WAITING", "IN_PROGRESS", "WAITING_QC", "QC_APPROVED", "WAITING_SHORTFALL_DECISION" },
             Enum.GetValues<ItemStageStatus>().Select(s => s.Code()).ToArray());
     }
 

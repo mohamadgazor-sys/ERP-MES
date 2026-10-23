@@ -359,7 +359,9 @@ public class UnitQueueTests
         Assert.True((await w.Work.PerformAsync(w.Production, StageAction.Start, await TargetAsync(w, a.RequestId, a.ItemId, 1), Token)).Succeeded);
         Assert.True((await w.Work.PerformAsync(w.Production, StageAction.SubmitForQc, await TargetAsync(w, a.RequestId, a.ItemId, 1), Token)).Succeeded);
         Assert.Equal(QueueBlock.WaitingQc, Assert.Single((await LoadAsync(w, w.Planning, milling)).Pending, e => e.ItemNo == "A").Block);
-        Assert.True((await w.Work.PerformAsync(w.Qc, StageAction.ApproveWholeQuantity, await TargetAsync(w, a.RequestId, a.ItemId, 1), Token)).Succeeded);
+        // A stage planned in a unit is decided by quantity (10 pieces here), not by the demonstration's whole-quantity approval.
+        Assert.Equal(ValidationIssue.UseQuantityInspection, (await w.Work.PerformAsync(w.Qc, StageAction.ApproveWholeQuantity, await TargetAsync(w, a.RequestId, a.ItemId, 1), Token)).Issue);
+        Assert.True((await w.Services.QcInspection.RecordInspectionAsync(w.Qc, await TargetAsync(w, a.RequestId, a.ItemId, 1), [new ERP.MES.Domain.Requests.InspectionEntry(ERP.MES.Domain.Requests.InspectionDisposition.Accepted, 10, null)], Token)).Succeeded);
 
         var millingAfter = await LoadAsync(w, w.Planning, milling);
         Assert.Equal(1, millingAfter.CompletedStageCount);

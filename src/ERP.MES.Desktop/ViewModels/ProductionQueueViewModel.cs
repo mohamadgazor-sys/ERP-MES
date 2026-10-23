@@ -214,6 +214,7 @@ public sealed class ProductionQueueViewModel(ProductionQueueService queue, IJala
         ItemStageStatus.WaitingPreviousQc => "در انتظار تأیید کنترل کیفیت مرحلهٔ قبل",
         ItemStageStatus.Waiting => "آمادهٔ اجرا",
         ItemStageStatus.InProgress => "در حال اجرا",
+        ItemStageStatus.WaitingShortfallDecision => "منتظر تصمیم دربارهٔ کسری (ضایعات)",
         ItemStageStatus.WaitingQc => "در انتظار کنترل کیفیت",
         ItemStageStatus.QcApproved => "تأییدشده توسط کنترل کیفیت",
         _ => string.Empty,

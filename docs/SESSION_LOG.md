@@ -1844,3 +1844,31 @@ Append one dated entry after every substantial session. Do not replace prior ent
 
 ### Recommended exact next action
 - Merge after CI, then 5b (quantity-level QC: accepted / rework / scrap per item and stage, D2/D3).
+
+---
+
+### Date / session
+- Date: 2026-10-23
+- Claude Code session ID (if useful): session_01UwqjPjBXLd2apjZb2urjds (phase 5b: quantity-level QC)
+
+### Goal
+- QC decides base units as accepted / rework / scrap per item and stage, with the rework loop, shortfall decision and next-stage eligibility on accepted units (Decision Log #92, #95 D2/D3).
+
+### Completed
+- Domain: stage balances in base units, `RecordInspection`, `DecideShortfall`, `QcInspectionLine`, `ShortfallDecision`, new stage status `WAITING_SHORTFALL_DECISION`, `BaseUnitsPerUnit` on items.
+- Application: `QcInspectionService` (worklist, history, inspection, shortfall decision with its own permissions); unit stages refuse the whole-quantity approval; quantity type base units captured at item definition and import.
+- Persistence: columns and two append-only tables, `EfQcInspectionRepository`, migration `AddQuantityQc` with upgrade test.
+- Desktop: page "بازرسی کنترل کیفیت"; the unit queue shows rework and the shortfall wait.
+- Tests: domain invariants (no double counting), service (permissions, rework, scrap, shortfall, stale versions, history, audit), migration, view model.
+
+### Decisions newly approved
+- None; labelled defaults are listed in #101.
+
+### Unresolved questions / risks
+- QC corrections of earlier decisions and the Planning ordered-quantity raise are not built; partial production submissions and operator-reported quantities come with 6b; cost of rework and scrap is phase 7.
+
+### Commands/tests actually run and results
+- See the pull request for the Linux and Windows CI totals of the final head.
+
+### Recommended exact next action
+- Merge after CI, then 6b (daily job reports and supervisor review, D8).

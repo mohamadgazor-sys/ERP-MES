@@ -35,6 +35,14 @@ public sealed class ItemStageConfiguration : IEntityTypeConfiguration<ItemStage>
         builder.HasOne<ERP.MES.Domain.Identity.User>().WithMany().HasForeignKey(s => s.StoppedByUserId).IsRequired(false).OnDelete(DeleteBehavior.Restrict);
         builder.Ignore(s => s.IsStopped);
 
+        // Quantity-level QC (Decision Log #92, #101): base units, never per-piece identities.
+        builder.Property(s => s.InputBaseUnits);
+        builder.Property(s => s.AwaitingQcBaseUnits).IsRequired().HasDefaultValue(0L);
+        builder.Property(s => s.AcceptedBaseUnits).IsRequired().HasDefaultValue(0L);
+        builder.Property(s => s.ReworkBaseUnits).IsRequired().HasDefaultValue(0L);
+        builder.Property(s => s.ScrapBaseUnits).IsRequired().HasDefaultValue(0L);
+        builder.Ignore(s => s.RemainingBaseUnits);
+
         // Derived from minutes per piece x quantity; not stored.
         builder.Ignore(s => s.PlannedTotalMinutes);
 

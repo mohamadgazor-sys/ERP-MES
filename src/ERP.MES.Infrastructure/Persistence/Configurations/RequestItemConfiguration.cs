@@ -23,6 +23,7 @@ public sealed class RequestItemConfiguration : IEntityTypeConfiguration<RequestI
         // Planning's specification (Decision Log #86, #95): nullable because REPAIR items may omit it and items of the simplified demonstration have none. Exact decimals, never rounded.
         builder.Property(i => i.QuantityTypeId);
         builder.HasOne<ERP.MES.Domain.Quality.QuantityType>().WithMany().HasForeignKey(i => i.QuantityTypeId).IsRequired(false).OnDelete(DeleteBehavior.Restrict);
+        builder.Property(i => i.BaseUnitsPerUnit).IsRequired().HasDefaultValue(1);
         builder.Property(i => i.MaterialId);
         builder.HasOne<ERP.MES.Domain.Materials.Material>().WithMany().HasForeignKey(i => i.MaterialId).IsRequired(false).OnDelete(DeleteBehavior.Restrict);
         builder.Property(i => i.WeightKgPerBaseUnit);

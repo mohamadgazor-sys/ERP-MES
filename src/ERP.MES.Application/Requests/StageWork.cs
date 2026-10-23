@@ -241,6 +241,12 @@ public sealed class StageWorkService(IRequestRepository requests, CurrentAuthori
             return null;
         }
 
+        if (action == StageAction.ApproveWholeQuantity)
+        {
+            // A stage planned in a unit is decided by quantity (accepted / rework / scrap per base unit, Decision Log #101); the whole-quantity shortcut is the demonstration's only.
+            return Outcome<StageActionResult>.Invalid(ValidationIssue.UseQuantityInspection);
+        }
+
         var closed = loaded.Value.Status is RequestStatus.Cancelled or RequestStatus.Closed;
         if (closed)
         {

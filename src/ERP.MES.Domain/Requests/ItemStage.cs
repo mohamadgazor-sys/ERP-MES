@@ -21,6 +21,9 @@ public enum ItemStageStatus
     WaitingQc = 5,
 
     QcApproved = 6,
+
+    /// <summary>Every submitted unit was decided by QC and some were scrapped: the stage cannot be complete until Management accepts the shortfall or Planning records a replacement order (Decision Log #95 D3, #101).</summary>
+    WaitingShortfallDecision = 7,
 }
 
 public static class ItemStageStatusInfo
@@ -33,6 +36,7 @@ public static class ItemStageStatusInfo
         ItemStageStatus.InProgress => "IN_PROGRESS",
         ItemStageStatus.WaitingQc => "WAITING_QC",
         ItemStageStatus.QcApproved => "QC_APPROVED",
+        ItemStageStatus.WaitingShortfallDecision => "WAITING_SHORTFALL_DECISION",
         _ => throw new ArgumentOutOfRangeException(nameof(status), status, "Unknown stage status."),
     };
 }
@@ -92,6 +96,27 @@ public sealed class ItemStage
     public long? StoppedByUserId { get; internal set; }
 
     public bool IsStopped => StoppedAtUtc is not null;
+
+    /// <summary>
+    /// Base units the stage works on (Decision Log #92, #101): the item's ordered base units for the first stage, the previous stage's accepted base units for the others. Null for a stage
+    /// whose quantity is not a whole number of base units (then only the demonstration's whole-quantity approval applies) and until the stage is released.
+    /// </summary>
+    public long? InputBaseUnits { get; internal set; }
+
+    /// <summary>Base units submitted to QC and not decided yet.</summary>
+    public long AwaitingQcBaseUnits { get; internal set; }
+
+    /// <summary>Base units QC accepted (cumulative).</summary>
+    public long AcceptedBaseUnits { get; internal set; }
+
+    /// <summary>Base units QC sent to rework that have not been resubmitted yet (a part of what is still to be produced).</summary>
+    public long ReworkBaseUnits { get; internal set; }
+
+    /// <summary>Base units QC scrapped (cumulative, permanent).</summary>
+    public long ScrapBaseUnits { get; internal set; }
+
+    /// <summary>Base units neither accepted, scrapped nor awaiting QC: still to be produced or reworked. Null when the input is not known.</summary>
+    public long? RemainingBaseUnits => InputBaseUnits is { } input ? input - AcceptedBaseUnits - ScrapBaseUnits - AwaitingQcBaseUnits : null;
 }
 
 /// <summary>

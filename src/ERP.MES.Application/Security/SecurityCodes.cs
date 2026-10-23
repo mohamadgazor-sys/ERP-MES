@@ -57,6 +57,8 @@ public static class AuditActions
     public const string ProductionUnitAdded = "ProductionUnitAdded";
     public const string MachineAdded = "MachineAdded";
     public const string MachineRateChanged = "MachineRateChanged";
+    public const string QcInspectionRecorded = "QcInspectionRecorded";
+    public const string ShortfallDecided = "ShortfallDecided";
     public const string ShiftTemplateAdded = "ShiftTemplateAdded";
     public const string ShiftTemplateChanged = "ShiftTemplateChanged";
     public const string WeeklyWorkdayChanged = "WeeklyWorkdayChanged";

@@ -58,6 +58,7 @@ public sealed class RequestItem
 
         var spec = specification ?? ItemSpecification.None;
         QuantityTypeId = spec.QuantityTypeId;
+        BaseUnitsPerUnit = Math.Max(1, spec.BaseUnitsPerUnit);
         MaterialId = spec.MaterialId;
         WeightKgPerBaseUnit = spec.WeightKgPerBaseUnit;
         LengthMm = spec.LengthMm;
@@ -83,6 +84,9 @@ public sealed class RequestItem
 
     /// <summary>The QC-owned quantity type the quantity is expressed in (Decision Log #90); null for an item without a specification (REPAIR where not applicable, or an item of the simplified demonstration).</summary>
     public long? QuantityTypeId { get; private set; }
+
+    /// <summary>How many base units one ordered unit counts (piece 1, pair 2; Decision Log #90, #101).</summary>
+    public int BaseUnitsPerUnit { get; private set; } = 1;
 
     /// <summary>The Warehouse material the item is made of.</summary>
     public long? MaterialId { get; private set; }
@@ -148,6 +152,7 @@ public sealed class RequestItem
         RequestedQuantity = requestedQuantity;
         Priority = priority;
         QuantityTypeId = specification.QuantityTypeId;
+        BaseUnitsPerUnit = Math.Max(1, specification.BaseUnitsPerUnit);
         MaterialId = specification.MaterialId;
         WeightKgPerBaseUnit = specification.WeightKgPerBaseUnit;
         LengthMm = specification.LengthMm;
@@ -225,6 +230,7 @@ public sealed class RequestItem
         Require(first, ItemStageStatus.Planned, "released");
         first.Status = ItemStageStatus.Waiting;
         first.AvailableSinceUtc = releasedAtUtc is { } at ? Customer.RequireUtc(at, nameof(releasedAtUtc)) : null;
+        first.InputBaseUnits = PlannedBaseUnits(first);
     }
 
     /// <summary>Demonstration-only transition WAITING -> IN_PROGRESS.</summary>
@@ -243,15 +249,25 @@ public sealed class RequestItem
         var stage = GetStage(stageNo);
         Require(stage, ItemStageStatus.InProgress, "submitted for QC");
         RequireNotStopped(stage, "submitted for QC");
+        if (stage.InputBaseUnits is { } input)
+        {
+            // Everything still to be produced or reworked goes to QC; the reworked units come back as a new submission and are counted once (Decision Log #92, #101).
+            if (input - stage.AcceptedBaseUnits - stage.ScrapBaseUnits - stage.AwaitingQcBaseUnits <= 0)
+            {
+                throw new InvalidOperationException("Stage " + stageNo + " has no units left to submit to QC.");
+            }
+
+            stage.AwaitingQcBaseUnits = input - stage.AcceptedBaseUnits - stage.ScrapBaseUnits;
+            stage.ReworkBaseUnits = 0;
+        }
+
         stage.Status = ItemStageStatus.WaitingQc;
         stage.PlanningPosition = null;
     }
 
     /// <summary>
-    /// DEMONSTRATION-ONLY: QC approves a stage for its whole planned quantity and the next stage becomes executable.
-    /// This is not the production rule: the approved requirements (section 9.3) split a QC result into accepted,
-    /// rework and scrap quantities, which this method and <see cref="QcApproval"/> do not represent (future work). The caller (the application layer) must check
-    /// that the actor belongs to QC.
+    /// DEMONSTRATION-ONLY (stages without a production unit): QC approves a stage for its whole planned quantity and the next stage becomes executable. The production rule is
+    /// <see cref="RecordInspection"/> (accepted / rework / scrap per base unit, Decision Log #101). The caller (the application layer) must check that the actor belongs to QC.
     /// </summary>
     public QcApproval ApproveStageWholeQuantity(int stageNo, long approvedByUserId, DateTime approvedAtUtc)
     {
@@ -260,21 +276,165 @@ public sealed class RequestItem
         Require(stage, ItemStageStatus.WaitingQc, "approved by QC");
         RequirePreviousApproved(stage);
         RequireNotStopped(stage, "approved by QC");
+        if (stage.InputBaseUnits is not null)
+        {
+            if (stage.ScrapBaseUnits > 0 || stage.ReworkBaseUnits > 0)
+            {
+                throw new InvalidOperationException("A stage with scrap or rework cannot be approved as a whole; record the inspection.");
+            }
 
+            stage.AcceptedBaseUnits += stage.AwaitingQcBaseUnits;
+            stage.AwaitingQcBaseUnits = 0;
+        }
+
+        return CompleteStage(stage, stage.PlannedQuantity, approvedByUserId, utc);
+    }
+
+    /// <summary>
+    /// QC decides base units of a submitted stage (Decision Log #92, #95 D2, #101): accepted, rework or scrap, a reason for rework and scrap, never more than what is awaiting QC (so nothing is
+    /// counted twice and nothing is overproduced). When nothing is awaiting any more: rework returns the stage to IN_PROGRESS for the reworked units; scrap with no rework waits for the shortfall
+    /// decision; otherwise the stage is QC approved and the next stage receives the accepted base units. The caller checks that the actor belongs to QC.
+    /// </summary>
+    public InspectionOutcome RecordInspection(int stageNo, IReadOnlyList<InspectionEntry> entries, long decidedByUserId, DateTime decidedAtUtc, string inspectionId)
+    {
+        ArgumentNullException.ThrowIfNull(entries);
+        var stage = GetStage(stageNo);
+        var utc = Customer.RequireUtc(decidedAtUtc, nameof(decidedAtUtc));
+        Require(stage, ItemStageStatus.WaitingQc, "inspected");
+        RequirePreviousApproved(stage);
+        RequireNotStopped(stage, "inspected");
+        if (stage.InputBaseUnits is null)
+        {
+            throw new StageNotCountableException("Stage " + stageNo + " has no whole number of base units; only the whole-quantity approval of the demonstration applies.");
+        }
+
+        if (entries.Count == 0)
+        {
+            throw new ArgumentException("At least one decision is required.", nameof(entries));
+        }
+
+        long total = 0;
+        foreach (var entry in entries)
+        {
+            if (!Enum.IsDefined(entry.Disposition) || entry.BaseUnits <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(entries), "Each decision needs a known disposition and a positive number of base units.");
+            }
+
+            var reason = entry.Reason?.Trim();
+            if (entry.Disposition != InspectionDisposition.Accepted && (string.IsNullOrEmpty(reason) || reason.Length > QcInspectionLine.MaxReasonLength))
+            {
+                throw new ArgumentException("A reason of 1 to " + QcInspectionLine.MaxReasonLength + " characters is required for rework and scrap.", nameof(entries));
+            }
+
+            total += entry.BaseUnits;
+        }
+
+        if (total > stage.AwaitingQcBaseUnits)
+        {
+            throw new InspectionExceedsAwaitingException("QC cannot decide " + total + " base units: only " + stage.AwaitingQcBaseUnits + " are awaiting QC at stage " + stageNo + ".");
+        }
+
+        var lines = new List<QcInspectionLine>();
+        foreach (var entry in entries)
+        {
+            switch (entry.Disposition)
+            {
+                case InspectionDisposition.Accepted:
+                    stage.AcceptedBaseUnits += entry.BaseUnits;
+                    break;
+                case InspectionDisposition.Rework:
+                    stage.ReworkBaseUnits += entry.BaseUnits;
+                    break;
+                default:
+                    stage.ScrapBaseUnits += entry.BaseUnits;
+                    break;
+            }
+
+            lines.Add(new QcInspectionLine(
+                Id, stageNo, inspectionId, entry.Disposition, entry.BaseUnits, entry.Disposition == InspectionDisposition.Accepted ? null : entry.Reason!.Trim(), decidedByUserId, utc));
+        }
+
+        stage.AwaitingQcBaseUnits -= total;
+        UpdatedAtUtc = utc;
+        var completed = false;
+        if (stage.AwaitingQcBaseUnits == 0)
+        {
+            if (stage.ReworkBaseUnits > 0)
+            {
+                stage.Status = ItemStageStatus.InProgress;
+            }
+            else if (stage.ScrapBaseUnits > 0)
+            {
+                stage.Status = ItemStageStatus.WaitingShortfallDecision;
+            }
+            else
+            {
+                CompleteStage(stage, (decimal)stage.AcceptedBaseUnits / BaseUnitsPerUnit, decidedByUserId, utc);
+                completed = true;
+            }
+        }
+
+        return new InspectionOutcome(lines, stage.Status, completed);
+    }
+
+    /// <summary>
+    /// Closes the shortfall scrap created (Decision Log #95 D3, #101): Management accepts it, or Planning records that replacement production was ordered; nothing is ordered automatically. The stage
+    /// then counts as QC approved with the accepted base units, which are all the next stage receives. A note or reference is required.
+    /// </summary>
+    public ShortfallDecision DecideShortfall(int stageNo, ShortfallKind kind, string? note, long decidedByUserId, DateTime decidedAtUtc)
+    {
+        var stage = GetStage(stageNo);
+        var utc = Customer.RequireUtc(decidedAtUtc, nameof(decidedAtUtc));
+        Require(stage, ItemStageStatus.WaitingShortfallDecision, "decided as a shortfall");
+        if (!Enum.IsDefined(kind))
+        {
+            throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unknown shortfall decision.");
+        }
+
+        var text = note?.Trim();
+        if (string.IsNullOrEmpty(text) || text.Length > QcInspectionLine.MaxReasonLength)
+        {
+            throw new ArgumentException("A note of 1 to " + QcInspectionLine.MaxReasonLength + " characters is required.", nameof(note));
+        }
+
+        var decision = new ShortfallDecision(Id, stageNo, kind, stage.ScrapBaseUnits, text, decidedByUserId, utc);
+        CompleteStage(stage, (decimal)stage.AcceptedBaseUnits / BaseUnitsPerUnit, decidedByUserId, utc);
+        UpdatedAtUtc = utc;
+        return decision;
+    }
+
+    // The stage is QC approved: the append-only approval, and the next stage becomes executable with the accepted base units (nothing when none were accepted).
+    private QcApproval CompleteStage(ItemStage stage, decimal approvedQuantity, long userId, DateTime utc)
+    {
         stage.Status = ItemStageStatus.QcApproved;
-        var approval = new QcApproval(stage.StageNo, stage.PlannedQuantity, approvedByUserId, utc);
+        var approval = new QcApproval(stage.StageNo, approvedQuantity, userId, utc);
         _qcApprovals.Add(approval);
         UpdatedAtUtc = utc;
 
         var next = _stages.FirstOrDefault(s => s.StageNo == stage.StageNo + 1);
         if (next is { Status: ItemStageStatus.WaitingPreviousQc })
         {
-            next.Status = ItemStageStatus.Waiting;
-            next.AvailableSinceUtc = utc;
+            if (stage.InputBaseUnits is not null)
+            {
+                next.InputBaseUnits = stage.AcceptedBaseUnits;
+            }
+
+            if (stage.InputBaseUnits is null || stage.AcceptedBaseUnits > 0)
+            {
+                next.Status = ItemStageStatus.Waiting;
+                next.AvailableSinceUtc = utc;
+            }
         }
 
         stage.PlanningPosition = null;
         return approval;
+    }
+
+    private long? PlannedBaseUnits(ItemStage stage)
+    {
+        var units = stage.PlannedQuantity * BaseUnitsPerUnit;
+        return units == decimal.Truncate(units) && units > 0 ? (long)units : null;
     }
 
     /// <summary>

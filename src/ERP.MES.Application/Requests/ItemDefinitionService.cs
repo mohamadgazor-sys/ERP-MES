@@ -126,6 +126,9 @@ public sealed class ItemDefinitionService(
                 {
                     return Outcome<Stored<Request>>.Invalid(ValidationIssue.QuantityTypeInvalid);
                 }
+
+                // QC inspects in base units: the item keeps how many base units one ordered unit counts at the time it is defined (Decision Log #90, #101).
+                specification = specification with { BaseUnitsPerUnit = type.Value.BaseUnitsPerType };
             }
 
             if (command.MaterialId is { } materialId)

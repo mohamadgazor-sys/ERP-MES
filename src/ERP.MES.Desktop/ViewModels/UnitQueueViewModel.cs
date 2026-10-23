@@ -396,7 +396,7 @@ public sealed class UnitQueueViewModel(UnitQueueService queue, StageWorkService 
         e.Priority.PersianName(),
         Messages.QueueCategoryText(e.Category),
         ProductionQueueViewModel.StageStatusText(e.Status),
-        e.Block == QueueBlock.StageStopped ? Messages.QueueBlockText(e.Block) + ": " + e.StopReason : Messages.QueueBlockText(e.Block),
+        (e.Block == QueueBlock.StageStopped ? Messages.QueueBlockText(e.Block) + ": " + e.StopReason : Messages.QueueBlockText(e.Block)) + (e.ReworkBaseUnits > 0 ? $" — بازکاری: {Digits(e.ReworkBaseUnits.ToString(CultureInfo.InvariantCulture))} واحد پایه" : string.Empty),
         e.PlanningPosition is { } p ? Digits(p) : "—",
         e.OverrideRank is { } rank
             ? $"جایگزینی مدیریت (رتبهٔ {Digits(rank)}): {e.OverrideReason}" + (e.OverrideNeedsReview ? " — نیازمند بازبینی مدیریت: " + e.OverrideReviewNote : string.Empty)

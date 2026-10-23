@@ -129,6 +129,11 @@ public static class Messages
         ValidationIssue.StageGateNotSatisfied => "شرط‌های آزادسازی تولید برقرار نیست (تأیید مدیریت، نقشه‌کشی، قرارداد، استعلام یا پرسش‌ها) یا درخواست لغو/بسته شده است؛ مرحله شروع یا آزاد نشد.",
         ValidationIssue.StageStopped => "این مرحله متوقف شده است و تا ازسرگیری ادامه نمی‌یابد.",
         ValidationIssue.StageUnitNotDesignated => "شما به واحد تولید این مرحله منصوب نشده‌اید؛ برنامه‌ریزی باید شما را به این واحد منصوب کند.",
+        ValidationIssue.InspectionEntriesInvalid => "تصمیم‌های بازرسی معتبر نیستند (حداقل یک تصمیم، تعداد مثبت، و برای بازکاری و ضایعات دلیل الزامی است).",
+        ValidationIssue.InspectionExceedsAwaiting => "تعداد تصمیم‌ها از واحدهای در انتظار کنترل کیفیت بیشتر است؛ هیچ واحدی دوبار شمرده نمی‌شود.",
+        ValidationIssue.StageNotCountable => "تعداد این مرحله عدد صحیحی از واحدهای پایه نیست؛ بازرسی تعدادی ممکن نیست.",
+        ValidationIssue.UseQuantityInspection => "مرحلهٔ واحد تولید با بازرسی تعدادی (پذیرفته/بازکاری/ضایعات) بررسی می‌شود، نه تأیید کل تعداد.",
+        ValidationIssue.ShortfallNoteRequired => "یادداشت یا شمارهٔ ارجاع تصمیم کسری را وارد کنید (حداکثر ۳۰۰ نویسه).",
         ValidationIssue.ShiftCodeDuplicate => "این کد شیفت قبلاً استفاده شده است.",
         ValidationIssue.ShiftTimesInvalid => "ساعت‌های شیفت معتبر نیست (شروع و پایان نباید یکسان باشند؛ استراحت باید داخل شیفت باشد؛ قالب ساعت: ۰۸:۰۰).",
         ValidationIssue.UnitShiftExists => "این واحد همین شیفت را از قبل دارد.",
@@ -368,6 +373,7 @@ public static class Messages
         ERP.MES.Application.Production.QueueBlock.NotReleased => "هنوز توسط برنامه‌ریزی آزاد نشده است",
         ERP.MES.Application.Production.QueueBlock.WaitingPreviousQc => "منتظر تأیید کنترل کیفیت مرحلهٔ قبل",
         ERP.MES.Application.Production.QueueBlock.WaitingQc => "منتظر تأیید کنترل کیفیت",
+        ERP.MES.Application.Production.QueueBlock.WaitingShortfallDecision => "کسری ناشی از ضایعات منتظر تصمیم مدیریت یا برنامه‌ریزی است",
         _ => "—",
     };
 

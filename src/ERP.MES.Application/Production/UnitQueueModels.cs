@@ -34,6 +34,9 @@ public enum QueueBlock
 
     /// <summary>The stage was submitted and waits for QC.</summary>
     WaitingQc,
+
+    /// <summary>Scrap left a shortfall that Management must accept or Planning must answer before the stage can be QC approved.</summary>
+    WaitingShortfallDecision,
 }
 
 /// <summary>
@@ -72,6 +75,9 @@ public sealed record UnitQueueEntry(
     public int Order { get; init; }
 
     public DateTime? PlannedEndUtc { get; init; }
+
+    /// <summary>Base units QC sent to rework that production has to redo and resubmit (0 when none).</summary>
+    public long ReworkBaseUnits { get; init; }
 
     public bool IsActionable => Block == QueueBlock.None;
 

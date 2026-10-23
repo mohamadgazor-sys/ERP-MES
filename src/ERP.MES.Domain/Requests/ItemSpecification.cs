@@ -6,8 +6,9 @@ namespace ERP.MES.Domain.Requests;
 /// A MAKE item needs the quantity type, the material and the weight; a REPAIR item may omit them where they do not apply. Values are exact: more decimals than the scale allows are refused,
 /// never rounded.
 /// </summary>
-public sealed record ItemSpecification(long? QuantityTypeId, long? MaterialId, decimal? WeightKgPerBaseUnit, decimal? LengthMm, decimal? DiameterMm)
+public sealed record ItemSpecification(long? QuantityTypeId, long? MaterialId, decimal? WeightKgPerBaseUnit, decimal? LengthMm, decimal? DiameterMm, int BaseUnitsPerUnit = 1)
 {
+    /// <summary>How many base units one ordered unit counts, taken from the quantity type when the item is defined (piece 1, pair 2, a set the sum of its members; Decision Log #90, #101). QC inspects in base units.</summary>
     /// <summary>Weight scale (decimal 12,4): at most 8 integer digits and 4 decimals.</summary>
     public const decimal MaxWeightKg = 99_999_999.9999m;
 

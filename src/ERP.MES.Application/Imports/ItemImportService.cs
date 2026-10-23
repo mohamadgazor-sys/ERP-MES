@@ -170,6 +170,10 @@ public sealed class ItemImportService(
                 }
 
                 var data = loaded.Parsed!.Rows.Where(r => r.Data is not null).ToDictionary(r => r.SheetRowNo, r => r.Data!);
+                var perType = (await qc.ListQuantityTypesAsync(cancellationToken)).ToDictionary(t => t.Value.Id, t => t.Value.BaseUnitsPerType);
+
+                // QC inspects in base units: the item keeps how many base units one ordered unit counts (Decision Log #101).
+                ItemSpecification WithBaseUnits(ItemSpecification spec) => spec.QuantityTypeId is { } id && perType.TryGetValue(id, out var units) ? spec with { BaseUnitsPerUnit = units } : spec;
                 var outcomes = new List<(ImportRowPreview Row, ItemImportOutcome Outcome)>();
                 foreach (var row in preview.Rows)
                 {
@@ -203,7 +207,7 @@ public sealed class ItemImportService(
                             var rowData = data.GetValueOrDefault(row.SheetRowNo);
                             if (outcome == ItemImportOutcome.Created)
                             {
-                                var item = request.DefineItem(0, rowData!.ItemNo, rowData.PartName, rowData.Quantity, rowData.Specification, user.UserId, now, rowData.Priority);
+                                var item = request.DefineItem(0, rowData!.ItemNo, rowData.PartName, rowData.Quantity, WithBaseUnits(rowData.Specification), user.UserId, now, rowData.Priority);
                                 foreach (var stage in rowData.Stages)
                                 {
                                     item.DefineInitialStage(stage.Title, stage.MinutesPerPiece, null, stage.ProductionUnitId, stage.MachineId);
@@ -211,7 +215,7 @@ public sealed class ItemImportService(
                             }
                             else if (outcome == ItemImportOutcome.Updated)
                             {
-                                request.ReviseItem(rowData!.ItemNo, rowData.PartName, rowData.Quantity, rowData.Priority, rowData.Specification, now);
+                                request.ReviseItem(rowData!.ItemNo, rowData.PartName, rowData.Quantity, rowData.Priority, WithBaseUnits(rowData.Specification), now);
                             }
                         }
                     },

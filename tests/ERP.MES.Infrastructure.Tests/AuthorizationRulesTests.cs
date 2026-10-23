@@ -62,6 +62,9 @@ public class AuthorizationRulesTests
         [Permission.OrderUnitQueue] = (["PLANNING"], null),
         [Permission.ManageStageHold] = (["PLANNING", "PRODUCTION"], null),
         [Permission.ManageUnitDesignations] = (["PLANNING"], null),
+        [Permission.ViewQcInspections] = (["QC", "PLANNING", "MANAGEMENT"], null),
+        [Permission.AcceptShortfall] = (["MANAGEMENT"], null),
+        [Permission.OrderShortfallReplacement] = (["PLANNING"], null),
         [Permission.ViewCalendar] = (["MANAGEMENT", "PLANNING", "PRODUCTION"], null),
         [Permission.ScheduleWorkers] = (["PLANNING"], null),
     };
