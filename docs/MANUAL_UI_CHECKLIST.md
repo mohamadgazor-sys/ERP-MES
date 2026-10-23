@@ -236,3 +236,10 @@ Prepare a fictional demonstration database with `demo-init` (`docs/AUTHENTICATIO
 - S3: Rework: the stage returns to production for exactly the reworked units (the unit queue shows "بازکاری: n واحد پایه"); after resubmission QC decides only those units.
 - S4: Scrap: when everything is decided the stage waits for "کسری". QC cannot decide it; Management presses "پذیرش کسری" or Planning presses "ثبت سفارش جایگزین" with a note; then the stage is approved and the next stage gets only the accepted units.
 - S5: Other departments see a denied page; Planning and Management read the worklist and history without being able to inspect.
+
+## T. Daily job reports and supervisor review (Decision Log #82 R5, #95 D8, #102) - not run by a person; covered by automated tests
+- T1: As a Production user linked to an operator open "گزارش کار روزانه", pick the date (Jalali), unit and shift, add lines (stage, machine, HH:mm times, downtime with a reason, processed base units), save the draft and submit. A user not linked to an operator is told so.
+- T2: Lines outside the shift, on an unplanned day, in an absence, on another machine than planned or overlapping another operator are accepted but show "خط علامت‌دار"; overlapping hours of the same operator are refused.
+- T3: As the unit's supervisor approve a report or return it with a reason; the operator edits the same report and resubmits. Planning can review only when the unit has no supervisor (the status then says so); nobody reviews their own report.
+- T4: As Planning, "Undo start/submission" is available only with a reason and only before QC decided; operators cannot act for each other.
+- T5: Management, Planning and the supervisor read reports; other departments see a denied page.

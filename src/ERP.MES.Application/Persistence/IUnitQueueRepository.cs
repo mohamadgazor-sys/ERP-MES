@@ -60,6 +60,9 @@ public interface IUnitQueueRepository
     /// <summary>Designates a user to a unit, or reinstates a withdrawn designation, with its audit entry, in one transaction.</summary>
     Task<Stored<UserUnitDesignation>> AssignDesignationAsync(long userId, long productionUnitId, long assignedByUserId, DateTime assignedAtUtc, AuditLogEntry audit, CancellationToken cancellationToken = default);
 
+    /// <summary>Marks a designation as the unit's supervisor (or not) under its expected version, with its audit entry.</summary>
+    Task<Stored<UserUnitDesignation>> SetSupervisorAsync(long designationId, long expectedVersion, bool isSupervisor, AuditLogEntry audit, CancellationToken cancellationToken = default);
+
     /// <summary>Withdraws a designation (kept as history) under its expected version, with its audit entry.</summary>
     Task<Stored<UserUnitDesignation>> RevokeDesignationAsync(long designationId, long expectedVersion, long revokedByUserId, DateTime revokedAtUtc, AuditLogEntry audit, CancellationToken cancellationToken = default);
 }

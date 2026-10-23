@@ -123,6 +123,18 @@ public enum Permission
     /// <summary>Stop a released stage because of a problem, and resume it (Planning, and Production for their own unit; Decision Log #99).</summary>
     ManageStageHold,
 
+    /// <summary>Create and submit one's own daily job report (an operator: a Production user linked to an operator record; Decision Log #102).</summary>
+    SubmitJobReport,
+
+    /// <summary>Review (approve or return) daily job reports: the supervisor of the unit, or Planning when the unit has none (flagged; Decision Log #95 D8, #102).</summary>
+    ReviewJobReports,
+
+    /// <summary>Read daily job reports: operators their own, supervisors their unit's, Planning and Management all (Decision Log #95 D8, #102).</summary>
+    ViewJobReports,
+
+    /// <summary>Correct an erroneous stage start or submission with a reason (Planning; Decision Log #95 D8, #102).</summary>
+    CorrectStageAction,
+
     /// <summary>Read the QC worklist, stage quantity balances and inspection history (QC, Planning and Management; Decision Log #101).</summary>
     ViewQcInspections,
 
@@ -215,6 +227,10 @@ public static class AuthorizationRules
         [Permission.OrderUnitQueue] = new([DepartmentCodes.Planning], null),
         [Permission.ManageStageHold] = new([DepartmentCodes.Planning, DepartmentCodes.Production], null),
         [Permission.ManageUnitDesignations] = new([DepartmentCodes.Planning], null),
+        [Permission.SubmitJobReport] = new([DepartmentCodes.Production], null),
+        [Permission.ReviewJobReports] = new([DepartmentCodes.Production, DepartmentCodes.Planning], null),
+        [Permission.ViewJobReports] = new([DepartmentCodes.Production, DepartmentCodes.Planning, DepartmentCodes.Management], null),
+        [Permission.CorrectStageAction] = new([DepartmentCodes.Planning], null),
         [Permission.ViewQcInspections] = new([DepartmentCodes.Qc, DepartmentCodes.Planning, DepartmentCodes.Management], null),
         [Permission.AcceptShortfall] = new([DepartmentCodes.Management], null),
         [Permission.OrderShortfallReplacement] = new([DepartmentCodes.Planning], null),

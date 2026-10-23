@@ -142,7 +142,8 @@ public partial class App : System.Windows.Application
             new ItemImportViewModel(workflow.ItemImport, workflow.Requests, new ERP.MES.Infrastructure.Imports.XlsxWorkbookWriter(), CurrentUser),
             new UnitQueueViewModel(workflow.UnitQueue, workflow.StageWork, workflow.UnitDesignations, dates, DigitStyle.Persian, CurrentUser),
             new CalendarViewModel(workflow.Calendar, workflow.WorkerSchedule, workflow.PlanningMaster, workflow.Operators, dates, DigitStyle.Persian, () => DateTime.UtcNow, CurrentUser),
-            new QcInspectionViewModel(workflow.QcInspection, dates, DigitStyle.Persian, CurrentUser));
+            new QcInspectionViewModel(workflow.QcInspection, dates, DigitStyle.Persian, CurrentUser),
+            new JobReportsViewModel(workflow.JobReports, workflow.UnitQueue, workflow.PlanningMaster, workflow.Calendar, dates, DigitStyle.Persian, () => DateTime.UtcNow, CurrentUser));
 
         _mainWindow = new MainWindow(shell, session, pages);
         _mainWindow.Show();

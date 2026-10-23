@@ -1872,3 +1872,31 @@ Append one dated entry after every substantial session. Do not replace prior ent
 
 ### Recommended exact next action
 - Merge after CI, then 6b (daily job reports and supervisor review, D8).
+
+---
+
+### Date / session
+- Date: 2026-10-23
+- Claude Code session ID (if useful): session_01UwqjPjBXLd2apjZb2urjds (phase 6b: daily job reports and supervisor review)
+
+### Goal
+- Operators report their own work per day; the unit supervisor (Planning when none, flagged) reviews; Planning may correct an erroneous start or submission with a reason (Decision Log #82 R5, #95 D8).
+
+### Completed
+- Domain: `DailyJobReport` with lines and append-only events, flags, `IsSupervisor` on designations, `UndoStart` / `UndoSubmit`.
+- Application: `JobReportService` (draft, submit with overlap checks and flags, review), supervisor designation, `StageWorkService.CorrectAsync`.
+- Persistence: three tables, `EfJobReportRepository`, migration `AddJobReports` with upgrade test.
+- Desktop: page "گزارش کار روزانه".
+- Tests: service (own-report rule, flags, review rules and fallback, visibility, validation, overlaps, corrections), migration, view model.
+
+### Decisions newly approved
+- None; labelled defaults are listed in #102.
+
+### Unresolved questions / risks
+- Late-report limit (no number given), amendment of approved reports, overtime links (6c), reports feed costing and KPIs only in phases 7 and 8.
+
+### Commands/tests actually run and results
+- See the pull request for the Linux and Windows CI totals of the final head.
+
+### Recommended exact next action
+- Merge after CI, then 6c (overtime assignments, D5).
