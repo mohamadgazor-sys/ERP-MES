@@ -21,12 +21,12 @@ public class MigrationTests
         // EF Core keeps its own bookkeeping tables (the migration history, and in EF Core 10 a migrations lock); only the application tables are compared.
         Assert.Contains("__EFMigrationsHistory", tables);
         Assert.Equal(
-            new[] { "AuditLog", "CalendarExceptions", "ContractDocumentLinks", "ContractHistory", "ContractVersions", "Contracts", "Customers", "Departments", "Documents", "DrawingClarifications", "ItemImportRows", "ItemImports", "ItemStages", "MachineHourlyRates", "Machines", "MaterialPrices", "Materials", "OperatorMachineAssignments", "OperatorMachineQualifications", "OperatorOffDays", "Operators", "ProductionUnits", "QcApprovals", "QcInspectionLines", "QuantityTypeMembers", "QuantityTypes", "QueueOverrideHistory", "QueueOverrides", "RawMaterialInquiries", "RawMaterialInquiryDispositions", "RawMaterialInquiryHistory", "RawMaterialInquiryLines", "RawMaterialInquiryResponses", "RawMaterialInquirySupplyRoutes", "RequestDocumentLinks", "RequestItems", "RequestWorkflowEntries", "Requests", "Roles", "ShiftTemplates", "ShortfallDecisions", "SystemSetup", "UnitConversions", "UnitShifts", "UnitsOfMeasure", "UserCredentials", "UserUnitDesignations", "Users", "WeeklyWorkdays", "WorkerSchedules" },
+            new[] { "AuditLog", "CalendarExceptions", "ContractDocumentLinks", "ContractHistory", "ContractVersions", "Contracts", "Customers", "DailyJobReportEvents", "DailyJobReportLines", "DailyJobReports", "Departments", "Documents", "DrawingClarifications", "ItemImportRows", "ItemImports", "ItemStages", "MachineHourlyRates", "Machines", "MaterialPrices", "Materials", "OperatorMachineAssignments", "OperatorMachineQualifications", "OperatorOffDays", "Operators", "ProductionUnits", "QcApprovals", "QcInspectionLines", "QuantityTypeMembers", "QuantityTypes", "QueueOverrideHistory", "QueueOverrides", "RawMaterialInquiries", "RawMaterialInquiryDispositions", "RawMaterialInquiryHistory", "RawMaterialInquiryLines", "RawMaterialInquiryResponses", "RawMaterialInquirySupplyRoutes", "RequestDocumentLinks", "RequestItems", "RequestWorkflowEntries", "Requests", "Roles", "ShiftTemplates", "ShortfallDecisions", "SystemSetup", "UnitConversions", "UnitShifts", "UnitsOfMeasure", "UserCredentials", "UserUnitDesignations", "Users", "WeeklyWorkdays", "WorkerSchedules" },
             tables.Where(t => !t.StartsWith("__EF", StringComparison.Ordinal)).ToArray());
 
         await using var context = db.NewContext();
         var applied = (await context.Database.GetAppliedMigrationsAsync(TestContext.Current.CancellationToken)).ToArray();
-        Assert.Equal(17, applied.Length);
+        Assert.Equal(18, applied.Length);
         Assert.EndsWith("_InitialCreate", applied[0], StringComparison.Ordinal);
         Assert.EndsWith("_AddAuthentication", applied[1], StringComparison.Ordinal);
         Assert.EndsWith("_SingleWorkTypePerRequest", applied[2], StringComparison.Ordinal);
@@ -44,6 +44,7 @@ public class MigrationTests
         Assert.EndsWith("_AddUnitQueue", applied[14], StringComparison.Ordinal);
         Assert.EndsWith("_AddPlanningCalendar", applied[15], StringComparison.Ordinal);
         Assert.EndsWith("_AddQuantityQc", applied[16], StringComparison.Ordinal);
+        Assert.EndsWith("_AddJobReports", applied[17], StringComparison.Ordinal);
         Assert.Empty(await context.Database.GetPendingMigrationsAsync(TestContext.Current.CancellationToken));
     }
 
@@ -55,7 +56,7 @@ public class MigrationTests
 
         // Fails if the model changed without a new migration, or if the snapshot was edited away from the model.
         Assert.False(context.Database.HasPendingModelChanges());
-        Assert.Equal(17, context.Database.GetMigrations().Count());
+        Assert.Equal(18, context.Database.GetMigrations().Count());
     }
 
     [Fact]

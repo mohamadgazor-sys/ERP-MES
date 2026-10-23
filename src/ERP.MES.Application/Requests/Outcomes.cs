@@ -297,6 +297,27 @@ public enum ValidationIssue
     /// <summary>The user is not designated to the stage's production unit.</summary>
     StageUnitNotDesignated,
 
+    /// <summary>The signed-in user is not linked to an active operator, so no report can be made in their name.</summary>
+    JobReportOperatorNotLinked,
+
+    /// <summary>The report date is missing, in the future or the unit does not run the shift.</summary>
+    JobReportDateInvalid,
+
+    /// <summary>A report of this operator for this date and shift already exists.</summary>
+    JobReportDuplicate,
+
+    /// <summary>A line is not valid (times, downtime and its reason, quantity, machine of another unit, stage not released or not of this unit).</summary>
+    JobReportLineInvalid,
+
+    /// <summary>Lines of the report overlap each other or another submitted or approved report of the same operator.</summary>
+    JobReportLinesOverlap,
+
+    /// <summary>A return reason (1 to 300 characters) is required.</summary>
+    JobReportReasonRequired,
+
+    /// <summary>Planning may review only when the unit has no designated supervisor, and nobody reviews their own report.</summary>
+    JobReportReviewerNotAllowed,
+
     /// <summary>The inspection decisions are not valid (none, a non-positive count, or a reason missing for rework or scrap).</summary>
     InspectionEntriesInvalid,
 

@@ -1418,6 +1418,11 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
                     b.Property<long>("AssignedByUserId")
                         .HasColumnType("INTEGER");
 
+                    b.Property<bool>("IsSupervisor")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(false);
+
                     b.Property<long>("ProductionUnitId")
                         .HasColumnType("INTEGER");
 
@@ -1687,6 +1692,164 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
                             UpdatedAtUtc = new DateTime(2026, 10, 22, 0, 0, 0, 0, DateTimeKind.Utc),
                             Version = 1L
                         });
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Reporting.DailyJobReport", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("CreatedByUserId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("OperatorId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("ProductionUnitId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ReturnReason")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("ReviewedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("ReviewedByPlanningFallback")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long?>("ReviewedByUserId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("RevisionNo")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("ShiftTemplateId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("SubmittedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateOnly>("WorkDate")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("ProductionUnitId");
+
+                    b.HasIndex("ReviewedByUserId");
+
+                    b.HasIndex("ShiftTemplateId");
+
+                    b.HasIndex("WorkDate", "ProductionUnitId");
+
+                    b.HasIndex("OperatorId", "WorkDate", "ShiftTemplateId")
+                        .IsUnique();
+
+                    b.ToTable("DailyJobReports", (string)null);
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Reporting.JobReportEvent", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("AtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("DailyJobReportId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Kind")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("PlanningFallback")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Reason")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("UserId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DailyJobReportId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("DailyJobReportEvents", (string)null);
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Reporting.JobReportLine", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("DailyJobReportId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("DowntimeMinutes")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("DowntimeReason")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("EndUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Flags")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("LineNo")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("MachineId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Note")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("ProcessedBaseUnits")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("RequestId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("RequestItemId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("StageNo")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("StartUtc")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DailyJobReportId");
+
+                    b.HasIndex("RequestId");
+
+                    b.HasIndex("MachineId", "StartUtc");
+
+                    b.HasIndex("RequestItemId", "StageNo");
+
+                    b.ToTable("DailyJobReportLines", (string)null);
                 });
 
             modelBuilder.Entity("ERP.MES.Domain.Requests.Customer", b =>
@@ -2988,6 +3151,81 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
                         .OnDelete(DeleteBehavior.Restrict);
                 });
 
+            modelBuilder.Entity("ERP.MES.Domain.Reporting.DailyJobReport", b =>
+                {
+                    b.HasOne("ERP.MES.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ERP.MES.Domain.Planning.Operator", null)
+                        .WithMany()
+                        .HasForeignKey("OperatorId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ERP.MES.Domain.Planning.ProductionUnit", null)
+                        .WithMany()
+                        .HasForeignKey("ProductionUnitId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ERP.MES.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("ReviewedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("ERP.MES.Domain.Scheduling.ShiftTemplate", null)
+                        .WithMany()
+                        .HasForeignKey("ShiftTemplateId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Reporting.JobReportEvent", b =>
+                {
+                    b.HasOne("ERP.MES.Domain.Reporting.DailyJobReport", null)
+                        .WithMany("Events")
+                        .HasForeignKey("DailyJobReportId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ERP.MES.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Reporting.JobReportLine", b =>
+                {
+                    b.HasOne("ERP.MES.Domain.Reporting.DailyJobReport", null)
+                        .WithMany("Lines")
+                        .HasForeignKey("DailyJobReportId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ERP.MES.Domain.Planning.Machine", null)
+                        .WithMany()
+                        .HasForeignKey("MachineId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ERP.MES.Domain.Requests.Request", null)
+                        .WithMany()
+                        .HasForeignKey("RequestId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ERP.MES.Domain.Requests.ItemStage", null)
+                        .WithMany()
+                        .HasForeignKey("RequestItemId", "StageNo")
+                        .HasPrincipalKey("RequestItemId", "StageNo")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("ERP.MES.Domain.Requests.Customer", b =>
                 {
                     b.HasOne("ERP.MES.Domain.Identity.User", null)
@@ -3290,6 +3528,13 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
             modelBuilder.Entity("ERP.MES.Domain.Quality.QuantityType", b =>
                 {
                     b.Navigation("Members");
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Reporting.DailyJobReport", b =>
+                {
+                    b.Navigation("Events");
+
+                    b.Navigation("Lines");
                 });
 
             modelBuilder.Entity("ERP.MES.Domain.Requests.Request", b =>

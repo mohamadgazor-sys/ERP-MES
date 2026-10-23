@@ -143,6 +143,19 @@ public sealed class EfUnitQueueRepository(IDbContextFactory<ErpMesDbContext> con
         return new Stored<UserUnitDesignation>(row, context.GetRowVersion(row));
     }
 
+    public async Task<Stored<UserUnitDesignation>> SetSupervisorAsync(long designationId, long expectedVersion, bool isSupervisor, AuditLogEntry audit, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(audit);
+        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
+        var row = await context.UserUnitDesignations.SingleOrDefaultAsync(d => d.Id == designationId, cancellationToken)
+            ?? throw new RecordNotFoundException("unit designation", designationId);
+        PersistenceSave.CheckExpectedVersion(context, row, expectedVersion);
+        row.SetSupervisor(isSupervisor);
+        context.AuditLog.Add(audit);
+        await PersistenceSave.SaveAsync(context, cancellationToken);
+        return new Stored<UserUnitDesignation>(row, context.GetRowVersion(row));
+    }
+
     public async Task<Stored<UserUnitDesignation>> RevokeDesignationAsync(
         long designationId, long expectedVersion, long revokedByUserId, DateTime revokedAtUtc, AuditLogEntry audit, CancellationToken cancellationToken = default)
     {

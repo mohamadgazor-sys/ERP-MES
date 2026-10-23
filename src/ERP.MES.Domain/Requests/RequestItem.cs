@@ -438,6 +438,37 @@ public sealed class RequestItem
     }
 
     /// <summary>
+    /// Planning corrects an erroneous start (Decision Log #95 D8, #102): IN_PROGRESS back to WAITING, allowed only while QC has decided nothing yet and nothing awaits QC. The caller records the reason.
+    /// </summary>
+    public void UndoStart(int stageNo)
+    {
+        var stage = GetStage(stageNo);
+        Require(stage, ItemStageStatus.InProgress, "corrected back to waiting");
+        if (stage.AcceptedBaseUnits > 0 || stage.ScrapBaseUnits > 0 || stage.ReworkBaseUnits > 0 || stage.AwaitingQcBaseUnits > 0)
+        {
+            throw new InvalidOperationException("Stage " + stageNo + " already has QC decisions; a start cannot be undone.");
+        }
+
+        stage.Status = ItemStageStatus.Waiting;
+    }
+
+    /// <summary>
+    /// Planning corrects an erroneous submission (Decision Log #95 D8, #102): WAITING_QC back to IN_PROGRESS, allowed only while QC has decided nothing at all about the stage.
+    /// </summary>
+    public void UndoSubmit(int stageNo)
+    {
+        var stage = GetStage(stageNo);
+        Require(stage, ItemStageStatus.WaitingQc, "corrected back to in progress");
+        if (stage.AcceptedBaseUnits > 0 || stage.ScrapBaseUnits > 0 || stage.ReworkBaseUnits > 0)
+        {
+            throw new InvalidOperationException("QC has already decided units of stage " + stageNo + "; a submission cannot be undone.");
+        }
+
+        stage.AwaitingQcBaseUnits = 0;
+        stage.Status = ItemStageStatus.InProgress;
+    }
+
+    /// <summary>
     /// Planning's position of a released (WAITING or IN_PROGRESS) stage in its unit's queue; null removes it. Positions are not unique: equal positions are ordered first come, first served.
     /// Returns false when nothing changed.
     /// </summary>

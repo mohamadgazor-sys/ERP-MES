@@ -84,6 +84,7 @@ public sealed class UserUnitDesignationConfiguration : IEntityTypeConfiguration<
         builder.Property(d => d.RevokedByUserId);
         builder.HasOne<User>().WithMany().HasForeignKey(d => d.RevokedByUserId).IsRequired(false).OnDelete(DeleteBehavior.Restrict);
         builder.Ignore(d => d.IsActive);
+        builder.Property(d => d.IsSupervisor).IsRequired().HasDefaultValue(false);
         builder.Property<long>(ErpMesDbContext.RowVersionPropertyName).IsConcurrencyToken().IsRequired();
     }
 }

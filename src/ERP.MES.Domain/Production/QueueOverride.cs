@@ -224,6 +224,19 @@ public sealed class UserUnitDesignation
 
     public bool IsActive => RevokedAtUtc is null;
 
+    /// <summary>True when the user supervises the unit: reviews and approves the unit's job reports (Decision Log #95 D8, #102). Set by Planning.</summary>
+    public bool IsSupervisor { get; private set; }
+
+    public void SetSupervisor(bool isSupervisor)
+    {
+        if (!IsActive)
+        {
+            throw new InvalidOperationException("The designation is withdrawn.");
+        }
+
+        IsSupervisor = isSupervisor;
+    }
+
     /// <summary>Withdraws the designation. The row is kept (who designated and who withdrew stays on record).</summary>
     public void Revoke(long revokedByUserId, DateTime revokedAtUtc)
     {
@@ -248,5 +261,6 @@ public sealed class UserUnitDesignation
         AssignedAtUtc = Customer.RequireUtc(assignedAtUtc, nameof(assignedAtUtc));
         RevokedAtUtc = null;
         RevokedByUserId = null;
+        IsSupervisor = false;
     }
 }

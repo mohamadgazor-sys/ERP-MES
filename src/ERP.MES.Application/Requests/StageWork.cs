@@ -21,6 +21,13 @@ public enum StageAction
     ApproveWholeQuantity,
 }
 
+/// <summary>The two corrections Planning may make to an erroneous operator action.</summary>
+public enum StageCorrection
+{
+    UndoStart = 1,
+    UndoSubmit,
+}
+
 /// <summary>Which stage actions the current user may perform, as the Application answers it now (from the database). A convenience for enabling buttons; every action checks again.</summary>
 public sealed record StageWorkCapabilities(bool CanView, bool CanRelease, bool CanRun, bool CanApprove)
 {
@@ -72,6 +79,72 @@ public sealed record StageWorkView(IReadOnlyList<ProductionQueueEntry> Entries, 
 public sealed class StageWorkService(IRequestRepository requests, CurrentAuthorization authorization, IClock clock, IAuditContext auditContext, RequestGateService gates, IUnitQueueRepository unitStore)
 {
     private static readonly Permission[] AllPermissions = [Permission.ViewProductionQueue, Permission.ReleaseStage, Permission.RunStage, Permission.InspectOrCorrectQc];
+
+    /// <summary>
+    /// Planning corrects an erroneous stage start (back to waiting) or submission (back to in progress) with a mandatory reason, audited (Decision Log #95 D8, #102). It is refused once QC has decided
+    /// anything about the stage. Nobody else can change a start or submission made by another operator.
+    /// </summary>
+    public async Task<Outcome<StageActionResult>> CorrectAsync(Principal? principal, StageCorrection correction, StageTarget target, string? reason, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(target);
+        var decision = await authorization.CheckAsync(principal, Permission.CorrectStageAction, cancellationToken);
+        if (!decision.IsAllowed)
+        {
+            return Outcome<StageActionResult>.Fail(OperationStatus.NotAuthorized);
+        }
+
+        var text = reason?.Trim();
+        if (!Enum.IsDefined(correction) || string.IsNullOrEmpty(text) || text.Length > 300)
+        {
+            return Outcome<StageActionResult>.Invalid(ValidationIssue.QueueReasonRequired);
+        }
+
+        var expected = RowVersionExpectations.ForRequest(target.RequestVersion).WithItem(target.ItemId, target.ItemVersion);
+        if (!target.StageVersions.TryGetValue(target.StageNo, out var own))
+        {
+            return Outcome<StageActionResult>.Invalid(ValidationIssue.VersionsMissing);
+        }
+
+        expected = expected.WithStage(target.ItemId, target.StageNo, own);
+        var user = decision.Current!;
+        var now = clock.UtcNow;
+        var before = ItemStageStatus.Planned;
+        var after = ItemStageStatus.Planned;
+        var summary = string.Empty;
+        try
+        {
+            return await CustomerService.GuardAsync(async () =>
+            {
+                await requests.UpdateRowsAsync(
+                    target.RequestId,
+                    expected,
+                    request =>
+                    {
+                        var item = request.Items.FirstOrDefault(i => i.Id == target.ItemId) ?? throw new InvalidOperationException("The request has no such item.");
+                        var stage = item.Stages.FirstOrDefault(s => s.StageNo == target.StageNo) ?? throw new InvalidOperationException("The item has no such stage.");
+                        before = stage.Status;
+                        if (correction == StageCorrection.UndoStart)
+                        {
+                            item.UndoStart(target.StageNo);
+                        }
+                        else
+                        {
+                            item.UndoSubmit(target.StageNo);
+                        }
+
+                        after = stage.Status;
+                        summary = $"Request {request.RequestNo.Value}, item {item.ItemNo}, stage {target.StageNo} ({stage.StageTitle}) corrected by Planning: {before.Code()} -> {after.Code()}; reason: {text}";
+                    },
+                    _ => [new AuditLogEntry(now, user.UserId, auditContext.MachineName, auditContext.OsUserName, auditContext.DatabaseLogin, AuditActions.StageCorrected, "ItemStage", target.ItemId + "/" + target.StageNo, summary)],
+                    cancellationToken);
+                return Outcome<StageActionResult>.Ok(new StageActionResult(StageAction.Start, target.StageNo, after, null, null));
+            });
+        }
+        catch (InvalidOperationException)
+        {
+            return Outcome<StageActionResult>.Fail(OperationStatus.InvalidState);
+        }
+    }
 
     public async Task<StageWorkCapabilities> GetCapabilitiesAsync(Principal? principal, CancellationToken cancellationToken = default)
     {
