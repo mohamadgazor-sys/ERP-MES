@@ -18,9 +18,8 @@ public class ProductionQueueViewModelTests
         foreach (var (itemNo, priority, quantity) in items)
         {
             h.Clock.Advance(TimeSpan.FromMinutes(1));
-            var version = (await h.Workflow.Requests.GetAsync(h.Planning, request, Token)).Value!.Request.Version;
-            var added = await h.Workflow.Requests.AddItemAsync(h.Planning, request, version, new AddItemCommand(itemNo, "قطعه " + itemNo, quantity, priority), Token);
-            Assert.True(added.Succeeded, added.Status + " " + added.Issue);
+            // Fixture seeding through the repository: the gated definition workflow is tested in ItemDefinitionViewModelTests; these tests are about the queue.
+            await h.RequestRepository.UpdateRowsAsync(request, RowVersionExpectations.None, r => r.AddItem(0, itemNo, "قطعه " + itemNo, quantity, h.Planning.UserId, h.Clock.UtcNow, priority), Token);
         }
 
         return request;

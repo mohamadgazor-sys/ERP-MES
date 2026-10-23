@@ -90,7 +90,6 @@ public sealed class RequestsViewModel(
     ];
 
     /// <summary>The three exact priority labels, most urgent first (Decision Log #58).</summary>
-    public IReadOnlyList<Choice<Priority>> Priorities { get; } = PriorityInfo.All.Select(p => new Choice<Priority>(p, p.PersianName())).ToList();
 
     public RequestRow? SelectedRequest
     {
@@ -151,9 +150,6 @@ public sealed class RequestsViewModel(
     public bool CanAttachPdf => _capabilities.CanAttachRequestPdf && _detail?.Value.Status == RequestStatus.Created;
 
     /// <summary>Adding an item needs the permission for the request's one work type (Decision Log #84); the Application checks again.</summary>
-    public bool CanAddItem => _detail is not null
-        && (_detail.Value.WorkType == WorkType.Make ? _capabilities.CanAddMakeItem : _capabilities.CanAddRepairItem);
-
     public bool CanSetPriority => _capabilities.CanSetPriority;
 
     /// <summary>Today's date as Jalali text in the screen's digit shape, to prefill the request date.</summary>
@@ -334,40 +330,6 @@ public sealed class RequestsViewModel(
         return saved;
     }
 
-    public async Task<bool> AddItemAsync(string? itemNo, string? partName, string? quantityText, Priority priority, CancellationToken cancellationToken = default)
-    {
-        var saved = false;
-        await RunAsync(async () =>
-        {
-            if (_detail is null)
-            {
-                Message = Messages.NothingSelected;
-                return;
-            }
-
-            if (!QuantityText.TryParse(quantityText, out var quantity))
-            {
-                Message = Messages.ForIssue(ValidationIssue.QuantityInvalid, JalaliDateError.None);
-                return;
-            }
-
-            var id = _detail.Value.Id;
-            var outcome = await requests.AddItemAsync(
-                currentUser(), id, _detail.Version, new AddItemCommand(itemNo, partName, quantity, priority), cancellationToken);
-            if (!outcome.Succeeded)
-            {
-                await ShowFailureAsync(outcome, cancellationToken, reopen: id);
-                return;
-            }
-
-            saved = true;
-            await ReloadAsync(cancellationToken, keepMessage: true);
-            await LoadDetailAsync(id, cancellationToken, keepMessage: true);
-            Message = "آیتم ثبت شد.";
-        });
-        return saved;
-    }
-
     private async Task ShowFailureAsync<T>(Outcome<T> outcome, CancellationToken cancellationToken, long? reopen = null)
     {
         var text = Messages.For(outcome);
@@ -485,7 +447,7 @@ public sealed class RequestsViewModel(
     {
         foreach (var name in new[]
                  {
-                     nameof(HasDetail), nameof(DetailHeading), nameof(DetailLine), nameof(DetailTitle), nameof(DetailDescription), nameof(HasNoItems), nameof(CanSubmit), nameof(CanAddItem), nameof(HasPdf), nameof(PdfText), nameof(CanAttachPdf), nameof(CanApprove), nameof(CanReject), nameof(CanReopen), nameof(CanForwardToDrawing), nameof(CanRecordDrawingResult), nameof(CanSendBackToDrawing), nameof(HasWorkflowActions),
+                     nameof(HasDetail), nameof(DetailHeading), nameof(DetailLine), nameof(DetailTitle), nameof(DetailDescription), nameof(HasNoItems), nameof(CanSubmit), nameof(HasPdf), nameof(PdfText), nameof(CanAttachPdf), nameof(CanApprove), nameof(CanReject), nameof(CanReopen), nameof(CanForwardToDrawing), nameof(CanRecordDrawingResult), nameof(CanSendBackToDrawing), nameof(HasWorkflowActions),
                  })
         {
             OnPropertyChanged(name);
@@ -494,7 +456,7 @@ public sealed class RequestsViewModel(
 
     private void RaiseCapabilityChanges()
     {
-        foreach (var name in new[] { nameof(CanCreateRequest), nameof(CanSubmit), nameof(CanAddItem), nameof(CanSetPriority), nameof(CanAttachPdf), nameof(CanApprove), nameof(CanReject), nameof(CanReopen), nameof(CanForwardToDrawing), nameof(CanRecordDrawingResult), nameof(CanSendBackToDrawing), nameof(HasWorkflowActions) })
+        foreach (var name in new[] { nameof(CanCreateRequest), nameof(CanSubmit), nameof(CanSetPriority), nameof(CanAttachPdf), nameof(CanApprove), nameof(CanReject), nameof(CanReopen), nameof(CanForwardToDrawing), nameof(CanRecordDrawingResult), nameof(CanSendBackToDrawing), nameof(HasWorkflowActions) })
         {
             OnPropertyChanged(name);
         }

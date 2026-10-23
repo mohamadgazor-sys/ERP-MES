@@ -79,9 +79,8 @@ public class ProductionQueueTests
 
     private static async Task AddItemAsync(World w, long requestId, string itemNo, Priority priority, decimal quantity = 10m)
     {
-        var current = (await w.Services.Requests.GetAsync(w.Planning, requestId, Token)).Value!;
-        var added = await w.Services.Requests.AddItemAsync(w.Planning, requestId, current.Request.Version, new AddItemCommand(itemNo, "Part " + itemNo, quantity, priority), Token);
-        Assert.True(added.Succeeded, added.Status + " " + added.Issue);
+        // Fixture seeding straight through the repository: the gated definition workflow (ItemDefinitionService) is tested in ItemDefinitionTests; these tests are about the queue.
+        await w.Fixture.Db.Requests().UpdateRowsAsync(requestId, RowVersionExpectations.None, r => r.AddItem(0, itemNo, "Part " + itemNo, quantity, w.Planning.UserId, w.Fixture.Clock.UtcNow, priority), Token);
         w.Fixture.Clock.Advance(TimeSpan.FromMinutes(1));
     }
 

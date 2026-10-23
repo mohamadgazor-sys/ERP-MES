@@ -240,7 +240,7 @@ The demonstration (PRs #18-#27) stays as it is until each gap below is closed by
 | Costing / price | None | R4 | 7 |
 | Job reports / KPI / shifts / overtime | None | R5-R8 | 6, 8 |
 | Material inquiry | *(Implemented: inquiries, lines, Yes/No answers, history, send/close/cancel, #94.)* Clarification thread, effect of "No", disposition and release gate wait for D1; Planning/Management read waits for D8 | R1 | 2 |
-| Quantities | A single decimal on the item. *(QC masters — units, conversions, quantity types — are implemented; selecting them on items is phase 4a.)* | Quantity types | 3a done, 4a |
+| Quantities | *(QC masters are implemented; items now select an active quantity type and carry weight/dimensions, phase 4a #96.)* The quantity is expressed in the quantity type's unit. | Quantity types | 3a, 4a done |
 
 ## 11. Staged implementation plan
 
@@ -254,7 +254,7 @@ Each PR is small, keeps the demo working until replaced, carries tests, a Decisi
 | 2b | MAKE contract gate (Planning decides, submit/approve/reject, Warehouse read-only, notification) | #85, #93 | 1b | none | done; rejection routing PROVISIONAL, notification derived from state |
 | 3a | QC masters: UOM, conversions, quantity types with base mapping and explicit set composition | #90 | - | none |
 | 3b | Planning masters: operators, machine codes, rate history, master assignments, qualifications; Warehouse material master and price history | #89 | - | none |
-| 4a | Item definition and stage planning (spec fields, stage->unit/machine, release gates) | #86, #89 | 1b, 2b, 3a, 3b | none |
+| 4a | Item definition and stage planning (spec fields, stage->unit/machine, release gates) | #86, #89, #95, #96 | 1b, 2b, 3a, 3b | none; done (manual workflow; Excel is 4b) |
 | 4b | Excel import (template, preview, validation, transactional commit, conflict choice) | #16 | 4a | none |
 | 5a | Per-unit queues (Planning position, categories, overrides with review flag) | #78 | 4a | none |
 | 5b | Quantity-level QC (inspection lines, balances, rework loop, next-stage eligibility) | #92 | 3a, 4a, 5a | D2, D3 |
@@ -307,7 +307,7 @@ The eight decisions of `OWNER_DECISION_PACKET.md` were approved as recommended, 
 |---|---|---|
 | D1 clarification to Planning; No-answer disposition by Drawing; Planning supply route; release blocked until every No is dispositioned | 2a-ii | implemented |
 | D8 inquiry read for Planning and Management; only Drawing cancels an inquiry; asker closes a clarification | 2a-ii | implemented |
-| Item and stage definition by Planning, gated | 4a | next |
+| Item and stage definition by Planning, gated | 4a | implemented (#96) |
 | D2 base-unit quantities, no serial identity | 5b | recorded |
 | D3 cost of rework/scrap absorbed, shortfall decision, no overproduction, accepted base units | 5b, 7 | recorded |
 | D4 contract amount vs calculated cost | 7 | recorded |

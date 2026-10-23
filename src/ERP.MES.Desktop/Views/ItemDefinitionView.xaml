@@ -1,0 +1,88 @@
+<UserControl x:Class="ERP.MES.Desktop.Views.ItemDefinitionView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Loaded="OnLoaded">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
+    </UserControl.Resources>
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel>
+            <TextBlock Text="{Binding Message}" TextWrapping="Wrap" Foreground="#9B1C1C" FontWeight="SemiBold" Margin="0,0,0,8" />
+            <TextBlock TextWrapping="Wrap" Foreground="{StaticResource MutedTextBrush}" Margin="0,0,0,8"
+                       Text="برنامه‌ریزی آیتم‌ها و مرحله‌های هر درخواست را تعریف می‌کند (نقشه‌کشی دیگر آیتم تعریف نمی‌کند). این کار فقط پس از برقرار شدن دروازه‌ها ممکن است: تأیید مدیریت، نتیجهٔ پذیرفتهٔ نقشه‌کشی، تصمیم قرارداد (ساخت)، پاسخ استعلام‌ها با تعیین تکلیف هر «خیر» و بسته شدن پرسش‌ها. آیتم ساخت به نوع تعداد، ماده و وزن (کیلوگرم برای هر واحد پایه) نیاز دارد؛ ابعاد به میلی‌متر. شمارهٔ آیتم متن آزاد است." />
+            <Button Content="بارگذاری مجدد" Padding="10,3" HorizontalAlignment="Left" Click="OnReloadClick" Margin="0,0,0,8" />
+
+            <TextBlock Text="درخواست‌ها" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource PrimaryBrush}" Margin="0,4,0,6" />
+            <DataGrid ItemsSource="{Binding Requests}" SelectedItem="{Binding SelectedRequest, Mode=TwoWay}" SelectionChanged="OnRequestSelected" AutoGenerateColumns="False" IsReadOnly="True"
+                      SelectionMode="Single" HeadersVisibility="Column" CanUserAddRows="False" CanUserDeleteRows="False" MaxHeight="200" Background="{StaticResource CardBrush}">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="شمارهٔ درخواست" Binding="{Binding RequestNo}" Width="140" />
+                    <DataGridTextColumn Header="مشتری" Binding="{Binding CustomerName}" Width="*" />
+                    <DataGridTextColumn Header="نوع کار" Binding="{Binding WorkTypeText}" Width="80" />
+                    <DataGridTextColumn Header="وضعیت" Binding="{Binding StatusText}" Width="*" />
+                    <DataGridTextColumn Header="آیتم‌ها" Binding="{Binding ItemCount}" Width="70" />
+                </DataGrid.Columns>
+            </DataGrid>
+
+            <StackPanel Visibility="{Binding HasRequest, Converter={StaticResource BoolToVisibility}}" Margin="0,12,0,0">
+                <TextBlock Text="{Binding RequestHeading}" FontSize="16" FontWeight="SemiBold" />
+                <TextBlock Text="{Binding GateText}" TextWrapping="Wrap" Foreground="{StaticResource MutedTextBrush}" Margin="0,2,0,8" />
+
+                <TextBlock Text="آیتم‌ها" FontWeight="SemiBold" Margin="0,4,0,4" />
+                <DataGrid ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedItem, Mode=TwoWay}" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single"
+                          HeadersVisibility="Column" CanUserAddRows="False" CanUserDeleteRows="False" MaxHeight="200" Background="{StaticResource CardBrush}">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="شمارهٔ آیتم" Binding="{Binding ItemNo}" Width="110" />
+                        <DataGridTextColumn Header="نام قطعه" Binding="{Binding PartName}" Width="*" />
+                        <DataGridTextColumn Header="تعداد" Binding="{Binding QuantityText}" Width="80" />
+                        <DataGridTextColumn Header="مشخصات" Binding="{Binding SpecificationText}" Width="2*" />
+                        <DataGridTextColumn Header="اولویت" Binding="{Binding PriorityText}" Width="80" />
+                        <DataGridTextColumn Header="مرحله‌ها" Binding="{Binding StageCount}" Width="70" />
+                    </DataGrid.Columns>
+                </DataGrid>
+
+                <Border Margin="0,8,0,0" Padding="10" Background="{StaticResource CardBrush}" BorderBrush="{StaticResource BorderBrushSoft}" BorderThickness="1" IsEnabled="{Binding CanDefineItem}">
+                    <StackPanel>
+                        <TextBlock Text="تعریف آیتم" FontWeight="SemiBold" />
+                        <WrapPanel Margin="0,6,0,0">
+                            <StackPanel Margin="0,0,10,0"><TextBlock Text="شمارهٔ آیتم" /><TextBox x:Name="ItemNoBox" Width="100" FlowDirection="LeftToRight" /></StackPanel>
+                            <StackPanel Margin="0,0,10,0"><TextBlock Text="نام قطعه" /><TextBox x:Name="PartNameBox" Width="170" /></StackPanel>
+                            <StackPanel Margin="0,0,10,0"><TextBlock Text="تعداد" /><TextBox x:Name="QuantityBox" Width="70" FlowDirection="LeftToRight" /></StackPanel>
+                            <StackPanel Margin="0,0,10,0"><TextBlock Text="نوع تعداد" /><ComboBox x:Name="TypeBox" ItemsSource="{Binding QuantityTypeChoices}" DisplayMemberPath="Text" Width="200" /></StackPanel>
+                            <StackPanel Margin="0,0,10,0"><TextBlock Text="ماده" /><ComboBox x:Name="MaterialBox" ItemsSource="{Binding MaterialChoices}" DisplayMemberPath="Text" Width="200" /></StackPanel>
+                            <StackPanel Margin="0,0,10,0"><TextBlock Text="وزن (kg برای هر واحد پایه)" /><TextBox x:Name="WeightBox" Width="110" FlowDirection="LeftToRight" /></StackPanel>
+                            <StackPanel Margin="0,0,10,0"><TextBlock Text="طول (mm)" /><TextBox x:Name="LengthBox" Width="80" FlowDirection="LeftToRight" /></StackPanel>
+                            <StackPanel Margin="0,0,10,0"><TextBlock Text="قطر (mm)" /><TextBox x:Name="DiameterBox" Width="80" FlowDirection="LeftToRight" /></StackPanel>
+                            <StackPanel Margin="0,0,10,0"><TextBlock Text="اولویت" /><ComboBox x:Name="PriorityBox" ItemsSource="{Binding Priorities}" DisplayMemberPath="Text" Width="110" /></StackPanel>
+                        </WrapPanel>
+                        <Button Content="ثبت آیتم" Padding="12,5" HorizontalAlignment="Left" Margin="0,8,0,0" Click="OnDefineItemClick" />
+                    </StackPanel>
+                </Border>
+
+                <TextBlock Text="مرحله‌های آیتم انتخاب‌شده" FontWeight="SemiBold" Margin="0,12,0,4" />
+                <DataGrid ItemsSource="{Binding Stages}" AutoGenerateColumns="False" IsReadOnly="True" HeadersVisibility="Column" CanUserAddRows="False" CanUserDeleteRows="False" MaxHeight="180" Background="{StaticResource CardBrush}">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="شمارهٔ مرحله" Binding="{Binding StageNo}" Width="90" />
+                        <DataGridTextColumn Header="عنوان" Binding="{Binding Title}" Width="*" />
+                        <DataGridTextColumn Header="دقیقه برای هر قطعه" Binding="{Binding MinutesText}" Width="130" />
+                        <DataGridTextColumn Header="واحد" Binding="{Binding UnitText}" Width="110" />
+                        <DataGridTextColumn Header="ماشین" Binding="{Binding MachineText}" Width="110" />
+                        <DataGridTextColumn Header="وضعیت" Binding="{Binding StatusText}" Width="*" />
+                    </DataGrid.Columns>
+                </DataGrid>
+                <Border Margin="0,8,0,0" Padding="10" Background="{StaticResource CardBrush}" BorderBrush="{StaticResource BorderBrushSoft}" BorderThickness="1" IsEnabled="{Binding CanDefineStage}">
+                    <StackPanel>
+                        <TextBlock Text="تعریف مرحله برای آیتم انتخاب‌شده (ماشین باید به واحد انتخاب‌شده تعلق داشته باشد)" FontWeight="SemiBold" />
+                        <WrapPanel Margin="0,6,0,0">
+                            <StackPanel Margin="0,0,10,0"><TextBlock Text="عنوان مرحله" /><TextBox x:Name="StageTitleBox" Width="190" /></StackPanel>
+                            <StackPanel Margin="0,0,10,0"><TextBlock Text="دقیقه برای هر قطعه" /><TextBox x:Name="MinutesBox" Width="90" FlowDirection="LeftToRight" /></StackPanel>
+                            <StackPanel Margin="0,0,10,0"><TextBlock Text="واحد تولیدی" /><ComboBox x:Name="UnitBox" ItemsSource="{Binding UnitChoices}" DisplayMemberPath="Text" Width="180" SelectionChanged="OnUnitChanged" /></StackPanel>
+                            <StackPanel Margin="0,0,10,0"><TextBlock Text="ماشین (اختیاری)" /><ComboBox x:Name="MachineBox" DisplayMemberPath="Text" Width="180" /></StackPanel>
+                        </WrapPanel>
+                        <Button Content="ثبت مرحله" Padding="12,5" HorizontalAlignment="Left" Margin="0,8,0,0" Click="OnDefineStageClick" />
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

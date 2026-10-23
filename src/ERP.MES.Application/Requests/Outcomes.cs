@@ -120,6 +120,33 @@ public enum ValidationIssue
     /// <summary>A new rate must apply from a date later than the machine's latest rate (history is never rewritten).</summary>
     RateNotLater,
 
+    /// <summary>The Management, Drawing, contract, inquiry or clarification gates are not satisfied, so items cannot be defined yet.</summary>
+    ItemGateNotSatisfied,
+
+    /// <summary>A MAKE item needs a quantity type, a material and a weight.</summary>
+    ItemSpecificationIncomplete,
+
+    /// <summary>The weight must be greater than zero, at most 99,999,999.9999 kg and have at most 4 decimals.</summary>
+    WeightInvalid,
+
+    /// <summary>A length or diameter must be greater than zero, at most 99,999,999.99 mm and have at most 2 decimals.</summary>
+    DimensionInvalid,
+
+    /// <summary>The chosen quantity type does not exist or is not active.</summary>
+    QuantityTypeInvalid,
+
+    /// <summary>The item does not exist in this request.</summary>
+    ItemNotFound,
+
+    /// <summary>The stage title is required (at most 200 characters).</summary>
+    StageTitleRequired,
+
+    /// <summary>The planned minutes per piece must be greater than zero.</summary>
+    StageMinutesInvalid,
+
+    /// <summary>The chosen machine does not belong to the chosen production unit.</summary>
+    MachineUnitMismatch,
+
     /// <summary>The question or answer text is required (at most 2000 characters).</summary>
     ClarificationTextInvalid,
 

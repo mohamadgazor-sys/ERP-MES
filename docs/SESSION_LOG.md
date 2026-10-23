@@ -1726,3 +1726,33 @@ Append one dated entry after every substantial session. Do not replace prior ent
 
 ### Recommended exact next action
 - Merge after CI, then phase 4a (Planning defines items and stages, gated).
+
+---
+
+### Date / session
+- Date: 2026-10-23
+- Claude Code session ID (if useful): session_01UwqjPjBXLd2apjZb2urjds (phase 4a: Planning defines items and stages)
+
+### Goal
+- Move item and stage definition from Drawing to Planning, behind the Management / Drawing / contract / inquiry / clarification gates, with a validated specification (Decision Log #86, #95, #96).
+
+### Completed
+- Domain: `ItemSpecification` (quantity type, material, weight kg per base unit, length/diameter mm; exact scale, no rounding), `Request.DefineItem` (MAKE needs type, material, weight), stage `ProductionUnitId`/`MachineId`.
+- Application: `ItemDefinitionService` (items and stages; gate evaluated in the use case; QC quantity types, Warehouse materials, Planning units and machines validated); `DefineMakeItems` is Planning's; `RequestService.AddItemAsync` removed.
+- Persistence: nullable specification columns and restricting foreign keys; migration `AddItemSpecifications` (upgrade test keeps items, stages and QC approvals).
+- Desktop: page "تعریف آیتم‌ها و مرحله‌ها"; the requests page lost its add-item form.
+- Tests: item-definition service tests (gates, permissions, validation, concurrency, stale principals, stages), migration upgrade test, view-model tests; the queue / stage-flow fixtures now seed through the repository.
+
+### Decisions newly approved
+- None beyond #95; labelled defaults are listed in #96.
+
+### Unresolved questions / risks
+- Items and stages cannot be edited after creation (a controlled revision is not built).
+- The Excel import (4b) needs its canonical example template and column documentation first; no compatibility with an unseen company workbook is claimed.
+- The demonstration stage release still checks no gate (#80); the per-unit queue and release rules come with 5a.
+
+### Commands/tests actually run and results
+- See the pull request for the Linux and Windows CI totals of the final head.
+
+### Recommended exact next action
+- Merge after CI, then 4b: write the canonical import template and its column documentation, then the Excel import (preview, validation, transactional commit, conflict choice).

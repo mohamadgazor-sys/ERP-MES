@@ -284,6 +284,37 @@ public sealed class Request
         _items.Any(i => string.Equals(i.ItemNo, itemNo, StringComparison.Ordinal));
 
     /// <summary>
+    /// Planning defines an item with its specification (Decision Log #86, #95). A MAKE item needs a quantity type, a material and a weight; a REPAIR item may omit them. Values that are
+    /// given must be valid (positive, within the scale, not rounded). The gates before definition (Management, Drawing, contract, inquiries) are checked by the Application, which can see
+    /// the other aggregates; this method enforces what the request and the specification alone decide.
+    /// </summary>
+    public RequestItem DefineItem(
+        long itemId, string itemNo, string partName, decimal requestedQuantity, ItemSpecification specification, long createdByUserId, DateTime createdAtUtc, Priority priority = Priority.Normal)
+    {
+        ArgumentNullException.ThrowIfNull(specification);
+        var problem = specification.Check(WorkType);
+        if (problem != SpecificationProblem.None)
+        {
+            throw new ItemSpecificationException(problem);
+        }
+
+        if (Status is RequestStatus.Cancelled or RequestStatus.Closed)
+        {
+            throw new InvalidOperationException("A " + Status.Code() + " request accepts no new items.");
+        }
+
+        if (itemNo is not null && HasItemNo(itemNo))
+        {
+            throw new InvalidOperationException("The request already contains an item with number '" + itemNo + "'.");
+        }
+
+        var item = new RequestItem(itemId, itemNo!, partName, requestedQuantity, priority, createdByUserId, createdAtUtc, specification);
+        _items.Add(item);
+        UpdatedAtUtc = createdAtUtc;
+        return item;
+    }
+
+    /// <summary>
     /// Adds an item. (RequestID, ItemNo) must be unique (section 5.2). The item inherits the request's work type (Decision Log #84). New
     /// items default to <see cref="Priority.Normal"/> (Decision Log #58).
     ///
@@ -317,4 +348,10 @@ public sealed class Request
         UpdatedAtUtc = createdAtUtc;
         return item;
     }
+}
+
+/// <summary>Thrown when an item specification is incomplete or invalid for the request's work type.</summary>
+public sealed class ItemSpecificationException(SpecificationProblem problem) : ArgumentException("The item specification is not valid: " + problem)
+{
+    public SpecificationProblem Problem { get; } = problem;
 }

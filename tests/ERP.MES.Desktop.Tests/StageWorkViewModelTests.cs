@@ -17,9 +17,8 @@ public class StageWorkViewModelTests
     {
         var customer = (await h.Workflow.Customers.CreateAsync(h.Central, "مشتری فرضی", Token)).Value!.Value.Id;
         var request = (await h.Workflow.Requests.CreateAsync(h.Central, new CreateRequestCommand(customer, "wsj-898", WorkType.Make, "1405/07/20", null, null), Token)).Value!.Value.Id;
-        var version = (await h.Workflow.Requests.GetAsync(h.Planning, request, Token)).Value!.Request.Version;
-        var added = await h.Workflow.Requests.AddItemAsync(h.Planning, request, version, new AddItemCommand("1.10", "قطعه ۱", 10m, Priority.Urgent), Token);
-        Assert.True(added.Succeeded, added.Status + " " + added.Issue);
+        // Fixture seeding through the repository (the gated definition workflow is tested in ItemDefinitionViewModelTests).
+        await h.RequestRepository.UpdateRowsAsync(request, RowVersionExpectations.None, r => r.AddItem(0, "1.10", "قطعه ۱", 10m, h.Planning.UserId, h.Clock.UtcNow, Priority.Urgent), Token);
         await h.RequestRepository.UpdateRowsAsync(
             request,
             RowVersionExpectations.None,

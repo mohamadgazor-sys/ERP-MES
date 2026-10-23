@@ -130,28 +130,7 @@
                     <TextBlock Text="این درخواست هنوز آیتمی ندارد." Foreground="{StaticResource MutedTextBrush}" Margin="0,6,0,0"
                                Visibility="{Binding HasNoItems, Converter={StaticResource BoolToVisibility}}" />
 
-                    <!-- New item: Drawing adds MAKE items, Planning adds REPAIR (and any) items; the Application decides and says so. -->
-                    <Expander Header="افزودن آیتم" Margin="0,10,0,0" IsEnabled="{Binding CanAddItem}">
-                        <Grid Margin="0,8,0,0">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="*" />
-                            </Grid.ColumnDefinitions>
-                            <StackPanel Grid.Column="0" Margin="0,0,12,0">
-                                <TextBlock Text="شمارهٔ آیتم" />
-                                <TextBox x:Name="ItemNoBox" FlowDirection="LeftToRight" Margin="0,2,0,8" />
-                                <TextBlock Text="نام قطعه" />
-                                <TextBox x:Name="PartNameBox" Margin="0,2,0,8" />
-                                <TextBlock Text="تعداد" />
-                                <TextBox x:Name="QuantityBox" FlowDirection="LeftToRight" Margin="0,2,0,8" />
-                            </StackPanel>
-                            <StackPanel Grid.Column="1">
-                                <TextBlock Text="اولویت (پیش‌فرض: عادی)" TextWrapping="Wrap" />
-                                <ComboBox x:Name="PriorityBox" ItemsSource="{Binding Priorities}" DisplayMemberPath="Text" Margin="0,2,0,8" />
-                                <Button Content="ثبت آیتم" Padding="12,5" HorizontalAlignment="Left" Click="OnAddItemClick" />
-                            </StackPanel>
-                        </Grid>
-                    </Expander>
+                    <TextBlock Text="تعریف آیتم و مرحله‌ها با برنامه‌ریزی است و پس از برقرار شدن دروازه‌ها در صفحهٔ «تعریف آیتم‌ها» انجام می‌شود." TextWrapping="Wrap" Foreground="{StaticResource MutedTextBrush}" Margin="0,10,0,0" />
                 </StackPanel>
             </Border>
         </StackPanel>

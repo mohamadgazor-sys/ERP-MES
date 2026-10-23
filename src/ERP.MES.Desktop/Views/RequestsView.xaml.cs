@@ -28,7 +28,6 @@ public partial class RequestsView : UserControl
                 DateBox.Text = _viewModel.TodayText;
             }
 
-            PriorityBox.SelectedItem ??= _viewModel.Priorities.FirstOrDefault(p => p.Value == Priority.Normal);
         });
     }
 
@@ -128,19 +127,6 @@ public partial class RequestsView : UserControl
     }
 
     private async void OnSubmitClick(object sender, RoutedEventArgs e) => await SafeAsync(() => _viewModel.SubmitAsync());
-
-    private async void OnAddItemClick(object sender, RoutedEventArgs e)
-    {
-        var priority = (PriorityBox.SelectedItem as Choice<Priority>)?.Value ?? Priority.Normal;
-        var saved = false;
-        await SafeAsync(async () => saved = await _viewModel.AddItemAsync(ItemNoBox.Text, PartNameBox.Text, QuantityBox.Text, priority));
-        if (saved)
-        {
-            ItemNoBox.Clear();
-            PartNameBox.Clear();
-            QuantityBox.Clear();
-        }
-    }
 
     private static async Task SafeAsync(Func<Task> action)
     {

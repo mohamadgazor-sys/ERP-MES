@@ -24,6 +24,7 @@ internal static class PageFactory
             ShellViewModel.ContractsKey => new ContractsView(pages.Contracts),
             ShellViewModel.InquiriesKey => new InquiriesView(pages.Inquiries),
             ShellViewModel.ClarificationsKey => new ClarificationsView(pages.Clarifications),
+            ShellViewModel.ItemDefinitionKey => new ItemDefinitionView(pages.ItemDefinition),
             ShellViewModel.LimitationsKey => new LimitationsView(),
             _ => new PlaceholderView(item.Title, shell.NotImplementedText),
         };

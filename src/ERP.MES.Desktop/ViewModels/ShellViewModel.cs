@@ -20,6 +20,7 @@ public sealed class ShellViewModel : ObservableObject
     public const string ContractsKey = "contracts";
     public const string InquiriesKey = "inquiries";
     public const string ClarificationsKey = "clarifications";
+    public const string ItemDefinitionKey = "itemdefinition";
     public const string LimitationsKey = "limitations";
 
     private readonly IJalaliDateService _dates;
@@ -47,6 +48,7 @@ public sealed class ShellViewModel : ObservableObject
             new NavigationItem(ContractsKey, "قراردادها", true),
             new NavigationItem(InquiriesKey, "استعلام مواد اولیه", true),
             new NavigationItem(ClarificationsKey, "پرسش‌های نقشه‌کشی", true),
+            new NavigationItem(ItemDefinitionKey, "تعریف آیتم‌ها و مرحله‌ها", true),
             new NavigationItem(LimitationsKey, "محدودیت‌های نسخه نمایشی", true),
         ];
 

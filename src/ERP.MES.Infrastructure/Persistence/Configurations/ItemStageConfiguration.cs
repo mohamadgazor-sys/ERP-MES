@@ -20,6 +20,12 @@ public sealed class ItemStageConfiguration : IEntityTypeConfiguration<ItemStage>
         builder.Property(s => s.PlannedQuantity).IsRequired();
         builder.Property(s => s.Status).HasConversion<int>().IsRequired();
 
+        // Planning's planned unit and machine (Decision Log #89); null for stages of the simplified demonstration.
+        builder.Property(s => s.ProductionUnitId);
+        builder.HasOne<ERP.MES.Domain.Planning.ProductionUnit>().WithMany().HasForeignKey(s => s.ProductionUnitId).IsRequired(false).OnDelete(DeleteBehavior.Restrict);
+        builder.Property(s => s.MachineId);
+        builder.HasOne<ERP.MES.Domain.Planning.Machine>().WithMany().HasForeignKey(s => s.MachineId).IsRequired(false).OnDelete(DeleteBehavior.Restrict);
+
         // Derived from minutes per piece x quantity; not stored.
         builder.Ignore(s => s.PlannedTotalMinutes);
 

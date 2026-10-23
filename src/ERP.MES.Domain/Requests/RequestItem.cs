@@ -19,6 +19,13 @@ public sealed class RequestItem
     private readonly List<ItemStage> _stages = [];
     private readonly List<QcApproval> _qcApprovals = [];
 
+    // For the persistence layer: the specification is stored as plain columns, so EF Core fills the properties itself.
+    private RequestItem()
+    {
+        ItemNo = string.Empty;
+        PartName = string.Empty;
+    }
+
     internal RequestItem(
         long id,
         string itemNo,
@@ -26,7 +33,8 @@ public sealed class RequestItem
         decimal requestedQuantity,
         Priority priority,
         long createdByUserId,
-        DateTime createdAtUtc)
+        DateTime createdAtUtc,
+        ItemSpecification? specification = null)
     {
         if (string.IsNullOrWhiteSpace(itemNo))
         {
@@ -48,6 +56,12 @@ public sealed class RequestItem
             throw new ArgumentOutOfRangeException(nameof(priority), priority, "Unknown priority.");
         }
 
+        var spec = specification ?? ItemSpecification.None;
+        QuantityTypeId = spec.QuantityTypeId;
+        MaterialId = spec.MaterialId;
+        WeightKgPerBaseUnit = spec.WeightKgPerBaseUnit;
+        LengthMm = spec.LengthMm;
+        DiameterMm = spec.DiameterMm;
         Id = id;
         ItemNo = itemNo;
         PartName = partName;
@@ -66,6 +80,21 @@ public sealed class RequestItem
     public string PartName { get; }
 
     public decimal RequestedQuantity { get; }
+
+    /// <summary>The QC-owned quantity type the quantity is expressed in (Decision Log #90); null for an item without a specification (REPAIR where not applicable, or an item of the simplified demonstration).</summary>
+    public long? QuantityTypeId { get; }
+
+    /// <summary>The Warehouse material the item is made of.</summary>
+    public long? MaterialId { get; }
+
+    /// <summary>Kilograms of raw material per base unit (decimal 12,4).</summary>
+    public decimal? WeightKgPerBaseUnit { get; }
+
+    /// <summary>Millimetres (decimal 10,2).</summary>
+    public decimal? LengthMm { get; }
+
+    /// <summary>Millimetres (decimal 10,2).</summary>
+    public decimal? DiameterMm { get; }
 
     /// <summary>Planning-controlled priority. Its storage location (item or stage) is still pending confirmation (section 18); the item field of section 5.1 is used and stages carry none.</summary>
     public Priority Priority { get; private set; }
@@ -111,7 +140,7 @@ public sealed class RequestItem
     /// outside the demonstration (fixed seeded routes, no route editor) and is neither implemented nor prohibited by
     /// this method. Do not add a post-release change by relaxing the check below.
     /// </summary>
-    public ItemStage DefineInitialStage(string stageTitle, decimal plannedMinutesPerPiece, decimal? plannedQuantity = null)
+    public ItemStage DefineInitialStage(string stageTitle, decimal plannedMinutesPerPiece, decimal? plannedQuantity = null, long? productionUnitId = null, long? machineId = null)
     {
         if (string.IsNullOrWhiteSpace(stageTitle))
         {
@@ -136,7 +165,7 @@ public sealed class RequestItem
         }
 
         var status = _stages.Count == 0 ? ItemStageStatus.Planned : ItemStageStatus.WaitingPreviousQc;
-        var stage = new ItemStage(_stages.Count + 1, stageTitle, plannedMinutesPerPiece, quantity, status);
+        var stage = new ItemStage(_stages.Count + 1, stageTitle, plannedMinutesPerPiece, quantity, status, productionUnitId, machineId);
         _stages.Add(stage);
         return stage;
     }
