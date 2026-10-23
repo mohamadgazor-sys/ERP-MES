@@ -1900,3 +1900,31 @@ Append one dated entry after every substantial session. Do not replace prior ent
 
 ### Recommended exact next action
 - Merge after CI, then 6c (overtime assignments, D5).
+
+---
+
+### Date / session
+- Date: 2026-10-23
+- Claude Code session ID (if useful): session_01UwqjPjBXLd2apjZb2urjds (phase 6c: overtime assignments and limits)
+
+### Goal
+- A supervisor proposes overtime, Planning approves it within limits it configured, Management decides what is outside them (Decision Log #89, #95 D5).
+
+### Completed
+- Domain: `OvertimeAssignment` (status machine, reason, times) and `OvertimeLimits`.
+- Application: `OvertimeService` (propose, Planning decision, Management decision, cancel, limits, role-filtered load), `OvertimeRules` (booking rules and limit usage), new permissions and audit codes.
+- Persistence: `EfOvertimeRepository` with rules checked in the saving transaction, two tables, migration `AddOvertime` with upgrade test.
+- Desktop: page "اضافه‌کاری".
+- Tests: domain state machine, service (flow, limits not configured, daily/weekly limits, authorization negatives, booking rules, cancel, stale versions, visibility), migration, view model.
+
+### Decisions newly approved
+- None; labelled defaults are listed in #103.
+
+### Unresolved questions / risks
+- Job report lines are not linked to assignments yet (planned with the KPI phase); the week start and "proposals do not reserve limit" are labelled defaults.
+
+### Commands/tests actually run and results
+- See the pull request for the Linux and Windows CI totals of the final head.
+
+### Recommended exact next action
+- Merge after CI, then phase 7 (costing, pricing, Warehouse receipt, finished/sent, dispatch; D3, D4, D7).

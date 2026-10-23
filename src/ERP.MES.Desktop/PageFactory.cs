@@ -30,6 +30,7 @@ internal static class PageFactory
             ShellViewModel.CalendarKey => new CalendarView(pages.Calendar),
             ShellViewModel.QcInspectionKey => new QcInspectionView(pages.QcInspection),
             ShellViewModel.JobReportsKey => new JobReportsView(pages.JobReports),
+            ShellViewModel.OvertimeKey => new OvertimeView(pages.Overtime),
             ShellViewModel.LimitationsKey => new LimitationsView(),
             _ => new PlaceholderView(item.Title, shell.NotImplementedText),
         };

@@ -155,6 +155,13 @@ public static class Messages
         ValidationIssue.ScheduleCapacityExceeded => "ظرفیت حداکثر این شیفت واحد در آن روز پر است.",
         ValidationIssue.ScheduleMachineBusy => "ماشین در همین زمان برای اپراتور دیگری رزرو است؛ فقط هم‌پوشانی تحویل صریح (با مدت و یادداشت) مجاز است.",
         ValidationIssue.HandoverInvalid => "هم‌پوشانی تحویل معتبر نیست (ماشین، یادداشت و مدت ۱ تا ۴۸۰ دقیقه لازم است و مدت باید هم‌پوشانی واقعی را پوشش دهد).",
+        ValidationIssue.OvertimeNotSupervisor => "فقط سرپرست تعیین‌شدهٔ همین واحد اضافه‌کاری پیشنهاد می‌دهد و کسی برای خودش پیشنهاد نمی‌دهد.",
+        ValidationIssue.OvertimeLimitsNotConfigured => "برنامه‌ریزی هنوز سقف اضافه‌کاری را تعریف نکرده است؛ تا آن زمان اضافه‌کاری تأیید نمی‌شود.",
+        ValidationIssue.OvertimeLimitsInvalid => "سقف معتبر نیست (روزانه ۱ تا ۱۴۴۰ دقیقه؛ هفتگی از سقف روزانه کمتر و از ۱۰۰۸۰ دقیقه بیشتر نباشد).",
+        ValidationIssue.OvertimeInvalid => "اضافه‌کاری معتبر نیست (اپراتور، واحد، ماشین، تاریخ و ساعت‌ها؛ حداکثر ۱۲ ساعت؛ دلیل الزامی و حداکثر ۳۰۰ نویسه است).",
+        ValidationIssue.OvertimeOperatorAbsent => "اپراتور در این روز غایب (مرخصی یا بیماری) ثبت شده است.",
+        ValidationIssue.OvertimeOperatorOverlap => "اضافه‌کاری باید بیرون از شیفت عادی باشد و با شیفت برنامه‌ریزی‌شده یا اضافه‌کاری دیگر همین اپراتور هم‌پوشانی ندارد.",
+        ValidationIssue.OvertimeMachineBusy => "ماشین در این زمان برای اپراتور دیگری (شیفت یا اضافه‌کاری) رزرو است.",
         ValidationIssue.DesignationUserInvalid => "کاربر انتخاب‌شده وجود ندارد، فعال نیست یا کاربر تولید نیست.",
         _ => Failed,
     };

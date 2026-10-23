@@ -2382,6 +2382,113 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
                     b.ToTable("OperatorOffDays", (string)null);
                 });
 
+            modelBuilder.Entity("ERP.MES.Domain.Scheduling.OvertimeAssignment", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("DecisionNote")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("EndLocal")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("ExceedsLimits")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("MachineId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("ManagementAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long?>("ManagementUserId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("OperatorId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("PlanningAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long?>("PlanningUserId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("ProductionUnitId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("ProposedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("ProposedByUserId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("StartLocal")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateOnly>("WorkDate")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ManagementUserId");
+
+                    b.HasIndex("PlanningUserId");
+
+                    b.HasIndex("ProductionUnitId");
+
+                    b.HasIndex("ProposedByUserId");
+
+                    b.HasIndex("MachineId", "WorkDate");
+
+                    b.HasIndex("OperatorId", "WorkDate");
+
+                    b.ToTable("OvertimeAssignments", (string)null);
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Scheduling.OvertimeLimits", b =>
+                {
+                    b.Property<long>("Id")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("ChangedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("ChangedByUserId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("MaxMinutesPerDay")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("MaxMinutesPerWeek")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ChangedByUserId");
+
+                    b.ToTable("OvertimeLimits", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_OvertimeLimits_Single", "\"Id\" = 1");
+                        });
+                });
+
             modelBuilder.Entity("ERP.MES.Domain.Scheduling.ShiftTemplate", b =>
                 {
                     b.Property<long>("Id")
@@ -3421,6 +3528,52 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
                     b.HasOne("ERP.MES.Domain.Identity.User", null)
                         .WithMany()
                         .HasForeignKey("RecordedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Scheduling.OvertimeAssignment", b =>
+                {
+                    b.HasOne("ERP.MES.Domain.Planning.Machine", null)
+                        .WithMany()
+                        .HasForeignKey("MachineId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ERP.MES.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("ManagementUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("ERP.MES.Domain.Planning.Operator", null)
+                        .WithMany()
+                        .HasForeignKey("OperatorId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ERP.MES.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("PlanningUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("ERP.MES.Domain.Planning.ProductionUnit", null)
+                        .WithMany()
+                        .HasForeignKey("ProductionUnitId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ERP.MES.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("ProposedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Scheduling.OvertimeLimits", b =>
+                {
+                    b.HasOne("ERP.MES.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("ChangedByUserId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });

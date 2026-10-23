@@ -62,6 +62,11 @@ public static class AuditActions
     public const string JobReportApproved = "JobReportApproved";
     public const string JobReportReturned = "JobReportReturned";
     public const string StageCorrected = "StageCorrected";
+    public const string OvertimeProposed = "OvertimeProposed";
+    public const string OvertimePlanningDecided = "OvertimePlanningDecided";
+    public const string OvertimeManagementDecided = "OvertimeManagementDecided";
+    public const string OvertimeCancelled = "OvertimeCancelled";
+    public const string OvertimeLimitsChanged = "OvertimeLimitsChanged";
     public const string UnitSupervisorChanged = "UnitSupervisorChanged";
     public const string QcInspectionRecorded = "QcInspectionRecorded";
     public const string ShortfallDecided = "ShortfallDecided";

@@ -40,7 +40,7 @@ public class PlanningCalendarMigrationTests
         Assert.Empty(db.Query("SELECT * FROM OperatorOffDays"));
         Assert.Empty(db.Query("SELECT * FROM WorkerSchedules"));
         Assert.Empty(db.Query("PRAGMA foreign_key_check"));
-        Assert.Equal(18, db.Query("SELECT MigrationId FROM __EFMigrationsHistory").Count);
+        Assert.Equal(19, db.Query("SELECT MigrationId FROM __EFMigrationsHistory").Count);
 
         // The regular week is seeded as data: Saturday to Thursday working, Friday off (Decision Log #13); every row starts at version 1.
         Assert.Equal(
