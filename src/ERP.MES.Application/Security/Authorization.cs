@@ -114,6 +114,18 @@ public enum Permission
     /// </summary>
     ReleaseStage,
 
+    /// <summary>Read a production unit's operational queue (Decision Log #99): Management and Planning for every unit, Production for the units they are designated to.</summary>
+    ViewUnitQueue,
+
+    /// <summary>Give released stages their Planning position within a unit queue (Planning controls the normal order, Decision Log #78).</summary>
+    OrderUnitQueue,
+
+    /// <summary>Stop a released stage because of a problem, and resume it (Planning, and Production for their own unit; Decision Log #99).</summary>
+    ManageStageHold,
+
+    /// <summary>Designate Production users to production units (labelled default: Planning; Decision Log #99).</summary>
+    ManageUnitDesignations,
+
     /// <summary>
     /// Start a waiting stage and hand it to QC (demonstration flow, Decision Log #79). DEMO-ONLY mapping approved by the owner (Decision Log #80), from Master Specification 25.4
     /// (production units "record work sessions, deliver completed work to QC"); it does not finalize the production authorization matrix. Department: Production.
@@ -182,6 +194,12 @@ public static class AuthorizationRules
 
         // Demonstration stage flow (Decision Log #79): DEMO-ONLY mapping approved by the owner (Decision Log #80); not a finalized production matrix. QC approval uses InspectOrCorrectQc.
         [Permission.ReleaseStage] = new([DepartmentCodes.Planning], null),
+
+        // Operational unit queues (Decision Log #78, #99). Management overrides use OverrideQueueOrder; priority changes use ChangePlanningPriority. Production sees only designated units (checked in the use case).
+        [Permission.ViewUnitQueue] = new([DepartmentCodes.Management, DepartmentCodes.Planning, DepartmentCodes.Production], null),
+        [Permission.OrderUnitQueue] = new([DepartmentCodes.Planning], null),
+        [Permission.ManageStageHold] = new([DepartmentCodes.Planning, DepartmentCodes.Production], null),
+        [Permission.ManageUnitDesignations] = new([DepartmentCodes.Planning], null),
         [Permission.RunStage] = new([DepartmentCodes.Production], null),
     };
 

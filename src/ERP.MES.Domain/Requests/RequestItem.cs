@@ -219,11 +219,12 @@ public sealed class RequestItem
     }
 
     /// <summary>Planning releases the first (internal) stage, which makes it executable (section 9.2). Demonstration-only transition PLANNED -> WAITING.</summary>
-    public void ReleaseFirstStage()
+    public void ReleaseFirstStage(DateTime? releasedAtUtc = null)
     {
         var first = _stages.FirstOrDefault() ?? throw new InvalidOperationException("The item has no stages.");
         Require(first, ItemStageStatus.Planned, "released");
         first.Status = ItemStageStatus.Waiting;
+        first.AvailableSinceUtc = releasedAtUtc is { } at ? Customer.RequireUtc(at, nameof(releasedAtUtc)) : null;
     }
 
     /// <summary>Demonstration-only transition WAITING -> IN_PROGRESS.</summary>
@@ -232,6 +233,7 @@ public sealed class RequestItem
         var stage = GetStage(stageNo);
         Require(stage, ItemStageStatus.Waiting, "started");
         RequirePreviousApproved(stage);
+        RequireNotStopped(stage, "started");
         stage.Status = ItemStageStatus.InProgress;
     }
 
@@ -240,7 +242,9 @@ public sealed class RequestItem
     {
         var stage = GetStage(stageNo);
         Require(stage, ItemStageStatus.InProgress, "submitted for QC");
+        RequireNotStopped(stage, "submitted for QC");
         stage.Status = ItemStageStatus.WaitingQc;
+        stage.PlanningPosition = null;
     }
 
     /// <summary>
@@ -255,6 +259,7 @@ public sealed class RequestItem
         var utc = Customer.RequireUtc(approvedAtUtc, nameof(approvedAtUtc));
         Require(stage, ItemStageStatus.WaitingQc, "approved by QC");
         RequirePreviousApproved(stage);
+        RequireNotStopped(stage, "approved by QC");
 
         stage.Status = ItemStageStatus.QcApproved;
         var approval = new QcApproval(stage.StageNo, stage.PlannedQuantity, approvedByUserId, utc);
@@ -265,9 +270,89 @@ public sealed class RequestItem
         if (next is { Status: ItemStageStatus.WaitingPreviousQc })
         {
             next.Status = ItemStageStatus.Waiting;
+            next.AvailableSinceUtc = utc;
         }
 
+        stage.PlanningPosition = null;
         return approval;
+    }
+
+    /// <summary>
+    /// Planning's position of a released (WAITING or IN_PROGRESS) stage in its unit's queue; null removes it. Positions are not unique: equal positions are ordered first come, first served.
+    /// Returns false when nothing changed.
+    /// </summary>
+    public bool SetPlanningPosition(int stageNo, int? position)
+    {
+        var stage = GetStage(stageNo);
+        if (stage.Status is not (ItemStageStatus.Waiting or ItemStageStatus.InProgress))
+        {
+            throw new InvalidOperationException("Stage " + stageNo + " is " + stage.Status.Code() + "; only a released stage (WAITING or IN_PROGRESS) has a queue position.");
+        }
+
+        if (position is < 1 or > MaxPlanningPosition)
+        {
+            throw new ArgumentOutOfRangeException(nameof(position), position, "A queue position is between 1 and " + MaxPlanningPosition + ".");
+        }
+
+        if (stage.PlanningPosition == position)
+        {
+            return false;
+        }
+
+        stage.PlanningPosition = position;
+        return true;
+    }
+
+    public const int MaxPlanningPosition = 100000;
+
+    /// <summary>Stops a released stage because of a problem (a reason is required). Allowed for a WAITING or IN_PROGRESS stage that is not already stopped.</summary>
+    public void StopStage(int stageNo, string? reason, long stoppedByUserId, DateTime stoppedAtUtc)
+    {
+        var stage = GetStage(stageNo);
+        var utc = Customer.RequireUtc(stoppedAtUtc, nameof(stoppedAtUtc));
+        if (stage.Status is not (ItemStageStatus.Waiting or ItemStageStatus.InProgress))
+        {
+            throw new InvalidOperationException("Stage " + stageNo + " is " + stage.Status.Code() + "; only a WAITING or IN_PROGRESS stage can be stopped.");
+        }
+
+        if (stage.IsStopped)
+        {
+            throw new InvalidOperationException("Stage " + stageNo + " is already stopped.");
+        }
+
+        var text = reason?.Trim();
+        if (string.IsNullOrEmpty(text) || text.Length > MaxStopReasonLength)
+        {
+            throw new ArgumentException("A stop reason of 1 to " + MaxStopReasonLength + " characters is required.", nameof(reason));
+        }
+
+        stage.StoppedAtUtc = utc;
+        stage.StopReason = text;
+        stage.StoppedByUserId = stoppedByUserId;
+    }
+
+    public const int MaxStopReasonLength = 500;
+
+    /// <summary>Resumes a stopped stage.</summary>
+    public void ResumeStage(int stageNo)
+    {
+        var stage = GetStage(stageNo);
+        if (!stage.IsStopped)
+        {
+            throw new InvalidOperationException("Stage " + stageNo + " is not stopped.");
+        }
+
+        stage.StoppedAtUtc = null;
+        stage.StopReason = null;
+        stage.StoppedByUserId = null;
+    }
+
+    private static void RequireNotStopped(ItemStage stage, string action)
+    {
+        if (stage.IsStopped)
+        {
+            throw new InvalidOperationException("Stage " + stage.StageNo + " is stopped and cannot be " + action + " until it is resumed.");
+        }
     }
 
     private ItemStage GetStage(int stageNo) =>

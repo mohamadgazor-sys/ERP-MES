@@ -139,7 +139,8 @@ public partial class App : System.Windows.Application
             new InquiriesViewModel(workflow.Inquiries, workflow.QcMaster, workflow.Gates, dates, CurrentUser),
             new ClarificationsViewModel(workflow.Clarifications, dates, CurrentUser),
             new ItemDefinitionViewModel(workflow.ItemDefinition, workflow.Requests, workflow.Gates, workflow.QcMaster, workflow.Materials, workflow.PlanningMaster, DigitStyle.Persian, CurrentUser),
-            new ItemImportViewModel(workflow.ItemImport, workflow.Requests, new ERP.MES.Infrastructure.Imports.XlsxWorkbookWriter(), CurrentUser));
+            new ItemImportViewModel(workflow.ItemImport, workflow.Requests, new ERP.MES.Infrastructure.Imports.XlsxWorkbookWriter(), CurrentUser),
+            new UnitQueueViewModel(workflow.UnitQueue, workflow.StageWork, workflow.UnitDesignations, DigitStyle.Persian, CurrentUser));
 
         _mainWindow = new MainWindow(shell, session, pages);
         _mainWindow.Show();

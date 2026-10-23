@@ -212,3 +212,12 @@ Prepare a fictional demonstration database with `demo-init` (`docs/AUTHENTICATIO
 - P4: Commit, then import the same file again: "تغییری لازم نبود… چیزی ذخیره نشد".
 - P5: As any user other than Planning the import buttons are disabled; for a request that has not passed the gates the page refuses with the gate message.
 - P6: A file whose item has 8 stage groups imports all 8 stages in order; a column "مرحله 21 - عنوان" makes the file refuse with a message naming the 20-stage safety limit.
+
+## Q. Operational per-unit queues (Decision Log #78, #99) - not run by a person; covered by automated tests
+- Q1: As Planning open "صف واحدهای تولید", pick a unit: released stages appear in order IN_PROGRESS, STOPPED, WAITING; inside a category by priority, Planning position, then who became available first. Stages not yet released or waiting for the previous stage's QC are listed below with their reason and cannot be acted on.
+- Q2: As Planning press "بالا/پایین" on a row: the order changes, the position column shows 1..n, and a restart of the application shows the same order.
+- Q3: As Management select rows and press "جایگزینی مدیریت…" with a reason: the rows go to the head of their category, the "جایگزینی مدیریت" column shows rank and reason, Planning's priority and position are unchanged. "پاک‌کردن جایگزینی…" needs a reason too.
+- Q4: As Planning change a row's priority while an override covers it: the override stays, the row says "نیازمند بازبینی مدیریت", and only Management can press "تأیید بازبینی".
+- Q5: As a designated Production user stop a row with a reason: it moves to "متوقف / مشکل‌دار" with the reason, and "شروع" is refused until "ازسرگیری". An undesignated Production user sees no unit.
+- Q6: Send a request back to Drawing: its stages show "شرط‌های آزادسازی تولید برقرار نیست" and cannot be started or released.
+- Q7: Planning designates a Production user to a unit in the lower section; withdrawing it removes the user's access at the next action.

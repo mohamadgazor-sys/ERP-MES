@@ -1786,3 +1786,32 @@ Append one dated entry after every substantial session. Do not replace prior ent
 
 ### Recommended exact next action
 - Merge after CI, then 5a (per-unit queues; user-to-unit designation).
+
+---
+
+### Date / session
+- Date: 2026-10-23
+- Claude Code session ID (if useful): session_01UwqjPjBXLd2apjZb2urjds (phase 5a: operational per-unit production queues)
+
+### Goal
+- Per-unit operational queues derived from persisted state: categories with reasons, Planning positions, Management overrides with review flag, gate/designation enforcement, audit and concurrency (Decision Log #78, #99).
+
+### Completed
+- Domain: stage `PlanningPosition`, `AvailableSinceUtc`, stop/resume with reason; `QueueOverride`, `QueueOverrideHistoryEntry`, `UserUnitDesignation`.
+- Application: `UnitQueueService` (load, planning order, priority change with override review flag, override set/clear/confirm, stop/resume), `UnitDesignationService`, pure `UnitQueueOrdering`; `StageWorkService` now enforces gates, stop state and unit designation for stages that have a unit.
+- Persistence: configurations, `EfUnitQueueRepository` (one transaction over several requests and overrides), migration `AddUnitQueue` with upgrade test.
+- Desktop page "صف واحدهای تولید".
+- Tests: domain, ordering, service (permissions, ties, persistence across restart, stale versions, gate failure, stopped work, overrides, review flag), migration, view model.
+
+### Decisions newly approved
+- None; labelled defaults are listed in #99.
+
+### Unresolved questions / risks
+- Planned end needs the calendar (6a). Operator assignment to stage actions and Planning correction of a wrong start come with 6b.
+- The queue is read request by request; a read model is needed at larger volumes.
+
+### Commands/tests actually run and results
+- See the pull request for the Linux and Windows CI totals of the final head.
+
+### Recommended exact next action
+- Merge after CI, then 6a (working calendar and shifts; D5 rules).

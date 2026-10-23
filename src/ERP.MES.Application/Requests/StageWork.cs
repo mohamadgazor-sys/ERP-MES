@@ -1,5 +1,6 @@
 using ERP.MES.Application.Persistence;
 using ERP.MES.Application.Security;
+using ERP.MES.Domain.Identity;
 using ERP.MES.Domain.Requests;
 
 namespace ERP.MES.Application.Requests;
@@ -61,13 +62,14 @@ public sealed record StageWorkView(IReadOnlyList<ProductionQueueEntry> Entries, 
 /// which compares them BEFORE the Domain method runs; (3) lets the Domain validate the transition and the QC gate; (4) saves the change, the append-only QC approval and the audit
 /// entry in ONE transaction. A stale version, an invalid transition or a failure leaves everything unchanged.
 ///
-/// DEMO-ONLY: there is no request-status, contract or Management-approval gate here. The request-status transition table and the relationship between contract / Management approval
-/// and production release are unresolved (Decision Log #80), so the production eligibility rules are neither implemented nor approved by this service.
+/// DEMO-ONLY for stages WITHOUT a production unit (seeded demonstration routes): there is no request-status, contract or Management-approval gate (Decision Log #80). A stage that Planning
+/// planned in a production unit (phase 4a onward) follows the operational rules instead (Decision Log #99): releasing or starting needs the production-release gates (Management, Drawing, contract,
+/// inquiry, clarification) and a request that is not cancelled or closed; a stopped stage cannot proceed; a Production user acts only on the units they are designated to.
 ///
 /// GUARANTEE (per row, not per aggregate - Decision Log #77): the named rows are protected against a stale view, and every row the change touches is protected until it is saved.
 /// A row of the same request that the action neither names nor changes is not compared.
 /// </summary>
-public sealed class StageWorkService(IRequestRepository requests, CurrentAuthorization authorization, IClock clock, IAuditContext auditContext)
+public sealed class StageWorkService(IRequestRepository requests, CurrentAuthorization authorization, IClock clock, IAuditContext auditContext, RequestGateService gates, IUnitQueueRepository unitStore)
 {
     private static readonly Permission[] AllPermissions = [Permission.ViewProductionQueue, Permission.ReleaseStage, Permission.RunStage, Permission.InspectOrCorrectQc];
 
@@ -163,7 +165,7 @@ public sealed class StageWorkService(IRequestRepository requests, CurrentAuthori
                         throw new InvalidOperationException("Only the first stage is released by Planning.");
                     }
 
-                    item.ReleaseFirstStage();
+                    item.ReleaseFirstStage(now);
                     break;
                 case StageAction.Start:
                     item.StartStage(number);
@@ -204,8 +206,14 @@ public sealed class StageWorkService(IRequestRepository requests, CurrentAuthori
 
         try
         {
+            var current = decision.Current!;
             return await CustomerService.GuardAsync(async () =>
             {
+                if (await CheckUnitScopeAsync(action, target, current, cancellationToken) is { } refused)
+                {
+                    return refused;
+                }
+
                 await requests.UpdateRowsAsync(target.RequestId, expected, Change, Audit, cancellationToken);
                 int? nextNo = nextAfter is null ? null : number + 1;
                 return Outcome<StageActionResult>.Ok(new StageActionResult(action, number, after, nextNo, nextAfter));
@@ -216,6 +224,53 @@ public sealed class StageWorkService(IRequestRepository requests, CurrentAuthori
             // An invalid transition or a QC-gate refusal from the Domain (or a missing item or stage). Nothing was saved.
             return Outcome<StageActionResult>.Fail(OperationStatus.InvalidState);
         }
+    }
+
+    // Operational rules for stages planned in a production unit (Decision Log #99); null = allowed here (the Domain still validates the transition). Stages without a unit are the demonstration's.
+    private async Task<Outcome<StageActionResult>?> CheckUnitScopeAsync(StageAction action, StageTarget target, Principal user, CancellationToken cancellationToken)
+    {
+        var loaded = await requests.FindAsync(target.RequestId, cancellationToken);
+        if (loaded is null)
+        {
+            return Outcome<StageActionResult>.Fail(OperationStatus.NotFound);
+        }
+
+        var stage = loaded.Value.Items.FirstOrDefault(i => i.Id == target.ItemId)?.Stages.FirstOrDefault(s => s.StageNo == target.StageNo);
+        if (stage?.ProductionUnitId is not { } unitId)
+        {
+            return null;
+        }
+
+        var closed = loaded.Value.Status is RequestStatus.Cancelled or RequestStatus.Closed;
+        if (closed)
+        {
+            return Outcome<StageActionResult>.Invalid(ValidationIssue.StageGateNotSatisfied);
+        }
+
+        if (action is StageAction.Release or StageAction.Start)
+        {
+            var gate = await gates.EvaluateAsync(target.RequestId, cancellationToken);
+            if (gate is not { Satisfied: true })
+            {
+                return Outcome<StageActionResult>.Invalid(ValidationIssue.StageGateNotSatisfied);
+            }
+        }
+
+        if (action != StageAction.Release && stage.IsStopped)
+        {
+            return Outcome<StageActionResult>.Invalid(ValidationIssue.StageStopped);
+        }
+
+        if (action is StageAction.Start or StageAction.SubmitForQc && user.DepartmentCode == DepartmentCodes.Production)
+        {
+            var designated = (await unitStore.ListDesignationsAsync(cancellationToken)).Any(d => d.Value.UserId == user.UserId && d.Value.ProductionUnitId == unitId && d.Value.IsActive);
+            if (!designated)
+            {
+                return Outcome<StageActionResult>.Invalid(ValidationIssue.StageUnitNotDesignated);
+            }
+        }
+
+        return null;
     }
 
     // The rows the action changes or relies on: the request and the item (the approval changes the item's update time; every action relies on the item's route), the stage itself, the

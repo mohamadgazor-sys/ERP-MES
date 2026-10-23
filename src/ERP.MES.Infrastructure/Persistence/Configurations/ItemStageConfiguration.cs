@@ -26,6 +26,15 @@ public sealed class ItemStageConfiguration : IEntityTypeConfiguration<ItemStage>
         builder.Property(s => s.MachineId);
         builder.HasOne<ERP.MES.Domain.Planning.Machine>().WithMany().HasForeignKey(s => s.MachineId).IsRequired(false).OnDelete(DeleteBehavior.Restrict);
 
+        // Operational queue state (Decision Log #78, #99): Planning position, when the stage became available (first come, first served), and a stop with its reason.
+        builder.Property(s => s.PlanningPosition);
+        builder.Property(s => s.AvailableSinceUtc);
+        builder.Property(s => s.StoppedAtUtc);
+        builder.Property(s => s.StopReason);
+        builder.Property(s => s.StoppedByUserId);
+        builder.HasOne<ERP.MES.Domain.Identity.User>().WithMany().HasForeignKey(s => s.StoppedByUserId).IsRequired(false).OnDelete(DeleteBehavior.Restrict);
+        builder.Ignore(s => s.IsStopped);
+
         // Derived from minutes per piece x quantity; not stored.
         builder.Ignore(s => s.PlannedTotalMinutes);
 

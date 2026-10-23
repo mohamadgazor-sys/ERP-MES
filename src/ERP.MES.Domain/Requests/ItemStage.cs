@@ -75,6 +75,23 @@ public sealed class ItemStage
 
     /// <summary>The machine Planning planned the stage on; it belongs to <see cref="ProductionUnitId"/>. Null when only the unit is planned.</summary>
     public long? MachineId { get; }
+
+    /// <summary>Planning's explicit position of this released stage within its unit's queue (Decision Log #78, #99); null = no position given. Positions may repeat; equal positions are ordered first come, first served.</summary>
+    public int? PlanningPosition { get; internal set; }
+
+    /// <summary>When the stage became available to run (released by Planning, or the previous stage was approved by QC): the "first come" timestamp of the queue tie-break. Null for stages that never became available or were created before this was recorded.</summary>
+    public DateTime? AvailableSinceUtc { get; internal set; }
+
+    /// <summary>When the stage was stopped (a problem); null while it is not stopped. A stopped stage keeps its status and cannot be started, submitted or approved until it is resumed.</summary>
+    public DateTime? StoppedAtUtc { get; internal set; }
+
+    /// <summary>Why the stage was stopped (required); null while it is not stopped.</summary>
+    public string? StopReason { get; internal set; }
+
+    /// <summary>The user who stopped the stage; null while it is not stopped.</summary>
+    public long? StoppedByUserId { get; internal set; }
+
+    public bool IsStopped => StoppedAtUtc is not null;
 }
 
 /// <summary>

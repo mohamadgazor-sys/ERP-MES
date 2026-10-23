@@ -219,7 +219,7 @@ public sealed class EfRequestRepository(IDbContextFactory<ErpMesDbContext> conte
     }
 
     // Items, stages and approvals are loaded in a stable order: the Domain addresses stages by position, so they must come back in stage order.
-    private static IQueryable<Request> LoadAggregate(ErpMesDbContext context) =>
+    internal static IQueryable<Request> LoadAggregate(ErpMesDbContext context) =>
         context.Requests
             .Include(r => r.Items.OrderBy(i => i.Id)).ThenInclude(i => i.Stages.OrderBy(s => s.StageNo))
             .Include(r => r.Items.OrderBy(i => i.Id)).ThenInclude(i => i.QcApprovals.OrderBy(a => EF.Property<long>(a, "Id")))
