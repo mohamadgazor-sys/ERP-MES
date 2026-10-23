@@ -1293,6 +1293,161 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
                     b.ToTable("ProductionUnits", (string)null);
                 });
 
+            modelBuilder.Entity("ERP.MES.Domain.Production.QueueOverride", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("NeedsReview")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("ProductionUnitId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Rank")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("RequestItemId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("ReviewFlaggedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ReviewNote")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("SetAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("SetByUserId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("StageNo")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SetByUserId");
+
+                    b.HasIndex("ProductionUnitId", "IsActive");
+
+                    b.HasIndex("RequestItemId", "StageNo")
+                        .IsUnique();
+
+                    b.ToTable("QueueOverrides", (string)null);
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Production.QueueOverrideHistoryEntry", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Action")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("AtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("NewOrder")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("NewRank")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("OldOrder")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("OldRank")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("OperationId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("ProductionUnitId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("RequestItemId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("StageNo")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("UserId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OperationId");
+
+                    b.HasIndex("ProductionUnitId");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("RequestItemId", "StageNo");
+
+                    b.ToTable("QueueOverrideHistory", (string)null);
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Production.UserUnitDesignation", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("AssignedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("AssignedByUserId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("ProductionUnitId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("RevokedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long?>("RevokedByUserId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("UserId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AssignedByUserId");
+
+                    b.HasIndex("ProductionUnitId");
+
+                    b.HasIndex("RevokedByUserId");
+
+                    b.HasIndex("UserId", "ProductionUnitId")
+                        .IsUnique();
+
+                    b.ToTable("UserUnitDesignations", (string)null);
+                });
+
             modelBuilder.Entity("ERP.MES.Domain.Quality.QuantityType", b =>
                 {
                     b.Property<long>("Id")
@@ -1573,6 +1728,9 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
+                    b.Property<DateTime?>("AvailableSinceUtc")
+                        .HasColumnType("TEXT");
+
                     b.Property<long?>("MachineId")
                         .HasColumnType("INTEGER");
 
@@ -1581,6 +1739,9 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
 
                     b.Property<decimal>("PlannedQuantity")
                         .HasColumnType("TEXT");
+
+                    b.Property<int?>("PlanningPosition")
+                        .HasColumnType("INTEGER");
 
                     b.Property<long?>("ProductionUnitId")
                         .HasColumnType("INTEGER");
@@ -1598,6 +1759,15 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
                     b.Property<int>("Status")
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("StopReason")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("StoppedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long?>("StoppedByUserId")
+                        .HasColumnType("INTEGER");
+
                     b.Property<long>("Version")
                         .IsConcurrencyToken()
                         .HasColumnType("INTEGER");
@@ -1607,6 +1777,8 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
                     b.HasIndex("MachineId");
 
                     b.HasIndex("ProductionUnitId");
+
+                    b.HasIndex("StoppedByUserId");
 
                     b.ToTable("ItemStages", (string)null);
                 });
@@ -2258,6 +2430,76 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("ERP.MES.Domain.Production.QueueOverride", b =>
+                {
+                    b.HasOne("ERP.MES.Domain.Planning.ProductionUnit", null)
+                        .WithMany()
+                        .HasForeignKey("ProductionUnitId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ERP.MES.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("SetByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ERP.MES.Domain.Requests.ItemStage", null)
+                        .WithMany()
+                        .HasForeignKey("RequestItemId", "StageNo")
+                        .HasPrincipalKey("RequestItemId", "StageNo")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Production.QueueOverrideHistoryEntry", b =>
+                {
+                    b.HasOne("ERP.MES.Domain.Planning.ProductionUnit", null)
+                        .WithMany()
+                        .HasForeignKey("ProductionUnitId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ERP.MES.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ERP.MES.Domain.Requests.ItemStage", null)
+                        .WithMany()
+                        .HasForeignKey("RequestItemId", "StageNo")
+                        .HasPrincipalKey("RequestItemId", "StageNo")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Production.UserUnitDesignation", b =>
+                {
+                    b.HasOne("ERP.MES.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("AssignedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ERP.MES.Domain.Planning.ProductionUnit", null)
+                        .WithMany()
+                        .HasForeignKey("ProductionUnitId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ERP.MES.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("RevokedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("ERP.MES.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("ERP.MES.Domain.Quality.QuantityType", b =>
                 {
                     b.HasOne("ERP.MES.Domain.Quality.UnitOfMeasure", null)
@@ -2335,6 +2577,11 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
                         .HasForeignKey("RequestItemId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.HasOne("ERP.MES.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("StoppedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("ERP.MES.Domain.Requests.QcApproval", b =>

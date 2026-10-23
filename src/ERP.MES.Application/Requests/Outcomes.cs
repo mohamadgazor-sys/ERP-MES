@@ -275,6 +275,30 @@ public enum ValidationIssue
 
     /// <summary>The caller did not supply the loaded row versions the action relies on; nothing was changed (Decision Log #77).</summary>
     VersionsMissing,
+
+    /// <summary>The production unit does not exist or is inactive.</summary>
+    QueueUnitInvalid,
+
+    /// <summary>No rows were named, a row is listed twice, or a row is not a released stage of the unit.</summary>
+    QueueRowsInvalid,
+
+    /// <summary>A reason is required (override, clearing, stopping) and was missing or too long.</summary>
+    QueueReasonRequired,
+
+    /// <summary>The user may not see this unit's queue (a Production user sees only the units they are designated to).</summary>
+    QueueUnitNotPermitted,
+
+    /// <summary>The stage cannot start or be released: a production-release condition no longer holds or the request is closed.</summary>
+    StageGateNotSatisfied,
+
+    /// <summary>The stage is stopped and cannot proceed until it is resumed.</summary>
+    StageStopped,
+
+    /// <summary>The user is not designated to the stage's production unit.</summary>
+    StageUnitNotDesignated,
+
+    /// <summary>The user chosen for a designation does not exist, is inactive or is not a Production user.</summary>
+    DesignationUserInvalid,
 }
 
 /// <summary>The result of a command or query: a status, the value on success, and the details of a refusal.</summary>

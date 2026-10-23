@@ -1,4 +1,6 @@
-# Production Overview / Queue (read-only)
+# Production Overview / Queue
+
+> **Update (phase 5a, Decision Log #99):** the operational per-unit queues described in sections 7.1 and 7.2 are now implemented on the page "صف واحدهای تولید" (`UnitQueueService`), built on the same request data as this read-only overview. The overview below stays read-only and is unchanged; sections 7.1/7.2 describe the approved target that #99 implements, and the details listed as open in 7.3 are settled by the labelled defaults in #99.
 
 Status: implemented as a **read-only overview** for Management and Planning in the demonstration build. It changes nothing. This page records what it shows, its provisional display
 order, the approved decisions (Decision Log #78) that are **not yet implemented**, and the details that are still open.

@@ -6,6 +6,7 @@ using ERP.MES.Domain.Imports;
 using ERP.MES.Domain.Inquiries;
 using ERP.MES.Domain.Materials;
 using ERP.MES.Domain.Planning;
+using ERP.MES.Domain.Production;
 using ERP.MES.Domain.Quality;
 using ERP.MES.Domain.Requests;
 using Microsoft.EntityFrameworkCore;
@@ -44,6 +45,12 @@ public sealed class ErpMesDbContext(DbContextOptions<ErpMesDbContext> options) :
     public DbSet<ContractDocumentLink> ContractDocumentLinks => Set<ContractDocumentLink>();
 
     public DbSet<ContractHistoryEntry> ContractHistory => Set<ContractHistoryEntry>();
+
+    public DbSet<QueueOverride> QueueOverrides => Set<QueueOverride>();
+
+    public DbSet<QueueOverrideHistoryEntry> QueueOverrideHistory => Set<QueueOverrideHistoryEntry>();
+
+    public DbSet<UserUnitDesignation> UserUnitDesignations => Set<UserUnitDesignation>();
 
     public DbSet<ItemImport> ItemImports => Set<ItemImport>();
 
@@ -98,7 +105,7 @@ public sealed class ErpMesDbContext(DbContextOptions<ErpMesDbContext> options) :
     /// <summary>Name of the shadow property that holds the application-managed row version (Decision Log #23).</summary>
     public const string RowVersionPropertyName = "Version";
 
-    private static readonly HashSet<Type> VersionedTypes = [typeof(Customer), typeof(Request), typeof(RequestItem), typeof(ItemStage), typeof(User), typeof(UserCredential), typeof(SystemSetup), typeof(UnitOfMeasure), typeof(UnitConversion), typeof(QuantityType), typeof(ProductionUnit), typeof(Machine), typeof(RawMaterialInquiry), typeof(DrawingClarification), typeof(RequestContract), typeof(ContractVersion), typeof(Material), typeof(Operator), typeof(OperatorMachineAssignment), typeof(OperatorMachineQualification)];
+    private static readonly HashSet<Type> VersionedTypes = [typeof(Customer), typeof(Request), typeof(RequestItem), typeof(ItemStage), typeof(User), typeof(UserCredential), typeof(SystemSetup), typeof(UnitOfMeasure), typeof(UnitConversion), typeof(QuantityType), typeof(ProductionUnit), typeof(Machine), typeof(RawMaterialInquiry), typeof(DrawingClarification), typeof(RequestContract), typeof(ContractVersion), typeof(Material), typeof(Operator), typeof(OperatorMachineAssignment), typeof(OperatorMachineQualification), typeof(QueueOverride), typeof(UserUnitDesignation)];
 
     /// <summary>The row version of a tracked entity of a versioned type (customer, request, request item, item stage).</summary>
     public long GetRowVersion(object entity) => (long)Entry(entity).Property(RowVersionPropertyName).CurrentValue!;
@@ -151,6 +158,12 @@ public sealed class ErpMesDbContext(DbContextOptions<ErpMesDbContext> options) :
             || ChangeTracker.Entries<ItemImportRow>().Any(e => e.State is EntityState.Modified or EntityState.Deleted))
         {
             throw new InvalidOperationException("The item-import log is append-only: entries cannot be changed or deleted.");
+        }
+
+        // The queue override history is append-only as well.
+        if (ChangeTracker.Entries<QueueOverrideHistoryEntry>().Any(e => e.State is EntityState.Modified or EntityState.Deleted))
+        {
+            throw new InvalidOperationException("The queue override history is append-only: entries cannot be changed or deleted.");
         }
 
         // The contract history is append-only as well.

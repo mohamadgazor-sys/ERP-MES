@@ -122,6 +122,14 @@ public static class Messages
         ValidationIssue.RequestClosedForItems => "به درخواست لغوشده یا بسته‌شده آیتم جدید اضافه نمی‌شود.",
         ValidationIssue.StageActionInvalid => "این کار مرحله‌ای پشتیبانی نمی‌شود.",
         ValidationIssue.VersionsMissing => "اطلاعات این ردیف کامل نیست؛ فهرست را دوباره بارگذاری کنید.",
+        ValidationIssue.QueueUnitInvalid => "واحد تولید انتخاب‌شده وجود ندارد یا فعال نیست.",
+        ValidationIssue.QueueRowsInvalid => "ردیف‌های انتخاب‌شده برای این کار معتبر نیستند (باید مرحلهٔ آزادشدهٔ همین واحد باشند، بدون تکرار؛ برای لغو یا تأیید، باید جایگزینی فعال داشته باشند). کاری انجام نشد.",
+        ValidationIssue.QueueReasonRequired => "دلیل را وارد کنید (حداکثر ۵۰۰ نویسه).",
+        ValidationIssue.QueueUnitNotPermitted => "شما به صف این واحد دسترسی ندارید.",
+        ValidationIssue.StageGateNotSatisfied => "شرط‌های آزادسازی تولید برقرار نیست (تأیید مدیریت، نقشه‌کشی، قرارداد، استعلام یا پرسش‌ها) یا درخواست لغو/بسته شده است؛ مرحله شروع یا آزاد نشد.",
+        ValidationIssue.StageStopped => "این مرحله متوقف شده است و تا ازسرگیری ادامه نمی‌یابد.",
+        ValidationIssue.StageUnitNotDesignated => "شما به واحد تولید این مرحله منصوب نشده‌اید؛ برنامه‌ریزی باید شما را به این واحد منصوب کند.",
+        ValidationIssue.DesignationUserInvalid => "کاربر انتخاب‌شده وجود ندارد، فعال نیست یا کاربر تولید نیست.",
         _ => Failed,
     };
 
@@ -327,6 +335,26 @@ public static class Messages
         ERP.MES.Domain.Quality.UnitKind.Mass => "جرم",
         ERP.MES.Domain.Quality.UnitKind.Length => "طول",
         _ => "سایر",
+    };
+
+    public static string QueueCategoryText(ERP.MES.Application.Production.QueueCategory? category) => category switch
+    {
+        ERP.MES.Application.Production.QueueCategory.InProgress => "در حال اجرا",
+        ERP.MES.Application.Production.QueueCategory.Stopped => "متوقف / مشکل‌دار",
+        ERP.MES.Application.Production.QueueCategory.Waiting => "در انتظار",
+        _ => "—",
+    };
+
+    public static string QueueBlockText(ERP.MES.Application.Production.QueueBlock block) => block switch
+    {
+        ERP.MES.Application.Production.QueueBlock.None => "قابل اجرا",
+        ERP.MES.Application.Production.QueueBlock.StageStopped => "متوقف شده",
+        ERP.MES.Application.Production.QueueBlock.RequestClosed => "درخواست لغو یا بسته شده است",
+        ERP.MES.Application.Production.QueueBlock.GateNotSatisfied => "شرط‌های آزادسازی تولید برقرار نیست",
+        ERP.MES.Application.Production.QueueBlock.NotReleased => "هنوز توسط برنامه‌ریزی آزاد نشده است",
+        ERP.MES.Application.Production.QueueBlock.WaitingPreviousQc => "منتظر تأیید کنترل کیفیت مرحلهٔ قبل",
+        ERP.MES.Application.Production.QueueBlock.WaitingQc => "منتظر تأیید کنترل کیفیت",
+        _ => "—",
     };
 
     public static string WorkTypeText(WorkType type) => type == WorkType.Make ? "ساخت" : "تعمیر";

@@ -219,7 +219,9 @@ public class StageWorkViewModelTests
             new ProductionQueueViewModelTests.ScriptedRepository { Failure = new PersistenceException("database error") },
             h.Security.Authorization,
             h.Clock,
-            new TestAuditContext()));
+            new TestAuditContext(),
+            h.Workflow.Gates,
+            h.Workflow.UnitQueueStore));
         await failing.LoadAsync(Token);
         Assert.True(failing.HasError);
         Assert.Equal(Messages.Failed, failing.Message);
@@ -229,7 +231,9 @@ public class StageWorkViewModelTests
             new ProductionQueueViewModelTests.ScriptedRepository { Failure = new InvalidOperationException("bug") },
             h.Security.Authorization,
             h.Clock,
-            new TestAuditContext()));
+            new TestAuditContext(),
+            h.Workflow.Gates,
+            h.Workflow.UnitQueueStore));
         await broken.LoadAsync(Token);
         Assert.True(broken.HasError);
         Assert.Equal(Messages.Unexpected, broken.Message);

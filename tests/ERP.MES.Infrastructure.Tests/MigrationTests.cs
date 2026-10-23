@@ -21,12 +21,12 @@ public class MigrationTests
         // EF Core keeps its own bookkeeping tables (the migration history, and in EF Core 10 a migrations lock); only the application tables are compared.
         Assert.Contains("__EFMigrationsHistory", tables);
         Assert.Equal(
-            new[] { "AuditLog", "ContractDocumentLinks", "ContractHistory", "ContractVersions", "Contracts", "Customers", "Departments", "Documents", "DrawingClarifications", "ItemImportRows", "ItemImports", "ItemStages", "MachineHourlyRates", "Machines", "MaterialPrices", "Materials", "OperatorMachineAssignments", "OperatorMachineQualifications", "Operators", "ProductionUnits", "QcApprovals", "QuantityTypeMembers", "QuantityTypes", "RawMaterialInquiries", "RawMaterialInquiryDispositions", "RawMaterialInquiryHistory", "RawMaterialInquiryLines", "RawMaterialInquiryResponses", "RawMaterialInquirySupplyRoutes", "RequestDocumentLinks", "RequestItems", "RequestWorkflowEntries", "Requests", "Roles", "SystemSetup", "UnitConversions", "UnitsOfMeasure", "UserCredentials", "Users" },
+            new[] { "AuditLog", "ContractDocumentLinks", "ContractHistory", "ContractVersions", "Contracts", "Customers", "Departments", "Documents", "DrawingClarifications", "ItemImportRows", "ItemImports", "ItemStages", "MachineHourlyRates", "Machines", "MaterialPrices", "Materials", "OperatorMachineAssignments", "OperatorMachineQualifications", "Operators", "ProductionUnits", "QcApprovals", "QuantityTypeMembers", "QuantityTypes", "QueueOverrideHistory", "QueueOverrides", "RawMaterialInquiries", "RawMaterialInquiryDispositions", "RawMaterialInquiryHistory", "RawMaterialInquiryLines", "RawMaterialInquiryResponses", "RawMaterialInquirySupplyRoutes", "RequestDocumentLinks", "RequestItems", "RequestWorkflowEntries", "Requests", "Roles", "SystemSetup", "UnitConversions", "UnitsOfMeasure", "UserCredentials", "UserUnitDesignations", "Users" },
             tables.Where(t => !t.StartsWith("__EF", StringComparison.Ordinal)).ToArray());
 
         await using var context = db.NewContext();
         var applied = (await context.Database.GetAppliedMigrationsAsync(TestContext.Current.CancellationToken)).ToArray();
-        Assert.Equal(14, applied.Length);
+        Assert.Equal(15, applied.Length);
         Assert.EndsWith("_InitialCreate", applied[0], StringComparison.Ordinal);
         Assert.EndsWith("_AddAuthentication", applied[1], StringComparison.Ordinal);
         Assert.EndsWith("_SingleWorkTypePerRequest", applied[2], StringComparison.Ordinal);
@@ -41,6 +41,7 @@ public class MigrationTests
         Assert.EndsWith("_AddInquiryDispositionsAndClarifications", applied[11], StringComparison.Ordinal);
         Assert.EndsWith("_AddItemSpecifications", applied[12], StringComparison.Ordinal);
         Assert.EndsWith("_AddItemImportLog", applied[13], StringComparison.Ordinal);
+        Assert.EndsWith("_AddUnitQueue", applied[14], StringComparison.Ordinal);
         Assert.Empty(await context.Database.GetPendingMigrationsAsync(TestContext.Current.CancellationToken));
     }
 
@@ -52,7 +53,7 @@ public class MigrationTests
 
         // Fails if the model changed without a new migration, or if the snapshot was edited away from the model.
         Assert.False(context.Database.HasPendingModelChanges());
-        Assert.Equal(14, context.Database.GetMigrations().Count());
+        Assert.Equal(15, context.Database.GetMigrations().Count());
     }
 
     [Fact]
@@ -111,6 +112,7 @@ public class MigrationTests
                 "ItemStages:MachineId->Machines:RESTRICT",
                 "ItemStages:ProductionUnitId->ProductionUnits:RESTRICT",
                 "ItemStages:RequestItemId->RequestItems:RESTRICT",
+                "ItemStages:StoppedByUserId->Users:RESTRICT",
                 "QcApprovals:ApprovedByUserId->Users:RESTRICT",
                 "QcApprovals:RequestItemId->ItemStages:RESTRICT",
                 "QcApprovals:RequestItemId->RequestItems:RESTRICT",

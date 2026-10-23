@@ -57,6 +57,17 @@ public static class AuditActions
     public const string ProductionUnitAdded = "ProductionUnitAdded";
     public const string MachineAdded = "MachineAdded";
     public const string MachineRateChanged = "MachineRateChanged";
+    public const string QueuePositionsSet = "QueuePositionsSet";
+    public const string QueueOverrideSet = "QueueOverrideSet";
+    public const string QueueOverrideMoved = "QueueOverrideMoved";
+    public const string QueueOverrideCleared = "QueueOverrideCleared";
+    public const string QueueOverrideFlaggedForReview = "QueueOverrideFlaggedForReview";
+    public const string QueueOverrideReviewConfirmed = "QueueOverrideReviewConfirmed";
+    public const string ItemPriorityChanged = "ItemPriorityChanged";
+    public const string StageStopped = "StageStopped";
+    public const string StageResumed = "StageResumed";
+    public const string UnitDesignationAssigned = "UnitDesignationAssigned";
+    public const string UnitDesignationRevoked = "UnitDesignationRevoked";
     public const string ItemImportCommitted = "ItemImportCommitted";
     public const string ItemRevisedByImport = "ItemRevisedByImport";
     public const string ItemDefined = "ItemDefined";
