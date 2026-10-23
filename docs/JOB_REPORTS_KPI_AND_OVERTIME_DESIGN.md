@@ -2,6 +2,8 @@
 
 **Status: DESIGN ONLY. Not implemented.** Approved: the requirements R5, R6, R8 (#82) and #89 (supervisors make only the approved overtime assignments and review their unit's reports; Planning owns machines and assignments). Items marked PROPOSED/DEFAULT are not approved; unit performance metrics are `OWNER_DECISION_PACKET.md` D6, overtime limits and overlapping shifts D5, review/read rows D8. Rewards and bonuses are decided outside the application ([REQ]; Decision Log #21 keeps the reward formula in Phase 2).
 
+> **Decision update (2026-10-23):** D5, D6 (separate unit metrics) and the D8 job-report/KPI read rows were APPROVED on 2026-10-23 (Decision Log #95); the "[OPEN D5/D6/D8]" markers below are superseded.
+
 ## 1. Purpose
 
 Operators record what they worked on each day inside the application. Planning uses approved reports for workforce and production KPIs; Warehouse uses approved report time for costing (COSTING_DESIGN). The report is a record of reported work, not a QC result and not proof of attendance.

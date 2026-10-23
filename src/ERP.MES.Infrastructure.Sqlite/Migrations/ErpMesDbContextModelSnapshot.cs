@@ -568,6 +568,73 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
                     b.ToTable("Users", (string)null);
                 });
 
+            modelBuilder.Entity("ERP.MES.Domain.Inquiries.DrawingClarification", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Answer")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("AnsweredAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("AnsweredByDepartmentCode")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long?>("AnsweredByUserId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("AskedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("AskedByDepartmentCode")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("AskedByUserId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("CloseNote")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("ClosedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long?>("ClosedByUserId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Question")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("RequestId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AnsweredByUserId");
+
+                    b.HasIndex("AskedByUserId");
+
+                    b.HasIndex("ClosedByUserId");
+
+                    b.HasIndex("RequestId");
+
+                    b.ToTable("DrawingClarifications", (string)null);
+                });
+
             modelBuilder.Entity("ERP.MES.Domain.Inquiries.InquiryHistoryEntry", b =>
                 {
                     b.Property<long>("Id")
@@ -612,6 +679,90 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
                     b.HasIndex("InquiryId");
 
                     b.ToTable("RawMaterialInquiryHistory", (string)null);
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Inquiries.InquiryLineDisposition", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("DecidedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DecidedByDepartmentCode")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("DecidedByUserId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Kind")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("LineId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long?>("NewRoundInquiryId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Note")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("ResponseId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DecidedByUserId");
+
+                    b.HasIndex("LineId");
+
+                    b.HasIndex("NewRoundInquiryId");
+
+                    b.HasIndex("ResponseId");
+
+                    b.ToTable("RawMaterialInquiryDispositions", (string)null);
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Inquiries.InquirySupplyRoute", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("DecidedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DecidedByDepartmentCode")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("DecidedByUserId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("ExternalPurchase")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("LineId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Note")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("ResponseId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DecidedByUserId");
+
+                    b.HasIndex("LineId");
+
+                    b.HasIndex("ResponseId");
+
+                    b.ToTable("RawMaterialInquirySupplyRoutes", (string)null);
                 });
 
             modelBuilder.Entity("ERP.MES.Domain.Inquiries.RawMaterialInquiry", b =>
@@ -1739,6 +1890,31 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
                     b.Navigation("Role");
                 });
 
+            modelBuilder.Entity("ERP.MES.Domain.Inquiries.DrawingClarification", b =>
+                {
+                    b.HasOne("ERP.MES.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("AnsweredByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("ERP.MES.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("AskedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ERP.MES.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("ClosedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("ERP.MES.Domain.Requests.Request", null)
+                        .WithMany()
+                        .HasForeignKey("RequestId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("ERP.MES.Domain.Inquiries.InquiryHistoryEntry", b =>
                 {
                     b.HasOne("ERP.MES.Domain.Identity.User", null)
@@ -1750,6 +1926,53 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
                     b.HasOne("ERP.MES.Domain.Inquiries.RawMaterialInquiry", null)
                         .WithMany("History")
                         .HasForeignKey("InquiryId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Inquiries.InquiryLineDisposition", b =>
+                {
+                    b.HasOne("ERP.MES.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("DecidedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ERP.MES.Domain.Inquiries.RawMaterialInquiryLine", null)
+                        .WithMany("Dispositions")
+                        .HasForeignKey("LineId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ERP.MES.Domain.Inquiries.RawMaterialInquiry", null)
+                        .WithMany()
+                        .HasForeignKey("NewRoundInquiryId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("ERP.MES.Domain.Inquiries.RawMaterialInquiryResponse", null)
+                        .WithMany()
+                        .HasForeignKey("ResponseId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Inquiries.InquirySupplyRoute", b =>
+                {
+                    b.HasOne("ERP.MES.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("DecidedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ERP.MES.Domain.Inquiries.RawMaterialInquiryLine", null)
+                        .WithMany("SupplyRoutes")
+                        .HasForeignKey("LineId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ERP.MES.Domain.Inquiries.RawMaterialInquiryResponse", null)
+                        .WithMany()
+                        .HasForeignKey("ResponseId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });
@@ -2103,7 +2326,11 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
 
             modelBuilder.Entity("ERP.MES.Domain.Inquiries.RawMaterialInquiryLine", b =>
                 {
+                    b.Navigation("Dispositions");
+
                     b.Navigation("Responses");
+
+                    b.Navigation("SupplyRoutes");
                 });
 
             modelBuilder.Entity("ERP.MES.Domain.Quality.QuantityType", b =>

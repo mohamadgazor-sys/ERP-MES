@@ -2,6 +2,8 @@
 
 **Status: DESIGN ONLY. Not implemented.** Approved (#89): Planning owns operator registration, operator-machine master assignments, machine codes and rates (with Management for rates), item specifications, planned stage-to-unit/machine assignment and shift configuration; supervisors make only the approved overtime assignments and cannot change a planned machine or substitute equipment. PROPOSED/DEFAULT items are not approved; overlap and overtime limits are `OWNER_DECISION_PACKET.md` D5.
 
+> **Decision update (2026-10-23):** D5 (supervisor creates, Planning approves, Management outside configured limits, no invented limits, overlap rules) was APPROVED on 2026-10-23 (Decision Log #95); the "[OPEN D5]" markers below are superseded.
+
 > **Implementation status:** production units, machines with stable codes and the machine rate history (section 3) are implemented (Planning machines PR). The rate table keeps `EffectiveFrom` only; the end of a rate is the day before the next entry. Operators, assignments, qualifications, item specifications, shifts, off-days, capacity and scheduling are not.
 
 ## 1. Ownership [REQ]

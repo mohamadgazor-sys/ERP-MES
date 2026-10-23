@@ -113,9 +113,9 @@ The inquiry is an informational sub-process owned by Drawing, anchored at the re
 | Drawing technical result returned (fully or partially accepted for the items in scope) | [APPROVED #86] |
 | Contract approved when required (MAKE only) | [APPROVED #85] |
 | Item fully defined (quantity type, dimensions, raw weight, material, stages with unit and machine) | [DEFAULT] |
-| Every inquiry line answered and every "No" line dispositioned | [OPEN D1] |
+| Every sent inquiry line answered, every "No" line dispositioned, every Drawing clarification closed | [APPROVED #95; enforced by `RequestGateService`] |
 
-The demonstration checks none of these (#80, #81).
+The demonstration checks none of these (#80, #81). The new item-definition workflow (phase 4a) checks the gates above in the Application, in the same use case; the gate service already evaluates the Management, Drawing, contract, inquiry and clarification gates (#93, #95).
 
 ## 6. Per-unit queues (relation to #78)
 
@@ -132,7 +132,11 @@ The overview is item-level and read-only. The authoritative per-unit queue is ap
 | Reopen a rejected request | | Y | Y | | | | | | | E |
 | Forward to Drawing / send back | | | Y | | | | | | | E |
 | Record technical result; request clarification | | | | Y | | | | | | E, A #82 |
-| Create / send raw-material inquiry | | | R | Y | R | | | | | A #86; R rows OPEN D8 |
+| Create / send / close / cancel raw-material inquiry; record a disposition of a No | | | | Y | | | | | | A #86, #95 |
+| Read raw-material inquiries, answers, dispositions | | R | R | Y | R | | | | | A #95 (D8) |
+| Record the supply route of a No line | | | Y | | | | | | | A #95 (D1) |
+| Ask a clarification question; close own question | | | | Y | | | | | | A #95 (D1) |
+| Answer a clarification question | | | Y | | | | | | | A #95 (D1) |
 | Answer inquiry lines (Yes/No + notes) | | | | R | Y | | | | | A #88 |
 | Decide contract required (MAKE); create / submit contract | | | Y | | R | | | | | A #85 |
 | Approve / reject contract | | Y | | | R | | | | | A #85 |
@@ -144,8 +148,8 @@ The overview is item-level and read-only. The authoritative per-unit queue is ap
 | Maintain UOM and quantity types | | | | | | | | Y | | A #90 |
 | Select UOM / quantity type for an item | | | Y | | | | | | | A #90 |
 | Shift templates, unit shifts, OFF days, capacity, worker schedule | | | Y | | | | | | | A #89 |
-| Overtime assignment (create) | | | | | | | Y | | | A #82 R8, #89; limits OPEN D5 |
-| Overtime approval | | | | | | | | | | OPEN D5 |
+| Overtime assignment (create) | | | | | | | Y | | | A #82 R8, #89 |
+| Overtime approval (Management outside configured limits) | | Y (outside limits) | Y | | | | | | | A #95 (D5); limits must be configured first |
 | Release first stage | | | Y | | | | | | | DEMO #80 |
 | Start stage; submit for QC | | | | | | Y | | | | DEMO #80; supervisor acting OPEN D8 |
 | QC disposition (accepted / rework / scrap); QC correction | | | | | | | | Y | | E, #92 |
@@ -294,3 +298,22 @@ Order: 1a, 1b, 3a and 3b (independent), 2b, 2a, 4a, 4b, 5a, 6a, 5b, 6b, 6c, 7, 8
 ## 16. Change to existing documents
 
 Annotated, not rewritten, with notes in the Decision Log: Master, Architecture and Domain/Database specifications, the Decision Log entries #2, #4, #34, #58, #75, #79, and this redesign's companions.
+
+## 10. Owner approvals of D1-D8 (2026-10-23, Decision Log #95)
+
+The eight decisions of `OWNER_DECISION_PACKET.md` were approved as recommended, with these boundaries (full text in Decision Log #95). **"[OPEN D1]" ... "[OPEN D8]" markers elsewhere in this document are superseded by this section; they are kept as history.**
+
+| Decision | Applied in | State |
+|---|---|---|
+| D1 clarification to Planning; No-answer disposition by Drawing; Planning supply route; release blocked until every No is dispositioned | 2a-ii | implemented |
+| D8 inquiry read for Planning and Management; only Drawing cancels an inquiry; asker closes a clarification | 2a-ii | implemented |
+| Item and stage definition by Planning, gated | 4a | next |
+| D2 base-unit quantities, no serial identity | 5b | recorded |
+| D3 cost of rework/scrap absorbed, shortfall decision, no overproduction, accepted base units | 5b, 7 | recorded |
+| D4 contract amount vs calculated cost | 7 | recorded |
+| D5 overtime approval, configurable limits (none invented), shift-overlap rules | 6a, 6c | recorded |
+| D6 separate unit metrics, pending-approval flag | 8 | recorded |
+| D7 receipt / finished-sent / dispatch as distinct records | 7 | recorded |
+| D8 job-report and KPI reads, supervisor fallback, no acting on behalf, Planning correction with reason, Central own requests, Production own unit queue | 5a, 6b, 8 | recorded; the stage commands cannot identify the operator yet, so "on behalf" and the Planning correction are not enforceable before then |
+
+The "Phase 2b" contract defaults, the operator `ViewOperators` audience and the material list audiences remain labelled defaults; #95 does not approve them.

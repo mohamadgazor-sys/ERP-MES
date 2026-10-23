@@ -1695,3 +1695,34 @@ Append one dated entry after every substantial session. Do not replace prior ent
 
 ### Recommended exact next action
 - Merge after CI. Then phase 4a (item definition by Planning) is the next independent phase; it needs the answers to the questions listed in the final report of this session.
+
+---
+
+### Date / session
+- Date: 2026-10-23
+- Claude Code session ID (if useful): session_01UwqjPjBXLd2apjZb2urjds (phase 2a-ii: owner approval of D1-D8; D1 implementation)
+
+### Goal
+- Record the owner approval of D1-D8 (Decision Log #95) and complete the raw-material inquiry workflow that waited for D1.
+
+### Completed
+- PR #37 (phase 2a) merged after its final-head Windows CI (run 39977289354, Domain 498 / Application 5 / Infrastructure 534 / Desktop 169).
+- Decisions recorded: Decision Log #95; `OWNER_DECISION_PACKET.md` status and per-item decision lines (original text kept); workflow redesign (gates, matrix, section 10); inquiry, costing, QC, planning and job-report designs annotated; Domain Specification note.
+- Domain: dispositions and supply routes on inquiry lines, `DrawingClarification`; Application: `ClarificationService`, disposition and supply-route commands, `RequestGateService` (Management/Drawing/contract/inquiry/clarification gates, evaluated in the Application); new permissions; Planning and Management read inquiries (read-only).
+- Persistence: `RawMaterialInquiryDispositions`, `RawMaterialInquirySupplyRoutes`, `DrawingClarifications`; migration `AddInquiryDispositionsAndClarifications` (additive).
+- Desktop: "پرسش‌های نقشه‌کشی" page; disposition/supply-route actions and gate line on the inquiry page; the contract page shows the full gate.
+
+### Decisions newly approved
+- D1-D8 as recommended, with boundaries (#95).
+
+### Unresolved questions / risks
+- The D8 rows about acting on behalf of an operator and Planning corrections of stage starts/submissions cannot be enforced yet because the demonstration stage commands do not identify the operator; they are applied with phases 5a/6b.
+- "Production users read only their own unit's queue" needs the user-to-unit designation (phase 5a); today the queue is Management/Planning only.
+- The demonstration stage release still checks no gate (#80); phase 4a's item definition is the first command that calls the gate service.
+- Detail chosen under D1 (not separately asked): a question that is answered but not yet closed keeps blocking release until Drawing closes it.
+
+### Commands/tests actually run and results
+- See the pull request for the Linux and Windows CI totals of the final head.
+
+### Recommended exact next action
+- Merge after CI, then phase 4a (Planning defines items and stages, gated).

@@ -12,7 +12,7 @@ public sealed record InquiryRequestRow(long RequestId, string RequestNo, string 
 
 public sealed record InquiryRow(long InquiryId, int RoundNo, string StatusText, int LineCount, int AnsweredCount);
 
-public sealed record InquiryLineRow(int LineNo, string MaterialText, string DimensionsText, string QuantityText, string AnswerText, string AnswerNoteText, string ResponderText);
+public sealed record InquiryLineRow(int LineNo, string MaterialText, string DimensionsText, string QuantityText, string AnswerText, string AnswerNoteText, string ResponderText, string DispositionText, string SupplyRouteText);
 
 public sealed record InquiryHistoryRow(string DateText, string ActionText, string LineText, string DepartmentText, string NoteText);
 
@@ -21,7 +21,7 @@ public sealed record InquiryHistoryRow(string DateText, string ActionText, strin
 /// The inquiry is information only: it changes no request status and blocks nothing. The clarification thread and the effect of a "No" wait for owner decision D1 and are not offered.
 /// The screen mirrors what the Application allows; every command is checked again there.
 /// </summary>
-public sealed class InquiriesViewModel(InquiryService service, QcMasterService qc, IJalaliDateService dates, Func<Principal> currentUser) : ObservableObject
+public sealed class InquiriesViewModel(InquiryService service, QcMasterService qc, RequestGateService gates, IJalaliDateService dates, Func<Principal> currentUser) : ObservableObject
 {
     private readonly ObservableCollection<InquiryRequestRow> _requests = [];
     private readonly ObservableCollection<InquiryRow> _inquiries = [];
@@ -33,6 +33,8 @@ public sealed class InquiriesViewModel(InquiryService service, QcMasterService q
     private InquiryRow? _selectedInquiry;
     private InquiryLineRow? _selectedLine;
     private InquiryDetail? _detail;
+    private ProductionGateStatus? _gate;
+    private IReadOnlyList<Choice<long>> _roundChoices = [];
     private string _message = string.Empty;
     private bool _isBusy;
     private bool _isLoading;
@@ -102,6 +104,20 @@ public sealed class InquiriesViewModel(InquiryService service, QcMasterService q
     public bool CanClose => _capabilities.CanManage && Status == InquiryStatus.Answered;
 
     public bool CanCancel => _capabilities.CanManage && Status is InquiryStatus.Draft or InquiryStatus.Sent or InquiryStatus.PartiallyAnswered or InquiryStatus.Answered;
+
+    public IReadOnlyList<Choice<long>> RoundChoices => _roundChoices;
+
+    /// <summary>The production-gate state of the selected request (read-only information; the Application enforces the gate).</summary>
+    public string GateText => _gate is null
+        ? string.Empty
+        : _gate.Satisfied
+            ? "دروازه‌های مدیریت، نقشه‌کشی، قرارداد، استعلام و پرسش‌ها برقرار است (این به‌تنهایی آزادسازی تولید نیست)."
+            : "موانع آزادسازی: " + string.Join("؛ ", _gate.Blockers.Select(Messages.GateBlockerText))
+                + (_gate.HasUnresolvedMaterialState ? " — وضعیت حل‌نشده: " + $"ردیف بی‌پاسخ {_gate.UnansweredInquiryLines}، «خیر» بدون تکلیف {_gate.PendingDispositions}، پرسش باز {_gate.UnresolvedClarifications}" : string.Empty);
+
+    public bool CanDispose => _capabilities.CanManage && Status is not (null or InquiryStatus.Draft) && _detail!.Inquiry.Value.PendingDispositionCount > 0;
+
+    public bool CanRecordSupplyRoute => _capabilities.CanRecordSupplyRoute && Status is not (null or InquiryStatus.Draft);
 
     public bool CanAnswer => _capabilities.CanAnswer && Status is InquiryStatus.Sent or InquiryStatus.PartiallyAnswered or InquiryStatus.Answered;
 
@@ -174,6 +190,16 @@ public sealed class InquiriesViewModel(InquiryService service, QcMasterService q
         value = parsed;
         return true;
     }
+
+    public Task<bool> DisposeSelectedLineAsync(DispositionKind kind, string? note, long? newRoundInquiryId, CancellationToken cancellationToken = default) =>
+        _selectedLine is { } l
+            ? WithInquiry((id, version) => service.RecordDispositionAsync(currentUser(), id, version, l.LineNo, kind, note, newRoundInquiryId, cancellationToken), "تکلیف پاسخ «خیر» ثبت شد.")
+            : Nothing();
+
+    public Task<bool> RecordSupplyRouteAsync(string? note, bool externalPurchase, CancellationToken cancellationToken = default) =>
+        _selectedLine is { } l
+            ? WithInquiry((id, version) => service.RecordSupplyRouteAsync(currentUser(), id, version, l.LineNo, note, externalPurchase, cancellationToken), "مسیر تأمین ثبت شد.")
+            : Nothing();
 
     private Task<bool> Nothing()
     {
@@ -259,6 +285,14 @@ public sealed class InquiriesViewModel(InquiryService service, QcMasterService q
             }
         }
 
+        _gate = null;
+        _roundChoices = [];
+        if (_selectedRequest is not null)
+        {
+            var gate = await gates.GetAsync(currentUser(), _selectedRequest.RequestId, cancellationToken);
+            _gate = gate.Succeeded ? gate.Value : null;
+        }
+
         _selectedInquiry = _inquiries.FirstOrDefault(i => i.InquiryId == keepInquiryId);
         OnPropertyChanged(nameof(SelectedInquiry));
         if (_selectedInquiry is not null)
@@ -290,7 +324,11 @@ public sealed class InquiriesViewModel(InquiryService service, QcMasterService q
                 $"{l.RequiredQuantity:0.####} {units.GetValueOrDefault(l.QuantityUnitId, "?").Split(' ')[0]}",
                 current is null ? "پاسخ داده نشده" : current.Answer == InquiryAnswer.Yes ? "بله" : "خیر",
                 current?.Note ?? string.Empty,
-                current is null ? string.Empty : Messages.DepartmentText(current.RespondedByDepartmentCode) + " — " + dates.FormatDateTime(current.RespondedAtUtc)));
+                current is null ? string.Empty : Messages.DepartmentText(current.RespondedByDepartmentCode) + " — " + dates.FormatDateTime(current.RespondedAtUtc),
+                l.CurrentDisposition is { } disposition
+                    ? Messages.DispositionKindText(disposition.Kind) + (string.IsNullOrEmpty(disposition.Note) ? string.Empty : ": " + disposition.Note)
+                    : current is { Answer: InquiryAnswer.No } ? "بدون تکلیف (مانع آزادسازی)" : string.Empty,
+                l.CurrentSupplyRoute is { } route ? (route.ExternalPurchase ? "خرید بیرونی: " : "مسیر تأمین: ") + route.Note : string.Empty));
         }
 
         foreach (var h in _detail.Inquiry.Value.History.Reverse())
@@ -302,6 +340,11 @@ public sealed class InquiriesViewModel(InquiryService service, QcMasterService q
 
         _selectedLine = _lines.FirstOrDefault(l => l.LineNo == keepLine);
         OnPropertyChanged(nameof(SelectedLine));
+        var thisRound = _detail.Inquiry.Value.RoundNo;
+        var siblings = await service.ListForRequestAsync(currentUser(), _detail.Inquiry.Value.RequestId, cancellationToken);
+        _roundChoices = siblings.Succeeded
+            ? siblings.Value!.Where(s => s.Value.RoundNo > thisRound && s.Value.Status != InquiryStatus.Cancelled).Select(s => new Choice<long>(s.Value.Id, $"دور {s.Value.RoundNo}")).ToList()
+            : [];
     }
 
     private void ClearDetail()
@@ -313,7 +356,7 @@ public sealed class InquiriesViewModel(InquiryService service, QcMasterService q
 
     private void NotifyAll()
     {
-        foreach (var name in new[] { nameof(CanView), nameof(HasInquiry), nameof(InquiryHeading), nameof(CanCreate), nameof(CanEditLines), nameof(CanSend), nameof(CanClose), nameof(CanCancel), nameof(CanAnswer) })
+        foreach (var name in new[] { nameof(CanView), nameof(HasInquiry), nameof(InquiryHeading), nameof(CanCreate), nameof(CanEditLines), nameof(CanSend), nameof(CanClose), nameof(CanCancel), nameof(CanAnswer), nameof(CanDispose), nameof(CanRecordSupplyRoute), nameof(GateText), nameof(RoundChoices) })
         {
             OnPropertyChanged(name);
         }

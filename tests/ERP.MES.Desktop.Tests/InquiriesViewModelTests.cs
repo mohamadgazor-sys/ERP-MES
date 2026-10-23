@@ -12,7 +12,7 @@ public class InquiriesViewModelTests
 
     private static byte[] Pdf() => System.Text.Encoding.ASCII.GetBytes("%PDF-1.4\n% fictional\n%%EOF\n");
 
-    private static InquiriesViewModel For(WorkflowHarness h, Principal user) => new(h.Workflow.Inquiries, h.Workflow.QcMaster, h.Dates, () => user);
+    private static InquiriesViewModel For(WorkflowHarness h, Principal user) => new(h.Workflow.Inquiries, h.Workflow.QcMaster, h.Workflow.Gates, h.Dates, () => user);
 
     private static async Task<long> UnderDrawingAsync(WorkflowHarness h)
     {
@@ -92,12 +92,24 @@ public class InquiriesViewModelTests
     }
 
     [Fact]
-    public async Task Planning_management_and_others_see_nothing_until_decision_D8()
+    public async Task Planning_and_management_read_but_cannot_act_and_others_see_nothing()
     {
         using var h = await WorkflowHarness.CreateAsync(Token);
         await UnderDrawingAsync(h);
 
-        foreach (var user in new[] { h.Planning, h.Management, h.Qc, h.Central, h.Production })
+        var planning = For(h, h.Planning);
+        await planning.LoadAsync(Token);
+        Assert.True(planning.CanView);
+        Assert.False(planning.CanCreate);
+        Assert.False(planning.CanEditLines);
+        Assert.False(planning.CanAnswer);
+        Assert.Single(planning.Requests);
+        var management = For(h, h.Management);
+        await management.LoadAsync(Token);
+        Assert.True(management.CanView);
+        Assert.False(management.CanCreate);
+
+        foreach (var user in new[] { h.Qc, h.Central, h.Production })
         {
             var vm = For(h, user);
             await vm.LoadAsync(Token);

@@ -120,6 +120,18 @@ public enum ValidationIssue
     /// <summary>A new rate must apply from a date later than the machine's latest rate (history is never rewritten).</summary>
     RateNotLater,
 
+    /// <summary>The question or answer text is required (at most 2000 characters).</summary>
+    ClarificationTextInvalid,
+
+    /// <summary>A clarification can only be asked while Drawing reviews the request.</summary>
+    ClarificationRequestState,
+
+    /// <summary>The disposition needs a note, or the chosen new round is not a later round of the same request.</summary>
+    DispositionInvalid,
+
+    /// <summary>The supply-route note is required.</summary>
+    SupplyRouteInvalid,
+
     /// <summary>The request is not in Drawing review or returned from Drawing, so raw-material inquiries are not possible.</summary>
     InquiryRequestState,
 

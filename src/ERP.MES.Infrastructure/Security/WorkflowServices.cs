@@ -10,7 +10,7 @@ namespace ERP.MES.Infrastructure.Security;
 
 /// <summary>The customer and request use cases wired to the real repositories, the current-authorization check and the clock. Composition roots (Desktop) and tests create it once per database.</summary>
 public sealed record WorkflowServices(
-    CustomerService Customers, RequestService Requests, ProductionQueueService Queue, StageWorkService StageWork, RequestDocumentService Documents, RequestWorkflowService Lifecycle, QcMasterService QcMaster, PlanningMasterService PlanningMaster, OperatorService Operators, MaterialService Materials, ContractService Contracts, InquiryService Inquiries)
+    CustomerService Customers, RequestService Requests, ProductionQueueService Queue, StageWorkService StageWork, RequestDocumentService Documents, RequestWorkflowService Lifecycle, QcMasterService QcMaster, PlanningMasterService PlanningMaster, OperatorService Operators, MaterialService Materials, ContractService Contracts, InquiryService Inquiries, ClarificationService Clarifications, RequestGateService Gates)
 {
     public static WorkflowServices Create(
         IDbContextFactory<ErpMesDbContext> contexts, CurrentAuthorization authorization, IJalaliDateService dates, IClock? clock = null, IAuditContext? auditContext = null, DocumentPolicy? documentPolicy = null)
@@ -34,6 +34,8 @@ public sealed record WorkflowServices(
             new OperatorService(new EfOperatorRepository(contexts), new EfPlanningMasterRepository(contexts), authorization, effectiveClock, dates, auditContext ?? new EnvironmentAuditContext()),
             new MaterialService(new EfMaterialRepository(contexts), authorization, effectiveClock, dates, auditContext ?? new EnvironmentAuditContext()),
             new ContractService(new EfContractRepository(contexts), authorization, effectiveClock, dates, auditContext ?? new EnvironmentAuditContext(), documentPolicy ?? DocumentPolicy.Default),
-            new InquiryService(new EfInquiryRepository(contexts), new EfQcMasterRepository(contexts), authorization, effectiveClock, auditContext ?? new EnvironmentAuditContext()));
+            new InquiryService(new EfInquiryRepository(contexts), new EfQcMasterRepository(contexts), authorization, effectiveClock, auditContext ?? new EnvironmentAuditContext()),
+            new ClarificationService(new EfClarificationRepository(contexts), authorization, effectiveClock, auditContext ?? new EnvironmentAuditContext()),
+            new RequestGateService(new EfContractRepository(contexts), new EfInquiryRepository(contexts), new EfClarificationRepository(contexts), authorization));
     }
 }

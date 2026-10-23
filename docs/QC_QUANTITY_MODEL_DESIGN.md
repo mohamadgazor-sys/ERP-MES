@@ -2,6 +2,8 @@
 
 **Status: DESIGN ONLY. Not implemented.** Approved: QC owns units of measure and quantity types as distinct concepts; Planning selects them for items; every quantity type maps through a controlled mapping to the base QC-counting unit; a set's composition is defined explicitly, never assumed (#90); individual-unit QC dispositions for the intended production system (#83, #92). The structures below are PROPOSED/DEFAULT; physical-piece identity and rework/scrap totals are `OWNER_DECISION_PACKET.md` D2, D3.
 
+> **Decision update (2026-10-23):** D2 (no per-piece identity; base-unit quantities) and D3 (shortfall decided by Planning/Management; no overproduction without a raised ordered quantity) were APPROVED on 2026-10-23 (Decision Log #95); the "[OPEN D2]/[OPEN D3]" markers below are superseded.
+
 > **Implementation status:** the master data of sections 2 and 3 (units of measure, conversions, quantity types with explicit set members) is implemented (QC masters PR, Decision Log #90). Item columns, QC inspection lines and balances (sections 3-6) are not.
 
 ## 1. Existing position that this design touches
