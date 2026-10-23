@@ -6,6 +6,7 @@ namespace ERP.MES.Domain.Documents;
 public enum DocumentType
 {
     RequestPdf = 1,
+    ContractPdf = 2,
 }
 
 /// <summary>Why a file was refused as a request PDF.</summary>
@@ -72,7 +73,16 @@ public sealed class StoredDocument
     /// <paramref name="maxBytes"/> is accepted, one byte more is refused - Decision Log #54), and a usable file name.
     /// </summary>
     public static bool TryCreateRequestPdf(
-        string? fileName, byte[]? content, string contentHash, long maxBytes, long uploadedByUserId, DateTime uploadedAtUtc, out StoredDocument? document, out PdfError error)
+        string? fileName, byte[]? content, string contentHash, long maxBytes, long uploadedByUserId, DateTime uploadedAtUtc, out StoredDocument? document, out PdfError error) =>
+        TryCreatePdf(DocumentType.RequestPdf, fileName, content, contentHash, maxBytes, uploadedByUserId, uploadedAtUtc, out document, out error);
+
+    /// <summary>The same checks for a contract PDF (Decision Log #85, #35).</summary>
+    public static bool TryCreateContractPdf(
+        string? fileName, byte[]? content, string contentHash, long maxBytes, long uploadedByUserId, DateTime uploadedAtUtc, out StoredDocument? document, out PdfError error) =>
+        TryCreatePdf(DocumentType.ContractPdf, fileName, content, contentHash, maxBytes, uploadedByUserId, uploadedAtUtc, out document, out error);
+
+    private static bool TryCreatePdf(
+        DocumentType type, string? fileName, byte[]? content, string contentHash, long maxBytes, long uploadedByUserId, DateTime uploadedAtUtc, out StoredDocument? document, out PdfError error)
     {
         document = null;
         if (contentHash is null || contentHash.Length != 64 || !contentHash.All(Uri.IsHexDigit))
@@ -105,7 +115,7 @@ public sealed class StoredDocument
             return false;
         }
 
-        document = new StoredDocument(DocumentType.RequestPdf, name, content, contentHash.ToUpperInvariant(), uploadedByUserId, Customer.RequireUtc(uploadedAtUtc, nameof(uploadedAtUtc)));
+        document = new StoredDocument(type, name, content, contentHash.ToUpperInvariant(), uploadedByUserId, Customer.RequireUtc(uploadedAtUtc, nameof(uploadedAtUtc)));
         error = PdfError.None;
         return true;
     }

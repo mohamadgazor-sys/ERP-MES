@@ -167,6 +167,197 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
                     b.ToTable("UserCredentials", (string)null);
                 });
 
+            modelBuilder.Entity("ERP.MES.Domain.Contracts.ContractDocumentLink", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ContentHash")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("ContentLength")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("ContractVersionId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("DocumentId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("LinkedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("LinkedByUserId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("SupersededAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ContractVersionId");
+
+                    b.HasIndex("DocumentId");
+
+                    b.HasIndex("LinkedByUserId");
+
+                    b.ToTable("ContractDocumentLinks", (string)null);
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Contracts.ContractHistoryEntry", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Action")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("ActionAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ActionByDepartmentCode")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("ActionByUserId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("ContractId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("FromStatus")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Note")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("ToStatus")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("VersionNo")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ActionByUserId");
+
+                    b.HasIndex("ContractId");
+
+                    b.ToTable("ContractHistory", (string)null);
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Contracts.ContractVersion", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateOnly?>("ContractDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("ContractId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ContractNo")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("CreatedByUserId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("DecidedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long?>("DecidedByUserId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("Decision")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("DecisionNote")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Note")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("State")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("SubmittedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long?>("SubmittedByUserId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Title")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("VersionNo")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("DecidedByUserId");
+
+                    b.HasIndex("SubmittedByUserId");
+
+                    b.HasIndex("ContractId", "VersionNo")
+                        .IsUnique();
+
+                    b.ToTable("ContractVersions", (string)null);
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Contracts.RequestContract", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("RequestId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Requirement")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RequestId")
+                        .IsUnique();
+
+                    b.ToTable("Contracts", (string)null);
+                });
+
             modelBuilder.Entity("ERP.MES.Domain.Documents.StoredDocument", b =>
                 {
                     b.Property<long>("Id")
@@ -1276,6 +1467,78 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("ERP.MES.Domain.Contracts.ContractDocumentLink", b =>
+                {
+                    b.HasOne("ERP.MES.Domain.Contracts.ContractVersion", null)
+                        .WithMany("DocumentLinks")
+                        .HasForeignKey("ContractVersionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ERP.MES.Domain.Documents.StoredDocument", "Document")
+                        .WithMany()
+                        .HasForeignKey("DocumentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ERP.MES.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("LinkedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Document");
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Contracts.ContractHistoryEntry", b =>
+                {
+                    b.HasOne("ERP.MES.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("ActionByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ERP.MES.Domain.Contracts.RequestContract", null)
+                        .WithMany("History")
+                        .HasForeignKey("ContractId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Contracts.ContractVersion", b =>
+                {
+                    b.HasOne("ERP.MES.Domain.Contracts.RequestContract", null)
+                        .WithMany("Versions")
+                        .HasForeignKey("ContractId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ERP.MES.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ERP.MES.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("DecidedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("ERP.MES.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("SubmittedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Contracts.RequestContract", b =>
+                {
+                    b.HasOne("ERP.MES.Domain.Requests.Request", null)
+                        .WithMany()
+                        .HasForeignKey("RequestId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("ERP.MES.Domain.Documents.StoredDocument", b =>
                 {
                     b.HasOne("ERP.MES.Domain.Identity.User", null)
@@ -1585,6 +1848,18 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
                         .HasForeignKey("RequestId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Contracts.ContractVersion", b =>
+                {
+                    b.Navigation("DocumentLinks");
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Contracts.RequestContract", b =>
+                {
+                    b.Navigation("History");
+
+                    b.Navigation("Versions");
                 });
 
             modelBuilder.Entity("ERP.MES.Domain.Quality.QuantityType", b =>

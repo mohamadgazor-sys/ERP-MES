@@ -130,6 +130,14 @@ Fixed seeded routes and the demonstration banner stay visible; stage progression
 - K3: A price dated on or before the latest is refused; the history is never rewritten.
 - K4: Management can add prices but not materials; Planning sees prices but cannot change them; Production and QC see the list without prices.
 
+## L. MAKE contract gate (Decision Log #85, #93) - not run by a person; covered by automated tests
+- L1: A MAKE request that Drawing returned (accepted) appears in "قراردادها" for Planning, Management and Warehouse; a REPAIR request never does.
+- L2: Planning records "قرارداد لازم نیست" - the gate line says the contract gate is satisfied (and that item definition and raw-material checks are not built yet).
+- L3: Planning records "قرارداد لازم است", enters number and Jalali date, attaches a PDF, sends to Management; sending without any of the three is refused with a message.
+- L4: Management rejects without a reason (refused) and with a reason; Planning starts a new version, edits, resubmits; both versions, both PDFs and the decisions stay visible.
+- L5: Management approves; the list shows "تأیید شده" to Planning and Warehouse. Warehouse sees everything but all action buttons are disabled.
+- L6: Provisional: the rejection routing (back to Planning for a new version) is a default, not an approved rule.
+
 ## E. Production overview for Management and Planning (read-only; `docs/PRODUCTION_QUEUE.md`, Decision Log #78) - pending the owner's run
 
 Prepare a fictional demonstration database with `demo-init` (see `docs/AUTHENTICATION.md` section 12). The seeded requests have routes and several stage states.

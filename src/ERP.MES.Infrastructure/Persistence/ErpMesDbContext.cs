@@ -1,4 +1,5 @@
 using ERP.MES.Application.Security;
+using ERP.MES.Domain.Contracts;
 using ERP.MES.Domain.Documents;
 using ERP.MES.Domain.Identity;
 using ERP.MES.Domain.Materials;
@@ -33,6 +34,14 @@ public sealed class ErpMesDbContext(DbContextOptions<ErpMesDbContext> options) :
     public DbSet<ProductionUnit> ProductionUnits => Set<ProductionUnit>();
 
     public DbSet<Machine> Machines => Set<Machine>();
+
+    public DbSet<RequestContract> RequestContracts => Set<RequestContract>();
+
+    public DbSet<ContractVersion> ContractVersions => Set<ContractVersion>();
+
+    public DbSet<ContractDocumentLink> ContractDocumentLinks => Set<ContractDocumentLink>();
+
+    public DbSet<ContractHistoryEntry> ContractHistory => Set<ContractHistoryEntry>();
 
     public DbSet<Material> Materials => Set<Material>();
 
@@ -69,7 +78,7 @@ public sealed class ErpMesDbContext(DbContextOptions<ErpMesDbContext> options) :
     /// <summary>Name of the shadow property that holds the application-managed row version (Decision Log #23).</summary>
     public const string RowVersionPropertyName = "Version";
 
-    private static readonly HashSet<Type> VersionedTypes = [typeof(Customer), typeof(Request), typeof(RequestItem), typeof(ItemStage), typeof(User), typeof(UserCredential), typeof(SystemSetup), typeof(UnitOfMeasure), typeof(UnitConversion), typeof(QuantityType), typeof(ProductionUnit), typeof(Machine), typeof(Material), typeof(Operator), typeof(OperatorMachineAssignment), typeof(OperatorMachineQualification)];
+    private static readonly HashSet<Type> VersionedTypes = [typeof(Customer), typeof(Request), typeof(RequestItem), typeof(ItemStage), typeof(User), typeof(UserCredential), typeof(SystemSetup), typeof(UnitOfMeasure), typeof(UnitConversion), typeof(QuantityType), typeof(ProductionUnit), typeof(Machine), typeof(RequestContract), typeof(ContractVersion), typeof(Material), typeof(Operator), typeof(OperatorMachineAssignment), typeof(OperatorMachineQualification)];
 
     /// <summary>The row version of a tracked entity of a versioned type (customer, request, request item, item stage).</summary>
     public long GetRowVersion(object entity) => (long)Entry(entity).Property(RowVersionPropertyName).CurrentValue!;
@@ -106,6 +115,12 @@ public sealed class ErpMesDbContext(DbContextOptions<ErpMesDbContext> options) :
         if (ChangeTracker.Entries<RequestWorkflowEntry>().Any(e => e.State is EntityState.Modified or EntityState.Deleted))
         {
             throw new InvalidOperationException("The request workflow history is append-only: entries cannot be changed or deleted.");
+        }
+
+        // The contract history is append-only as well.
+        if (ChangeTracker.Entries<ContractHistoryEntry>().Any(e => e.State is EntityState.Modified or EntityState.Deleted))
+        {
+            throw new InvalidOperationException("The contract history is append-only: entries cannot be changed or deleted.");
         }
 
         foreach (var entry in ChangeTracker.Entries().Where(e => VersionedTypes.Contains(e.Metadata.ClrType)).ToList())

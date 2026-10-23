@@ -1635,3 +1635,34 @@ Append one dated entry after every substantial session. Do not replace prior ent
 
 ### Recommended exact next action
 - Merge after CI, then phase 2b (MAKE contract gate) or 2a (raw-material inquiry), per the staged plan.
+
+---
+
+### Date / session
+- Date: 2026-10-23
+- Claude Code session ID (if useful): session_01UwqjPjBXLd2apjZb2urjds (phase 2b: MAKE contract gate)
+
+### Goal
+- Planning decides whether a MAKE request needs a contract, prepares and submits it with a PDF; Management approves or rejects; Warehouse reads; production definition is blocked until the contract gate is satisfied (Decision Log #85, #93).
+
+### Completed
+- Domain (`Domain/Contracts`): `RequestContract` (decision, versions, PDF links, append-only history), `ContractEligibility`, `DefinitionReadiness`; `DocumentType.ContractPdf`.
+- Application: `ContractService` (Planning: decide/change requirement/save draft/attach PDF/submit/start revision; Management: approve/reject with mandatory reason; read for Planning/Management/Warehouse), new permission `ViewContracts`, audit codes, validation issues.
+- Persistence: `Contracts`, `ContractVersions`, `ContractDocumentLinks`, `ContractHistory`; migration `AddContractGate` (additive); every change re-reads the request facts and raises the request row version in the same transaction.
+- Desktop: "قراردادها" page.
+- Request statuses unchanged; readiness derived from persisted state.
+
+### Decisions newly approved
+- Owner direction (this task): rejection reason mandatory; rejection routing recorded as PROVISIONAL (Decision Log #93).
+
+### Unresolved questions / risks
+- No notification mechanism exists; approval is visible in the contract list (derived). Persistent unread notifications are not built.
+- A contract decision made for one Drawing result is not re-validated against a later, different Drawing result except through the eligibility check (accepted result required).
+- Raw-material disposition and item definition gates are not built; D1-D8 remain open.
+- Contract search by number/date/customer is not built beyond the list.
+
+### Commands/tests actually run and results
+- Local (Linux): non-Desktop tests Domain 490, Application 5, Infrastructure 519 passed; Desktop LocalLinux subset 123 passed; Release build 0 warnings 0 errors. See the pull request for the final head's Windows CI totals.
+
+### Recommended exact next action
+- Merge after CI, then phase 2a (raw-material inquiry entities and Warehouse answers; routing after "No" stays behind D1) or 4a.

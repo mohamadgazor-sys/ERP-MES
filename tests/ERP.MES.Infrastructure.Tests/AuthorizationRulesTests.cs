@@ -38,6 +38,7 @@ public class AuthorizationRulesTests
         // Read-only production overview (Decision Log #78): Management and Planning, any role; every other department is denied.
         [Permission.MaintainProductionResources] = (["PLANNING"], null),
         [Permission.ViewPlanningMasterData] = ([], null),
+        [Permission.ViewContracts] = (["PLANNING", "MANAGEMENT", "WAREHOUSE"], null),
         [Permission.MaintainMaterials] = (["WAREHOUSE"], null),
         [Permission.ViewMaterials] = ([], null),
         [Permission.ViewMaterialPrices] = (["WAREHOUSE", "MANAGEMENT", "PLANNING"], null),

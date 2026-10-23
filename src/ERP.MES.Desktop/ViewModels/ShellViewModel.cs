@@ -17,6 +17,7 @@ public sealed class ShellViewModel : ObservableObject
     public const string MachinesKey = "machines";
     public const string OperatorsKey = "operators";
     public const string MaterialsKey = "materials";
+    public const string ContractsKey = "contracts";
     public const string LimitationsKey = "limitations";
 
     private readonly IJalaliDateService _dates;
@@ -41,6 +42,7 @@ public sealed class ShellViewModel : ObservableObject
             new NavigationItem(MachinesKey, "ماشین‌ها و نرخ‌ها", true),
             new NavigationItem(OperatorsKey, "اپراتورها", true),
             new NavigationItem(MaterialsKey, "مواد اولیه و قیمت", true),
+            new NavigationItem(ContractsKey, "قراردادها", true),
             new NavigationItem(LimitationsKey, "محدودیت‌های نسخه نمایشی", true),
         ];
 

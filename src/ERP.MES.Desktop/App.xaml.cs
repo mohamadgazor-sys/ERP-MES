@@ -134,7 +134,8 @@ public partial class App : System.Windows.Application
             new QcMasterViewModel(workflow.QcMaster, CurrentUser),
             new PlanningMasterViewModel(workflow.PlanningMaster, dates, DigitStyle.Persian, CurrentUser),
             new OperatorsViewModel(workflow.Operators, workflow.PlanningMaster, dates, CurrentUser),
-            new MaterialsViewModel(workflow.Materials, dates, DigitStyle.Persian, CurrentUser));
+            new MaterialsViewModel(workflow.Materials, dates, DigitStyle.Persian, CurrentUser),
+            new ContractsViewModel(workflow.Contracts, dates, CurrentUser));
 
         _mainWindow = new MainWindow(shell, session, pages);
         _mainWindow.Show();

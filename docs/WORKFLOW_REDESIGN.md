@@ -227,7 +227,7 @@ The demonstration (PRs #18-#27) stays as it is until each gap below is closed by
 
 | Area | Demonstration | Intended process | Closed by phase |
 |---|---|---|---|
-| Request lifecycle | *(Implemented: one type per request #84; PDF before submission #87; Management approve/reject, reopen, forward to Drawing, Drawing result, send back, with workflow history and audit.)* Still missing: contract gate, item definition after the gates, production release gates, clarification threads (D1) | Section 3 | 2b, 4a |
+| Request lifecycle | *(Implemented: one type per request #84; PDF before submission #87; Management approve/reject, reopen, forward to Drawing, Drawing result, send back, with workflow history and audit.)* The MAKE contract gate is implemented (#93: own contract status, request status unchanged, readiness derived). Still missing: item definition after the gates, production release gates, clarification threads (D1) | Section 3 | 2b, 4a |
 | Items and stages | Fixed seeded routes; no unit or machine on stages | Planning defines stages with unit and machine; Excel import | 3, 4 |
 | Stage actions | Release/start/submit/approve with no request-status, contract or Management gate [DEMO] | Gates of section 5 | 1, 2, 5 |
 | QC | Whole quantity only | Per-unit accepted / rework / scrap | 5 |
@@ -247,7 +247,7 @@ Each PR is small, keeps the demo working until replaced, carries tests, a Decisi
 | 1a | Single-type requests (model, mapping, migration, Excel/demo adjustments), PDF-before-submit | #84, #87 | - | none |
 | 1b | Request lifecycle: Management decision, forward to Drawing, Drawing result, status history, reopen | #29, #82 | 1a | none (clarification route uses [DEFAULT]) |
 | 2a | Raw-material inquiry (Drawing, Warehouse Yes/No, history, clarification) | #86, #88 | 1b | D1 for the routing after "No"; build entities and answers first |
-| 2b | MAKE contract gate (Planning decides, submit/approve/reject, Warehouse read-only, notification) | #85 | 1b | none |
+| 2b | MAKE contract gate (Planning decides, submit/approve/reject, Warehouse read-only, notification) | #85, #93 | 1b | none | done; rejection routing PROVISIONAL, notification derived from state |
 | 3a | QC masters: UOM, conversions, quantity types with base mapping and explicit set composition | #90 | - | none |
 | 3b | Planning masters: operators, machine codes, rate history, master assignments, qualifications; Warehouse material master and price history | #89 | - | none |
 | 4a | Item definition and stage planning (spec fields, stage->unit/machine, release gates) | #86, #89 | 1b, 2b, 3a, 3b | none |

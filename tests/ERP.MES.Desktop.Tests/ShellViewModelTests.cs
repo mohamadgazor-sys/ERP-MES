@@ -20,7 +20,7 @@ public class ShellViewModelTests
         var shell = Create(SampleUtc);
 
         Assert.Equal(
-            new[] { "dashboard", "customers", "requests", "queue", "stages", "qcmaster", "machines", "operators", "materials", "limitations" },
+            new[] { "dashboard", "customers", "requests", "queue", "stages", "qcmaster", "machines", "operators", "materials", "contracts", "limitations" },
             shell.Items.Select(i => i.Key).ToArray());
         Assert.Equal(shell.Items.Count, shell.Items.Select(i => i.Key).Distinct().Count());
     }

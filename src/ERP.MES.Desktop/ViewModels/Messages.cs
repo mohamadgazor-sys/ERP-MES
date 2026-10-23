@@ -68,6 +68,14 @@ public static class Messages
         ValidationIssue.EffectiveDateRequired => "تاریخ شروع اعمال نرخ را وارد کنید.",
         ValidationIssue.EffectiveDateInvalid => "تاریخ شروع اعمال نرخ معتبر نیست (مثال: ۱۴۰۵/۰۷/۲۰).",
         ValidationIssue.RateNotLater => "تاریخ شروع نرخ جدید باید بعد از آخرین نرخ ثبت‌شدهٔ این ماشین باشد؛ تاریخچه بازنویسی نمی‌شود.",
+        ValidationIssue.ContractNotApplicable => "برای درخواست تعمیر مرحلهٔ قرارداد وجود ندارد.",
+        ValidationIssue.ContractRequestNotReturned => "درخواست باید پس از تأیید مدیریت و بررسی نقشه‌کشی در وضعیت «بازگشته از نقشه‌کشی به برنامه‌ریزی» باشد.",
+        ValidationIssue.ContractDrawingNotAccepted => "نتیجهٔ نقشه‌کشی باید «پذیرفته‌شده» یا «پذیرفته‌شده بخشی» باشد.",
+        ValidationIssue.ContractNoRequired => "برای ارسال، شمارهٔ قرارداد را وارد کنید.",
+        ValidationIssue.ContractDateRequired => "برای ارسال، تاریخ قرارداد را وارد کنید.",
+        ValidationIssue.ContractPdfRequired => "برای ارسال، فایل PDF قرارداد را پیوست کنید.",
+        ValidationIssue.ContractTextTooLong => "شمارهٔ قرارداد (حداکثر ۵۰) یا عنوان (حداکثر ۲۰۰) بیش از حد مجاز است.",
+        ValidationIssue.ContractAlreadyDecided => "تصمیم دربارهٔ لزوم قرارداد قبلاً ثبت شده است؛ برای تغییر از «تغییر تصمیم» با ذکر دلیل استفاده کنید.",
         ValidationIssue.MaterialInvalid => "ماده انتخاب‌شده وجود ندارد یا فعال نیست.",
         ValidationIssue.PriceInvalid => "قیمت باید عددی بزرگ‌تر از صفر (ریال بر کیلوگرم) باشد؛ بدون جداکنندهٔ هزارگان.",
         ValidationIssue.PriceNotLater => "تاریخ شروع قیمت جدید باید بعد از آخرین قیمت ثبت‌شدهٔ این ماده باشد؛ تاریخچه بازنویسی نمی‌شود.",
@@ -125,6 +133,46 @@ public static class Messages
         DrawingOutcome.MoreInformationNeeded => "نیاز به اطلاعات بیشتر",
         DrawingOutcome.ReturnedForCorrection => "بازگشت برای اصلاح",
         _ => string.Empty,
+    };
+
+    public static string ContractStatusText(ERP.MES.Domain.Contracts.ContractStatus status) => status switch
+    {
+        ERP.MES.Domain.Contracts.ContractStatus.NotRequired => "قرارداد لازم نیست",
+        ERP.MES.Domain.Contracts.ContractStatus.Draft => "پیش‌نویس (نزد برنامه‌ریزی)",
+        ERP.MES.Domain.Contracts.ContractStatus.PendingManagement => "در انتظار مدیریت",
+        ERP.MES.Domain.Contracts.ContractStatus.Approved => "تأیید شده",
+        _ => "ردشده؛ بازگشته به برنامه‌ریزی",
+    };
+
+    public static string ContractVersionStateText(ERP.MES.Domain.Contracts.ContractVersionState state) => state switch
+    {
+        ERP.MES.Domain.Contracts.ContractVersionState.Draft => "پیش‌نویس",
+        ERP.MES.Domain.Contracts.ContractVersionState.Submitted => "ارسال‌شده",
+        _ => "کنار گذاشته‌شده",
+    };
+
+    public static string ContractActionText(ERP.MES.Domain.Contracts.ContractAction action) => action switch
+    {
+        ERP.MES.Domain.Contracts.ContractAction.DecidedNotRequired => "ثبت: قرارداد لازم نیست",
+        ERP.MES.Domain.Contracts.ContractAction.DecidedRequired => "ثبت: قرارداد لازم است",
+        ERP.MES.Domain.Contracts.ContractAction.RequirementChanged => "تغییر تصمیم",
+        ERP.MES.Domain.Contracts.ContractAction.DraftSaved => "ذخیرهٔ پیش‌نویس",
+        ERP.MES.Domain.Contracts.ContractAction.PdfAttached => "پیوست PDF",
+        ERP.MES.Domain.Contracts.ContractAction.Submitted => "ارسال به مدیریت",
+        ERP.MES.Domain.Contracts.ContractAction.Approved => "تأیید مدیریت",
+        ERP.MES.Domain.Contracts.ContractAction.Rejected => "رد مدیریت",
+        _ => "شروع نسخهٔ جدید",
+    };
+
+    public static string DefinitionBlockText(ERP.MES.Domain.Contracts.DefinitionBlock block) => block switch
+    {
+        ERP.MES.Domain.Contracts.DefinitionBlock.None => "—",
+        ERP.MES.Domain.Contracts.DefinitionBlock.RequestNotReturnedFromDrawing => "درخواست هنوز پس از تأیید مدیریت از نقشه‌کشی به برنامه‌ریزی بازنگشته است",
+        ERP.MES.Domain.Contracts.DefinitionBlock.DrawingResultNotAccepted => "نتیجهٔ نقشه‌کشی پذیرفته نشده است",
+        ERP.MES.Domain.Contracts.DefinitionBlock.ContractDecisionMissing => "برنامه‌ریزی هنوز دربارهٔ لزوم قرارداد تصمیم نگرفته است",
+        ERP.MES.Domain.Contracts.DefinitionBlock.ContractInPreparation => "قرارداد در حال تهیه است",
+        ERP.MES.Domain.Contracts.DefinitionBlock.ContractPendingManagement => "قرارداد منتظر تصمیم مدیریت است",
+        _ => "قرارداد رد شده و باید اصلاح و دوباره ارسال شود",
     };
 
     public static string DepartmentText(string code) => code switch

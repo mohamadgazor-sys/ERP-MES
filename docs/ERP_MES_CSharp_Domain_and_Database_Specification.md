@@ -662,6 +662,8 @@ The contract customer is always derived by joining `Contract.RequestID` to `Requ
 
 > **[Decision Log #35]** Document references on this entity are link-table associations, not single foreign keys; see §20.
 
+> **[Decision Log #93]** Implemented as `Contracts` (one per request, own status), `ContractVersions` (number, date, title, note, state, Management decision, decider, time, reason), `ContractDocumentLinks` (link rows to the stored PDF, Decision Log #35) and `ContractHistory` (append-only). `ContractRequired` is represented by the `Requirement` of the contract record (no record = undecided). The request status set is unchanged. `IsCurrent`/`IsActive` are replaced by version states. A rejection reason is mandatory.
+
 ## 11.3 Contract navigation indexes
 
 Contract search must support:

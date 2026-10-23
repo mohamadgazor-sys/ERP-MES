@@ -120,6 +120,30 @@ public enum ValidationIssue
     /// <summary>A new rate must apply from a date later than the machine's latest rate (history is never rewritten).</summary>
     RateNotLater,
 
+    /// <summary>A REPAIR request has no contract workflow (Decision Log #85).</summary>
+    ContractNotApplicable,
+
+    /// <summary>The request is not in "returned from Drawing" status: Management approval and Drawing's result come first.</summary>
+    ContractRequestNotReturned,
+
+    /// <summary>Drawing's latest result is not fully or partially accepted.</summary>
+    ContractDrawingNotAccepted,
+
+    /// <summary>The contract number is required to submit.</summary>
+    ContractNoRequired,
+
+    /// <summary>The contract date is required to submit.</summary>
+    ContractDateRequired,
+
+    /// <summary>The contract PDF is required to submit.</summary>
+    ContractPdfRequired,
+
+    /// <summary>The contract number or title is longer than allowed.</summary>
+    ContractTextTooLong,
+
+    /// <summary>The contract decision is already recorded for this request.</summary>
+    ContractAlreadyDecided,
+
     /// <summary>The material does not exist or is not active.</summary>
     MaterialInvalid,
 
