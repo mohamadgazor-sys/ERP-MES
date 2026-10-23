@@ -2023,6 +2023,338 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
                     b.ToTable("RequestWorkflowEntries", (string)null);
                 });
 
+            modelBuilder.Entity("ERP.MES.Domain.Scheduling.CalendarException", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateOnly>("Date")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Kind")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long?>("ProductionUnitId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("RecordedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("RecordedByUserId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long?>("ShiftTemplateId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Date");
+
+                    b.HasIndex("ProductionUnitId");
+
+                    b.HasIndex("RecordedByUserId");
+
+                    b.HasIndex("ShiftTemplateId");
+
+                    b.ToTable("CalendarExceptions", (string)null);
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Scheduling.OperatorOffDay", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateOnly>("FromDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Kind")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Note")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("OperatorId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("RecordedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("RecordedByUserId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateOnly>("ToDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RecordedByUserId");
+
+                    b.HasIndex("OperatorId", "FromDate");
+
+                    b.ToTable("OperatorOffDays", (string)null);
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Scheduling.ShiftTemplate", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<TimeOnly?>("BreakEnd")
+                        .HasColumnType("TEXT");
+
+                    b.Property<TimeOnly?>("BreakStart")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .UseCollation("BINARY");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("CreatedByUserId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<TimeOnly>("EndTime")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<TimeOnly>("StartTime")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.ToTable("ShiftTemplates", (string)null);
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Scheduling.UnitShift", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("CreatedByUserId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("MaxOperators")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("MinOperators")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("OverlapAllowed")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("ProductionUnitId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("ShiftTemplateId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("ShiftTemplateId");
+
+                    b.HasIndex("ProductionUnitId", "ShiftTemplateId")
+                        .IsUnique();
+
+                    b.ToTable("UnitShifts", (string)null);
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Scheduling.WeeklyWorkday", b =>
+                {
+                    b.Property<int>("Day")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsWorkday")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Day");
+
+                    b.ToTable("WeeklyWorkdays", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Day = 0,
+                            IsWorkday = true,
+                            UpdatedAtUtc = new DateTime(2026, 10, 23, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Version = 1L
+                        },
+                        new
+                        {
+                            Day = 1,
+                            IsWorkday = true,
+                            UpdatedAtUtc = new DateTime(2026, 10, 23, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Version = 1L
+                        },
+                        new
+                        {
+                            Day = 2,
+                            IsWorkday = true,
+                            UpdatedAtUtc = new DateTime(2026, 10, 23, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Version = 1L
+                        },
+                        new
+                        {
+                            Day = 3,
+                            IsWorkday = true,
+                            UpdatedAtUtc = new DateTime(2026, 10, 23, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Version = 1L
+                        },
+                        new
+                        {
+                            Day = 4,
+                            IsWorkday = true,
+                            UpdatedAtUtc = new DateTime(2026, 10, 23, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Version = 1L
+                        },
+                        new
+                        {
+                            Day = 5,
+                            IsWorkday = false,
+                            UpdatedAtUtc = new DateTime(2026, 10, 23, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Version = 1L
+                        },
+                        new
+                        {
+                            Day = 6,
+                            IsWorkday = true,
+                            UpdatedAtUtc = new DateTime(2026, 10, 23, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Version = 1L
+                        });
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Scheduling.WorkerSchedule", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("CancelReason")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("CancelledAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long?>("CancelledByUserId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("CreatedByUserId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateOnly>("Date")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("HandoverMinutes")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("HandoverNote")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long?>("MachineId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("OperatorId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("ProductionUnitId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("ShiftTemplateId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CancelledByUserId");
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("MachineId");
+
+                    b.HasIndex("ProductionUnitId");
+
+                    b.HasIndex("ShiftTemplateId");
+
+                    b.HasIndex("Date", "ProductionUnitId");
+
+                    b.HasIndex("OperatorId", "Date");
+
+                    b.ToTable("WorkerSchedules", (string)null);
+                });
+
             modelBuilder.Entity("ERP.MES.Application.Security.AuditLogEntry", b =>
                 {
                     b.HasOne("ERP.MES.Domain.Identity.User", null)
@@ -2680,6 +3012,107 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
                     b.HasOne("ERP.MES.Domain.Requests.Request", null)
                         .WithMany("WorkflowHistory")
                         .HasForeignKey("RequestId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Scheduling.CalendarException", b =>
+                {
+                    b.HasOne("ERP.MES.Domain.Planning.ProductionUnit", null)
+                        .WithMany()
+                        .HasForeignKey("ProductionUnitId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("ERP.MES.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("RecordedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ERP.MES.Domain.Scheduling.ShiftTemplate", null)
+                        .WithMany()
+                        .HasForeignKey("ShiftTemplateId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Scheduling.OperatorOffDay", b =>
+                {
+                    b.HasOne("ERP.MES.Domain.Planning.Operator", null)
+                        .WithMany()
+                        .HasForeignKey("OperatorId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ERP.MES.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("RecordedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Scheduling.ShiftTemplate", b =>
+                {
+                    b.HasOne("ERP.MES.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Scheduling.UnitShift", b =>
+                {
+                    b.HasOne("ERP.MES.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ERP.MES.Domain.Planning.ProductionUnit", null)
+                        .WithMany()
+                        .HasForeignKey("ProductionUnitId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ERP.MES.Domain.Scheduling.ShiftTemplate", null)
+                        .WithMany()
+                        .HasForeignKey("ShiftTemplateId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Scheduling.WorkerSchedule", b =>
+                {
+                    b.HasOne("ERP.MES.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("CancelledByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("ERP.MES.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ERP.MES.Domain.Planning.Machine", null)
+                        .WithMany()
+                        .HasForeignKey("MachineId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("ERP.MES.Domain.Planning.Operator", null)
+                        .WithMany()
+                        .HasForeignKey("OperatorId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ERP.MES.Domain.Planning.ProductionUnit", null)
+                        .WithMany()
+                        .HasForeignKey("ProductionUnitId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ERP.MES.Domain.Scheduling.ShiftTemplate", null)
+                        .WithMany()
+                        .HasForeignKey("ShiftTemplateId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });

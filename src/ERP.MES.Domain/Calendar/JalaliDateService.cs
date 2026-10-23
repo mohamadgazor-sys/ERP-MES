@@ -177,6 +177,28 @@ public sealed class JalaliDateService : IJalaliDateService
 
     public string FormatDate(DateOnly gregorianDate) => FormatDate(ToJalali(gregorianDate));
 
+    public DateTime LocalToUtc(DateOnly date, TimeOnly time)
+    {
+        var local = DateTime.SpecifyKind(date.ToDateTime(time), DateTimeKind.Unspecified);
+        if (_displayTimeZone.IsInvalidTime(local) || _displayTimeZone.IsAmbiguousTime(local))
+        {
+            throw new ArgumentException("The local time does not exist or occurs twice in the display time zone.", nameof(time));
+        }
+
+        return TimeZoneInfo.ConvertTimeToUtc(local, _displayTimeZone);
+    }
+
+    public (DateOnly Date, TimeOnly Time) UtcToLocal(DateTime utcTimestamp)
+    {
+        if (utcTimestamp.Kind != DateTimeKind.Utc)
+        {
+            throw new ArgumentException("Timestamps are stored in UTC; the value must have Kind = Utc.", nameof(utcTimestamp));
+        }
+
+        var local = TimeZoneInfo.ConvertTimeFromUtc(utcTimestamp, _displayTimeZone);
+        return (DateOnly.FromDateTime(local), TimeOnly.FromDateTime(local));
+    }
+
     public string FormatDateTime(DateTime utcTimestamp)
     {
         if (utcTimestamp.Kind != DateTimeKind.Utc)

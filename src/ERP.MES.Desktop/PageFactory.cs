@@ -27,6 +27,7 @@ internal static class PageFactory
             ShellViewModel.ItemDefinitionKey => new ItemDefinitionView(pages.ItemDefinition),
             ShellViewModel.ItemImportKey => new ItemImportView(pages.ItemImport),
             ShellViewModel.UnitQueueKey => new UnitQueueView(pages.UnitQueue),
+            ShellViewModel.CalendarKey => new CalendarView(pages.Calendar),
             ShellViewModel.LimitationsKey => new LimitationsView(),
             _ => new PlaceholderView(item.Title, shell.NotImplementedText),
         };

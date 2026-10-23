@@ -14,6 +14,7 @@ public sealed class ShellViewModel : ObservableObject
     public const string QueueKey = "queue";
     public const string StagesKey = "stages";
     public const string UnitQueueKey = "unitqueue";
+    public const string CalendarKey = "calendar";
     public const string DefinitionsKey = "qcmaster";
     public const string MachinesKey = "machines";
     public const string OperatorsKey = "operators";
@@ -44,6 +45,7 @@ public sealed class ShellViewModel : ObservableObject
             new NavigationItem(QueueKey, "صف تولید", true),
             new NavigationItem(StagesKey, "مراحل و کنترل کیفیت", true),
             new NavigationItem(UnitQueueKey, "صف واحدهای تولید", true),
+            new NavigationItem(CalendarKey, "تقویم و شیفت‌ها", true),
             new NavigationItem(DefinitionsKey, "واحدها و انواع مقدار", true),
             new NavigationItem(MachinesKey, "ماشین‌ها و نرخ‌ها", true),
             new NavigationItem(OperatorsKey, "اپراتورها", true),

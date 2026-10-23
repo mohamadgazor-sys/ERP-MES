@@ -8,6 +8,7 @@ using ERP.MES.Domain.Materials;
 using ERP.MES.Domain.Planning;
 using ERP.MES.Domain.Production;
 using ERP.MES.Domain.Quality;
+using ERP.MES.Domain.Scheduling;
 using ERP.MES.Domain.Requests;
 using Microsoft.EntityFrameworkCore;
 
@@ -45,6 +46,18 @@ public sealed class ErpMesDbContext(DbContextOptions<ErpMesDbContext> options) :
     public DbSet<ContractDocumentLink> ContractDocumentLinks => Set<ContractDocumentLink>();
 
     public DbSet<ContractHistoryEntry> ContractHistory => Set<ContractHistoryEntry>();
+
+    public DbSet<ShiftTemplate> ShiftTemplates => Set<ShiftTemplate>();
+
+    public DbSet<WeeklyWorkday> WeeklyWorkdays => Set<WeeklyWorkday>();
+
+    public DbSet<CalendarException> CalendarExceptions => Set<CalendarException>();
+
+    public DbSet<UnitShift> UnitShifts => Set<UnitShift>();
+
+    public DbSet<OperatorOffDay> OperatorOffDays => Set<OperatorOffDay>();
+
+    public DbSet<WorkerSchedule> WorkerSchedules => Set<WorkerSchedule>();
 
     public DbSet<QueueOverride> QueueOverrides => Set<QueueOverride>();
 
@@ -105,7 +118,7 @@ public sealed class ErpMesDbContext(DbContextOptions<ErpMesDbContext> options) :
     /// <summary>Name of the shadow property that holds the application-managed row version (Decision Log #23).</summary>
     public const string RowVersionPropertyName = "Version";
 
-    private static readonly HashSet<Type> VersionedTypes = [typeof(Customer), typeof(Request), typeof(RequestItem), typeof(ItemStage), typeof(User), typeof(UserCredential), typeof(SystemSetup), typeof(UnitOfMeasure), typeof(UnitConversion), typeof(QuantityType), typeof(ProductionUnit), typeof(Machine), typeof(RawMaterialInquiry), typeof(DrawingClarification), typeof(RequestContract), typeof(ContractVersion), typeof(Material), typeof(Operator), typeof(OperatorMachineAssignment), typeof(OperatorMachineQualification), typeof(QueueOverride), typeof(UserUnitDesignation)];
+    private static readonly HashSet<Type> VersionedTypes = [typeof(Customer), typeof(Request), typeof(RequestItem), typeof(ItemStage), typeof(User), typeof(UserCredential), typeof(SystemSetup), typeof(UnitOfMeasure), typeof(UnitConversion), typeof(QuantityType), typeof(ProductionUnit), typeof(Machine), typeof(RawMaterialInquiry), typeof(DrawingClarification), typeof(RequestContract), typeof(ContractVersion), typeof(Material), typeof(Operator), typeof(OperatorMachineAssignment), typeof(OperatorMachineQualification), typeof(QueueOverride), typeof(UserUnitDesignation), typeof(ShiftTemplate), typeof(WeeklyWorkday), typeof(CalendarException), typeof(UnitShift), typeof(OperatorOffDay), typeof(WorkerSchedule)];
 
     /// <summary>The row version of a tracked entity of a versioned type (customer, request, request item, item stage).</summary>
     public long GetRowVersion(object entity) => (long)Entry(entity).Property(RowVersionPropertyName).CurrentValue!;

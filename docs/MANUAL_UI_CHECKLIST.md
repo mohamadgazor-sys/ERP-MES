@@ -221,3 +221,11 @@ Prepare a fictional demonstration database with `demo-init` (`docs/AUTHENTICATIO
 - Q5: As a designated Production user stop a row with a reason: it moves to "متوقف / مشکل‌دار" with the reason, and "شروع" is refused until "ازسرگیری". An undesignated Production user sees no unit.
 - Q6: Send a request back to Drawing: its stages show "شرط‌های آزادسازی تولید برقرار نیست" and cannot be started or released.
 - Q7: Planning designates a Production user to a unit in the lower section; withdrawing it removes the user's access at the next action.
+
+## R. Planning calendar, shifts and worker schedule (Decision Log #13, #95 D5, #100) - not run by a person; covered by automated tests
+- R1: As Planning open "تقویم و شیفت‌ها": the week shows Saturday to Thursday as working days and Friday off; add a shift template (for example 08:00-17:00 with a 12:00-13:00 break) and see its working minutes.
+- R2: Add the template to a unit with a capacity; adding a template that overlaps another shift of the same unit is refused until "هم‌پوشانی را صریحاً علامت می‌زنم" is ticked.
+- R3: Plan an operator on a unit shift for a Jalali date; planning the same operator in an overlapping shift the same day, exceeding the maximum, planning on a day off, or on a machine already used at that time is refused with a specific message.
+- R4: Record a company holiday for a day that already has planned operators: the screen says how many rows became inconsistent; the rows stay and are flagged. Record an operator absence the same way.
+- R5: On "صف واحدهای تولید" the planned-end column shows a date and time for actionable rows of a unit that runs a shift, and "—" for a unit without a shift, a stopped row or a blocked row.
+- R6: As Management or Production open the page: everything is read-only; as Drawing, Central, QC or Warehouse the page is denied.

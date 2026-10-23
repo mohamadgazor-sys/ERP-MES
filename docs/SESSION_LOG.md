@@ -1815,3 +1815,32 @@ Append one dated entry after every substantial session. Do not replace prior ent
 
 ### Recommended exact next action
 - Merge after CI, then 6a (working calendar and shifts; D5 rules).
+
+---
+
+### Date / session
+- Date: 2026-10-23
+- Claude Code session ID (if useful): session_01UwqjPjBXLd2apjZb2urjds (phase 6a: Planning calendar, shifts and worker schedule)
+
+### Goal
+- Configurable working calendar, shifts, capacity, operator off-days and worker schedule with the D5 overlap rules, and a calendar-based planned-end forecast for the unit queues (Decision Log #13, #95, #100).
+
+### Completed
+- Domain: `ShiftTemplate`, `WeeklyWorkday`, `CalendarException`, `UnitShift`, `OperatorOffDay`, `WorkerSchedule`, pure `WorkingCalendar`; `IJalaliDateService.LocalToUtc/UtcToLocal`.
+- Application: `CalendarService`, `WorkerScheduleService`, `WorkerScheduleRules` (D5), planned-end forecast in `UnitQueueService`.
+- Persistence: six tables, seeded week, `EfSchedulingRepository` (rules checked in the insert's transaction), migration `AddPlanningCalendar` with upgrade test.
+- Desktop: page "تقویم و شیفت‌ها"; planned end shown on the unit queue.
+- Tests: domain calendar maths, service tests (permissions, templates, overlaps, exceptions, D5 scheduling rules, cancellations, forecast), migration, view models.
+
+### Decisions newly approved
+- None; labelled defaults are listed in #100.
+
+### Unresolved questions / risks
+- How headcount scales unit throughput (U-36); machine downtime registration by PM and its effect on the forecast (#14); effective-dated capacity.
+- The Windows Infrastructure suite takes about 28 minutes; the job timeout was raised to 90 minutes in #41.
+
+### Commands/tests actually run and results
+- See the pull request for the Linux and Windows CI totals of the final head.
+
+### Recommended exact next action
+- Merge after CI, then 5b (quantity-level QC: accepted / rework / scrap per item and stage, D2/D3).
