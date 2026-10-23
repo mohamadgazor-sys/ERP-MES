@@ -152,7 +152,12 @@ Fixed seeded routes and the demonstration banner stay visible; stage progression
 - N4: Planning and Management can open the inquiry page and read everything, but every action button is disabled; QC, Central and Production see nothing.
 - N5: Only Drawing can cancel an inquiry (reason required); only Drawing can close its own question.
 
-## E. Production overview for Management and Planning (read-only; `docs/PRODUCTION_QUEUE.md`, Decision Log #78) - pending the owner's run
+## O. Item and stage definition by Planning (Decision Log #86, #95, #96) - not run by a person; covered by automated tests
+- O1: On "تعریف آیتم‌ها و مرحله‌ها" select a request that is not yet through the gates: the page says why definition is impossible and offers no definition (the Application refuses it too).
+- O2: Select a request whose gates hold: define a MAKE item (number, name, quantity, quantity type, material, weight in kg, length/diameter in mm); a MAKE item without type, material or weight is refused; a REPAIR item may omit them.
+- O3: Select the item and add stages: title, minutes per piece, production unit and (optional) a machine of that unit; a machine of another unit is refused.
+- O4: As Drawing, Central, Management, Warehouse, QC or Production the page offers no definition. The requests page no longer has an "add item" form.
+ and Planning (read-only; `docs/PRODUCTION_QUEUE.md`, Decision Log #78) - pending the owner's run
 
 Prepare a fictional demonstration database with `demo-init` (see `docs/AUTHENTICATION.md` section 12). The seeded requests have routes and several stage states.
 

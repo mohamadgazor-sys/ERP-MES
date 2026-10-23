@@ -88,10 +88,6 @@ public class WorkflowServiceTests
         return outcome.Value!;
     }
 
-    private static AddItemCommand Make(string itemNo = "1.10", Priority priority = Priority.Normal) => new(itemNo, "Ring A", 10m, priority);
-
-    private static AddItemCommand Repair(string itemNo = "2.10", Priority priority = Priority.Normal) => new(itemNo, "Shaft B", 4m, priority);
-
     /// <summary>A small FICTIONAL but valid-looking PDF: the signature line and a trailer. <paramref name="size"/> pads it to an exact number of bytes when given.</summary>
     private static byte[] PdfBytes(int? size = null)
     {
@@ -501,12 +497,10 @@ public class WorkflowServiceTests
 
         var detail = await w.Requests.GetAsync(w.Qc, created.Value.Id, Token);
         var withPdf = await WithPdfAsync(w, created);
-        var item = await w.Requests.AddItemAsync(w.Drawing, created.Value.Id, withPdf.Version, Make("1.10"), Token);
-        var submitted = await w.Requests.SubmitToManagementAsync(w.Central, created.Value.Id, item.Value!.Version, Token);
+        var submitted = await w.Requests.SubmitToManagementAsync(w.Central, created.Value.Id, withPdf.Version, Token);
 
         Assert.True(detail.Succeeded);
         Assert.Equal("Fictional Customer A", detail.Value!.CustomerName);
-        Assert.True(item.Succeeded);
         Assert.True(submitted.Succeeded);
         Assert.Single((await w.Requests.ListAsync(w.Central, customer.Value.Id, Token)).Value!);
     }
@@ -642,28 +636,6 @@ public class WorkflowServiceTests
     // ---- requests: one work type per request (Decision Log #84), items, permissions ----
 
     [Fact]
-    public async Task A_make_request_is_built_by_drawing_and_planning_in_turn_and_each_item_records_who_added_it()
-    {
-        using var w = await StartAsync();
-        var customer = await CustomerAsync(w);
-        var created = await RequestAsync(w, customer.Value.Id);
-
-        var first = await w.Requests.AddItemAsync(w.Drawing, created.Value.Id, created.Version, Make("1.10"), Token);
-        var second = await w.Requests.AddItemAsync(w.Planning, created.Value.Id, first.Value!.Version, Make("2.10", Priority.Urgent), Token);
-
-        Assert.True(first.Succeeded);
-        Assert.True(second.Succeeded);
-        var request = (await w.Restarted().Requests.GetAsync(w.Qc, created.Value.Id, Token)).Value!.Request.Value;
-        Assert.Equal(WorkType.Make, request.WorkType);
-        Assert.Equal(new[] { w.Drawing.UserId, w.Planning.UserId }, request.Items.Select(i => i.CreatedByUserId).ToArray());
-        Assert.Equal(new[] { Priority.Normal, Priority.Urgent }, request.Items.Select(i => i.Priority).ToArray());
-        Assert.Equal(new[] { 10m, 10m }, request.Items.Select(i => i.RequestedQuantity).ToArray());
-        var summary = (await w.Requests.ListAsync(w.Central, null, Token)).Value!.Single();
-        Assert.Equal(2, summary.ItemCount);
-        Assert.Equal(WorkType.Make, summary.WorkType);
-    }
-
-    [Fact]
     public async Task The_work_type_is_chosen_at_creation_stored_on_the_request_and_must_be_valid()
     {
         using var w = await StartAsync();
@@ -683,150 +655,6 @@ public class WorkflowServiceTests
         Assert.Equal(WorkType.Repair, types["T-2"]);
     }
 
-    [Fact]
-    public async Task Item_permissions_follow_the_provisional_map_for_the_requests_own_work_type_and_nobody_gets_more()
-    {
-        using var w = await StartAsync();
-        var customer = await CustomerAsync(w);
-        var make = await RequestAsync(w, customer.Value.Id, "I-MAKE", workType: WorkType.Make);
-        var repair = await RequestAsync(w, customer.Value.Id, "I-REPAIR", workType: WorkType.Repair);
-
-        // Drawing defines items of MAKE requests only (provisional map #34, until the item-definition phase moves item definition to Planning, #86).
-        Assert.Equal(OperationStatus.NotAuthorized, (await w.Requests.AddItemAsync(w.Drawing, repair.Value.Id, repair.Version, Repair("D-R"), Token)).Status);
-        // Central creates and submits requests; it does not define items. Management, QC and Admin have no item permission.
-        foreach (var user in new[] { w.Central, w.Management, w.Qc, w.Admin })
-        {
-            Assert.Equal(OperationStatus.NotAuthorized, (await w.Requests.AddItemAsync(user, make.Value.Id, make.Version, Make("X-M"), Token)).Status);
-            Assert.Equal(OperationStatus.NotAuthorized, (await w.Requests.AddItemAsync(user, repair.Value.Id, repair.Version, Repair("X-R"), Token)).Status);
-        }
-
-        Assert.Equal(OperationStatus.NotAuthorized, (await w.Requests.AddItemAsync(null, make.Value.Id, make.Version, Make("N"), Token)).Status);
-        Assert.Empty((await w.Requests.GetAsync(w.Central, make.Value.Id, Token)).Value!.Request.Value.Items);
-        Assert.Empty((await w.Requests.GetAsync(w.Central, repair.Value.Id, Token)).Value!.Request.Value.Items);
-
-        // Drawing may define MAKE items; Planning may define items of either type.
-        Assert.True((await w.Requests.AddItemAsync(w.Drawing, make.Value.Id, make.Version, Make("D-M"), Token)).Succeeded);
-        Assert.True((await w.Requests.AddItemAsync(w.Planning, make.Value.Id, (await w.Requests.GetAsync(w.Central, make.Value.Id, Token)).Value!.Request.Version, Make("P-M"), Token)).Succeeded);
-        Assert.True((await w.Requests.AddItemAsync(w.Planning, repair.Value.Id, repair.Version, Repair("P-R"), Token)).Succeeded);
-    }
-
-    [Fact]
-    public async Task A_priority_other_than_normal_needs_the_planning_priority_permission()
-    {
-        using var w = await StartAsync();
-        var customer = await CustomerAsync(w);
-        var created = await RequestAsync(w, customer.Value.Id);
-
-        var drawingUrgent = await w.Requests.AddItemAsync(w.Drawing, created.Value.Id, created.Version, Make("U-1", Priority.Urgent), Token);
-        var drawingNormal = await w.Requests.AddItemAsync(w.Drawing, created.Value.Id, created.Version, Make("U-2"), Token);
-        var planningVery = await w.Requests.AddItemAsync(w.Planning, created.Value.Id, drawingNormal.Value!.Version, Repair("U-3", Priority.VeryUrgent), Token);
-
-        Assert.Equal(OperationStatus.NotAuthorized, drawingUrgent.Status);
-        Assert.True(drawingNormal.Succeeded);
-        Assert.True(planningVery.Succeeded);
-        var items = (await w.Requests.GetAsync(w.Central, created.Value.Id, Token)).Value!.Request.Value.Items;
-        Assert.Equal(new[] { "U-2", "U-3" }, items.Select(i => i.ItemNo).ToArray());
-        Assert.Equal(new[] { "عادی", "خیلی فوری" }, items.Select(i => i.Priority.PersianName()).ToArray());
-        Assert.Equal(OperationStatus.ValidationFailed, (await w.Requests.AddItemAsync(w.Planning, created.Value.Id, planningVery.Value!.Version, Make("U-4", (Priority)99), Token)).Status);
-    }
-
-    [Theory]
-    [InlineData(null, "Ring", 1, ValidationIssue.ItemNoRequired)]
-    [InlineData("  ", "Ring", 1, ValidationIssue.ItemNoRequired)]
-    [InlineData("1.10", null, 1, ValidationIssue.PartNameRequired)]
-    [InlineData("1.10", " ", 1, ValidationIssue.PartNameRequired)]
-    [InlineData("1.10", "Ring", 0, ValidationIssue.QuantityInvalid)]
-    [InlineData("1.10", "Ring", -2, ValidationIssue.QuantityInvalid)]
-    public async Task An_invalid_item_is_refused_with_the_reason_and_nothing_is_saved(string? itemNo, string? partName, int quantity, ValidationIssue expected)
-    {
-        using var w = await StartAsync();
-        var customer = await CustomerAsync(w);
-        var created = await RequestAsync(w, customer.Value.Id);
-
-        var outcome = await w.Requests.AddItemAsync(w.Drawing, created.Value.Id, created.Version, new AddItemCommand(itemNo, partName, quantity), Token);
-
-        Assert.Equal(OperationStatus.ValidationFailed, outcome.Status);
-        Assert.Equal(expected, outcome.Issue);
-        Assert.Equal(0, Count(w, "RequestItems"));
-    }
-
-    [Fact]
-    public async Task Item_numbers_are_unique_per_request_compared_exactly_and_exact_decimal_quantities_are_kept()
-    {
-        using var w = await StartAsync();
-        var customer = await CustomerAsync(w);
-        var first = await RequestAsync(w, customer.Value.Id, "P-1");
-        var second = await RequestAsync(w, customer.Value.Id, "P-2");
-
-        var one = await w.Requests.AddItemAsync(w.Drawing, first.Value.Id, first.Version, new AddItemCommand("A-1", "Ring", 2.0001m), Token);
-        var duplicate = await w.Requests.AddItemAsync(w.Drawing, first.Value.Id, one.Value!.Version, Make("A-1"), Token);
-        var otherCase = await w.Requests.AddItemAsync(w.Drawing, first.Value.Id, one.Value.Version, Make("a-1"), Token);
-        var otherRequest = await w.Requests.AddItemAsync(w.Drawing, second.Value.Id, second.Version, Make("A-1"), Token);
-
-        Assert.Equal(ValidationIssue.ItemNoDuplicate, duplicate.Issue);
-        Assert.True(otherCase.Succeeded);
-        Assert.True(otherRequest.Succeeded);
-        var stored = (await w.Restarted().Requests.GetAsync(w.Central, first.Value.Id, Token)).Value!.Request.Value.Items;
-        Assert.Equal(new[] { "A-1", "a-1" }, stored.Select(i => i.ItemNo).ToArray());
-        Assert.Equal(2.0001m, stored[0].RequestedQuantity);
-    }
-
-    [Fact]
-    public async Task A_cancelled_or_closed_request_accepts_no_new_items()
-    {
-        using var w = await StartAsync();
-        var customer = await CustomerAsync(w);
-        var created = await RequestAsync(w, customer.Value.Id);
-        w.Fixture.Db.Execute("UPDATE Requests SET Status = 7 WHERE Id = " + created.Value.Id);
-
-        var outcome = await w.Requests.AddItemAsync(w.Drawing, created.Value.Id, created.Version, Make(), Token);
-
-        Assert.Equal(ValidationIssue.RequestClosedForItems, outcome.Issue);
-        Assert.Equal(0, Count(w, "RequestItems"));
-        Assert.Equal(OperationStatus.NotFound, (await w.Requests.AddItemAsync(w.Drawing, 4242, 1, Make(), Token)).Status);
-    }
-
-    [Fact]
-    public async Task Two_people_editing_the_same_request_cannot_overwrite_each_other()
-    {
-        using var w = await StartAsync();
-        var customer = await CustomerAsync(w);
-        var created = await WithPdfAsync(w, await RequestAsync(w, customer.Value.Id));
-
-        // Drawing and Planning both opened the request at the same version. (The clock moves on between operations, as it does in real use: the version of the
-        // request row changes when the row changes, and a new item changes the request's "updated" time.)
-        w.Fixture.Clock.Advance(TimeSpan.FromMinutes(1));
-        var drawing = await w.Requests.AddItemAsync(w.Drawing, created.Value.Id, created.Version, Make("D-1"), Token);
-        var planning = await w.Requests.AddItemAsync(w.Planning, created.Value.Id, created.Version, Repair("P-1"), Token);
-
-        Assert.True(drawing.Succeeded);
-        Assert.Equal(OperationStatus.ConcurrencyConflict, planning.Status);
-        var current = (await w.Requests.GetAsync(w.Planning, created.Value.Id, Token)).Value!.Request;
-        Assert.Equal(new[] { "D-1" }, current.Value.Items.Select(i => i.ItemNo).ToArray());
-
-        // After reloading, Planning's change goes through, and Central's submit with the old version is refused too.
-        Assert.True((await w.Requests.AddItemAsync(w.Planning, created.Value.Id, current.Version, Repair("P-1"), Token)).Succeeded);
-        Assert.Equal(OperationStatus.ConcurrencyConflict, (await w.Requests.SubmitToManagementAsync(w.Central, created.Value.Id, created.Version, Token)).Status);
-    }
-
-    [Fact]
-    public async Task A_stale_principal_cannot_add_items_after_the_department_or_activity_changed()
-    {
-        using var w = await StartAsync();
-        var customer = await CustomerAsync(w);
-        var created = await RequestAsync(w, customer.Value.Id);
-        var ok = await w.Requests.AddItemAsync(w.Drawing, created.Value.Id, created.Version, Make("D-1"), Token);
-        Assert.True(ok.Succeeded);
-
-        w.Fixture.Db.Execute("UPDATE Users SET DepartmentId = (SELECT Id FROM Departments WHERE Code = '" + DepartmentCodes.Qc + "') WHERE Username = 'drawing.one'");
-        Assert.Equal(DepartmentCodes.Drawing, w.Drawing.DepartmentCode);
-        Assert.Equal(OperationStatus.NotAuthorized, (await w.Requests.AddItemAsync(w.Drawing, created.Value.Id, ok.Value!.Version, Make("D-2"), Token)).Status);
-
-        await w.Fixture.Services.Accounts.SetActiveAsync(w.Admin, w.Planning.UserId, false, Token);
-        Assert.Equal(OperationStatus.NotAuthorized, (await w.Requests.AddItemAsync(w.Planning, created.Value.Id, ok.Value.Version, Repair("P-1"), Token)).Status);
-        Assert.Single((await w.Requests.GetAsync(w.Central, created.Value.Id, Token)).Value!.Request.Value.Items);
-    }
-
     // ---- capabilities (what the screens may enable) ----
 
     [Fact]
@@ -840,11 +668,11 @@ public class WorkflowServiceTests
         var management = await w.Requests.GetCapabilitiesAsync(w.Management, Token);
         var qc = await w.Requests.GetCapabilitiesAsync(w.Qc, Token);
 
-        Assert.Equal(new Capabilities(true, true, true, true, true, false, false, false), central);
-        Assert.Equal(new Capabilities(true, true, false, false, false, true, true, true), planning);
-        Assert.Equal(new Capabilities(true, false, false, false, false, true, false, false), drawing);
-        Assert.Equal(new Capabilities(true, false, false, false, false, false, false, true), management);
-        Assert.Equal(new Capabilities(true, false, false, false, false, false, false, false), qc);
+        Assert.Equal(new Capabilities(true, true, true, true, true, false), central);
+        Assert.Equal(new Capabilities(true, true, false, false, false, true), planning);
+        Assert.Equal(new Capabilities(true, false, false, false, false, false), drawing);
+        Assert.Equal(new Capabilities(true, false, false, false, false, true), management);
+        Assert.Equal(new Capabilities(true, false, false, false, false, false), qc);
         Assert.Equal(Capabilities.None, await w.Requests.GetCapabilitiesAsync(null, Token));
 
         await w.Fixture.Services.Accounts.SetActiveAsync(w.Admin, w.Central.UserId, false, Token);

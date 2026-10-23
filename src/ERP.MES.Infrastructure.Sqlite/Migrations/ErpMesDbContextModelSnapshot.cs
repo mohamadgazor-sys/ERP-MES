@@ -1514,11 +1514,17 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
+                    b.Property<long?>("MachineId")
+                        .HasColumnType("INTEGER");
+
                     b.Property<decimal>("PlannedMinutesPerPiece")
                         .HasColumnType("TEXT");
 
                     b.Property<decimal>("PlannedQuantity")
                         .HasColumnType("TEXT");
+
+                    b.Property<long?>("ProductionUnitId")
+                        .HasColumnType("INTEGER");
 
                     b.Property<long>("RequestItemId")
                         .HasColumnType("INTEGER");
@@ -1538,6 +1544,10 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
                         .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("MachineId");
+
+                    b.HasIndex("ProductionUnitId");
 
                     b.ToTable("ItemStages", (string)null);
                 });
@@ -1685,16 +1695,28 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
                     b.Property<long>("CreatedByUserId")
                         .HasColumnType("INTEGER");
 
+                    b.Property<decimal?>("DiameterMm")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("ItemNo")
                         .IsRequired()
                         .HasColumnType("TEXT")
                         .UseCollation("BINARY");
+
+                    b.Property<decimal?>("LengthMm")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long?>("MaterialId")
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("PartName")
                         .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<int>("Priority")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long?>("QuantityTypeId")
                         .HasColumnType("INTEGER");
 
                     b.Property<long>("RequestId")
@@ -1710,9 +1732,16 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
                         .IsConcurrencyToken()
                         .HasColumnType("INTEGER");
 
+                    b.Property<decimal?>("WeightKgPerBaseUnit")
+                        .HasColumnType("TEXT");
+
                     b.HasKey("Id");
 
                     b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("MaterialId");
+
+                    b.HasIndex("QuantityTypeId");
 
                     b.HasIndex("RequestId", "ItemNo")
                         .IsUnique();
@@ -2208,6 +2237,16 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
 
             modelBuilder.Entity("ERP.MES.Domain.Requests.ItemStage", b =>
                 {
+                    b.HasOne("ERP.MES.Domain.Planning.Machine", null)
+                        .WithMany()
+                        .HasForeignKey("MachineId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("ERP.MES.Domain.Planning.ProductionUnit", null)
+                        .WithMany()
+                        .HasForeignKey("ProductionUnitId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("ERP.MES.Domain.Requests.RequestItem", null)
                         .WithMany("Stages")
                         .HasForeignKey("RequestItemId")
@@ -2282,6 +2321,16 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
                         .HasForeignKey("CreatedByUserId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.HasOne("ERP.MES.Domain.Materials.Material", null)
+                        .WithMany()
+                        .HasForeignKey("MaterialId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("ERP.MES.Domain.Quality.QuantityType", null)
+                        .WithMany()
+                        .HasForeignKey("QuantityTypeId")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("ERP.MES.Domain.Requests.Request", null)
                         .WithMany("Items")

@@ -57,6 +57,8 @@ public static class AuditActions
     public const string ProductionUnitAdded = "ProductionUnitAdded";
     public const string MachineAdded = "MachineAdded";
     public const string MachineRateChanged = "MachineRateChanged";
+    public const string ItemDefined = "ItemDefined";
+    public const string ItemStageDefined = "ItemStageDefined";
     public const string ClarificationAsked = "ClarificationAsked";
     public const string ClarificationAnswered = "ClarificationAnswered";
     public const string ClarificationClosed = "ClarificationClosed";

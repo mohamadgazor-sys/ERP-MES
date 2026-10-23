@@ -26,7 +26,7 @@ public class MigrationTests
 
         await using var context = db.NewContext();
         var applied = (await context.Database.GetAppliedMigrationsAsync(TestContext.Current.CancellationToken)).ToArray();
-        Assert.Equal(12, applied.Length);
+        Assert.Equal(13, applied.Length);
         Assert.EndsWith("_InitialCreate", applied[0], StringComparison.Ordinal);
         Assert.EndsWith("_AddAuthentication", applied[1], StringComparison.Ordinal);
         Assert.EndsWith("_SingleWorkTypePerRequest", applied[2], StringComparison.Ordinal);
@@ -39,6 +39,7 @@ public class MigrationTests
         Assert.EndsWith("_AddContractGate", applied[9], StringComparison.Ordinal);
         Assert.EndsWith("_AddRawMaterialInquiries", applied[10], StringComparison.Ordinal);
         Assert.EndsWith("_AddInquiryDispositionsAndClarifications", applied[11], StringComparison.Ordinal);
+        Assert.EndsWith("_AddItemSpecifications", applied[12], StringComparison.Ordinal);
         Assert.Empty(await context.Database.GetPendingMigrationsAsync(TestContext.Current.CancellationToken));
     }
 
@@ -50,7 +51,7 @@ public class MigrationTests
 
         // Fails if the model changed without a new migration, or if the snapshot was edited away from the model.
         Assert.False(context.Database.HasPendingModelChanges());
-        Assert.Equal(12, context.Database.GetMigrations().Count());
+        Assert.Equal(13, context.Database.GetMigrations().Count());
     }
 
     [Fact]
@@ -106,12 +107,16 @@ public class MigrationTests
             new[]
             {
                 "Customers:CreatedByUserId->Users:RESTRICT",
+                "ItemStages:MachineId->Machines:RESTRICT",
+                "ItemStages:ProductionUnitId->ProductionUnits:RESTRICT",
                 "ItemStages:RequestItemId->RequestItems:RESTRICT",
                 "QcApprovals:ApprovedByUserId->Users:RESTRICT",
                 "QcApprovals:RequestItemId->ItemStages:RESTRICT",
                 "QcApprovals:RequestItemId->RequestItems:RESTRICT",
                 "QcApprovals:StageNo->ItemStages:RESTRICT",
                 "RequestItems:CreatedByUserId->Users:RESTRICT",
+                "RequestItems:MaterialId->Materials:RESTRICT",
+                "RequestItems:QuantityTypeId->QuantityTypes:RESTRICT",
                 "RequestItems:RequestId->Requests:RESTRICT",
                 "Requests:CreatedByUserId->Users:RESTRICT",
                 "Requests:CustomerId->Customers:RESTRICT",

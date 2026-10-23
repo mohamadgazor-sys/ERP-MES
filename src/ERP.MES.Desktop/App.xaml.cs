@@ -137,7 +137,8 @@ public partial class App : System.Windows.Application
             new MaterialsViewModel(workflow.Materials, dates, DigitStyle.Persian, CurrentUser),
             new ContractsViewModel(workflow.Contracts, workflow.Gates, dates, CurrentUser),
             new InquiriesViewModel(workflow.Inquiries, workflow.QcMaster, workflow.Gates, dates, CurrentUser),
-            new ClarificationsViewModel(workflow.Clarifications, dates, CurrentUser));
+            new ClarificationsViewModel(workflow.Clarifications, dates, CurrentUser),
+            new ItemDefinitionViewModel(workflow.ItemDefinition, workflow.Requests, workflow.Gates, workflow.QcMaster, workflow.Materials, workflow.PlanningMaster, DigitStyle.Persian, CurrentUser));
 
         _mainWindow = new MainWindow(shell, session, pages);
         _mainWindow.Show();

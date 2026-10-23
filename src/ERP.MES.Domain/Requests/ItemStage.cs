@@ -44,8 +44,10 @@ public static class ItemStageStatusInfo
 /// </summary>
 public sealed class ItemStage
 {
-    internal ItemStage(int stageNo, string stageTitle, decimal plannedMinutesPerPiece, decimal plannedQuantity, ItemStageStatus status)
+    internal ItemStage(int stageNo, string stageTitle, decimal plannedMinutesPerPiece, decimal plannedQuantity, ItemStageStatus status, long? productionUnitId = null, long? machineId = null)
     {
+        ProductionUnitId = productionUnitId;
+        MachineId = machineId;
         StageNo = stageNo;
         StageTitle = stageTitle;
         PlannedMinutesPerPiece = plannedMinutesPerPiece;
@@ -67,6 +69,12 @@ public sealed class ItemStage
     public decimal PlannedTotalMinutes => PlannedMinutesPerPiece * PlannedQuantity;
 
     public ItemStageStatus Status { get; internal set; }
+
+    /// <summary>The production unit Planning planned the stage in (Decision Log #89); null for a stage of the simplified demonstration.</summary>
+    public long? ProductionUnitId { get; }
+
+    /// <summary>The machine Planning planned the stage on; it belongs to <see cref="ProductionUnitId"/>. Null when only the unit is planned.</summary>
+    public long? MachineId { get; }
 }
 
 /// <summary>

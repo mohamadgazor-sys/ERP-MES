@@ -20,6 +20,15 @@ public sealed class RequestItemConfiguration : IEntityTypeConfiguration<RequestI
         // Exact decimal values; the scale is still open for Milestone 2, so no precision is set and nothing is rounded.
         builder.Property(i => i.RequestedQuantity).IsRequired();
 
+        // Planning's specification (Decision Log #86, #95): nullable because REPAIR items may omit it and items of the simplified demonstration have none. Exact decimals, never rounded.
+        builder.Property(i => i.QuantityTypeId);
+        builder.HasOne<ERP.MES.Domain.Quality.QuantityType>().WithMany().HasForeignKey(i => i.QuantityTypeId).IsRequired(false).OnDelete(DeleteBehavior.Restrict);
+        builder.Property(i => i.MaterialId);
+        builder.HasOne<ERP.MES.Domain.Materials.Material>().WithMany().HasForeignKey(i => i.MaterialId).IsRequired(false).OnDelete(DeleteBehavior.Restrict);
+        builder.Property(i => i.WeightKgPerBaseUnit);
+        builder.Property(i => i.LengthMm);
+        builder.Property(i => i.DiameterMm);
+
         // The Planning priority lives on the item; stages inherit it (Decision Log #58, G6).
         builder.Property(i => i.Priority).HasConversion<int>().IsRequired();
         builder.Property(i => i.CreatedByUserId).IsRequired();

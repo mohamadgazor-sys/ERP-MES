@@ -148,7 +148,7 @@ public static class AuthorizationRules
         [Permission.CreateAndSubmitRequest] = new([DepartmentCodes.Central], null),
         [Permission.ReceiveAndEditRequestDetails] = new([DepartmentCodes.Planning], null),
         [Permission.ReopenRejectedRequest] = new([DepartmentCodes.Planning, DepartmentCodes.Management], null),
-        [Permission.DefineMakeItems] = new([DepartmentCodes.Drawing], null),
+        [Permission.DefineMakeItems] = new([DepartmentCodes.Planning], null),
         [Permission.DefineRepairItemsAndEditAnyItem] = new([DepartmentCodes.Planning], null),
         [Permission.ImportItemsFromExcel] = new([DepartmentCodes.Planning, DepartmentCodes.Drawing], null),
         [Permission.MaintainCustomers] = new([DepartmentCodes.Central, DepartmentCodes.Planning], null),

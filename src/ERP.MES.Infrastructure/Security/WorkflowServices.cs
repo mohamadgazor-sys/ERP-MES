@@ -10,7 +10,7 @@ namespace ERP.MES.Infrastructure.Security;
 
 /// <summary>The customer and request use cases wired to the real repositories, the current-authorization check and the clock. Composition roots (Desktop) and tests create it once per database.</summary>
 public sealed record WorkflowServices(
-    CustomerService Customers, RequestService Requests, ProductionQueueService Queue, StageWorkService StageWork, RequestDocumentService Documents, RequestWorkflowService Lifecycle, QcMasterService QcMaster, PlanningMasterService PlanningMaster, OperatorService Operators, MaterialService Materials, ContractService Contracts, InquiryService Inquiries, ClarificationService Clarifications, RequestGateService Gates)
+    CustomerService Customers, RequestService Requests, ProductionQueueService Queue, StageWorkService StageWork, RequestDocumentService Documents, RequestWorkflowService Lifecycle, QcMasterService QcMaster, PlanningMasterService PlanningMaster, OperatorService Operators, MaterialService Materials, ContractService Contracts, InquiryService Inquiries, ClarificationService Clarifications, RequestGateService Gates, ItemDefinitionService ItemDefinition)
 {
     public static WorkflowServices Create(
         IDbContextFactory<ErpMesDbContext> contexts, CurrentAuthorization authorization, IJalaliDateService dates, IClock? clock = null, IAuditContext? auditContext = null, DocumentPolicy? documentPolicy = null)
@@ -22,6 +22,7 @@ public sealed record WorkflowServices(
         var effectiveClock = clock ?? new SystemClock();
         var customers = new EfCustomerRepository(contexts);
         var requests = new EfRequestRepository(contexts);
+        var gates = new RequestGateService(new EfContractRepository(contexts), new EfInquiryRepository(contexts), new EfClarificationRepository(contexts), authorization);
         return new WorkflowServices(
             new CustomerService(customers, authorization, effectiveClock),
             new RequestService(requests, customers, authorization, effectiveClock, dates, auditContext ?? new EnvironmentAuditContext()),
@@ -36,6 +37,7 @@ public sealed record WorkflowServices(
             new ContractService(new EfContractRepository(contexts), authorization, effectiveClock, dates, auditContext ?? new EnvironmentAuditContext(), documentPolicy ?? DocumentPolicy.Default),
             new InquiryService(new EfInquiryRepository(contexts), new EfQcMasterRepository(contexts), authorization, effectiveClock, auditContext ?? new EnvironmentAuditContext()),
             new ClarificationService(new EfClarificationRepository(contexts), authorization, effectiveClock, auditContext ?? new EnvironmentAuditContext()),
-            new RequestGateService(new EfContractRepository(contexts), new EfInquiryRepository(contexts), new EfClarificationRepository(contexts), authorization));
+            gates,
+            new ItemDefinitionService(requests, new EfQcMasterRepository(contexts), new EfMaterialRepository(contexts), new EfPlanningMasterRepository(contexts), gates, authorization, effectiveClock, auditContext ?? new EnvironmentAuditContext()));
     }
 }
