@@ -21,12 +21,12 @@ public class MigrationTests
         // EF Core keeps its own bookkeeping tables (the migration history, and in EF Core 10 a migrations lock); only the application tables are compared.
         Assert.Contains("__EFMigrationsHistory", tables);
         Assert.Equal(
-            new[] { "AuditLog", "CalendarExceptions", "ContractDocumentLinks", "ContractHistory", "ContractVersions", "Contracts", "Customers", "DailyJobReportEvents", "DailyJobReportLines", "DailyJobReports", "Departments", "Documents", "DrawingClarifications", "ItemCostCalculations", "ItemCostLines", "ItemImportRows", "ItemImports", "ItemPriceDecisions", "ItemStages", "MachineHourlyRates", "Machines", "MaterialPrices", "Materials", "OperatorMachineAssignments", "OperatorMachineQualifications", "OperatorOffDays", "Operators", "OvertimeAssignments", "OvertimeLimits", "ProductionUnits", "QcApprovals", "QcInspectionLines", "QuantityTypeMembers", "QuantityTypes", "QueueOverrideHistory", "QueueOverrides", "RawMaterialInquiries", "RawMaterialInquiryDispositions", "RawMaterialInquiryHistory", "RawMaterialInquiryLines", "RawMaterialInquiryResponses", "RawMaterialInquirySupplyRoutes", "RequestDocumentLinks", "RequestItems", "RequestWorkflowEntries", "Requests", "Roles", "ShiftTemplates", "ShortfallDecisions", "SystemSetup", "UnitConversions", "UnitShifts", "UnitsOfMeasure", "UserCredentials", "UserUnitDesignations", "Users", "WeeklyWorkdays", "WorkerSchedules" },
+            new[] { "AuditLog", "CalendarExceptions", "ContractDocumentLinks", "ContractHistory", "ContractVersions", "Contracts", "CustomerDispatches", "Customers", "DailyJobReportEvents", "DailyJobReportLines", "DailyJobReports", "Departments", "Documents", "DrawingClarifications", "ItemCostCalculations", "ItemCostLines", "ItemFinishedSent", "ItemImportRows", "ItemImports", "ItemPriceDecisions", "ItemStages", "MachineHourlyRates", "Machines", "MaterialPrices", "Materials", "OperatorMachineAssignments", "OperatorMachineQualifications", "OperatorOffDays", "Operators", "OvertimeAssignments", "OvertimeLimits", "ProductionUnits", "QcApprovals", "QcInspectionLines", "QuantityTypeMembers", "QuantityTypes", "QueueOverrideHistory", "QueueOverrides", "RawMaterialInquiries", "RawMaterialInquiryDispositions", "RawMaterialInquiryHistory", "RawMaterialInquiryLines", "RawMaterialInquiryResponses", "RawMaterialInquirySupplyRoutes", "RequestDocumentLinks", "RequestItems", "RequestWorkflowEntries", "Requests", "Roles", "ShiftTemplates", "ShortfallDecisions", "SystemSetup", "UnitConversions", "UnitShifts", "UnitsOfMeasure", "UserCredentials", "UserUnitDesignations", "Users", "WarehouseReceipts", "WeeklyWorkdays", "WorkerSchedules" },
             tables.Where(t => !t.StartsWith("__EF", StringComparison.Ordinal)).ToArray());
 
         await using var context = db.NewContext();
         var applied = (await context.Database.GetAppliedMigrationsAsync(TestContext.Current.CancellationToken)).ToArray();
-        Assert.Equal(20, applied.Length);
+        Assert.Equal(21, applied.Length);
         Assert.EndsWith("_InitialCreate", applied[0], StringComparison.Ordinal);
         Assert.EndsWith("_AddAuthentication", applied[1], StringComparison.Ordinal);
         Assert.EndsWith("_SingleWorkTypePerRequest", applied[2], StringComparison.Ordinal);
@@ -47,6 +47,7 @@ public class MigrationTests
         Assert.EndsWith("_AddJobReports", applied[17], StringComparison.Ordinal);
         Assert.EndsWith("_AddOvertime", applied[18], StringComparison.Ordinal);
         Assert.EndsWith("_AddCosting", applied[19], StringComparison.Ordinal);
+        Assert.EndsWith("_AddWarehouseCompletion", applied[20], StringComparison.Ordinal);
         Assert.Empty(await context.Database.GetPendingMigrationsAsync(TestContext.Current.CancellationToken));
     }
 
@@ -58,7 +59,7 @@ public class MigrationTests
 
         // Fails if the model changed without a new migration, or if the snapshot was edited away from the model.
         Assert.False(context.Database.HasPendingModelChanges());
-        Assert.Equal(20, context.Database.GetMigrations().Count());
+        Assert.Equal(21, context.Database.GetMigrations().Count());
     }
 
     [Fact]

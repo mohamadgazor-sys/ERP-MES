@@ -1,3 +1,4 @@
+using ERP.MES.Domain.Warehouse;
 using ERP.MES.Domain.Costing;
 using ERP.MES.Application.Security;
 using ERP.MES.Domain.Contracts;
@@ -80,6 +81,12 @@ public sealed class ErpMesDbContext(DbContextOptions<ErpMesDbContext> options) :
     public DbSet<ItemCostLine> ItemCostLines => Set<ItemCostLine>();
 
     public DbSet<ItemPriceDecision> ItemPriceDecisions => Set<ItemPriceDecision>();
+
+    public DbSet<WarehouseReceipt> WarehouseReceipts => Set<WarehouseReceipt>();
+
+    public DbSet<ItemFinishedSent> ItemFinishedSent => Set<ItemFinishedSent>();
+
+    public DbSet<CustomerDispatch> CustomerDispatches => Set<CustomerDispatch>();
 
     public DbSet<QueueOverride> QueueOverrides => Set<QueueOverride>();
 
@@ -212,6 +219,12 @@ public sealed class ErpMesDbContext(DbContextOptions<ErpMesDbContext> options) :
         if (ChangeTracker.Entries().Any(e => e.Entity is ItemCostCalculation or ItemCostLine && e.State is EntityState.Modified or EntityState.Deleted))
         {
             throw new InvalidOperationException("Cost snapshots are append-only: entries cannot be changed or deleted.");
+        }
+
+        // The warehouse completion records are append-only (Decision Log #105): a mistaken record is not edited or removed.
+        if (ChangeTracker.Entries().Any(e => e.Entity is WarehouseReceipt or ERP.MES.Domain.Warehouse.ItemFinishedSent or CustomerDispatch && e.State is EntityState.Modified or EntityState.Deleted))
+        {
+            throw new InvalidOperationException("The warehouse completion records are append-only: entries cannot be changed or deleted.");
         }
 
         // The queue override history is append-only as well.

@@ -256,3 +256,9 @@ Prepare a fictional demonstration database with `demo-init` (`docs/AUTHENTICATIO
 - V2: After the rates and the price exist, calculate: the detail lines show every report line with minutes x rate and the material (kg x price), the total and the unit cost over the accepted base units. Submit the price to Management.
 - V3: As Management approve the proposal, or change it (reason mandatory); for a contract item ("(قرارداد)") enter the contract amount and contract number - they are mandatory.
 - V4: Recalculate after a rate change: a new snapshot appears and the older decision can no longer be decided. Planning reads only; other departments see a denied page.
+
+## W. Warehouse receipt, finished/sent and customer dispatch (Master Specification 17.2; Decision Log #95 D7, #105) - not run by a person; covered by automated tests
+- W1: As Warehouse open "دریافت انبار و تکمیل": only items with all stages QC-approved are listed with their accepted base units. "ثبت دریافت نهایی" records the receipt; a second receipt is refused.
+- W2: "تکمیل/ارسال شد" is refused before the receipt and before Management approved the price of the item's latest cost calculation; after both it succeeds once.
+- W3: "ثبت ارسال" needs a received item, a Jalali date that is not in the future and a document reference; several dispatches may be recorded; none is required.
+- W4: Planning and Management see the list but have no buttons; other departments see a denied page.

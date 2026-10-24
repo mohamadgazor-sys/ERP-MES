@@ -378,6 +378,24 @@ public enum ValidationIssue
     /// <summary>The user chosen for a designation does not exist, is inactive or is not a Production user.</summary>
     DesignationUserInvalid,
 
+    /// <summary>The item cannot be received: its route is not complete in quantity terms or nothing was accepted.</summary>
+    ReceiptNotReady,
+
+    /// <summary>The item has already been received (a duplicate final receipt is refused).</summary>
+    ReceiptDuplicate,
+
+    /// <summary>The item must be received first.</summary>
+    ReceiptRequired,
+
+    /// <summary>The latest cost snapshot of the item has no price approved by Management, so the item cannot be marked finished/sent.</summary>
+    FinishedSentNeedsPrice,
+
+    /// <summary>The item is already marked finished/sent.</summary>
+    FinishedSentDuplicate,
+
+    /// <summary>The date, document reference or note of a warehouse record is not valid (a Jalali date not in the future; a reference of 1 to 100 characters; a note of at most 300).</summary>
+    CompletionInputInvalid,
+
     /// <summary>The item cannot be costed yet: its route is not complete in quantity terms, nothing was accepted, or the first release date is unknown.</summary>
     CostingNotReady,
 

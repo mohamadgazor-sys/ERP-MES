@@ -2903,6 +2903,110 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
                     b.ToTable("WorkerSchedules", (string)null);
                 });
 
+            modelBuilder.Entity("ERP.MES.Domain.Warehouse.CustomerDispatch", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateOnly>("DispatchDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DocumentReference")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .UseCollation("BINARY");
+
+                    b.Property<string>("Note")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("RecordedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("RecordedByUserId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("RequestItemId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RecordedByUserId");
+
+                    b.HasIndex("RequestItemId");
+
+                    b.ToTable("CustomerDispatches", (string)null);
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Warehouse.ItemFinishedSent", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("ApprovedPriceRial")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("MarkedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("MarkedByUserId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("PriceDecisionId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("ReceiptId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("RequestItemId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MarkedByUserId");
+
+                    b.HasIndex("PriceDecisionId");
+
+                    b.HasIndex("ReceiptId");
+
+                    b.HasIndex("RequestItemId")
+                        .IsUnique();
+
+                    b.ToTable("ItemFinishedSent", (string)null);
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Warehouse.WarehouseReceipt", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Note")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("ReceivedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("ReceivedBaseUnits")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("ReceivedByUserId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("RequestItemId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ReceivedByUserId");
+
+                    b.HasIndex("RequestItemId")
+                        .IsUnique();
+
+                    b.ToTable("WarehouseReceipts", (string)null);
+                });
+
             modelBuilder.Entity("ERP.MES.Application.Security.AuditLogEntry", b =>
                 {
                     b.HasOne("ERP.MES.Domain.Identity.User", null)
@@ -3885,6 +3989,63 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
                     b.HasOne("ERP.MES.Domain.Scheduling.ShiftTemplate", null)
                         .WithMany()
                         .HasForeignKey("ShiftTemplateId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Warehouse.CustomerDispatch", b =>
+                {
+                    b.HasOne("ERP.MES.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("RecordedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ERP.MES.Domain.Requests.RequestItem", null)
+                        .WithMany()
+                        .HasForeignKey("RequestItemId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Warehouse.ItemFinishedSent", b =>
+                {
+                    b.HasOne("ERP.MES.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("MarkedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ERP.MES.Domain.Costing.ItemPriceDecision", null)
+                        .WithMany()
+                        .HasForeignKey("PriceDecisionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ERP.MES.Domain.Warehouse.WarehouseReceipt", null)
+                        .WithMany()
+                        .HasForeignKey("ReceiptId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ERP.MES.Domain.Requests.RequestItem", null)
+                        .WithMany()
+                        .HasForeignKey("RequestItemId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Warehouse.WarehouseReceipt", b =>
+                {
+                    b.HasOne("ERP.MES.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("ReceivedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ERP.MES.Domain.Requests.RequestItem", null)
+                        .WithMany()
+                        .HasForeignKey("RequestItemId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });
