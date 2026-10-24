@@ -94,6 +94,10 @@ public sealed class DemoAccountProvisioner(
     public async Task<DemoSeedActors> ResolveActorsAsync(CancellationToken cancellationToken = default) =>
         new(await FindUserIdAsync(CentralUsername, cancellationToken), await FindUserIdAsync(QcUsername, cancellationToken));
 
+    /// <summary>The demonstration accounts the master data (units, machines, material, operator) is attributed to. Throws when they do not exist.</summary>
+    public async Task<DemoMasterActors> ResolveMasterActorsAsync(CancellationToken cancellationToken = default) =>
+        new(await FindUserIdAsync("demo.planning", cancellationToken), await FindUserIdAsync("demo.warehouse", cancellationToken), await FindUserIdAsync("demo.production", cancellationToken));
+
     private async Task<long> FindUserIdAsync(string username, CancellationToken cancellationToken)
     {
         await using var context = await contexts.CreateDbContextAsync(cancellationToken);

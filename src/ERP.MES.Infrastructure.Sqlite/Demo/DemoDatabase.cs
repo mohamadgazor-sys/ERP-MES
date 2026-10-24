@@ -250,7 +250,13 @@ public static class DemoDatabase
     {
         var actors = await provisioner.ResolveActorsAsync(cancellationToken);
         var seeder = new DemoDataSeeder(new EfCustomerRepository(contexts), new EfRequestRepository(contexts), dates, actors);
-        return await seeder.SeedAsync(cancellationToken);
+        var summary = await seeder.SeedAsync(cancellationToken);
+
+        // Master data for the end-to-end walkthrough, written like the sample requests (docs/DEMO_WALKTHROUGH.md); the time is fixed so a reset gives the same rows.
+        await new DemoMasterDataSeeder(
+            new EfPlanningMasterRepository(contexts), new EfSchedulingRepository(contexts), new EfMaterialRepository(contexts), new EfOperatorRepository(contexts), new EfUnitQueueRepository(contexts),
+            dates, await provisioner.ResolveMasterActorsAsync(cancellationToken), new DateTime(2026, 10, 23, 5, 0, 0, DateTimeKind.Utc)).SeedAsync(cancellationToken);
+        return summary;
     }
 
     // Outside the repository by construction: the user's local application data. Never overwritten (the name is unique).

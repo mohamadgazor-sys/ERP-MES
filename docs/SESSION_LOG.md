@@ -2036,3 +2036,29 @@ Append one dated entry after every substantial session. Do not replace prior ent
 
 ### Recommended exact next action
 - Merge after CI, then 9b.
+
+---
+
+### Date / session
+- Date: 2026-10-24
+- Claude Code session ID (if useful): session_01UwqjPjBXLd2apjZb2urjds (phase 9b: end-to-end acceptance test and demonstration master data)
+
+### Goal
+- Prove the roadmap is one coherent flow, not isolated screens, and make the demonstration database ready for a manual walkthrough.
+
+### Completed
+- `DemoMasterDataSeeder` (units, machines + rates, shift D, material + price, operator, designation) wired into `demo-init` / `demo-reset`; repeatable and identical after a reset; real users and audit entries; no bypass of authorization.
+- `EndToEndDemoTests`: one contract request from the customer to the dispatch and the unit metrics on the seeded demonstration database.
+- `docs/DEMO_WALKTHROUGH.md`; `docs/DEMO_SEED_AND_RESET.md` section 4; Decision Log #108.
+
+### Decisions newly approved
+- None.
+
+### Unresolved questions / risks
+- A person has not yet walked the flow through the WPF application on Windows. Remaining phase 9 work: 9c retire the demonstration (unit-less) stage flow and convert the sample requests; 9d SQL Server provider pass (needs owner approval of the package and an instance).
+
+### Commands/tests actually run and results
+- See the pull request for the Linux and Windows CI totals of the final head.
+
+### Recommended exact next action
+- Merge after CI, then 9c.
