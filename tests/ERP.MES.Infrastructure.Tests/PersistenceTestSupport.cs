@@ -26,7 +26,28 @@ internal sealed class TempDatabase : IDisposable
 
     public ErpMesDbContext NewContext() => new(SqliteDatabase.CreateOptions(Path));
 
-    public Task MigrateAsync() => SqliteDatabase.MigrateAsync(Path);
+    /// <summary>
+    /// Brings the database to the latest committed migration. The first call of a test run applies every migration to one template file; later calls copy that file, which gives the same database
+    /// (schema, seeded rows, migration history) without applying the migrations again for every test - on the Windows CI runner that was the dominant per-test cost. A database that already exists
+    /// (a second call) is migrated in place, which is idempotent. Tests of the migrations themselves open their own context and never use this shortcut.
+    /// </summary>
+    public async Task MigrateAsync()
+    {
+        if (File.Exists(Path))
+        {
+            await SqliteDatabase.MigrateAsync(Path);
+            return;
+        }
+
+        var template = await MigratedTemplate.GetAsync();
+        if (template is null)
+        {
+            await SqliteDatabase.MigrateAsync(Path);
+            return;
+        }
+
+        File.Copy(template, Path, overwrite: false);
+    }
 
     /// <summary>The user ids that the persistence tests use as creator (1) and QC approver (9).</summary>
     public const long TestCreatorId = 1;
@@ -109,6 +130,64 @@ internal sealed class TempDatabase : IDisposable
             try
             {
                 File.Delete(Path + suffix);
+            }
+            catch (IOException)
+            {
+                // A leftover temp file does not affect the result.
+            }
+        }
+    }
+}
+
+/// <summary>One migrated SQLite file per test run, created on first use and deleted when the process exits. Null (callers migrate themselves) if the file is not self-contained.</summary>
+internal static class MigratedTemplate
+{
+    private static readonly SemaphoreSlim Gate = new(1, 1);
+    private static string? _path;
+    private static bool _unusable;
+
+    public static async Task<string?> GetAsync()
+    {
+        await Gate.WaitAsync();
+        try
+        {
+            if (_unusable)
+            {
+                return null;
+            }
+
+            if (_path is not null)
+            {
+                return _path;
+            }
+
+            var path = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "erpmes-test-template-" + Guid.NewGuid().ToString("N") + ".db");
+            await SqliteDatabase.MigrateAsync(path);
+
+            // A copy of the main file is only the same database when no journal or write-ahead log is left behind.
+            if (File.Exists(path + "-wal") || File.Exists(path + "-journal"))
+            {
+                _unusable = true;
+                return null;
+            }
+
+            AppDomain.CurrentDomain.ProcessExit += (_, _) => TryDelete(path);
+            _path = path;
+            return path;
+        }
+        finally
+        {
+            Gate.Release();
+        }
+    }
+
+    private static void TryDelete(string path)
+    {
+        foreach (var suffix in new[] { string.Empty, "-wal", "-shm", "-journal" })
+        {
+            try
+            {
+                File.Delete(path + suffix);
             }
             catch (IOException)
             {

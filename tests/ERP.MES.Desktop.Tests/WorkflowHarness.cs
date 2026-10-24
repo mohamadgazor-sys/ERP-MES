@@ -66,7 +66,7 @@ internal sealed class WorkflowHarness : IDisposable
     public static async Task<WorkflowHarness> CreateAsync(CancellationToken cancellationToken)
     {
         var h = new WorkflowHarness();
-        await SqliteDatabase.MigrateAsync(h._path, cancellationToken);
+        await MigratedTemplate.CopyOrMigrateAsync(h._path, cancellationToken);
         var factory = SqliteDatabase.CreateContextFactory(h._path);
         h.Security = SecurityServices.Create(factory, new AuthenticationPolicy { Pbkdf2Iterations = AuthenticationPolicy.Pbkdf2IterationsFloor }, h.Clock, hasher: new LowCostHasher());
         h.Workflow = WorkflowServices.Create(factory, h.Security.Authorization, h.Dates, h.Clock);
@@ -142,4 +142,73 @@ internal sealed class LowCostHasher : ERP.MES.Application.Security.IPasswordHash
     public bool Verify(string password, ERP.MES.Application.Security.PasswordHashRecord stored) => _inner.Verify(password, stored);
 
     public bool NeedsUpgrade(ERP.MES.Application.Security.PasswordHashRecord stored, int configuredWorkFactor) => false;
+}
+
+/// <summary>
+/// One migrated SQLite file per test run (created on first use, deleted at process exit); a harness database is a copy of it, which is the same database without applying every migration again
+/// for each screen test. Falls back to migrating in place if the template is not a single self-contained file.
+/// </summary>
+internal static class MigratedTemplate
+{
+    private static readonly SemaphoreSlim Gate = new(1, 1);
+    private static string? _path;
+    private static bool _unusable;
+
+    public static async Task CopyOrMigrateAsync(string target, CancellationToken cancellationToken)
+    {
+        var template = await GetAsync(cancellationToken);
+        if (template is null)
+        {
+            await SqliteDatabase.MigrateAsync(target, cancellationToken);
+            return;
+        }
+
+        File.Copy(template, target, overwrite: false);
+    }
+
+    private static async Task<string?> GetAsync(CancellationToken cancellationToken)
+    {
+        await Gate.WaitAsync(cancellationToken);
+        try
+        {
+            if (_unusable)
+            {
+                return null;
+            }
+
+            if (_path is not null)
+            {
+                return _path;
+            }
+
+            var path = Path.Combine(Path.GetTempPath(), "erpmes-desktop-test-template-" + Guid.NewGuid().ToString("N") + ".db");
+            await SqliteDatabase.MigrateAsync(path, cancellationToken);
+            if (File.Exists(path + "-wal") || File.Exists(path + "-journal"))
+            {
+                _unusable = true;
+                return null;
+            }
+
+            AppDomain.CurrentDomain.ProcessExit += (_, _) =>
+            {
+                foreach (var suffix in new[] { string.Empty, "-wal", "-shm", "-journal" })
+                {
+                    try
+                    {
+                        File.Delete(path + suffix);
+                    }
+                    catch (IOException)
+                    {
+                        // A leftover temp file does not affect the result.
+                    }
+                }
+            };
+            _path = path;
+            return path;
+        }
+        finally
+        {
+            Gate.Release();
+        }
+    }
 }

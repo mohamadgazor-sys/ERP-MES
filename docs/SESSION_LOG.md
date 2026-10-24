@@ -2088,3 +2088,27 @@ Append one dated entry after every substantial session. Do not replace prior ent
 
 ### Recommended exact next action
 - Merge after CI. Then ask the owner about 9d (package approval and a SQL Server instance) and for a manual Windows walkthrough of docs/DEMO_WALKTHROUGH.md.
+
+---
+
+### Date / session
+- Date: 2026-10-24
+- Claude Code session ID (if useful): session_01UwqjPjBXLd2apjZb2urjds (phase 9e: migrated template database for tests)
+
+### Goal
+- Keep the Windows CI inside its 90-minute timeout after the 9c run took 60 minutes.
+
+### Completed
+- One migrated template database per test run, copied per test (Infrastructure `TempDatabase`, Desktop `WorkflowHarness`). Decision Log #110. Local: Infrastructure 3:54 -> 2:34, Desktop 1:10 -> 0:50.
+
+### Decisions newly approved
+- None; test-only.
+
+### Unresolved questions / risks
+- Windows runner time varies by about 2x between runs; report the Windows duration of this change from CI.
+
+### Commands/tests actually run and results
+- See the pull request for the Linux and Windows CI totals of the final head.
+
+### Recommended exact next action
+- Merge after CI; then final status for the owner (9d needs approval).
