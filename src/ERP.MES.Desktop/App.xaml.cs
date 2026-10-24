@@ -145,7 +145,8 @@ public partial class App : System.Windows.Application
             new QcInspectionViewModel(workflow.QcInspection, dates, DigitStyle.Persian, CurrentUser),
             new JobReportsViewModel(workflow.JobReports, workflow.UnitQueue, workflow.PlanningMaster, workflow.Calendar, dates, DigitStyle.Persian, () => DateTime.UtcNow, CurrentUser),
             new OvertimeViewModel(workflow.Overtime, workflow.Operators, workflow.PlanningMaster, dates, DigitStyle.Persian, () => DateTime.UtcNow, CurrentUser),
-            new CostingViewModel(workflow.Costing, workflow.PlanningMaster, dates, DigitStyle.Persian, CurrentUser));
+            new CostingViewModel(workflow.Costing, workflow.PlanningMaster, dates, DigitStyle.Persian, CurrentUser),
+            new CompletionViewModel(workflow.Completion, dates, DigitStyle.Persian, CurrentUser));
 
         _mainWindow = new MainWindow(shell, session, pages);
         _mainWindow.Show();

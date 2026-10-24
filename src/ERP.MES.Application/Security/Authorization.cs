@@ -153,6 +153,18 @@ public enum Permission
     /// <summary>Read cost snapshots and price decisions (Warehouse, Planning, Management; Decision Log #104).</summary>
     ViewItemCosts,
 
+    /// <summary>Record the final warehouse receipt of a QC-completed item (Warehouse only; Master Specification 17.2, Decision Log #105).</summary>
+    RecordWarehouseReceipt,
+
+    /// <summary>Mark an item finished/sent after receipt and Management's price approval (Warehouse; Decision Log #95 D7, #105).</summary>
+    MarkItemFinishedSent,
+
+    /// <summary>Record an optional customer dispatch of a received item (Warehouse; Decision Log #95 D7, #105).</summary>
+    RecordCustomerDispatch,
+
+    /// <summary>Read the warehouse completion list: receipts, finished/sent marks and dispatches (Warehouse, Planning, Management; Decision Log #105).</summary>
+    ViewWarehouseCompletion,
+
     /// <summary>Correct an erroneous stage start or submission with a reason (Planning; Decision Log #95 D8, #102).</summary>
     CorrectStageAction,
 
@@ -252,6 +264,10 @@ public static class AuthorizationRules
         [Permission.ReviewJobReports] = new([DepartmentCodes.Production, DepartmentCodes.Planning], null),
         [Permission.ViewJobReports] = new([DepartmentCodes.Production, DepartmentCodes.Planning, DepartmentCodes.Management], null),
         [Permission.CorrectStageAction] = new([DepartmentCodes.Planning], null),
+        [Permission.RecordWarehouseReceipt] = new([DepartmentCodes.Warehouse], null),
+        [Permission.MarkItemFinishedSent] = new([DepartmentCodes.Warehouse], null),
+        [Permission.RecordCustomerDispatch] = new([DepartmentCodes.Warehouse], null),
+        [Permission.ViewWarehouseCompletion] = new([DepartmentCodes.Warehouse, DepartmentCodes.Planning, DepartmentCodes.Management], null),
         [Permission.CalculateItemCost] = new([DepartmentCodes.Warehouse], null),
         [Permission.ApproveItemPrice] = new([DepartmentCodes.Management], null),
         [Permission.ViewItemCosts] = new([DepartmentCodes.Warehouse, DepartmentCodes.Planning, DepartmentCodes.Management], null),

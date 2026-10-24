@@ -1956,3 +1956,31 @@ Append one dated entry after every substantial session. Do not replace prior ent
 
 ### Recommended exact next action
 - Merge after CI, then phase 7b (Warehouse receipt after final QC, finished/sent after price approval, optional dispatch; D7).
+
+---
+
+### Date / session
+- Date: 2026-10-24
+- Claude Code session ID (if useful): session_01UwqjPjBXLd2apjZb2urjds (phase 7b: Warehouse receipt, finished/sent, dispatch)
+
+### Goal
+- Three distinct Warehouse records after the last QC: final receipt, finished/sent after Management's price approval, optional customer dispatch (Decision Log #95 D7).
+
+### Completed
+- Domain: `WarehouseReceipt`, `ItemFinishedSent`, `CustomerDispatch` (append-only, validated).
+- Application: `WarehouseCompletionService` (list, receive, mark finished/sent, record dispatch), permissions and audit codes.
+- Persistence: `EfWarehouseCompletionRepository` (facts read in the saving transaction; unique keys back the duplicate rules), three tables, migration `AddWarehouseCompletion` with upgrade test.
+- Desktop: page "دریافت انبار و تکمیل".
+- Tests: domain validation, service (full flow, wrong order, incomplete items, recalculation needs a new approval, authorization negatives), migration, view model.
+
+### Decisions newly approved
+- None; labelled defaults (finished/sent also requires the receipt; no reversal; request status not changed automatically) are listed in #105.
+
+### Unresolved questions / risks
+- Reversal or correction of a mistaken receipt; automatic request closing; stock ledger (out of v1 scope).
+
+### Commands/tests actually run and results
+- See the pull request for the Linux and Windows CI totals of the final head.
+
+### Recommended exact next action
+- Merge after CI, then phase 8 (KPI reporting, D6: separate labelled unit metrics).
