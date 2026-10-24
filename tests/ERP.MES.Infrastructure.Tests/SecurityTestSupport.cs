@@ -37,6 +37,24 @@ internal sealed class CountingHasher(IPasswordHasher inner) : IPasswordHasher
 }
 
 /// <summary>
+/// A password hasher with a tiny work factor for tests that are NOT about passwords (the workflow and master-data suites create ten or more users each and would otherwise spend most of their time
+/// in PBKDF2). Production code never uses it; the real hasher at the documented floor is used by the authentication, bootstrap, recovery, session and account tests, which are the ones that test
+/// password behaviour. It reports no upgrade needed so a sign-in never re-hashes.
+/// </summary>
+internal sealed class LowCostHasher : IPasswordHasher
+{
+    private const int WorkFactor = 1_000;
+
+    private readonly Pbkdf2PasswordHasher _inner = new();
+
+    public PasswordHashRecord Hash(string password, int workFactor) => _inner.Hash(password, WorkFactor);
+
+    public bool Verify(string password, PasswordHashRecord stored) => _inner.Verify(password, stored);
+
+    public bool NeedsUpgrade(PasswordHashRecord stored, int configuredWorkFactor) => false;
+}
+
+/// <summary>
 /// A migrated temporary SQLite database with the real security services, a controllable clock and a fixed audit context. The work factor is the documented
 /// safety FLOOR so the suite stays fast; the approved baseline (600,000) is covered by the policy and hasher tests, and nothing here changes it.
 /// </summary>
@@ -47,12 +65,12 @@ internal sealed class SecurityFixture : IDisposable
 
     public static AuthenticationPolicy FastPolicy { get; } = new() { Pbkdf2Iterations = AuthenticationPolicy.Pbkdf2IterationsFloor };
 
-    private SecurityFixture(TempDatabase db, AuthenticationPolicy policy)
+    private SecurityFixture(TempDatabase db, AuthenticationPolicy policy, IPasswordHasher? hasher = null)
     {
         Db = db;
         Policy = policy;
         Clock = new FakeClock();
-        Services = SecurityServices.Create(db.ContextFactory, policy, Clock, new FixedAuditContext());
+        Services = SecurityServices.Create(db.ContextFactory, policy, Clock, new FixedAuditContext(), hasher);
     }
 
     public TempDatabase Db { get; }
@@ -68,6 +86,14 @@ internal sealed class SecurityFixture : IDisposable
         var db = new TempDatabase();
         await db.MigrateAsync();
         return new SecurityFixture(db, policy ?? FastPolicy);
+    }
+
+    /// <summary>The fixture for tests that are not about passwords: same services, but the low-cost hasher (see <see cref="LowCostHasher"/>).</summary>
+    public static async Task<SecurityFixture> CreateFastAsync()
+    {
+        var db = new TempDatabase();
+        await db.MigrateAsync();
+        return new SecurityFixture(db, FastPolicy, new LowCostHasher());
     }
 
     /// <summary>The same database and clock with services built from another policy (for example a higher work factor after an upgrade of the baseline).</summary>
