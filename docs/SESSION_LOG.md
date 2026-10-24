@@ -2062,3 +2062,29 @@ Append one dated entry after every substantial session. Do not replace prior ent
 
 ### Recommended exact next action
 - Merge after CI, then 9c.
+
+---
+
+### Date / session
+- Date: 2026-10-24
+- Claude Code session ID (if useful): session_01UwqjPjBXLd2apjZb2urjds (phase 9c: retire the demonstration stage flow)
+
+### Goal
+- Remove the demonstration-only stage path that let any Production user advance unit-less stages and approve by whole quantity.
+
+### Completed
+- Removed `StageAction.ApproveWholeQuantity`, the demonstration stage-work screen and its API; unit-less stage actions are refused with `StageUnitRequired`. Domain method and history kept. Decision Log #109; documents marked retired.
+- Tests: `StageActionTests` (actions on unit stages), trimmed `StageWorkflowTests` (persistence guarantees + the refusal).
+
+### Decisions newly approved
+- None (the retirement was part of the owner-approved roadmap, phase 9).
+
+### Unresolved questions / risks
+- The sample requests are frozen (cannot be advanced); converting their routes to unit stages with quantity decisions is possible later.
+- 9d, the SQL Server provider pass, needs the owner's approval of the provider package and a SQL Server instance.
+
+### Commands/tests actually run and results
+- See the pull request for the Linux and Windows CI totals of the final head.
+
+### Recommended exact next action
+- Merge after CI. Then ask the owner about 9d (package approval and a SQL Server instance) and for a manual Windows walkthrough of docs/DEMO_WALKTHROUGH.md.

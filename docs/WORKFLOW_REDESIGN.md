@@ -263,7 +263,7 @@ Each PR is small, keeps the demo working until replaced, carries tests, a Decisi
 | 6c | Overtime assignments | R8, #103 | 6a, 6b | D5; done (labelled defaults in #103; report-line link deferred to phase 8) |
 | 7 | Costing, Management price approval, Warehouse completion | #91, R4, #104 | 3b, 5b, 6b | D3, D4, D7; 7a (costing and price) done - labelled defaults in #104; 7b (Warehouse receipt, finished/sent, dispatch, D7) done - labelled defaults in #105 |
 | 8 | KPI reporting | R6 | 6b, 5b | D6 |
-| 9 | End-to-end integration, demo hardening, SQL Server test pass (#25), retire the demo stage flow | | all | none |
+| 9 | End-to-end integration, demo hardening, SQL Server test pass (#25), retire the demo stage flow | 9a test speed #107, 9b end-to-end test and demo master data #108, 9c demo stage flow retired #109 done; 9d SQL Server pass open (needs owner approval of the provider package and an instance) | | all | none |
 
 Order: 1a, 1b, 3a and 3b (independent), 2b, 2a, 4a, 4b, 5a, 6a, 5b, 6b, 6c, 7, 8, 9. A PR that needs an open decision builds only the parts not affected, or waits.
 

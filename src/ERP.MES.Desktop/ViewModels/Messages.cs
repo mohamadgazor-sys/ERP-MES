@@ -139,7 +139,7 @@ public static class Messages
         ValidationIssue.InspectionEntriesInvalid => "تصمیم‌های بازرسی معتبر نیستند (حداقل یک تصمیم، تعداد مثبت، و برای بازکاری و ضایعات دلیل الزامی است).",
         ValidationIssue.InspectionExceedsAwaiting => "تعداد تصمیم‌ها از واحدهای در انتظار کنترل کیفیت بیشتر است؛ هیچ واحدی دوبار شمرده نمی‌شود.",
         ValidationIssue.StageNotCountable => "تعداد این مرحله عدد صحیحی از واحدهای پایه نیست؛ بازرسی تعدادی ممکن نیست.",
-        ValidationIssue.UseQuantityInspection => "مرحلهٔ واحد تولید با بازرسی تعدادی (پذیرفته/بازکاری/ضایعات) بررسی می‌شود، نه تأیید کل تعداد.",
+        ValidationIssue.StageUnitRequired => "این مرحله در هیچ واحد تولیدی برنامه‌ریزی نشده است؛ برنامه‌ریزی باید ابتدا مرحله را به یک واحد تولید اختصاص دهد (جریان نمایشی بدون واحد بازنشسته شده است).",
         ValidationIssue.ShortfallNoteRequired => "یادداشت یا شمارهٔ ارجاع تصمیم کسری را وارد کنید (حداکثر ۳۰۰ نویسه).",
         ValidationIssue.ShiftCodeDuplicate => "این کد شیفت قبلاً استفاده شده است.",
         ValidationIssue.ShiftTimesInvalid => "ساعت‌های شیفت معتبر نیست (شروع و پایان نباید یکسان باشند؛ استراحت باید داخل شیفت باشد؛ قالب ساعت: ۰۸:۰۰).",

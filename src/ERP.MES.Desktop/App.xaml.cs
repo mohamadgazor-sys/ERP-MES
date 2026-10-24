@@ -130,7 +130,6 @@ public partial class App : System.Windows.Application
             new CustomersViewModel(workflow.Customers, workflow.Requests, dates, CurrentUser),
             new RequestsViewModel(workflow.Requests, workflow.Documents, workflow.Lifecycle, workflow.Customers, dates, DigitStyle.Persian, () => DateTime.UtcNow, CurrentUser),
             new ProductionQueueViewModel(workflow.Queue, dates, DigitStyle.Persian, () => DateTime.UtcNow, CurrentUser),
-            new StageWorkViewModel(workflow.StageWork, DigitStyle.Persian, CurrentUser),
             new QcMasterViewModel(workflow.QcMaster, CurrentUser),
             new PlanningMasterViewModel(workflow.PlanningMaster, dates, DigitStyle.Persian, CurrentUser),
             new OperatorsViewModel(workflow.Operators, workflow.PlanningMaster, dates, CurrentUser),

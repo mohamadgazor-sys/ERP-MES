@@ -12,7 +12,6 @@ public sealed class ShellViewModel : ObservableObject
     public const string CustomersKey = "customers";
     public const string RequestsKey = "requests";
     public const string QueueKey = "queue";
-    public const string StagesKey = "stages";
     public const string UnitQueueKey = "unitqueue";
     public const string CalendarKey = "calendar";
     public const string QcInspectionKey = "qcinspection";
@@ -49,7 +48,6 @@ public sealed class ShellViewModel : ObservableObject
             new NavigationItem(CustomersKey, "مشتریان", true),
             new NavigationItem(RequestsKey, "درخواست‌ها", true),
             new NavigationItem(QueueKey, "صف تولید", true),
-            new NavigationItem(StagesKey, "مراحل و کنترل کیفیت", true),
             new NavigationItem(UnitQueueKey, "صف واحدهای تولید", true),
             new NavigationItem(QcInspectionKey, "بازرسی کنترل کیفیت", true),
             new NavigationItem(JobReportsKey, "گزارش کار روزانه", true),

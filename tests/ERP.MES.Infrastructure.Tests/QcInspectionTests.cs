@@ -389,9 +389,6 @@ public class QcInspectionTests
         Assert.Equal(ValidationIssue.InspectionExceedsAwaiting, (await w.Qci.RecordInspectionAsync(w.Qc, target, [Accept(15), Scrap(6)], Token)).Issue);
         Assert.Equal(ValidationIssue.VersionsMissing, (await w.Qci.RecordInspectionAsync(w.Qc, target with { StageVersions = new Dictionary<int, long>() }, [Accept(1)], Token)).Issue);
 
-        // The demonstration's whole-quantity approval is not available for a stage planned in a unit.
-        Assert.Equal(ValidationIssue.UseQuantityInspection, (await w.Work.PerformAsync(w.Qc, StageAction.ApproveWholeQuantity, target, Token)).Issue);
-
         // A second QC user working from the same stale view is refused.
         Assert.True((await w.Qci.RecordInspectionAsync(w.Qc, target, [Accept(10)], Token)).Succeeded);
         var stale = await w.Qci.RecordInspectionAsync(w.Qc, target, [Accept(10)], Token);
