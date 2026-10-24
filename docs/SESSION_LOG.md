@@ -1928,3 +1928,31 @@ Append one dated entry after every substantial session. Do not replace prior ent
 
 ### Recommended exact next action
 - Merge after CI, then phase 7 (costing, pricing, Warehouse receipt, finished/sent, dispatch; D3, D4, D7).
+
+---
+
+### Date / session
+- Date: 2026-10-23
+- Claude Code session ID (if useful): session_01UwqjPjBXLd2apjZb2urjds (phase 7a: item cost and price)
+
+### Goal
+- Warehouse calculates an immutable item cost from approved report time, machine rates and the material price; Management approves or changes the price (Decision Log #91, #95 D3/D4).
+
+### Completed
+- Domain: `ItemCostCalculation` / `ItemCostLine` (immutable snapshot) and `ItemPriceDecision` (Draft, Submitted, Approved; calculated or contract basis).
+- Application: `CostCalculator` (formula v1, named gaps), `CostingService` (list, history, calculate, submit, approve), permissions and audit codes.
+- Persistence: `EfCostingRepository` (inputs read in the saving transaction; superseded decisions refused), three tables, migration `AddCosting` with upgrade test.
+- Desktop: page "هزینه و قیمت".
+- Tests: pure formula tests, domain tests, service tests (flow, refusals with gaps, authorization negatives, price rules and stale versions, contract basis), migration, view model.
+
+### Decisions newly approved
+- None; labelled defaults (notably: the contract amount is entered by Management because contracts store none) are listed in #104.
+
+### Unresolved questions / risks
+- Where the contract amount should live (owner decision); Management adjustment lines; invalidation of a snapshot after QC corrections or amended reports; list pagination.
+
+### Commands/tests actually run and results
+- See the pull request for the Linux and Windows CI totals of the final head.
+
+### Recommended exact next action
+- Merge after CI, then phase 7b (Warehouse receipt after final QC, finished/sent after price approval, optional dispatch; D7).

@@ -378,6 +378,21 @@ public enum ValidationIssue
     /// <summary>The user chosen for a designation does not exist, is inactive or is not a Production user.</summary>
     DesignationUserInvalid,
 
+    /// <summary>The item cannot be costed yet: its route is not complete in quantity terms, nothing was accepted, or the first release date is unknown.</summary>
+    CostingNotReady,
+
+    /// <summary>No approved report time exists for the item, so no authoritative cost is produced (it is never defaulted to the plan).</summary>
+    CostingNoApprovedTime,
+
+    /// <summary>A machine has no rate for a work date of an approved line; the gaps are named in the warnings (nothing is defaulted).</summary>
+    CostingRateMissing,
+
+    /// <summary>The raw material has no price for the price date; the gap is named in the warnings.</summary>
+    CostingPriceMissing,
+
+    /// <summary>The item price is not valid: a positive whole number of Rial, a reason when the calculated price is changed, and the amount and contract reference for a contract item.</summary>
+    ItemPriceInvalid,
+
     /// <summary>Only the designated supervisor of the unit proposes overtime for it, and nobody proposes overtime for themselves.</summary>
     OvertimeNotSupervisor,
 

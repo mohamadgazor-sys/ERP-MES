@@ -1,6 +1,6 @@
 # Costing Design - Machining and Raw-Material Cost (R4)
 
-**Status: DESIGN ONLY. Not implemented.** Approved (#91): final machining cost = approved actual job-report time x the machine rate applicable to that work; planned duration is for clearly labelled estimates only. Policies marked PROPOSED/DEFAULT are not approved; rework/scrap treatment and quantity basis are `OWNER_DECISION_PACKET.md` D3, contract pricing is D4. All currency is Iranian Rial; no silent Toman conversion ([EXISTING]).
+**Status: sections 1-5, 7-8 (snapshot, price decision, permissions, audit) implemented in phase 7a (Decision Log #104); the Warehouse completion steps (receipt, finished/sent, dispatch; D7) are phase 7b.** Approved (#91): final machining cost = approved actual job-report time x the machine rate applicable to that work; planned duration is for clearly labelled estimates only. Policies marked PROPOSED/DEFAULT are not approved; rework/scrap treatment and quantity basis are `OWNER_DECISION_PACKET.md` D3, contract pricing is D4. All currency is Iranian Rial; no silent Toman conversion ([EXISTING]).
 
 > **Decision update (2026-10-23):** D3 (rework/scrap cost absorbed and reported separately; accepted base units as produced quantity) and D4 (contract amount is the price; calculated cost informational) were APPROVED on 2026-10-23 (Decision Log #95); the "[OPEN D3]/[OPEN D4]" markers below are superseded.
 
