@@ -262,3 +262,9 @@ Prepare a fictional demonstration database with `demo-init` (`docs/AUTHENTICATIO
 - W2: "تکمیل/ارسال شد" is refused before the receipt and before Management approved the price of the item's latest cost calculation; after both it succeeds once.
 - W3: "ثبت ارسال" needs a received item, a Jalali date that is not in the future and a document reference; several dispatches may be recorded; none is required.
 - W4: Planning and Management see the list but have no buttons; other departments see a denied page.
+
+## X. Unit metrics and operator hours (docs/JOB_REPORTS_KPI_AND_OVERTIME_DESIGN.md section 7; Decision Log #95 D6/D8, #106) - not run by a person; covered by automated tests
+- X1: As Planning or Management open "شاخص‌های واحدها": every unit is a row with separate labelled metrics (productive hours, overtime estimate, accepted / rework / scrap units, rates, planned vs actual, utilization); there is no score and no unit ranking.
+- X2: A unit with reports still waiting for approval shows "قطعی نیست" and the number; after the reports are approved the figures change and the unit becomes "قطعی".
+- X3: The operator list is ranked by productive hours only (ties: more worked days, then code) and is labelled as an hour ranking.
+- X4: A unit supervisor sees only their own units; operators, other Production users and other departments see a denied page. The result shows its run time and the chosen Jalali range.

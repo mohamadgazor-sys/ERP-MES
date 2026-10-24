@@ -33,6 +33,7 @@ internal static class PageFactory
             ShellViewModel.OvertimeKey => new OvertimeView(pages.Overtime),
             ShellViewModel.CostingKey => new CostingView(pages.Costing),
             ShellViewModel.CompletionKey => new CompletionView(pages.Completion),
+            ShellViewModel.KpiKey => new KpiView(pages.Kpi),
             ShellViewModel.LimitationsKey => new LimitationsView(),
             _ => new PlaceholderView(item.Title, shell.NotImplementedText),
         };
