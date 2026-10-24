@@ -2011,3 +2011,28 @@ Append one dated entry after every substantial session. Do not replace prior ent
 
 ### Recommended exact next action
 - Merge after CI, then phase 9 (integration, demo hardening, retire the demonstration stage flow, SQL Server test pass).
+
+---
+
+### Date / session
+- Date: 2026-10-24
+- Claude Code session ID (if useful): session_01UwqjPjBXLd2apjZb2urjds (phase 9a: test-suite speed)
+
+### Goal
+- Keep the Windows CI inside its 90-minute timeout as the suite grows, without touching production security.
+
+### Completed
+- Test-only `LowCostHasher` for the workflow, master-data and screen tests; the security tests keep the real hasher. Decision Log #107.
+- Local timings (Linux): Infrastructure 12 min 36 s -> 3 min 54 s; Desktop 7 min 1 s -> 1 min 18 s; all tests pass.
+
+### Decisions newly approved
+- None; no production code or security setting changed.
+
+### Unresolved questions / risks
+- None for this change. Remaining phase 9 work: end-to-end acceptance test and demo master-data seed (9b), retiring the demonstration stage flow (9c), SQL Server provider pass (9d, needs owner approval for the package and an instance).
+
+### Commands/tests actually run and results
+- See the pull request for the Linux and Windows CI totals of the final head.
+
+### Recommended exact next action
+- Merge after CI, then 9b.

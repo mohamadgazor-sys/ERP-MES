@@ -68,7 +68,7 @@ internal sealed class WorkflowHarness : IDisposable
         var h = new WorkflowHarness();
         await SqliteDatabase.MigrateAsync(h._path, cancellationToken);
         var factory = SqliteDatabase.CreateContextFactory(h._path);
-        h.Security = SecurityServices.Create(factory, new AuthenticationPolicy { Pbkdf2Iterations = AuthenticationPolicy.Pbkdf2IterationsFloor }, h.Clock);
+        h.Security = SecurityServices.Create(factory, new AuthenticationPolicy { Pbkdf2Iterations = AuthenticationPolicy.Pbkdf2IterationsFloor }, h.Clock, hasher: new LowCostHasher());
         h.Workflow = WorkflowServices.Create(factory, h.Security.Authorization, h.Dates, h.Clock);
 
         var issued = await h.Security.Bootstrap.IssueTokenAsync(cancellationToken: cancellationToken);
@@ -131,4 +131,18 @@ internal sealed class WorkflowHarness : IDisposable
             }
         }
     }
+}
+
+/// <summary>A password hasher with a tiny work factor for the screen tests, which create many users and do not test passwords (the real hasher at the documented floor is covered by the Infrastructure security tests). Production never uses it.</summary>
+internal sealed class LowCostHasher : ERP.MES.Application.Security.IPasswordHasher
+{
+    private const int WorkFactor = 1_000;
+
+    private readonly ERP.MES.Infrastructure.Security.Pbkdf2PasswordHasher _inner = new();
+
+    public ERP.MES.Application.Security.PasswordHashRecord Hash(string password, int workFactor) => _inner.Hash(password, WorkFactor);
+
+    public bool Verify(string password, ERP.MES.Application.Security.PasswordHashRecord stored) => _inner.Verify(password, stored);
+
+    public bool NeedsUpgrade(ERP.MES.Application.Security.PasswordHashRecord stored, int configuredWorkFactor) => false;
 }

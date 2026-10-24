@@ -49,7 +49,7 @@ public class OperatorServiceTests
 
     private static async Task<World> StartAsync()
     {
-        var fixture = await SecurityFixture.CreateAsync();
+        var fixture = await SecurityFixture.CreateFastAsync();
         var admin = await fixture.BootstrapAdminAsync(cancellationToken: Token);
         return new World
         {
