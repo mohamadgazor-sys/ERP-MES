@@ -327,8 +327,8 @@ public enum ValidationIssue
     /// <summary>The stage has no whole number of base units, so only the demonstration's whole-quantity approval can apply.</summary>
     StageNotCountable,
 
-    /// <summary>A stage planned in a production unit is inspected by quantity; the whole-quantity approval is not available for it.</summary>
-    UseQuantityInspection,
+    /// <summary>The stage is not planned in a production unit, so it cannot be released, started or submitted (the demonstration flow without a unit is retired; Planning plans the stage in a unit).</summary>
+    StageUnitRequired,
 
     /// <summary>A note or reference (1 to 300 characters) is required for the shortfall decision.</summary>
     ShortfallNoteRequired,

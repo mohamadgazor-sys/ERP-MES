@@ -102,9 +102,6 @@ internal sealed class WorkflowHarness : IDisposable
         return new RequestsViewModel(workflow.Requests, workflow.Documents, workflow.Lifecycle, workflow.Customers, Dates, DigitStyle.Persian, () => Clock.UtcNow, () => user);
     }
 
-    public StageWorkViewModel StagesFor(Principal user, StageWorkService? service = null) =>
-        new(service ?? Workflow.StageWork, DigitStyle.Persian, () => user);
-
     public ProductionQueueViewModel QueueFor(Principal user, ProductionQueueService? service = null) =>
         new(service ?? Workflow.Queue, Dates, DigitStyle.Persian, () => Clock.UtcNow, () => user);
 

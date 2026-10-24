@@ -1,3 +1,5 @@
+> **RETIRED (Decision Log #109).** The demonstration stage flow described below no longer exists in the application: the whole-quantity QC approval and the demonstration stage-work screen were removed, and release/start/submit are refused for stages without a production unit. Operation uses the unit queue page (release, start, submit) and quantity inspection by QC (`docs/QC_QUANTITY_MODEL_DESIGN.md`). This document is kept as the record of what the owner tested and accepted in #79-#81.
+
 # Demonstration stage progression and QC approval
 
 Status: implemented for the demonstration build (Decision Log #79; permission mapping approved demo-only in #80; owner's manual Windows test F1-F18 passed and the mapping confirmed in #81). It uses the already-approved demo-only Domain transitions and the existing status model. It adds no production

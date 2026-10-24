@@ -5,7 +5,9 @@ using ERP.MES.Domain.Requests;
 
 namespace ERP.MES.Application.Requests;
 
-/// <summary>The four demonstration-only stage actions (Decision Log #58, #79). Each acts on the CURRENT stage of an item: the first stage QC has not approved.</summary>
+/// <summary>
+/// The stage actions of operation (Decision Log #58, #79, #99, #109). The whole-quantity QC approval of the demonstration is retired: QC decides by quantity (<see cref="QcInspectionService"/>, Decision Log #101).
+/// </summary>
 public enum StageAction
 {
     /// <summary>PLANNED to WAITING for the first stage (Planning).</summary>
@@ -16,9 +18,6 @@ public enum StageAction
 
     /// <summary>IN_PROGRESS to WAITING_QC (Production).</summary>
     SubmitForQc,
-
-    /// <summary>WAITING_QC to QC_APPROVED for the stage's whole planned quantity, which makes the next stage WAITING (QC).</summary>
-    ApproveWholeQuantity,
 }
 
 /// <summary>The two corrections Planning may make to an erroneous operator action.</summary>
@@ -26,18 +25,6 @@ public enum StageCorrection
 {
     UndoStart = 1,
     UndoSubmit,
-}
-
-/// <summary>Which stage actions the current user may perform, as the Application answers it now (from the database). A convenience for enabling buttons; every action checks again.</summary>
-public sealed record StageWorkCapabilities(bool CanView, bool CanRelease, bool CanRun, bool CanApprove)
-{
-    public static StageWorkCapabilities None { get; } = new(false, false, false, false);
-}
-
-/// <summary>The stage actions that are possible for one queue entry for this user right now (permission AND stage state). The Domain and the use case enforce the same rules again.</summary>
-public sealed record AvailableStageActions(bool CanRelease, bool CanStart, bool CanSubmitForQc, bool CanApprove)
-{
-    public static AvailableStageActions None { get; } = new(false, false, false, false);
 }
 
 /// <summary>The loaded state an action is based on: the ids and every row version the entry was read with. Build it from the entry the user saw (<see cref="From"/>).</summary>
@@ -55,8 +42,6 @@ public sealed record StageTarget(long RequestId, long ItemId, int StageNo, long 
 /// <summary>What a successful stage action did: the new status of the stage, and of the next stage when QC approval released it.</summary>
 public sealed record StageActionResult(StageAction Action, int StageNo, ItemStageStatus NewStatus, int? NextStageNo, ItemStageStatus? NextStageNewStatus);
 
-/// <summary>The stage work screen's data: the items in the display order and what the user may do.</summary>
-public sealed record StageWorkView(IReadOnlyList<ProductionQueueEntry> Entries, StageWorkCapabilities Capabilities);
 
 /// <summary>
 /// The limited, DEMONSTRATION-ONLY stage progression and QC approval (Decision Log #58, #79): release the first stage, start it, submit it for QC, record whole-quantity QC
@@ -78,8 +63,6 @@ public sealed record StageWorkView(IReadOnlyList<ProductionQueueEntry> Entries, 
 /// </summary>
 public sealed class StageWorkService(IRequestRepository requests, CurrentAuthorization authorization, IClock clock, IAuditContext auditContext, RequestGateService gates, IUnitQueueRepository unitStore)
 {
-    private static readonly Permission[] AllPermissions = [Permission.ViewProductionQueue, Permission.ReleaseStage, Permission.RunStage, Permission.InspectOrCorrectQc];
-
     /// <summary>
     /// Planning corrects an erroneous stage start (back to waiting) or submission (back to in progress) with a mandatory reason, audited (Decision Log #95 D8, #102). It is refused once QC has decided
     /// anything about the stage. Nobody else can change a start or submission made by another operator.
@@ -146,43 +129,6 @@ public sealed class StageWorkService(IRequestRepository requests, CurrentAuthori
         }
     }
 
-    public async Task<StageWorkCapabilities> GetCapabilitiesAsync(Principal? principal, CancellationToken cancellationToken = default)
-    {
-        var set = await authorization.EvaluateAsync(principal, AllPermissions, cancellationToken);
-        return CapabilitiesOf(set);
-    }
-
-    /// <summary>The items with their current stage and what the user may do. Allowed for anyone who may view the overview or perform one of the stage actions.</summary>
-    public async Task<Outcome<StageWorkView>> LoadAsync(Principal? principal, CancellationToken cancellationToken = default)
-    {
-        var set = await authorization.EvaluateAsync(principal, AllPermissions, cancellationToken);
-        var capabilities = CapabilitiesOf(set);
-        if (!capabilities.CanView)
-        {
-            return Outcome<StageWorkView>.Fail(OperationStatus.NotAuthorized);
-        }
-
-        return await CustomerService.GuardAsync(async () =>
-            Outcome<StageWorkView>.Ok(new StageWorkView(await ProductionQueueService.ReadEntriesAsync(requests, cancellationToken), capabilities)));
-    }
-
-    /// <summary>The actions possible for an entry: the user's permission AND the stage's state. Pure; the same rules are enforced again when an action runs.</summary>
-    public static AvailableStageActions AvailableFor(StageWorkCapabilities capabilities, ProductionQueueEntry entry)
-    {
-        ArgumentNullException.ThrowIfNull(capabilities);
-        ArgumentNullException.ThrowIfNull(entry);
-        if (entry.CurrentStage is not { } stage)
-        {
-            return AvailableStageActions.None;
-        }
-
-        return new AvailableStageActions(
-            capabilities.CanRelease && stage is { StageNo: 1, Status: ItemStageStatus.Planned },
-            capabilities.CanRun && stage.Status == ItemStageStatus.Waiting,
-            capabilities.CanRun && stage.Status == ItemStageStatus.InProgress,
-            capabilities.CanApprove && stage.Status == ItemStageStatus.WaitingQc);
-    }
-
     public async Task<Outcome<StageActionResult>> PerformAsync(Principal? principal, StageAction action, StageTarget target, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(target);
@@ -191,12 +137,7 @@ public sealed class StageWorkService(IRequestRepository requests, CurrentAuthori
             return Outcome<StageActionResult>.Invalid(ValidationIssue.StageActionInvalid);
         }
 
-        var permission = action switch
-        {
-            StageAction.Release => Permission.ReleaseStage,
-            StageAction.Start or StageAction.SubmitForQc => Permission.RunStage,
-            _ => Permission.InspectOrCorrectQc,
-        };
+        var permission = action == StageAction.Release ? Permission.ReleaseStage : Permission.RunStage;
         var decision = await authorization.CheckAsync(principal, permission, cancellationToken);
         if (!decision.IsAllowed)
         {
@@ -213,9 +154,6 @@ public sealed class StageWorkService(IRequestRepository requests, CurrentAuthori
         var number = target.StageNo;
         var before = ItemStageStatus.Planned;
         var after = ItemStageStatus.Planned;
-        ItemStageStatus? nextBefore = null;
-        ItemStageStatus? nextAfter = null;
-        var approvedQuantity = 0m;
         string title = string.Empty;
         string itemNo = string.Empty;
         string requestNo = string.Empty;
@@ -243,14 +181,8 @@ public sealed class StageWorkService(IRequestRepository requests, CurrentAuthori
                 case StageAction.Start:
                     item.StartStage(number);
                     break;
-                case StageAction.SubmitForQc:
-                    item.SubmitStageForQc(number);
-                    break;
                 default:
-                    var next = item.Stages.FirstOrDefault(s => s.StageNo == number + 1);
-                    nextBefore = next?.Status;
-                    approvedQuantity = item.ApproveStageWholeQuantity(number, userId, now).ApprovedQuantity;
-                    nextAfter = next?.Status;
+                    item.SubmitStageForQc(number);
                     break;
             }
 
@@ -263,16 +195,9 @@ public sealed class StageWorkService(IRequestRepository requests, CurrentAuthori
             {
                 StageAction.Release => (AuditActions.StageReleased, "released"),
                 StageAction.Start => (AuditActions.StageStarted, "started"),
-                StageAction.SubmitForQc => (AuditActions.StageSubmittedForQc, "submitted for QC"),
-                _ => (AuditActions.StageQcApproved, "approved by QC (whole quantity " + approvedQuantity.ToString("0.############################", System.Globalization.CultureInfo.InvariantCulture) + ")"),
+                _ => (AuditActions.StageSubmittedForQc, "submitted for QC"),
             };
             var summary = $"Request {requestNo}, item {itemNo}, stage {number} ({title}) {text}: {before.Code()} -> {after.Code()}";
-            if (action == StageAction.ApproveWholeQuantity)
-            {
-                summary += nextBefore is { } nb && nextAfter is { } na
-                    ? $"; stage {number + 1}: {nb.Code()} -> {na.Code()}"
-                    : "; no further stage";
-            }
 
             return [new AuditLogEntry(now, userId, auditContext.MachineName, auditContext.OsUserName, auditContext.DatabaseLogin, code, "ItemStage", target.ItemId + "/" + number, summary)];
         }
@@ -288,8 +213,7 @@ public sealed class StageWorkService(IRequestRepository requests, CurrentAuthori
                 }
 
                 await requests.UpdateRowsAsync(target.RequestId, expected, Change, Audit, cancellationToken);
-                int? nextNo = nextAfter is null ? null : number + 1;
-                return Outcome<StageActionResult>.Ok(new StageActionResult(action, number, after, nextNo, nextAfter));
+                return Outcome<StageActionResult>.Ok(new StageActionResult(action, number, after, null, null));
             });
         }
         catch (InvalidOperationException)
@@ -299,7 +223,8 @@ public sealed class StageWorkService(IRequestRepository requests, CurrentAuthori
         }
     }
 
-    // Operational rules for stages planned in a production unit (Decision Log #99); null = allowed here (the Domain still validates the transition). Stages without a unit are the demonstration's.
+    // Operational rules (Decision Log #99, #109); null = allowed here (the Domain still validates the transition). A stage without a production unit can no longer be released, started or submitted:
+    // the demonstration flow that acted on such stages without a unit designation is retired.
     private async Task<Outcome<StageActionResult>?> CheckUnitScopeAsync(StageAction action, StageTarget target, Principal user, CancellationToken cancellationToken)
     {
         var loaded = await requests.FindAsync(target.RequestId, cancellationToken);
@@ -309,15 +234,14 @@ public sealed class StageWorkService(IRequestRepository requests, CurrentAuthori
         }
 
         var stage = loaded.Value.Items.FirstOrDefault(i => i.Id == target.ItemId)?.Stages.FirstOrDefault(s => s.StageNo == target.StageNo);
-        if (stage?.ProductionUnitId is not { } unitId)
+        if (stage is null)
         {
-            return null;
+            return Outcome<StageActionResult>.Fail(OperationStatus.NotFound);
         }
 
-        if (action == StageAction.ApproveWholeQuantity)
+        if (stage.ProductionUnitId is not { } unitId)
         {
-            // A stage planned in a unit is decided by quantity (accepted / rework / scrap per base unit, Decision Log #101); the whole-quantity shortcut is the demonstration's only.
-            return Outcome<StageActionResult>.Invalid(ValidationIssue.UseQuantityInspection);
+            return Outcome<StageActionResult>.Invalid(ValidationIssue.StageUnitRequired);
         }
 
         var closed = loaded.Value.Status is RequestStatus.Cancelled or RequestStatus.Closed;
@@ -353,7 +277,7 @@ public sealed class StageWorkService(IRequestRepository requests, CurrentAuthori
     }
 
     // The rows the action changes or relies on: the request and the item (the approval changes the item's update time; every action relies on the item's route), the stage itself, the
-    // previous stage (starting or approving relies on it being approved) and, for an approval, the next stage (it becomes WAITING). Rows the caller did not read are not invented.
+    // previous stage (starting relies on it being approved). Rows the caller did not read are not invented.
     private static bool TryExpectations(StageAction action, StageTarget target, out RowVersionExpectations expected)
     {
         expected = RowVersionExpectations.ForRequest(target.RequestVersion).WithItem(target.ItemId, target.ItemVersion);
@@ -364,7 +288,7 @@ public sealed class StageWorkService(IRequestRepository requests, CurrentAuthori
         }
 
         expected = expected.WithStage(target.ItemId, number, own);
-        if (action is StageAction.Start or StageAction.ApproveWholeQuantity && number > 1)
+        if (action == StageAction.Start && number > 1)
         {
             if (!target.StageVersions.TryGetValue(number - 1, out var previous))
             {
@@ -374,24 +298,6 @@ public sealed class StageWorkService(IRequestRepository requests, CurrentAuthori
             expected = expected.WithStage(target.ItemId, number - 1, previous);
         }
 
-        if (action == StageAction.ApproveWholeQuantity && target.StageVersions.TryGetValue(number + 1, out var following))
-        {
-            expected = expected.WithStage(target.ItemId, number + 1, following);
-        }
-
         return true;
-    }
-
-    private static StageWorkCapabilities CapabilitiesOf(PermissionSet set)
-    {
-        if (set.Current is null)
-        {
-            return StageWorkCapabilities.None;
-        }
-
-        var release = set.Has(Permission.ReleaseStage);
-        var run = set.Has(Permission.RunStage);
-        var approve = set.Has(Permission.InspectOrCorrectQc);
-        return new StageWorkCapabilities(set.Has(Permission.ViewProductionQueue) || release || run || approve, release, run, approve);
     }
 }

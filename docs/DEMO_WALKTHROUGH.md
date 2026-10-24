@@ -39,5 +39,5 @@ Not in the walkthrough but available: overtime (Planning configures the limits; 
 
 ## 3. Honest limits
 
-- The sample requests (`DEMO-...`) still have stages without a production unit; they belong to the earlier demonstration stage flow (Decision Log #79-#81). The new walkthrough request does not use that flow.
+- The sample requests (`DEMO-...`) have stages without a production unit; they are frozen examples for the list and overview screens - the demonstration stage flow that advanced them was retired (Decision Log #109), so they cannot be released, started or inspected. The walkthrough request does not use them.
 - A person has not yet performed this walkthrough in the WPF application on Windows; the automated test performs the same use cases.
