@@ -66,6 +66,7 @@ public class AuthorizationRulesTests
         [Permission.ReviewJobReports] = (["PRODUCTION", "PLANNING"], null),
         [Permission.ViewJobReports] = (["PRODUCTION", "PLANNING", "MANAGEMENT"], null),
         [Permission.CorrectStageAction] = (["PLANNING"], null),
+        [Permission.ViewKpi] = (["PLANNING", "MANAGEMENT", "PRODUCTION"], null),
         [Permission.RecordWarehouseReceipt] = (["WAREHOUSE"], null),
         [Permission.MarkItemFinishedSent] = (["WAREHOUSE"], null),
         [Permission.RecordCustomerDispatch] = (["WAREHOUSE"], null),

@@ -1984,3 +1984,30 @@ Append one dated entry after every substantial session. Do not replace prior ent
 
 ### Recommended exact next action
 - Merge after CI, then phase 8 (KPI reporting, D6: separate labelled unit metrics).
+
+---
+
+### Date / session
+- Date: 2026-10-24
+- Claude Code session ID (if useful): session_01UwqjPjBXLd2apjZb2urjds (phase 8: unit metrics and operator hours)
+
+### Goal
+- Separate, labelled unit metrics from approved reports, QC decisions and the schedule, with Planning, Management and unit supervisors reading (Decision Log #95 D6/D8).
+
+### Completed
+- Application: `KpiCalculator` (pure), `KpiService` (access by role, as-of run), `IKpiRepository`, permission `ViewKpi`.
+- Persistence: `EfKpiRepository` (read-only facts, no new tables, no migration).
+- Desktop: page "شاخص‌های واحدها".
+- Tests: pure calculator tests (metrics, exact local-day periods, overtime estimate, pending approvals, ranking and ties, supervisor filter), integration tests on a real database (figures, unapproved reports counted not used, access negatives), view model.
+
+### Decisions newly approved
+- None; labelled defaults are listed in #106.
+
+### Unresolved questions / risks
+- Report lines are not linked to overtime assignments (overtime share is an estimate); drill-down, export and headcount normalization are not built.
+
+### Commands/tests actually run and results
+- See the pull request for the Linux and Windows CI totals of the final head.
+
+### Recommended exact next action
+- Merge after CI, then phase 9 (integration, demo hardening, retire the demonstration stage flow, SQL Server test pass).

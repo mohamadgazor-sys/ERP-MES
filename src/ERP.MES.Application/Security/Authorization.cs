@@ -165,6 +165,9 @@ public enum Permission
     /// <summary>Read the warehouse completion list: receipts, finished/sent marks and dispatches (Warehouse, Planning, Management; Decision Log #105).</summary>
     ViewWarehouseCompletion,
 
+    /// <summary>Read the unit metrics and operator hours: Planning and Management for any unit, a unit supervisor for their own units (Decision Log #95 D6/D8, #106).</summary>
+    ViewKpi,
+
     /// <summary>Correct an erroneous stage start or submission with a reason (Planning; Decision Log #95 D8, #102).</summary>
     CorrectStageAction,
 
@@ -264,6 +267,7 @@ public static class AuthorizationRules
         [Permission.ReviewJobReports] = new([DepartmentCodes.Production, DepartmentCodes.Planning], null),
         [Permission.ViewJobReports] = new([DepartmentCodes.Production, DepartmentCodes.Planning, DepartmentCodes.Management], null),
         [Permission.CorrectStageAction] = new([DepartmentCodes.Planning], null),
+        [Permission.ViewKpi] = new([DepartmentCodes.Planning, DepartmentCodes.Management, DepartmentCodes.Production], null),
         [Permission.RecordWarehouseReceipt] = new([DepartmentCodes.Warehouse], null),
         [Permission.MarkItemFinishedSent] = new([DepartmentCodes.Warehouse], null),
         [Permission.RecordCustomerDispatch] = new([DepartmentCodes.Warehouse], null),
