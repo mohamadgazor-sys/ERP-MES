@@ -1503,6 +1503,185 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
                     b.ToTable("ProductionUnits", (string)null);
                 });
 
+            modelBuilder.Entity("ERP.MES.Domain.Production.OutageEvent", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long?>("ClosedByUserId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("EndedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<long?>("ProductionUnitId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("ReasonId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("RecordedByUserId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("StartedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ClosedByUserId");
+
+                    b.HasIndex("ProductionUnitId");
+
+                    b.HasIndex("ReasonId");
+
+                    b.HasIndex("RecordedByUserId");
+
+                    b.ToTable("OutageEvents", (string)null);
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Production.PauseReason", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long?>("CreatedByUserId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("DefaultScope")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsSystem")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("RequiresNote")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.ToTable("PauseReasons", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1L,
+                            Code = "POWER_OUTAGE",
+                            CreatedAtUtc = new DateTime(2026, 10, 27, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DefaultScope = 4,
+                            IsActive = true,
+                            IsSystem = true,
+                            Name = "قطع برق",
+                            RequiresNote = false,
+                            Version = 1L
+                        },
+                        new
+                        {
+                            Id = 2L,
+                            Code = "PLANNED_MAINTENANCE",
+                            CreatedAtUtc = new DateTime(2026, 10, 27, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DefaultScope = 2,
+                            IsActive = true,
+                            IsSystem = true,
+                            Name = "تعمیر و نگهداری پیشگیرانهٔ برنامه‌ریزی‌شده",
+                            RequiresNote = false,
+                            Version = 1L
+                        },
+                        new
+                        {
+                            Id = 3L,
+                            Code = "MACHINE_BREAKDOWN",
+                            CreatedAtUtc = new DateTime(2026, 10, 27, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DefaultScope = 2,
+                            IsActive = true,
+                            IsSystem = true,
+                            Name = "خرابی برنامه‌ریزی‌نشدهٔ ماشین",
+                            RequiresNote = false,
+                            Version = 1L
+                        },
+                        new
+                        {
+                            Id = 4L,
+                            Code = "OPERATOR_ABSENCE_HANDOVER",
+                            CreatedAtUtc = new DateTime(2026, 10, 27, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DefaultScope = 3,
+                            IsActive = true,
+                            IsSystem = true,
+                            Name = "غیبت اپراتور یا تحویل شیفت",
+                            RequiresNote = false,
+                            Version = 1L
+                        },
+                        new
+                        {
+                            Id = 5L,
+                            Code = "MATERIAL_UNAVAILABLE",
+                            CreatedAtUtc = new DateTime(2026, 10, 27, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DefaultScope = 1,
+                            IsActive = true,
+                            IsSystem = true,
+                            Name = "نبود مواد",
+                            RequiresNote = false,
+                            Version = 1L
+                        },
+                        new
+                        {
+                            Id = 6L,
+                            Code = "WAITING_ASSISTANCE",
+                            CreatedAtUtc = new DateTime(2026, 10, 27, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DefaultScope = 1,
+                            IsActive = true,
+                            IsSystem = true,
+                            Name = "انتظار برای سرپرست یا پشتیبانی فنی",
+                            RequiresNote = false,
+                            Version = 1L
+                        },
+                        new
+                        {
+                            Id = 7L,
+                            Code = "OTHER",
+                            CreatedAtUtc = new DateTime(2026, 10, 27, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DefaultScope = 1,
+                            IsActive = true,
+                            IsSystem = true,
+                            Name = "سایر (توضیح الزامی)",
+                            RequiresNote = true,
+                            Version = 1L
+                        });
+                });
+
             modelBuilder.Entity("ERP.MES.Domain.Production.QueueOverride", b =>
                 {
                     b.Property<long>("Id")
@@ -1661,6 +1840,277 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
                         .IsUnique();
 
                     b.ToTable("UserUnitDesignations", (string)null);
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Production.WorkSession", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("DispatchedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("DispatchedByUserId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("FinishKind")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("FinishNote")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("FinishedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long?>("FinishedByUserId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("MachineId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("OperatorId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("OutsideShiftReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<long?>("PredecessorSessionId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("ProductionUnitId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("QualificationWarning")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("RequestItemId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("StageNo")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("StartedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long?>("StartedByUserId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("TimeApprovedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long?>("TimeApprovedByUserId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DispatchedByUserId");
+
+                    b.HasIndex("FinishedByUserId");
+
+                    b.HasIndex("MachineId");
+
+                    b.HasIndex("OperatorId");
+
+                    b.HasIndex("PredecessorSessionId");
+
+                    b.HasIndex("StartedByUserId");
+
+                    b.HasIndex("TimeApprovedByUserId");
+
+                    b.HasIndex("ProductionUnitId", "Status");
+
+                    b.HasIndex("RequestItemId", "StageNo");
+
+                    b.ToTable("WorkSessions", (string)null);
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Production.WorkSessionCorrection", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Boundary")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CorrectedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("CorrectedByUserId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("NewValueUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("OldValueUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("PauseIndex")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("SessionId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CorrectedByUserId");
+
+                    b.HasIndex("SessionId");
+
+                    b.ToTable("WorkSessionCorrections", (string)null);
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Production.WorkSessionEvent", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("AtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("ByUserId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Detail")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("SessionId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ByUserId");
+
+                    b.HasIndex("SessionId");
+
+                    b.ToTable("WorkSessionEvents", (string)null);
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Production.WorkSessionInterval", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("EndedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("EndedBy")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long?>("EndedByUserId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("MachineId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("OperatorId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("SessionId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("StartedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("StartedByUserId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EndedByUserId");
+
+                    b.HasIndex("MachineId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_WorkSessionIntervals_OpenMachine")
+                        .HasFilter("[EndedAtUtc] IS NULL");
+
+                    b.HasIndex("OperatorId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_WorkSessionIntervals_OpenOperator")
+                        .HasFilter("[EndedAtUtc] IS NULL");
+
+                    b.HasIndex("SessionId")
+                        .IsUnique()
+                        .HasFilter("[EndedAtUtc] IS NULL");
+
+                    b.HasIndex("StartedByUserId");
+
+                    b.HasIndex("MachineId", "StartedAtUtc");
+
+                    b.ToTable("WorkSessionIntervals", (string)null);
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Production.WorkSessionPause", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<long?>("OutageEventId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("PausedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("PausedByUserId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("ReasonId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("ResumedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long?>("ResumedByUserId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Scope")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("SessionId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OutageEventId");
+
+                    b.HasIndex("PausedByUserId");
+
+                    b.HasIndex("ReasonId");
+
+                    b.HasIndex("ResumedByUserId");
+
+                    b.HasIndex("SessionId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_WorkSessionPauses_OpenPerSession")
+                        .HasFilter("[ResumedAtUtc] IS NULL");
+
+                    b.ToTable("WorkSessionPauses", (string)null);
                 });
 
             modelBuilder.Entity("ERP.MES.Domain.Quality.QuantityType", b =>
@@ -3543,6 +3993,39 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("ERP.MES.Domain.Production.OutageEvent", b =>
+                {
+                    b.HasOne("ERP.MES.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("ClosedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("ERP.MES.Domain.Planning.ProductionUnit", null)
+                        .WithMany()
+                        .HasForeignKey("ProductionUnitId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("ERP.MES.Domain.Production.PauseReason", null)
+                        .WithMany()
+                        .HasForeignKey("ReasonId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ERP.MES.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("RecordedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Production.PauseReason", b =>
+                {
+                    b.HasOne("ERP.MES.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
             modelBuilder.Entity("ERP.MES.Domain.Production.QueueOverride", b =>
                 {
                     b.HasOne("ERP.MES.Domain.Planning.ProductionUnit", null)
@@ -3609,6 +4092,153 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
                     b.HasOne("ERP.MES.Domain.Identity.User", null)
                         .WithMany()
                         .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Production.WorkSession", b =>
+                {
+                    b.HasOne("ERP.MES.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("DispatchedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ERP.MES.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("FinishedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("ERP.MES.Domain.Planning.Machine", null)
+                        .WithMany()
+                        .HasForeignKey("MachineId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ERP.MES.Domain.Planning.Operator", null)
+                        .WithMany()
+                        .HasForeignKey("OperatorId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ERP.MES.Domain.Production.WorkSession", null)
+                        .WithMany()
+                        .HasForeignKey("PredecessorSessionId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("ERP.MES.Domain.Planning.ProductionUnit", null)
+                        .WithMany()
+                        .HasForeignKey("ProductionUnitId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ERP.MES.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("StartedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("ERP.MES.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("TimeApprovedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("ERP.MES.Domain.Requests.ItemStage", null)
+                        .WithMany()
+                        .HasForeignKey("RequestItemId", "StageNo")
+                        .HasPrincipalKey("RequestItemId", "StageNo")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Production.WorkSessionCorrection", b =>
+                {
+                    b.HasOne("ERP.MES.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("CorrectedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ERP.MES.Domain.Production.WorkSession", null)
+                        .WithMany("Corrections")
+                        .HasForeignKey("SessionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Production.WorkSessionEvent", b =>
+                {
+                    b.HasOne("ERP.MES.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("ByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ERP.MES.Domain.Production.WorkSession", null)
+                        .WithMany("Events")
+                        .HasForeignKey("SessionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Production.WorkSessionInterval", b =>
+                {
+                    b.HasOne("ERP.MES.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("EndedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("ERP.MES.Domain.Planning.Machine", null)
+                        .WithMany()
+                        .HasForeignKey("MachineId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ERP.MES.Domain.Planning.Operator", null)
+                        .WithMany()
+                        .HasForeignKey("OperatorId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ERP.MES.Domain.Production.WorkSession", null)
+                        .WithMany("Intervals")
+                        .HasForeignKey("SessionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ERP.MES.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("StartedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Production.WorkSessionPause", b =>
+                {
+                    b.HasOne("ERP.MES.Domain.Production.OutageEvent", null)
+                        .WithMany()
+                        .HasForeignKey("OutageEventId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("ERP.MES.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("PausedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ERP.MES.Domain.Production.PauseReason", null)
+                        .WithMany()
+                        .HasForeignKey("ReasonId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ERP.MES.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("ResumedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("ERP.MES.Domain.Production.WorkSession", null)
+                        .WithMany("Pauses")
+                        .HasForeignKey("SessionId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });
@@ -4144,6 +4774,17 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
                     b.Navigation("Responses");
 
                     b.Navigation("SupplyRoutes");
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Production.WorkSession", b =>
+                {
+                    b.Navigation("Corrections");
+
+                    b.Navigation("Events");
+
+                    b.Navigation("Intervals");
+
+                    b.Navigation("Pauses");
                 });
 
             modelBuilder.Entity("ERP.MES.Domain.Quality.QuantityType", b =>

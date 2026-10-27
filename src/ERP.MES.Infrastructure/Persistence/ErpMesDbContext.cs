@@ -56,6 +56,20 @@ public sealed class ErpMesDbContext(DbContextOptions<ErpMesDbContext> options) :
 
     public DbSet<ItemContractDecision> ItemContractDecisions => Set<ItemContractDecision>();
 
+    public DbSet<PauseReason> PauseReasons => Set<PauseReason>();
+
+    public DbSet<OutageEvent> OutageEvents => Set<OutageEvent>();
+
+    public DbSet<WorkSession> WorkSessions => Set<WorkSession>();
+
+    public DbSet<WorkSessionInterval> WorkSessionIntervals => Set<WorkSessionInterval>();
+
+    public DbSet<WorkSessionPause> WorkSessionPauses => Set<WorkSessionPause>();
+
+    public DbSet<WorkSessionEvent> WorkSessionEvents => Set<WorkSessionEvent>();
+
+    public DbSet<WorkSessionCorrection> WorkSessionCorrections => Set<WorkSessionCorrection>();
+
     public DbSet<DailyJobReport> DailyJobReports => Set<DailyJobReport>();
 
     public DbSet<JobReportLine> JobReportLines => Set<JobReportLine>();
@@ -149,7 +163,7 @@ public sealed class ErpMesDbContext(DbContextOptions<ErpMesDbContext> options) :
     /// <summary>Name of the shadow property that holds the application-managed row version (Decision Log #23).</summary>
     public const string RowVersionPropertyName = "Version";
 
-    private static readonly HashSet<Type> VersionedTypes = [typeof(Customer), typeof(Request), typeof(RequestItem), typeof(ItemStage), typeof(User), typeof(UserCredential), typeof(SystemSetup), typeof(UnitOfMeasure), typeof(UnitConversion), typeof(QuantityType), typeof(ProductionUnit), typeof(Machine), typeof(RawMaterialInquiry), typeof(DrawingClarification), typeof(RequestContract), typeof(ContractVersion), typeof(Material), typeof(Operator), typeof(OperatorMachineAssignment), typeof(OperatorMachineQualification), typeof(QueueOverride), typeof(UserUnitDesignation), typeof(ShiftTemplate), typeof(WeeklyWorkday), typeof(CalendarException), typeof(UnitShift), typeof(OperatorOffDay), typeof(WorkerSchedule), typeof(DailyJobReport), typeof(OvertimeLimits), typeof(OvertimeAssignment), typeof(ItemPriceDecision)];
+    private static readonly HashSet<Type> VersionedTypes = [typeof(Customer), typeof(Request), typeof(RequestItem), typeof(ItemStage), typeof(User), typeof(UserCredential), typeof(SystemSetup), typeof(UnitOfMeasure), typeof(UnitConversion), typeof(QuantityType), typeof(ProductionUnit), typeof(Machine), typeof(RawMaterialInquiry), typeof(DrawingClarification), typeof(RequestContract), typeof(ContractVersion), typeof(Material), typeof(Operator), typeof(OperatorMachineAssignment), typeof(OperatorMachineQualification), typeof(QueueOverride), typeof(UserUnitDesignation), typeof(ShiftTemplate), typeof(WeeklyWorkday), typeof(CalendarException), typeof(UnitShift), typeof(OperatorOffDay), typeof(WorkerSchedule), typeof(DailyJobReport), typeof(OvertimeLimits), typeof(OvertimeAssignment), typeof(ItemPriceDecision), typeof(PauseReason), typeof(OutageEvent), typeof(WorkSession)];
 
     /// <summary>The row version of a tracked entity of a versioned type (customer, request, request item, item stage).</summary>
     public long GetRowVersion(object entity) => (long)Entry(entity).Property(RowVersionPropertyName).CurrentValue!;
@@ -245,6 +259,12 @@ public sealed class ErpMesDbContext(DbContextOptions<ErpMesDbContext> options) :
         if (ChangeTracker.Entries<ItemContractDecision>().Any(e => e.State is EntityState.Modified or EntityState.Deleted))
         {
             throw new InvalidOperationException("The item contract decisions are append-only: entries cannot be changed or deleted.");
+        }
+
+        // The work session history and the corrections are append-only.
+        if (ChangeTracker.Entries().Any(e => e.Entity is WorkSessionEvent or WorkSessionCorrection && e.State is EntityState.Modified or EntityState.Deleted))
+        {
+            throw new InvalidOperationException("The work session history is append-only: entries cannot be changed or deleted.");
         }
 
         foreach (var entry in ChangeTracker.Entries().Where(e => VersionedTypes.Contains(e.Metadata.ClrType)).ToList())
