@@ -279,6 +279,9 @@ public enum ValidationIssue
     /// <summary>The stage is tracked by sessions but none has recorded work yet.</summary>
     SubmitNoFinishedSession,
 
+    /// <summary>The item has finished work sessions whose actual time Planning has not approved yet; costing would silently leave their time out.</summary>
+    CostingSessionsNotApproved,
+
     /// <summary>There is no active session to pause.</summary>
     SessionNothingToPause,
 

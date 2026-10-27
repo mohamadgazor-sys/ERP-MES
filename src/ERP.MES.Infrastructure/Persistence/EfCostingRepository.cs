@@ -63,7 +63,10 @@ public sealed class EfCostingRepository(IDbContextFactory<ErpMesDbContext> conte
         var reports = await context.DailyJobReports.Include(r => r.Lines).AsNoTracking()
             .Where(r => r.Status == JobReportStatus.Approved && r.Lines.Any(l => l.RequestItemId == requestItemId)).ToListAsync(cancellationToken);
         var lines = reports.SelectMany(r => r.Lines.Where(l => l.RequestItemId == requestItemId).Select(l => new ApprovedTimeLine(l.Id, l.MachineId, r.WorkDate, l.ProductiveMinutes))).ToList();
-        var machineIds = lines.Select(l => l.MachineId).Distinct().ToList();
+        var sessions = await context.WorkSessions.Include(w => w.Intervals).AsSplitQuery().AsNoTracking()
+            .Where(w => w.RequestItemId == requestItemId && w.Status == ERP.MES.Domain.Production.WorkSessionStatus.Finished).ToListAsync(cancellationToken);
+        var approvedSessions = sessions.Where(w => w.IsTimeApproved).ToList();
+        var machineIds = lines.Select(l => l.MachineId).Concat(approvedSessions.Select(w => w.MachineId)).Distinct().ToList();
         var rates = await context.MachineHourlyRates.AsNoTracking().Where(r => machineIds.Contains(r.MachineId)).ToListAsync(cancellationToken);
         var codes = await context.Machines.AsNoTracking().Where(m => machineIds.Contains(m.Id)).ToDictionaryAsync(m => m.Id, m => m.Code, cancellationToken);
         var material = item.MaterialId is { } materialId ? await context.Materials.AsNoTracking().FirstOrDefaultAsync(m => m.Id == materialId, cancellationToken) : null;
@@ -72,7 +75,7 @@ public sealed class EfCostingRepository(IDbContextFactory<ErpMesDbContext> conte
 
         var inputs = new CostInputs(
             item.Id, request.Id, request.RequestNo.Value, item.ItemNo, request.WorkType, IsContractApproved(contract) && !itemNotRequired, item.IsRouteCompleted, stages.FirstOrDefault()?.AvailableSinceUtc,
-            stages.FirstOrDefault()?.InputBaseUnits, stages.LastOrDefault()?.AcceptedBaseUnits ?? 0, item.MaterialId, material?.Code, item.WeightKgPerBaseUnit, lines, rates, codes, prices, next);
+            stages.FirstOrDefault()?.InputBaseUnits, stages.LastOrDefault()?.AcceptedBaseUnits ?? 0, item.MaterialId, material?.Code, item.WeightKgPerBaseUnit, lines, rates, codes, prices, next, approvedSessions, sessions.Count(w => !w.IsTimeApproved));
         var built = build(inputs);
         if (built.Refusal != ValidationIssue.None)
         {

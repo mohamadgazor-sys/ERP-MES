@@ -32,7 +32,11 @@ public sealed record KpiFacts(
     IReadOnlyList<KpiInspection> Inspections,
     IReadOnlyList<KpiCompletedStage> CompletedStages,
     IReadOnlyList<KpiScheduledRow> Scheduled,
-    IReadOnlyList<KpiOvertimeWindow> Overtime);
+    IReadOnlyList<KpiOvertimeWindow> Overtime,
+    IReadOnlyList<KpiSessionInterval>? SessionIntervals = null);
+
+/// <summary>An interval of a time-approved work session (Decision Log #114): the operator's labour time, split by local day in the calculator. SessionId is carried for traceability.</summary>
+public sealed record KpiSessionInterval(long SessionId, long OperatorId, long UnitId, DateTime StartUtc, DateTime EndUtc);
 
 /// <summary>Read-only access to everything the unit metrics need (Decision Log #106); nothing is written.</summary>
 public interface IKpiRepository

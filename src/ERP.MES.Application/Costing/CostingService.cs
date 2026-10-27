@@ -65,7 +65,7 @@ public sealed class CostingService(
         {
             var (calculation, price, build) = await store.CalculateAsync(
                 requestItemId,
-                inputs => CostCalculator.Build(inputs, user.UserId, now, utc => dates.UtcToLocal(utc).Date),
+                inputs => CostCalculator.Build(inputs, user.UserId, now, utc => dates.UtcToLocal(utc).Date, date => dates.LocalToUtc(date, TimeOnly.MinValue)),
                 Audit(user, now, AuditActions.ItemCostCalculated, requestItemId.ToString(System.Globalization.CultureInfo.InvariantCulture), $"Cost of item {requestItemId} calculated"),
                 cancellationToken);
             return build.Refusal == ValidationIssue.None

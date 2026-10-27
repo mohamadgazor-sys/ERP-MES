@@ -137,6 +137,20 @@ public sealed class WorkSessionService(
         });
     }
 
+    /// <summary>The five distinct actual-time metrics of one stage (machine-hours, labour-hours, elapsed, paused by reason, planned vs actual) from the recorded instants of its sessions.</summary>
+    public async Task<Outcome<StageMetrics>> LoadStageMetricsAsync(Principal? principal, long itemId, int stageNo, bool approvedOnly = false, CancellationToken cancellationToken = default)
+    {
+        var rows = await LoadStageAsync(principal, itemId, stageNo, cancellationToken);
+        if (!rows.Succeeded)
+        {
+            return Outcome<StageMetrics>.Fail(rows.Status);
+        }
+
+        var planned = rows.Value!.Count == 0 ? 0m : rows.Value[0].PlannedMinutes;
+        return Outcome<StageMetrics>.Ok(SessionMetricsCalculator.Compute(
+            rows.Value.Select(r => r.Session.Value), [new StagePlan(itemId, stageNo, planned)], clock.UtcNow, approvedOnly ? s => s.IsTimeApproved : null));
+    }
+
     // ---- dispatch and start ----
 
     /// <summary>

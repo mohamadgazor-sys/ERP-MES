@@ -1,4 +1,5 @@
 using ERP.MES.Application.Persistence;
+using ERP.MES.Application.Production;
 using ERP.MES.Application.Requests;
 using ERP.MES.Domain.Costing;
 using ERP.MES.Domain.Materials;
@@ -15,7 +16,7 @@ namespace ERP.MES.Application.Costing;
 /// </summary>
 public static class CostCalculator
 {
-    public static CostBuild Build(CostInputs inputs, long userId, DateTime nowUtc, Func<DateTime, DateOnly> localDate)
+    public static CostBuild Build(CostInputs inputs, long userId, DateTime nowUtc, Func<DateTime, DateOnly> localDate, Func<DateOnly, DateTime>? localMidnightUtc = null)
     {
         ArgumentNullException.ThrowIfNull(inputs);
         ArgumentNullException.ThrowIfNull(localDate);
@@ -24,7 +25,15 @@ public static class CostCalculator
             return Refuse(ValidationIssue.CostingNotReady);
         }
 
-        if (inputs.Lines.Count == 0)
+        if (inputs.UnapprovedFinishedSessions > 0)
+        {
+            return Refuse(ValidationIssue.CostingSessionsNotApproved);
+        }
+
+        var sessionDays = inputs.ApprovedSessions.Count == 0
+            ? []
+            : SessionMetricsCalculator.MachineDays(inputs.ApprovedSessions, nowUtc, localDate, localMidnightUtc ?? throw new ArgumentException("Costing work sessions needs the local midnight function.", nameof(localMidnightUtc)));
+        if (inputs.Lines.Count == 0 && sessionDays.Count == 0)
         {
             return Refuse(ValidationIssue.CostingNoApprovedTime);
         }
@@ -42,6 +51,20 @@ public static class CostCalculator
 
             var amount = decimal.Round(rate.RatePerHourRial * line.ProductiveMinutes / 60m, 0, MidpointRounding.AwayFromZero);
             lines.Add(new ItemCostLine(lines.Count + 1, CostLineKind.Machining, line.JobReportLineId, line.MachineId, rate.Id, line.WorkDate, line.ProductiveMinutes, null, rate.RatePerHourRial, amount));
+        }
+
+        // Machine runtime of approved work sessions: one line per machine and local date, handover overlaps counted once, the same rate-history rule and rounding as a report line (Decision Log #114).
+        foreach (var day in sessionDays)
+        {
+            var rate = MachineRates.RateOn(inputs.Rates, day.MachineId, day.Date);
+            if (rate is null)
+            {
+                gaps.Add($"RATE|{inputs.MachineCodes.GetValueOrDefault(day.MachineId, "?")}|{day.Date:yyyy-MM-dd}");
+                continue;
+            }
+
+            var amount = decimal.Round(rate.RatePerHourRial * day.Minutes / 60m, 0, MidpointRounding.AwayFromZero);
+            lines.Add(new ItemCostLine(lines.Count + 1, CostLineKind.Machining, null, day.MachineId, rate.Id, day.Date, day.Minutes, null, rate.RatePerHourRial, amount, string.Join(',', day.SessionIds)));
         }
 
         long? materialPriceId = null;

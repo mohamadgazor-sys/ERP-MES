@@ -35,7 +35,7 @@ public sealed class ItemCostLine
     {
     }
 
-    public ItemCostLine(int lineNo, CostLineKind kind, long? jobReportLineId, long? machineId, long? rateId, DateOnly? workDate, int? minutes, decimal? weightKg, decimal unitPriceRial, decimal amountRial)
+    public ItemCostLine(int lineNo, CostLineKind kind, long? jobReportLineId, long? machineId, long? rateId, DateOnly? workDate, int? minutes, decimal? weightKg, decimal unitPriceRial, decimal amountRial, string? sessionIds = null)
     {
         if (amountRial < 0 || amountRial != decimal.Round(amountRial, 0, MidpointRounding.AwayFromZero))
         {
@@ -45,6 +45,7 @@ public sealed class ItemCostLine
         LineNo = lineNo;
         Kind = kind;
         JobReportLineId = jobReportLineId;
+        SessionIds = sessionIds;
         MachineId = machineId;
         RateId = rateId;
         WorkDate = workDate;
@@ -62,6 +63,9 @@ public sealed class ItemCostLine
 
     /// <summary>The approved report line the machining time came from (machining lines).</summary>
     public long? JobReportLineId { get; private set; }
+
+    /// <summary>For a machine line costed from work sessions (Decision Log #114): the ids of the sessions whose runtime on that machine and date it covers, comma separated; null for a job report line and for material.</summary>
+    public string? SessionIds { get; private set; }
 
     public long? MachineId { get; private set; }
 
