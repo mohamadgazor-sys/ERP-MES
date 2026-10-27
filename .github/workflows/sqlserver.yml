@@ -1,0 +1,96 @@
+name: SQL Server integration
+
+# The SQL Server integration pass (Decision Log #117). The provider project and its tests are NOT in ERP-MES.sln, so the main Windows workflow does not restore the provider package. This workflow restores,
+# audits and tests them on Linux against a throw-away SQL Server container whose sa password is generated here, masked and never written to a file. No secrets, no deployment.
+# Third-party actions are pinned to full commit SHAs; the comment names the release.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sqlserver-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  sqlserver:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      PROJECT: tests/ERP.MES.Infrastructure.SqlServer.Tests/ERP.MES.Infrastructure.SqlServer.Tests.csproj
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up .NET SDK from global.json
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: global.json
+
+      - name: Restore (provider project and its tests)
+        run: dotnet restore "$PROJECT"
+
+      - name: List packages (direct and transitive)
+        run: dotnet list "$PROJECT" package --include-transitive --no-restore
+
+      - name: Check for vulnerable packages (direct and transitive)
+        run: |
+          set -o pipefail
+          dotnet list "$PROJECT" package --vulnerable --include-transitive --no-restore 2>&1 | tee vulnerable.txt
+          if grep -q 'has the following vulnerable packages' vulnerable.txt; then echo 'Vulnerable packages were found (direct or transitive).'; exit 1; fi
+          if ! grep -q 'no vulnerable packages' vulnerable.txt; then echo 'The vulnerability report did not complete.'; exit 1; fi
+
+      - name: Build
+        run: dotnet build "$PROJECT" --configuration Release --no-restore
+
+      - name: Start SQL Server (throw-away container)
+        run: |
+          password="Aa1!$(openssl rand -hex 16)"
+          echo "::add-mask::$password"
+          docker run -d --name mssql -e ACCEPT_EULA=Y -e "MSSQL_SA_PASSWORD=$password" -p 1433:1433 mcr.microsoft.com/mssql/server:2022-latest
+          ready=0
+          for i in $(seq 1 60); do
+            if docker exec mssql /opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P "$password" -Q "SELECT 1" >/dev/null 2>&1; then ready=1; break; fi
+            sleep 2
+          done
+          if [ "$ready" -ne 1 ]; then docker logs mssql | tail -50; echo 'SQL Server did not become ready.'; exit 1; fi
+          docker exec mssql /opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P "$password" -h -1 -Q "SET NOCOUNT ON; SELECT @@VERSION"
+          echo "ERPMES_SQLSERVER=Server=localhost,1433;User Id=sa;Password=$password;TrustServerCertificate=True;Encrypt=True" >> "$GITHUB_ENV"
+
+      - name: Test
+        run: dotnet test "$PROJECT" --configuration Release --no-build --logger trx --results-directory TestResults
+
+      # With the server available no test may be skipped, and a run that discovers no tests is not a pass.
+      - name: Verify the SQL Server tests ran and passed
+        run: |
+          python3 - <<'PY'
+          import glob, xml.etree.ElementTree as ET
+          files = glob.glob('TestResults/**/*.trx', recursive=True)
+          if not files: raise SystemExit('No TRX result files were produced.')
+          total = passed = failed = skipped = 0
+          for f in files:
+              c = ET.parse(f).getroot().find('{*}ResultSummary/{*}Counters')
+              total += int(c.get('total')); passed += int(c.get('passed')); failed += int(c.get('failed'))
+              skipped += int(c.get('total')) - int(c.get('executed'))
+          print(f'total={total} passed={passed} failed={failed} skipped={skipped}')
+          if total == 0 or failed != 0 or skipped != 0 or passed != total: raise SystemExit('Not all SQL Server tests ran and passed.')
+          PY
+
+      - name: Upload test results
+        if: ${{ always() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: sqlserver-test-results
+          path: TestResults
+          if-no-files-found: ignore
+
+      - name: Stop SQL Server
+        if: ${{ always() }}
+        run: docker rm -f mssql || true

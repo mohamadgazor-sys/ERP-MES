@@ -27,4 +27,10 @@
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.13" />
   </ItemGroup>
 
+  <!-- SQL Server provider for the production backend (Decision Log #117). Same version as the other EF Core components. Used only by src/ERP.MES.Infrastructure.SqlServer, which is not part of
+       ERP-MES.sln; its licence and dependency graph are recorded in docs/DEPENDENCY_LICENCE_INVENTORY.md. -->
+  <ItemGroup>
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.13" />
+  </ItemGroup>
+
 </Project>
