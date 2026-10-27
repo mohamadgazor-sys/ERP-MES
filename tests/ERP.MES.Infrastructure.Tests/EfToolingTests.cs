@@ -36,7 +36,7 @@ public class EfToolingTests
             .OrderBy(n => n, StringComparer.Ordinal)
             .ToArray();
 
-        Assert.Equal(new[] { "ERP.MES.Infrastructure.Sqlite", "ERP.MES.Provisioning" }, files);
+        Assert.Equal(new[] { "ERP.MES.Infrastructure.SqlServer", "ERP.MES.Infrastructure.Sqlite", "ERP.MES.Provisioning" }, files);
     }
 
     [Fact]
