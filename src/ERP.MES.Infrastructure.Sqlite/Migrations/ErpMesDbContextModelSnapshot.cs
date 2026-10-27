@@ -325,6 +325,43 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
                     b.ToTable("ContractVersions", (string)null);
                 });
 
+            modelBuilder.Entity("ERP.MES.Domain.Contracts.ItemContractDecision", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("DecidedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("DecidedByUserId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("RequestId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("RequestItemId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Requirement")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DecidedByUserId");
+
+                    b.HasIndex("RequestId");
+
+                    b.HasIndex("RequestItemId");
+
+                    b.ToTable("ItemContractDecisions", (string)null);
+                });
+
             modelBuilder.Entity("ERP.MES.Domain.Contracts.RequestContract", b =>
                 {
                     b.Property<long>("Id")
@@ -3095,6 +3132,27 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
                         .WithMany()
                         .HasForeignKey("SubmittedByUserId")
                         .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Contracts.ItemContractDecision", b =>
+                {
+                    b.HasOne("ERP.MES.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("DecidedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ERP.MES.Domain.Requests.Request", null)
+                        .WithMany()
+                        .HasForeignKey("RequestId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ERP.MES.Domain.Requests.RequestItem", null)
+                        .WithMany()
+                        .HasForeignKey("RequestItemId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("ERP.MES.Domain.Contracts.RequestContract", b =>

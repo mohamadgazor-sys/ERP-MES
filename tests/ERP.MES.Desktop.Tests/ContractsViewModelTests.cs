@@ -146,4 +146,34 @@ public class ContractsViewModelTests
         Assert.Equal(Messages.ForIssue(ValidationIssue.ContractAlreadyDecided, ERP.MES.Domain.Calendar.JalaliDateError.None), second.Message);
         Assert.Equal("قرارداد لازم نیست", second.Rows.Single().StatusText);
     }
+
+    [Fact]
+    public async Task Planning_decides_the_contract_per_item_with_a_reason_and_the_item_row_shows_it()
+    {
+        using var h = await WorkflowHarness.CreateAsync(Token);
+        var id = await ReturnedMakeRequestAsync(h, "C-9");
+        Assert.True((await h.Workflow.Materials.AddMaterialAsync(h.Warehouse, "ST37-R30", "میلگرد ST37", "ST37", "میلگرد", Token)).Succeeded);
+        var piece = (await h.Workflow.QcMaster.LoadAsync(h.Qc, Token)).Value!.QuantityTypes.First(t => t.Value.Code == "PIECE").Value.Id;
+        var material = (await h.Workflow.Materials.LoadAsync(h.Warehouse, Token)).Value!.Materials.First().Value.Id;
+        var planning = For(h, h.Planning);
+        await planning.LoadAsync(Token);
+        await planning.SelectAsync(id, Token);
+        Assert.True(await planning.DecideAsync(true, null, Token));
+        var version = (await h.Workflow.Requests.GetAsync(h.Qc, id, Token)).Value!.Request.Version;
+        Assert.True((await h.Workflow.ItemDefinition.DefineItemAsync(h.Planning, id, version, new DefineItemCommand("1.10", "حلقه", 10m, Priority.Normal, piece, material, 1m, null, null), Token)).Succeeded);
+        await planning.SelectAsync(id, Token);
+
+        var row = Assert.Single(planning.ItemRows);
+        Assert.Equal("قرارداد لازم است", row.EffectiveText);
+        planning.SelectedItemRow = row;
+        Assert.True(planning.CanDecideItem);
+
+        Assert.False(await planning.DecideItemAsync(false, " ", Token));
+        Assert.True(await planning.DecideItemAsync(false, "قطعهٔ بدون قرارداد", Token));
+
+        var after = Assert.Single(planning.ItemRows);
+        Assert.Equal("قرارداد لازم نیست", after.EffectiveText);
+        Assert.Equal("قطعهٔ بدون قرارداد", after.ReasonText);
+        Assert.False(For(h, h.Management).CanDecideItem);
+    }
 }

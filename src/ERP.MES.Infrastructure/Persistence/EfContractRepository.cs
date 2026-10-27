@@ -37,7 +37,7 @@ public sealed class EfContractRepository(IDbContextFactory<ErpMesDbContext> cont
     public async Task<ContractDetail?> FindAsync(long requestId, CancellationToken cancellationToken = default)
     {
         await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
-        var request = await context.Requests.Include(r => r.WorkflowHistory).SingleOrDefaultAsync(r => r.Id == requestId, cancellationToken);
+        var request = await context.Requests.Include(r => r.WorkflowHistory).Include(r => r.Items).ThenInclude(i => i.Stages).AsSplitQuery().SingleOrDefaultAsync(r => r.Id == requestId, cancellationToken);
         if (request is null)
         {
             return null;
@@ -45,8 +45,61 @@ public sealed class EfContractRepository(IDbContextFactory<ErpMesDbContext> cont
 
         var customer = await context.Customers.SingleAsync(c => c.Id == request.CustomerId, cancellationToken);
         var contract = await LoadContracts(context).SingleOrDefaultAsync(c => c.RequestId == requestId, cancellationToken);
+        var decisions = (await context.ItemContractDecisions.AsNoTracking().Where(d => d.RequestId == requestId).OrderBy(d => d.Id).ToListAsync(cancellationToken))
+            .GroupBy(d => d.RequestItemId).ToDictionary(g => g.Key, g => g.Last().Requirement);
         return new ContractDetail(
-            requestId, request.RequestNo.Value, customer.Name, request.WorkType, Facts(request), contract is null ? null : new Stored<RequestContract>(contract, context.GetRowVersion(contract)));
+            requestId, request.RequestNo.Value, customer.Name, request.WorkType, Facts(request), contract is null ? null : new Stored<RequestContract>(contract, context.GetRowVersion(contract)), decisions,
+            request.Items.OrderBy(i => i.Id).Select(i => new ContractItemInfo(i.Id, i.ItemNo, i.PartName, i.Stages.Any(st => st.Status is not (ItemStageStatus.Planned or ItemStageStatus.WaitingPreviousQc)))).ToList());
+    }
+
+    public async Task<int> CountItemsAsync(long requestId, CancellationToken cancellationToken = default)
+    {
+        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
+        return await context.RequestItems.AsNoTracking().CountAsync(i => EF.Property<long>(i, "RequestId") == requestId, cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<ItemContractDecisionRecord>> ListItemDecisionsAsync(long requestId, CancellationToken cancellationToken = default)
+    {
+        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
+        var rows = await (
+                from d in context.ItemContractDecisions.AsNoTracking()
+                join i in context.RequestItems.AsNoTracking() on d.RequestItemId equals i.Id
+                where d.RequestId == requestId
+                orderby d.Id
+                select new ItemContractDecisionRecord(i.Id, i.ItemNo, d.Requirement, d.Reason, d.DecidedByUserId, d.DecidedAtUtc))
+            .ToListAsync(cancellationToken);
+        return rows;
+    }
+
+    public async Task<ItemContractDecisionRecord> DecideItemAsync(
+        long requestId,
+        long itemId,
+        Func<ItemContractContext, ItemContractDecision> decide,
+        Func<ItemContractDecision, string, string, IReadOnlyList<AuditLogEntry>> audit,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(decide);
+        ArgumentNullException.ThrowIfNull(audit);
+        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
+        var request = await context.Requests.Include(r => r.WorkflowHistory).Include(r => r.Items).ThenInclude(i => i.Stages).SingleOrDefaultAsync(r => r.Id == requestId, cancellationToken)
+            ?? throw new RecordNotFoundException("request", requestId);
+        var contract = await context.RequestContracts.SingleOrDefaultAsync(c => c.RequestId == requestId, cancellationToken);
+        var item = request.Items.FirstOrDefault(i => i.Id == itemId);
+        var latest = await context.ItemContractDecisions.Where(d => d.RequestItemId == itemId).OrderByDescending(d => d.Id).Select(d => (ContractRequirement?)d.Requirement).FirstOrDefaultAsync(cancellationToken);
+        var released = item is not null && item.Stages.Any(s => s.Status is not (ItemStageStatus.Planned or ItemStageStatus.WaitingPreviousQc));
+        var row = decide(new ItemContractContext(Facts(request), contract?.Requirement, item is not null, released, latest));
+        context.ItemContractDecisions.Add(row);
+
+        // Fence the request and the contract rows: a request that moved on, or a contract whose requirement changed, after the facts were read cannot take a stale item decision.
+        context.Entry(request).Property(ErpMesDbContext.RowVersionPropertyName).IsModified = true;
+        if (contract is not null)
+        {
+            context.Entry(contract).Property(ErpMesDbContext.RowVersionPropertyName).IsModified = true;
+        }
+
+        context.AuditLog.AddRange(audit(row, request.RequestNo.Value, item!.ItemNo));
+        await PersistenceSave.SaveAsync(context, cancellationToken);
+        return new ItemContractDecisionRecord(item.Id, item.ItemNo, row.Requirement, row.Reason, row.DecidedByUserId, row.DecidedAtUtc);
     }
 
     public async Task<Stored<RequestContract>> ApplyAsync(

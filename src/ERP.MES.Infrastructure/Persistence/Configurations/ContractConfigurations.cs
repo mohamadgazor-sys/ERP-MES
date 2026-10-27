@@ -106,3 +106,24 @@ public sealed class ContractHistoryEntryConfiguration : IEntityTypeConfiguration
         builder.Property(e => e.ActionAtUtc).IsRequired();
     }
 }
+
+/// <summary>Item-level contract decisions (Decision Log #111). Append-only: the latest row of an item is its current decision.</summary>
+public sealed class ItemContractDecisionConfiguration : IEntityTypeConfiguration<ItemContractDecision>
+{
+    public void Configure(EntityTypeBuilder<ItemContractDecision> builder)
+    {
+        builder.ToTable("ItemContractDecisions");
+        builder.HasKey(d => d.Id);
+        builder.Property(d => d.Id).ValueGeneratedOnAdd();
+        builder.Property(d => d.RequestId).IsRequired();
+        builder.HasOne<Request>().WithMany().HasForeignKey(d => d.RequestId).IsRequired().OnDelete(DeleteBehavior.Restrict);
+        builder.Property(d => d.RequestItemId).IsRequired();
+        builder.HasOne<RequestItem>().WithMany().HasForeignKey(d => d.RequestItemId).IsRequired().OnDelete(DeleteBehavior.Restrict);
+        builder.Property(d => d.Requirement).HasConversion<int>().IsRequired();
+        builder.Property(d => d.Reason).IsRequired().HasMaxLength(ItemContractDecision.MaxReasonLength);
+        builder.Property(d => d.DecidedByUserId).IsRequired();
+        builder.HasOne<User>().WithMany().HasForeignKey(d => d.DecidedByUserId).IsRequired().OnDelete(DeleteBehavior.Restrict);
+        builder.Property(d => d.DecidedAtUtc).IsRequired();
+        builder.HasIndex(d => d.RequestItemId);
+    }
+}

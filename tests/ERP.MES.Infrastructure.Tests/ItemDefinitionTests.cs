@@ -255,20 +255,20 @@ public class ItemDefinitionTests
         var id = await ReturnedAsync(w, WorkType.Make, DrawingOutcome.FullyAccepted, "G-1");
         Assert.Equal(ValidationIssue.ItemGateNotSatisfied, (await w.Items.DefineItemAsync(w.Planning, id, await VersionAsync(w, id), Make(piece, material), Token)).Issue);
 
-        // A required contract that is only a draft or pending still blocks.
+        // A required contract that is only a draft or pending no longer blocks DEFINITION (Decision Log #111: the contract is decided per item after the items exist); it still holds the request gate for release and start.
         var draft = (await w.Contracts.DecideRequirementAsync(w.Planning, id, ContractRequirement.Required, null, Token)).Value!;
-        Assert.Equal(ValidationIssue.ItemGateNotSatisfied, (await w.Items.DefineItemAsync(w.Planning, id, await VersionAsync(w, id), Make(piece, material), Token)).Issue);
         Tick(w);
         var named = (await w.Contracts.SaveDraftAsync(w.Planning, id, draft.Version, "CN-1", "1405/07/25", null, null, Token)).Value!;
         var pdf = (await w.Contracts.AttachPdfAsync(w.Planning, id, named.Version, "c.pdf", Pdf(), Token)).Value!;
         var pending = (await w.Contracts.SubmitAsync(w.Planning, id, pdf.Version, Token)).Value!;
-        Assert.Equal(ValidationIssue.ItemGateNotSatisfied, (await w.Items.DefineItemAsync(w.Planning, id, await VersionAsync(w, id), Make(piece, material), Token)).Issue);
-
-        // Approved: now it passes.
-        Assert.True((await w.Contracts.ApproveAsync(w.Manager, id, pending.Version, null, Token)).Succeeded);
         var done = await w.Items.DefineItemAsync(w.Planning, id, await VersionAsync(w, id), Make(piece, material), Token);
         Assert.True(done.Succeeded, done.Status + " " + done.Issue);
         Assert.Equal(1, Count(w, "RequestItems"));
+        Assert.False((await w.Gates.EvaluateAsync(id, Token))!.Satisfied);
+
+        // Approved: the request gate holds.
+        Assert.True((await w.Contracts.ApproveAsync(w.Manager, id, pending.Version, null, Token)).Succeeded);
+        Assert.True((await w.Gates.EvaluateAsync(id, Token))!.Satisfied);
     }
 
     [Fact]

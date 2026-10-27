@@ -35,7 +35,7 @@ public class CompletionMigrationTests
         Assert.Empty(db.Query("SELECT * FROM ItemFinishedSent"));
         Assert.Empty(db.Query("SELECT * FROM CustomerDispatches"));
         Assert.Empty(db.Query("PRAGMA foreign_key_check"));
-        Assert.Equal(21, db.Query("SELECT MigrationId FROM __EFMigrationsHistory").Count);
+        Assert.Equal(22, db.Query("SELECT MigrationId FROM __EFMigrationsHistory").Count);
 
         var keys = new List<string>();
         foreach (var table in new[] { "WarehouseReceipts", "ItemFinishedSent", "CustomerDispatches" })

@@ -43,6 +43,21 @@
                 </DataGrid>
                 <Button Content="مشاهدهٔ آخرین PDF" Padding="10,3" HorizontalAlignment="Left" Margin="0,6,0,0" Click="OnViewPdfClick" Visibility="{Binding CanViewPdf, Converter={StaticResource BoolToVisibility}}" />
 
+                <TextBlock Text="تصمیم قرارداد هر آیتم" FontWeight="SemiBold" Margin="0,12,0,4" />
+                <TextBlock TextWrapping="Wrap" Foreground="{StaticResource MutedTextBrush}" Text="آیتمی که «قرارداد لازم نیست» ثبت شود، منتظر تأیید قرارداد نمی‌ماند؛ سایر آیتم‌ها تا تأیید قرارداد آزاد یا شروع نمی‌شوند. دلیل الزامی است و هر تصمیم در تاریخچه می‌ماند." />
+                <DataGrid ItemsSource="{Binding ItemRows}" SelectedItem="{Binding SelectedItemRow, Mode=TwoWay}" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single" HeadersVisibility="Column" CanUserAddRows="False" CanUserDeleteRows="False" MaxHeight="170" Background="{StaticResource CardBrush}">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="آیتم" Binding="{Binding ItemNo}" Width="90" />
+                        <DataGridTextColumn Header="نام قطعه" Binding="{Binding PartName}" Width="*" />
+                        <DataGridTextColumn Header="تصمیم" Binding="{Binding EffectiveText}" Width="150" />
+                        <DataGridTextColumn Header="دلیل" Binding="{Binding ReasonText}" Width="*" />
+                    </DataGrid.Columns>
+                </DataGrid>
+                <WrapPanel Margin="0,6,0,0">
+                    <Button Content="این آیتم: قرارداد لازم است" Padding="12,5" Margin="0,0,8,0" Click="OnItemRequiredClick" IsEnabled="{Binding CanDecideItem}" />
+                    <Button Content="این آیتم: قرارداد لازم نیست" Padding="12,5" Margin="0,0,8,0" Click="OnItemNotRequiredClick" IsEnabled="{Binding CanDecideItem}" />
+                </WrapPanel>
+
                 <TextBlock Text="تاریخچه" FontWeight="SemiBold" Margin="0,12,0,4" />
                 <DataGrid ItemsSource="{Binding History}" AutoGenerateColumns="False" IsReadOnly="True" HeadersVisibility="Column" CanUserAddRows="False" CanUserDeleteRows="False" MaxHeight="200" Background="{StaticResource CardBrush}">
                     <DataGrid.Columns>

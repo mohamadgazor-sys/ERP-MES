@@ -507,10 +507,10 @@ public sealed class UnitQueueService(
             }
 
             var closed = loaded.Value.Status is RequestStatus.Cancelled or RequestStatus.Closed;
-            var gate = await gates.EvaluateAsync(summary.RequestId, cancellationToken);
-            var gateOk = gate is { Satisfied: true };
+            var requestGates = await gates.EvaluateItemsAsync(summary.RequestId, cancellationToken);
             foreach (var item in loaded.Value.Items)
             {
+                var gateOk = requestGates?.For(item.Id).Satisfied == true;
                 var stages = item.Stages.OrderBy(s => s.StageNo).ToList();
                 var versions = stages.ToDictionary(s => s.StageNo, s => loaded.Versions.StageVersion(item.Id, s.StageNo));
                 foreach (var stage in stages.Where(s => s.ProductionUnitId == unitId))

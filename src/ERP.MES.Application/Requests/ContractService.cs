@@ -22,6 +22,12 @@ public sealed class ContractAlreadyExistsException : InvalidOperationException
     }
 }
 
+/// <summary>Raised inside an item contract decision when a rule refuses it.</summary>
+public sealed class ItemContractRefusedException(ValidationIssue issue) : InvalidOperationException("The item contract decision was refused: " + issue)
+{
+    public ValidationIssue Issue { get; } = issue;
+}
+
 /// <summary>A contract PDF with its content.</summary>
 public sealed record ContractPdfFile(string FileName, long ContentLength, string ContentHash, byte[] Content);
 
@@ -114,6 +120,117 @@ public sealed class ContractService(IContractRepository contracts, CurrentAuthor
         RunAsync(principal, Permission.CreateOrSubmitContract, requestId, expectedVersion, AuditActions.ContractRequirementChanged, "requirement changed", reason,
             validate: () => NoteIssue(reason, required: true),
             (existing, facts, actor, now, _) => { existing!.ChangeRequirement(facts, requirement, reason, actor, now); return existing; }, null, cancellationToken);
+
+    /// <summary>The item-level contract decisions of a request, oldest first (Decision Log #111).</summary>
+    public async Task<Outcome<IReadOnlyList<ItemContractDecisionRecord>>> ListItemDecisionsAsync(Principal? principal, long requestId, CancellationToken cancellationToken = default)
+    {
+        if (!(await authorization.CheckAsync(principal, Permission.ViewContracts, cancellationToken)).IsAllowed)
+        {
+            return Outcome<IReadOnlyList<ItemContractDecisionRecord>>.Fail(OperationStatus.NotAuthorized);
+        }
+
+        return await CustomerService.GuardAsync(async () => Outcome<IReadOnlyList<ItemContractDecisionRecord>>.Ok(await contracts.ListItemDecisionsAsync(requestId, cancellationToken)));
+    }
+
+    /// <summary>
+    /// Planning decides whether ONE item of a MAKE request needs the request's approved contract (Decision Log #111). Needs a reason (every decision is history). "Required" is possible only when the request
+    /// itself has a contract decision of "required"; "not required" releases the item from the contract gate. Refused once a stage of the item has been released or started, and a repeated decision is refused.
+    /// </summary>
+    public async Task<Outcome<ItemContractDecisionRecord>> DecideItemAsync(
+        Principal? principal, long requestId, long itemId, ContractRequirement requirement, string? reason, CancellationToken cancellationToken = default)
+    {
+        var decision = await authorization.CheckAsync(principal, Permission.CreateOrSubmitContract, cancellationToken);
+        if (!decision.IsAllowed)
+        {
+            return Outcome<ItemContractDecisionRecord>.Fail(OperationStatus.NotAuthorized);
+        }
+
+        var text = reason?.Trim();
+        if (!Enum.IsDefined(requirement))
+        {
+            return Outcome<ItemContractDecisionRecord>.Invalid(ValidationIssue.ContractNotApplicable);
+        }
+
+        if (string.IsNullOrEmpty(text))
+        {
+            return Outcome<ItemContractDecisionRecord>.Invalid(ValidationIssue.ReasonRequired);
+        }
+
+        if (text.Length > ItemContractDecision.MaxReasonLength)
+        {
+            return Outcome<ItemContractDecisionRecord>.Invalid(ValidationIssue.ReasonTooLong);
+        }
+
+        var userId = decision.Current!.UserId;
+        var now = clock.UtcNow;
+        try
+        {
+            return await CustomerService.GuardAsync(async () =>
+            {
+                var saved = await contracts.DecideItemAsync(
+                    requestId,
+                    itemId,
+                    context =>
+                    {
+                        var reasonIneligible = context.Eligibility.Check();
+                        if (reasonIneligible != ContractIneligibility.None)
+                        {
+                            throw new ContractGateException(reasonIneligible);
+                        }
+
+                        if (!context.ItemExists)
+                        {
+                            throw new ItemContractRefusedException(ValidationIssue.ItemNotFound);
+                        }
+
+                        if (context.RequestRequirement is null)
+                        {
+                            throw new ItemContractRefusedException(ValidationIssue.ItemContractRequestUndecided);
+                        }
+
+                        if (requirement == ContractRequirement.Required && context.RequestRequirement != ContractRequirement.Required)
+                        {
+                            throw new ItemContractRefusedException(ValidationIssue.ItemContractRequestNotRequired);
+                        }
+
+                        if (context.ItemHasReleasedStage)
+                        {
+                            throw new ItemContractRefusedException(ValidationIssue.ItemContractInProduction);
+                        }
+
+                        // The item's current decision is its own latest row, or the request's decision when it has none.
+                        if ((context.LatestItemRequirement ?? context.RequestRequirement) == requirement)
+                        {
+                            throw new ItemContractRefusedException(ValidationIssue.ItemContractUnchanged);
+                        }
+
+                        return new ItemContractDecision(requestId, itemId, requirement, text, userId, now);
+                    },
+                    (row, requestNo, itemNo) =>
+                    [
+                        new AuditLogEntry(
+                            now, userId, auditContext.MachineName, auditContext.OsUserName, auditContext.DatabaseLogin, AuditActions.ItemContractDecided, "RequestItem",
+                            itemId.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                            $"Request {requestNo}, item {itemNo}: contract {(row.Requirement == ContractRequirement.Required ? "required" : "not required")}; reason: {row.Reason}"),
+                    ],
+                    cancellationToken);
+                return Outcome<ItemContractDecisionRecord>.Ok(saved);
+            });
+        }
+        catch (ItemContractRefusedException refused)
+        {
+            return Outcome<ItemContractDecisionRecord>.Invalid(refused.Issue);
+        }
+        catch (ContractGateException exception)
+        {
+            return Outcome<ItemContractDecisionRecord>.Invalid(exception.Reason switch
+            {
+                ContractIneligibility.NotMake => ValidationIssue.ContractNotApplicable,
+                ContractIneligibility.RequestNotReturnedFromDrawing => ValidationIssue.ContractRequestNotReturned,
+                _ => ValidationIssue.ContractDrawingNotAccepted,
+            });
+        }
+    }
 
     public async Task<Outcome<Stored<RequestContract>>> SaveDraftAsync(
         Principal? principal, long requestId, long expectedVersion, string? contractNo, string? contractDateJalali, string? title, string? note, CancellationToken cancellationToken = default)

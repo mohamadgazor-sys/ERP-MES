@@ -116,6 +116,7 @@ public static class AuditActions
     public const string InquiryCancelled = "InquiryCancelled";
     public const string ContractRequirementDecided = "ContractRequirementDecided";
     public const string ContractRequirementChanged = "ContractRequirementChanged";
+    public const string ItemContractDecided = "ItemContractDecided";
     public const string ContractDraftSaved = "ContractDraftSaved";
     public const string ContractPdfAttached = "ContractPdfAttached";
     public const string ContractSubmitted = "ContractSubmitted";

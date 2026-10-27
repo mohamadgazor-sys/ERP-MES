@@ -103,7 +103,7 @@ public sealed class ItemDefinitionService(
             }
 
             var gate = await gates.EvaluateAsync(requestId, cancellationToken);
-            if (gate is null || !gate.Satisfied)
+            if (gate is null || !gate.DefinitionAllowed)
             {
                 return Outcome<Stored<Request>>.Invalid(ValidationIssue.ItemGateNotSatisfied);
             }
@@ -212,8 +212,8 @@ public sealed class ItemDefinitionService(
                 return Outcome<Stored<Request>>.Invalid(ValidationIssue.ItemNotFound);
             }
 
-            var gate = await gates.EvaluateAsync(requestId, cancellationToken);
-            if (gate is null || !gate.Satisfied)
+            var gate = await gates.EvaluateAsync(requestId, itemId, cancellationToken);
+            if (gate is null || !gate.DefinitionAllowed)
             {
                 return Outcome<Stored<Request>>.Invalid(ValidationIssue.ItemGateNotSatisfied);
             }

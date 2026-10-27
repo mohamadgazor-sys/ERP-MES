@@ -279,7 +279,7 @@ public sealed class ItemImportService(
         }
 
         var gate = await gates.EvaluateAsync(requestId, cancellationToken);
-        if (gate is null || !gate.Satisfied)
+        if (gate is null || !gate.DefinitionAllowed)
         {
             return new Loaded(null, null, new Failed(OperationStatus.ValidationFailed, ValidationIssue.ItemGateNotSatisfied));
         }
