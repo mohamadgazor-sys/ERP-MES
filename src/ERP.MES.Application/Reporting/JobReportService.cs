@@ -37,6 +37,7 @@ public sealed class JobReportService(
     ISchedulingRepository scheduling,
     IUnitQueueRepository unitQueue,
     IRequestRepository requests,
+    IWorkSessionRepository workSessions,
     IJalaliDateService dates,
     CurrentAuthorization authorization,
     IClock clock,
@@ -295,6 +296,12 @@ public sealed class JobReportService(
             if (stage is null || stage.ProductionUnitId != unitId || stage.Status is ItemStageStatus.Planned or ItemStageStatus.WaitingPreviousQc)
             {
                 return new Built(null, ValidationIssue.JobReportLineInvalid);
+            }
+
+            // Work sessions (Decision Log #112): a stage is tracked by sessions or by job reports, never by both.
+            if (await workSessions.StageHasSessionsAsync(input.ItemId, input.StageNo, cancellationToken))
+            {
+                return new Built(null, ValidationIssue.SessionTimeBasisConflict);
             }
 
             try

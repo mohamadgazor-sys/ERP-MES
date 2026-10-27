@@ -194,6 +194,21 @@ public enum Permission
     /// (production units "record work sessions, deliver completed work to QC"); it does not finalize the production authorization matrix. Department: Production.
     /// </summary>
     RunStage,
+
+    /// <summary>See work sessions: Production (own unit or own sessions, scoped in the Application), Planning and Management (Decision Log #112).</summary>
+    ViewWorkSessions,
+
+    /// <summary>Dispatch, start, pause, resume, finish, hand over and cancel work sessions. Department: Production; the Application scopes it to the units the user supervises (or, for pause/resume/finish, to the user's own sessions).</summary>
+    OperateWorkSessions,
+
+    /// <summary>Correct a recorded session instant with a reason (Planning).</summary>
+    CorrectWorkSessions,
+
+    /// <summary>Approve the actual time of a finished session so that it can reach costing (Planning; never the person who dispatched or started it).</summary>
+    ApproveSessionTime,
+
+    /// <summary>Add or deactivate pause reasons (Planning).</summary>
+    ManagePauseReasons,
 }
 
 /// <summary>
@@ -285,6 +300,11 @@ public static class AuthorizationRules
         [Permission.ViewCalendar] = new([DepartmentCodes.Planning, DepartmentCodes.Management, DepartmentCodes.Production], null),
         [Permission.ScheduleWorkers] = new([DepartmentCodes.Planning], null),
         [Permission.RunStage] = new([DepartmentCodes.Production], null),
+        [Permission.ViewWorkSessions] = new([DepartmentCodes.Production, DepartmentCodes.Planning, DepartmentCodes.Management], null),
+        [Permission.OperateWorkSessions] = new([DepartmentCodes.Production], null),
+        [Permission.CorrectWorkSessions] = new([DepartmentCodes.Planning], null),
+        [Permission.ApproveSessionTime] = new([DepartmentCodes.Planning], null),
+        [Permission.ManagePauseReasons] = new([DepartmentCodes.Planning], null),
     };
 
     /// <summary>All permissions that have a rule, for tests and documentation.</summary>
