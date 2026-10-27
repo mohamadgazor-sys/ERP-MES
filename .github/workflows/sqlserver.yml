@@ -116,6 +116,9 @@ jobs:
       - name: Restore local .NET tools
         run: dotnet tool restore
 
+      - name: Restore the design-time project (dotnet ef builds with --no-restore)
+        run: dotnet restore src/ERP.MES.Infrastructure.SqlServer.Design/ERP.MES.Infrastructure.SqlServer.Design.csproj
+
       - name: Generate the SQL Server migration
         run: |
           dotnet ef migrations add InitialSqlServer --project src/ERP.MES.Infrastructure.SqlServer --startup-project src/ERP.MES.Infrastructure.SqlServer.Design --context ErpMesDbContext --output-dir Migrations
