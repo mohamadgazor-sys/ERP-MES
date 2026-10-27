@@ -26,6 +26,7 @@ internal static class PageFactory
             ShellViewModel.ItemDefinitionKey => new ItemDefinitionView(pages.ItemDefinition),
             ShellViewModel.ItemImportKey => new ItemImportView(pages.ItemImport),
             ShellViewModel.UnitQueueKey => new UnitQueueView(pages.UnitQueue),
+            ShellViewModel.WorkBoardKey => new WorkBoardView(pages.WorkBoard),
             ShellViewModel.CalendarKey => new CalendarView(pages.Calendar),
             ShellViewModel.QcInspectionKey => new QcInspectionView(pages.QcInspection),
             ShellViewModel.JobReportsKey => new JobReportsView(pages.JobReports),

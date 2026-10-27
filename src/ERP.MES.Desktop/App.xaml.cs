@@ -146,7 +146,8 @@ public partial class App : System.Windows.Application
             new OvertimeViewModel(workflow.Overtime, workflow.Operators, workflow.PlanningMaster, dates, DigitStyle.Persian, () => DateTime.UtcNow, CurrentUser),
             new CostingViewModel(workflow.Costing, workflow.PlanningMaster, dates, DigitStyle.Persian, CurrentUser),
             new CompletionViewModel(workflow.Completion, dates, DigitStyle.Persian, CurrentUser),
-            new KpiViewModel(workflow.Kpi, dates, DigitStyle.Persian, () => DateTime.UtcNow, CurrentUser));
+            new KpiViewModel(workflow.Kpi, dates, DigitStyle.Persian, () => DateTime.UtcNow, CurrentUser),
+            new WorkBoardViewModel(workflow.UnitQueue, workflow.WorkSessions, workflow.StageWork, dates, DigitStyle.Persian, () => DateTime.UtcNow, CurrentUser));
 
         _mainWindow = new MainWindow(shell, session, pages);
         _mainWindow.Show();
