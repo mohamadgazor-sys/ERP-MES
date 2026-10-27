@@ -27,7 +27,7 @@ public class EfToolingTests
     }
 
     [Fact]
-    public void The_design_package_is_only_in_the_migrations_project_and_the_startup_project()
+    public void The_design_package_is_only_in_the_migrations_projects_and_the_startup_projects()
     {
         var files = SourceProjectFiles()
             .Where(file => XDocument.Load(file).Descendants("PackageReference")
@@ -36,7 +36,7 @@ public class EfToolingTests
             .OrderBy(n => n, StringComparer.Ordinal)
             .ToArray();
 
-        Assert.Equal(new[] { "ERP.MES.Infrastructure.SqlServer", "ERP.MES.Infrastructure.Sqlite", "ERP.MES.Provisioning" }, files);
+        Assert.Equal(new[] { "ERP.MES.Infrastructure.SqlServer", "ERP.MES.Infrastructure.SqlServer.Design", "ERP.MES.Infrastructure.Sqlite", "ERP.MES.Provisioning" }, files);
     }
 
     [Fact]
