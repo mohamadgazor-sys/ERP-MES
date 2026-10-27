@@ -63,7 +63,7 @@ Honest limits of the sample, all inherited from the Domain model (Decision Log #
 
 ## 3a. Demonstration accounts and credentials
 
-A new or reset demonstration database also gets eight fictional accounts (including `demo.production` for the stage walkthrough), created through the production bootstrap and account use cases, each with a random one-time password written only to a protected credential file outside the repository (`--credentials <file>`, or a default under the user's local application data). `demo-init` on an initialised database creates none; `demo-reset` creates new accounts with new passwords. The commands never print a password. Details, the file protection and the checks: `docs/AUTHENTICATION.md` section 9.
+A new or reset demonstration database also gets nine fictional accounts (including `demo.production` for the operator and `demo.supervisor` for the unit supervisor in the work-session walkthrough), created through the production bootstrap and account use cases, each with a random one-time password written only to a protected credential file outside the repository (`--credentials <file>`, or a default under the user's local application data). `demo-init` on an initialised database creates none; `demo-reset` creates new accounts with new passwords. The commands never print a password. Details, the file protection and the checks: `docs/AUTHENTICATION.md` section 9.
 
 ## 4. Concurrency (M8) - resolved by Decision Log #77
 
@@ -78,3 +78,8 @@ The CI workflow additionally runs the real `Provisioning` commands on a temporar
 ## 4. Master data for the end-to-end walkthrough (Decision Log #108)
 
 `DemoMasterDataSeeder` (Infrastructure/Demo) adds, after the sample requests, the fictional master data that `docs/DEMO_WALKTHROUGH.md` needs: units `MILLING` and `TURNING`, machines `FCC-06` and `TCC-12` with rates, the day shift `D` for both units, the material `ST37-R30` with a price, the operator `OP-DEMO` linked to `demo.production`, and that account's designation to MILLING. It is written through the repositories and the Domain with real users (`demo.planning`, `demo.warehouse`) and one audit entry per row, like the sample requests; it does NOT go through the application services because those refuse a demonstration account until it has replaced its one-time password, and the seed does not go around that rule. The time is fixed (1405/08/01 05:00 UTC), it is repeatable (an existing row is left unchanged) and a reset gives exactly the same rows. Owner decisions are left empty on purpose: no overtime limits, no unit supervisor, no worker schedule.
+
+
+## 5. Work-session additions (Decision Log #112-#115)
+
+The master-data seed also assigns `OP-DEMO` to `FCC-06`, records its qualification on it, designates the new `demo.supervisor` account to MILLING and marks it supervisor (all with audit entries under `demo.planning`). The supervisor is a demonstration choice, not an owner decision. Overtime limits and the worker schedule stay empty. The work-session tables themselves start empty; the seven pause reasons come from the migration.

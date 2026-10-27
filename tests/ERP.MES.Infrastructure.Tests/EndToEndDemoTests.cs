@@ -1,11 +1,11 @@
 using ERP.MES.Application.Persistence;
-using ERP.MES.Application.Reporting;
+using ERP.MES.Application.Production;
 using ERP.MES.Application.Requests;
 using ERP.MES.Application.Security;
 using ERP.MES.Domain.Contracts;
 using ERP.MES.Domain.Costing;
 using ERP.MES.Domain.Requests;
-using ERP.MES.Domain.Reporting;
+using ERP.MES.Domain.Production;
 using ERP.MES.Infrastructure.Security;
 using ERP.MES.Infrastructure.Sqlite.Demo;
 
@@ -46,7 +46,7 @@ public class EndToEndDemoTests
         var result = await DemoDatabase.InitializeAsync(db.Path, dates, db.NextCredentialPath(), SecurityFixture.FastPolicy, Token);
         var credentials = ReadCredentials(result.CredentialFile!);
         var security = SecurityServices.Create(db.ContextFactory, SecurityFixture.FastPolicy, hasher: new LowCostHasher());
-        var clock = new FakeClock { UtcNow = new DateTime(2026, 10, 24, 9, 0, 0, DateTimeKind.Utc) }; // Saturday 1405/08/02, a working day
+        var clock = new FakeClock { UtcNow = new DateTime(2026, 10, 24, 7, 30, 0, DateTimeKind.Utc) }; // Saturday 1405/08/02, a working day; the display zone of the test is UTC
         var w = WorkflowServices.Create(db.ContextFactory, security.Authorization, dates, clock);
 
         var central = await SignedInAsync(security, "demo.central", credentials["demo.central"]);
@@ -56,6 +56,7 @@ public class EndToEndDemoTests
         var qc = await SignedInAsync(security, "demo.qc", credentials["demo.qc"]);
         var warehouse = await SignedInAsync(security, "demo.warehouse", credentials["demo.warehouse"]);
         var production = await SignedInAsync(security, "demo.production", credentials["demo.production"]);
+        var supervisor = await SignedInAsync(security, "demo.supervisor", credentials["demo.supervisor"]);
         void Tick() => clock.Advance(TimeSpan.FromMinutes(1));
         var sampleRequests = Count(db, "Requests");
 
@@ -99,56 +100,76 @@ public class EndToEndDemoTests
         Assert.True((await w.StageWork.PerformAsync(planning, StageAction.Release, await TargetAsync(), Token)).Succeeded);
         Tick();
 
-        // 4. The designated production operator starts the stage and reports the day; Planning reviews it as the flagged fallback because the unit has no supervisor.
-        var queue = (await w.UnitQueue.LoadAsync(production, milling, Token)).Value!;
-        Assert.Contains(queue.Queue, e => e.RequestNo == "E2E-1" && e.ItemNo == "E2E.10");
-        Assert.True((await w.StageWork.PerformAsync(production, StageAction.Start, await TargetAsync(), Token)).Succeeded);
+        // 4. Planning schedules the operator for the day; the milling supervisor sees the stage in the unit queue, dispatches it to the unit's machine and the operator, and starts the work session.
+        var queue = (await w.UnitQueue.LoadAsync(supervisor, milling, Token)).Value!;
+        var entry = Assert.Single(queue.Queue, e => e.RequestNo == "E2E-1" && e.ItemNo == "E2E.10");
+        Assert.True(entry.IsActionable);
         var template = (await w.Calendar.LoadAsync(planning, Token)).Value!.Configuration.Templates.Single(t => t.Value.Code == "D").Value.Id;
         var machine = (await w.PlanningMaster.LoadAsync(planning, Token)).Value!.Machines.Single(m => m.Value.Code == "FCC-06").Value.Id;
-        var start = new DateTime(2026, 10, 24, 8, 0, 0, DateTimeKind.Utc);
-        var saved = await w.JobReports.SaveDraftAsync(production, null, null, new DateOnly(2026, 10, 24), milling, template, [new JobLineInput(requestId, itemId, 1, machine, start, start.AddHours(4), 0, null, 10, null)], Token);
-        Assert.True(saved.Succeeded, saved.Status + " " + saved.Issue);
-        var submitted = (await w.JobReports.SubmitAsync(production, saved.Value!.Value.Id, saved.Value.Version, Token)).Value!;
-        var reviewed = (await w.JobReports.ReviewAsync(planning, submitted.Value.Id, submitted.Version, true, null, Token)).Value!;
-        Assert.True(reviewed.Value.ReviewedByPlanningFallback);
+        var operatorId = (await w.Operators.LoadAsync(planning, Token)).Value!.Operators.Single(o => o.Value.Code == "OP-DEMO").Value.Id;
+        Assert.True((await w.WorkerSchedule.ScheduleAsync(planning, operatorId, new DateOnly(2026, 10, 24), milling, template, null, null, null, Token)).Succeeded);
+        Assert.Equal(ValidationIssue.SessionNotSupervisor, (await w.WorkSessions.DispatchAsync(production, new DispatchCommand(itemId, 1, machine, operatorId, null, null, true), Token)).Issue); // the operator cannot dispatch
+        clock.UtcNow = new DateTime(2026, 10, 24, 8, 0, 0, DateTimeKind.Utc);
+        var started = await w.WorkSessions.DispatchAsync(supervisor, new DispatchCommand(itemId, 1, machine, operatorId, entry.StageVersion, null, true), Token);
+        Assert.True(started.Succeeded, started.Status + " " + started.Issue);
+        Assert.False(started.Value!.Value.QualificationWarning);
+
+        // 5. The operator pauses for missing material from 10:00 to 10:30 and resumes; the supervisor finishes the session at 12:00. The stage is not complete yet.
+        clock.UtcNow = new DateTime(2026, 10, 24, 10, 0, 0, DateTimeKind.Utc);
+        var reasonId = (await w.WorkSessions.LoadUnitAsync(supervisor, milling, 7, Token)).Value!.Reasons.Single(r => r.Value.Code == PauseReason.MaterialUnavailable).Value.Id;
+        var paused = await w.WorkSessions.PauseAsync(production, started.Value.Value.Id, started.Value.Version, reasonId, "مواد نرسید", Token);
+        Assert.True(paused.Succeeded, paused.Status + " " + paused.Issue);
+        Assert.Equal(ValidationIssue.SubmitBlockedBySessions, (await w.StageWork.PerformAsync(production, StageAction.SubmitForQc, await TargetAsync(), Token)).Issue);
+        clock.UtcNow = new DateTime(2026, 10, 24, 10, 30, 0, DateTimeKind.Utc);
+        var resumed = await w.WorkSessions.ResumeAsync(production, paused.Value!.Value.Id, paused.Value.Version, null, Token);
+        Assert.True(resumed.Succeeded, resumed.Status + " " + resumed.Issue);
+        clock.UtcNow = new DateTime(2026, 10, 24, 12, 0, 0, DateTimeKind.Utc);
+        var sessionDone = await w.WorkSessions.FinishAsync(supervisor, resumed.Value!.Value.Id, resumed.Value.Version, null, Token);
+        Assert.True(sessionDone.Succeeded, sessionDone.Status + " " + sessionDone.Issue);
+        var metrics = (await w.WorkSessions.LoadStageMetricsAsync(supervisor, itemId, 1, false, Token)).Value!;
+        Assert.Equal((210d, 210d, 240d, 30d), (metrics.MachineHours.Single().Runtime.TotalMinutes, metrics.LaborHours.Single().Time.TotalMinutes, metrics.Elapsed.Single().Elapsed.TotalMinutes, metrics.PausedByReason.Single().Time.TotalMinutes));
+
+        // 6. Planning approves the session's actual time (not the person who dispatched it); only approved time reaches the cost.
+        Assert.True((await w.WorkSessions.ApproveTimeAsync(planning, sessionDone.Value!.Value.Id, sessionDone.Value.Version, Token)).Succeeded);
         Tick();
 
-        // 5. The stage goes to QC, which accepts all ten base units: the route is complete.
+        // 7. The stage goes to QC, which accepts all ten base units: the route is complete.
         Assert.True((await w.StageWork.PerformAsync(production, StageAction.SubmitForQc, await TargetAsync(), Token)).Succeeded);
         var inspected = await w.QcInspection.RecordInspectionAsync(qc, await TargetAsync(), [new InspectionEntry(InspectionDisposition.Accepted, 10, null)], Token);
         Assert.True(inspected.Succeeded, inspected.Status + " " + inspected.Issue);
         Tick();
 
-        // 6. Warehouse receives the item and calculates its cost from the seeded rate and price; the contract item takes its price from the contract, which Management records with the contract number.
+        // 8. Warehouse receives the item and calculates its cost from the seeded rate and price; the contract item takes its price from the contract, which Management records with the contract number.
         Assert.True((await w.Completion.ReceiveAsync(warehouse, itemId, "تحویل از کنترل کیفیت", Token)).Succeeded);
         var cost = await w.Costing.CalculateAsync(warehouse, itemId, Token);
         Assert.True(cost.Succeeded, cost.Status + " " + cost.Issue + " " + string.Join(",", cost.WarningList));
-        Assert.Equal((4_800_000m, 900_000m, 5_700_000m), (cost.Value!.Calculation.Value.MachiningTotalRial, cost.Value.Calculation.Value.MaterialTotalRial, cost.Value.Calculation.Value.TotalRial));
+        Assert.Equal((4_200_000m, 900_000m, 5_100_000m), (cost.Value!.Calculation.Value.MachiningTotalRial, cost.Value.Calculation.Value.MaterialTotalRial, cost.Value.Calculation.Value.TotalRial));
         Assert.Equal(PriceBasis.Contract, cost.Value.Decision.Value.Basis);
         Assert.Equal(ValidationIssue.FinishedSentNeedsPrice, (await w.Completion.MarkFinishedSentAsync(warehouse, itemId, Token)).Issue);
         var priced = (await w.Costing.SubmitAsync(warehouse, cost.Value.Decision.Value.Id, cost.Value.Decision.Version, Token)).Value!;
         var final = await w.Costing.ApproveAsync(manager, priced.Value.Id, priced.Version, 8_000_000m, null, "CN-E2E-1", Token);
         Assert.True(final.Succeeded, final.Status + " " + final.Issue);
 
-        // 7. Warehouse marks the item finished/sent and records the customer dispatch.
+        // 9. Warehouse marks the item finished/sent and records the customer dispatch.
         var finished = await w.Completion.MarkFinishedSentAsync(warehouse, itemId, Token);
         Assert.True(finished.Succeeded, finished.Status + " " + finished.Issue);
         Assert.Equal(8_000_000m, finished.Value!.ApprovedPriceRial);
         Assert.True((await w.Completion.RecordDispatchAsync(warehouse, itemId, "1405/08/02", "WB-E2E-1", null, Token)).Succeeded);
 
-        // 8. Management reads the unit metrics of the day: only approved time counts and nothing is waiting for approval.
+        // 10. Management reads the unit metrics of the day: only approved time counts (the operator's labour time, pause excluded) and nothing is waiting for approval.
         var kpi = (await w.Kpi.ReportAsync(manager, new DateOnly(2026, 10, 24), new DateOnly(2026, 10, 24), Token)).Value!;
         var unit = kpi.Units.Single(u => u.Code == "MILLING");
-        Assert.Equal((240, 10L, 1m, 1, true), (unit.ProductiveMinutes, unit.AcceptedBaseUnits, unit.AcceptanceRate, unit.CompletedStages, unit.IsAuthoritative));
+        Assert.Equal((210, 10L, 1m, 1, true), (unit.ProductiveMinutes, unit.AcceptedBaseUnits, unit.AcceptanceRate, unit.CompletedStages, unit.IsAuthoritative));
         Assert.Equal("OP-DEMO", Assert.Single(kpi.Operators).Code);
 
         // The history is complete and the sample data was not touched.
         Assert.Equal(sampleRequests + 1, Count(db, "Requests"));
-        foreach (var code in new[] { "WarehouseReceiptRecorded", "ItemCostCalculated", "ItemPriceSubmitted", "ItemPriceApproved", "ItemFinishedSent", "CustomerDispatchRecorded", "JobReportSubmitted", "JobReportApproved", "QcInspectionRecorded" })
+        foreach (var code in new[] { "WarehouseReceiptRecorded", "ItemCostCalculated", "ItemPriceSubmitted", "ItemPriceApproved", "ItemFinishedSent", "CustomerDispatchRecorded", "WorkSessionDispatched", "WorkSessionStarted", "WorkSessionPaused", "WorkSessionResumed", "WorkSessionFinished", "WorkSessionTimeApproved", "QcInspectionRecorded" })
         {
             Assert.Equal(1, Count(db, $"AuditLog WHERE ActionCode = '{code}'"));
         }
 
         Assert.Equal(0, Count(db, "OvertimeLimits")); // the owner-decision settings stay empty until Planning configures them
+        Assert.Equal(0, Count(db, "DailyJobReports")); // the stage is tracked by its session, not by a job report
     }
 }

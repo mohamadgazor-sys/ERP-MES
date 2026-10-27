@@ -21,6 +21,7 @@ public sealed class DemoAccountProvisioner(
     public const string AdminUsername = "demo.admin";
     public const string CentralUsername = "demo.central";
     public const string QcUsername = "demo.qc";
+    public const string SupervisorUsername = "demo.supervisor";
 
     private const string PasswordAlphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
     private const int PasswordLength = 20;
@@ -38,6 +39,7 @@ public sealed class DemoAccountProvisioner(
         new(QcUsername, "کاربر کنترل کیفیت" + Fictional, DepartmentCodes.Qc, RoleCodes.Staff),
         new("demo.warehouse", "کاربر انبار" + Fictional, DepartmentCodes.Warehouse, RoleCodes.Staff),
         new("demo.production", "کاربر تولید" + Fictional, DepartmentCodes.Production, RoleCodes.Staff),
+        new(SupervisorUsername, "سرپرست واحد فرزکاری" + Fictional, DepartmentCodes.Production, RoleCodes.Staff),
     ];
 
     /// <summary>A random password of <see cref="PasswordLength"/> characters from an alphabet without look-alike characters.</summary>
@@ -96,7 +98,7 @@ public sealed class DemoAccountProvisioner(
 
     /// <summary>The demonstration accounts the master data (units, machines, material, operator) is attributed to. Throws when they do not exist.</summary>
     public async Task<DemoMasterActors> ResolveMasterActorsAsync(CancellationToken cancellationToken = default) =>
-        new(await FindUserIdAsync("demo.planning", cancellationToken), await FindUserIdAsync("demo.warehouse", cancellationToken), await FindUserIdAsync("demo.production", cancellationToken));
+        new(await FindUserIdAsync("demo.planning", cancellationToken), await FindUserIdAsync("demo.warehouse", cancellationToken), await FindUserIdAsync("demo.production", cancellationToken), await FindUserIdAsync(SupervisorUsername, cancellationToken));
 
     private async Task<long> FindUserIdAsync(string username, CancellationToken cancellationToken)
     {

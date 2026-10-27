@@ -319,3 +319,8 @@ The eight decisions of `OWNER_DECISION_PACKET.md` were approved as recommended, 
 | D8 job-report and KPI reads, supervisor fallback, no acting on behalf, Planning correction with reason, Central own requests, Production own unit queue | 5a, 6b, 8 | recorded; the stage commands cannot identify the operator yet, so "on behalf" and the Planning correction are not enforceable before then |
 
 The "Phase 2b" contract defaults, the operator `ViewOperators` audience and the material list audiences remain labelled defaults; #95 does not approve them.
+
+
+## 17. Work sessions, dispatch and actual time (owner direction of 2026-10-27; Decision Log #111-#115)
+
+The per-unit queues are unchanged in their ordering, Planning positions and Management overrides. Under each stage, work is recorded as **sessions** (machine + operator + start/pause/resume/finish history): the supervisor of the stage's unit dispatches and starts; the first start moves the stage to in progress; pauses carry a configurable reason and never pause the stage; finishing a session never completes the stage; the stage goes to QC only when no session is assigned, active or paused, with the existing quantity reconciliation unchanged. Gates are evaluated per item (the item's own contract decision). Actual time is derived from the recorded instants; Planning approves a session's time; machine-rate costing multiplies machine runtime (counted once) by the rate in force and adds no labour cost. Full design, rules and open questions: `docs/WORK_SESSIONS_DESIGN.md`.

@@ -41,16 +41,16 @@ public class DemoAccountsTests
 
         var result = await Init(db);
 
-        Assert.Equal(8, result.AccountsCreated);
+        Assert.Equal(9, result.AccountsCreated);
         Assert.Equal(
             new[]
             {
                 "demo.admin|SYSTEM|ADMIN", "demo.central|CENTRAL|STAFF", "demo.drawing|DRAWING|STAFF", "demo.management|MANAGEMENT|MANAGER",
-                "demo.planning|PLANNING|STAFF", "demo.production|PRODUCTION|STAFF", "demo.qc|QC|STAFF", "demo.warehouse|WAREHOUSE|STAFF",
+                "demo.planning|PLANNING|STAFF", "demo.production|PRODUCTION|STAFF", "demo.qc|QC|STAFF", "demo.supervisor|PRODUCTION|STAFF", "demo.warehouse|WAREHOUSE|STAFF",
             },
             db.Query("SELECT u.Username || '|' || d.Code || '|' || r.Code FROM Users u JOIN Departments d ON d.Id = u.DepartmentId JOIN Roles r ON r.Id = u.RoleId ORDER BY u.Username"));
         Assert.Equal(new[] { "Initialized" }, db.Query("SELECT State FROM SystemSetup"));
-        Assert.Equal(new[] { "8" }, db.Query("SELECT COUNT(*) FROM UserCredentials WHERE MustChangePassword = 1"));
+        Assert.Equal(new[] { "9" }, db.Query("SELECT COUNT(*) FROM UserCredentials WHERE MustChangePassword = 1"));
         Assert.All(db.Query("SELECT DisplayName FROM Users"), name => Assert.EndsWith("(نمونه آزمایشی)", name, StringComparison.Ordinal));
     }
 
@@ -64,7 +64,7 @@ public class DemoAccountsTests
         Assert.Equal(AuditActions.AdminTokenIssued, actions[0]);
         Assert.Equal(AuditActions.BootstrapCompleted, actions[1]);
         Assert.Equal(AuditActions.PasswordReset, actions[2]);
-        Assert.Equal(7, actions.Count(a => a == AuditActions.UserCreated));
+        Assert.Equal(8, actions.Count(a => a == AuditActions.UserCreated));
 
         // The only administrator is protected like any other.
         var admin = new Principal(1, "demo.admin", "x", DepartmentCodes.System, RoleCodes.Admin, false);
@@ -80,8 +80,8 @@ public class DemoAccountsTests
 
         Assert.NotNull(result.CredentialFile);
         var credentials = ReadCredentials(result.CredentialFile);
-        Assert.Equal(8, credentials.Count);
-        Assert.Equal(8, credentials.Values.Distinct(StringComparer.Ordinal).Count());
+        Assert.Equal(9, credentials.Count);
+        Assert.Equal(9, credentials.Values.Distinct(StringComparer.Ordinal).Count());
         Assert.All(credentials.Values, password => Assert.Equal(20, password.Length));
 
         // The passwords are nowhere else: not in the result, not in the database file, not in the audit log.
@@ -144,12 +144,12 @@ public class DemoAccountsTests
         var result = await Reset(db);
         var second = ReadCredentials(result.CredentialFile!);
 
-        Assert.Equal(8, result.AccountsCreated);
+        Assert.Equal(9, result.AccountsCreated);
         Assert.Equal(first.Keys.OrderBy(k => k, StringComparer.Ordinal), second.Keys.OrderBy(k => k, StringComparer.Ordinal));
         Assert.All(first.Keys, user => Assert.NotEqual(first[user], second[user]));
         Assert.Equal(SignInStatus.Failed, (await services.Authentication.SignInAsync("demo.admin", first["demo.admin"], Token)).Status);
         Assert.Equal(SignInStatus.Succeeded, (await services.Authentication.SignInAsync("demo.admin", second["demo.admin"], Token)).Status);
-        Assert.Equal(8, Count(db, "Users"));
+        Assert.Equal(9, Count(db, "Users"));
     }
 
     private static int Count(TempDatabase db, string table) => int.Parse(db.Query("SELECT COUNT(*) FROM " + table)[0], System.Globalization.CultureInfo.InvariantCulture);
@@ -230,7 +230,7 @@ public class DemoAccountsTests
 
         var result = await Init(db);
 
-        Assert.Equal(8, result.AccountsCreated);
+        Assert.Equal(9, result.AccountsCreated);
         Assert.Equal(3, Count(db, "Customers"));
         Assert.True(File.Exists(result.CredentialFile));
     }

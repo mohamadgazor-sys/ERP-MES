@@ -127,8 +127,8 @@ jobs:
           $out = & dotnet @cli demo-init $demo --credentials $credentialsOne 2>&1 | Out-String
           if ($LASTEXITCODE -ne 0) { throw "demo-init failed with exit code $LASTEXITCODE" }
           $first = Read-Passwords $credentialsOne
-          if ($first.Count -ne 8 -or ($first | Where-Object { $_.Length -ne 20 })) { throw 'Expected eight 20-character one-time passwords.' }
-          if (($first | Select-Object -Unique).Count -ne 8) { throw 'The one-time passwords are not distinct.' }
+          if ($first.Count -ne 9 -or ($first | Where-Object { $_.Length -ne 20 })) { throw 'Expected nine 20-character one-time passwords.' }
+          if (($first | Select-Object -Unique).Count -ne 9) { throw 'The one-time passwords are not distinct.' }
           Assert-NoSecret $out $first
           Write-Host $out
 
@@ -151,7 +151,7 @@ jobs:
           $out = & dotnet @cli demo-reset $demo --yes --credentials $credentialsTwo 2>&1 | Out-String
           if ($LASTEXITCODE -ne 0) { throw "demo-reset --yes failed with exit code $LASTEXITCODE" }
           $second = Read-Passwords $credentialsTwo
-          if ($second.Count -ne 8) { throw 'Expected eight new one-time passwords after the reset.' }
+          if ($second.Count -ne 9) { throw 'Expected nine new one-time passwords after the reset.' }
           if (@($second | Where-Object { $first -contains $_ }).Count -ne 0) { throw 'The reset must create new passwords.' }
           Assert-NoSecret $out ($first + $second)
           Write-Host $out

@@ -41,7 +41,9 @@ public class DemoMasterDataTests
         Assert.Equal(2, Count(db, "UnitShifts"));
         Assert.Equal(new[] { "ST37-R30|90000.0" }, db.Query("SELECT m.Code || '|' || p.PricePerKgRial FROM MaterialPrices p JOIN Materials m ON m.Id = p.MaterialId"));
         Assert.Equal(new[] { "OP-DEMO|demo.production" }, db.Query("SELECT o.Code || '|' || u.Username FROM Operators o JOIN Users u ON u.Id = o.UserId"));
-        Assert.Equal(new[] { "demo.production|MILLING|0" }, db.Query("SELECT u.Username || '|' || p.Code || '|' || d.IsSupervisor FROM UserUnitDesignations d JOIN Users u ON u.Id = d.UserId JOIN ProductionUnits p ON p.Id = d.ProductionUnitId WHERE d.RevokedAtUtc IS NULL"));
+        Assert.Equal(new[] { "demo.production|MILLING|0", "demo.supervisor|MILLING|1" }, db.Query("SELECT u.Username || '|' || p.Code || '|' || d.IsSupervisor FROM UserUnitDesignations d JOIN Users u ON u.Id = d.UserId JOIN ProductionUnits p ON p.Id = d.ProductionUnitId WHERE d.RevokedAtUtc IS NULL ORDER BY u.Username"));
+        Assert.Equal(new[] { "OP-DEMO|FCC-06" }, db.Query("SELECT o.Code || '|' || m.Code FROM OperatorMachineAssignments a JOIN Operators o ON o.Id = a.OperatorId JOIN Machines m ON m.Id = a.MachineId"));
+        Assert.Equal(new[] { "OP-DEMO|FCC-06" }, db.Query("SELECT o.Code || '|' || m.Code FROM OperatorMachineQualifications q JOIN Operators o ON o.Id = q.OperatorId JOIN Machines m ON m.Id = q.MachineId"));
         Assert.All(db.Query("SELECT Name FROM ProductionUnits UNION ALL SELECT Name FROM Machines UNION ALL SELECT FullName FROM Operators"), name => Assert.EndsWith("(نمونه آزمایشی)", name, StringComparison.Ordinal));
     }
 
@@ -55,7 +57,7 @@ public class DemoMasterDataTests
         Assert.Equal(0, Count(db, "OvertimeLimits")); // Planning must configure the limits (D5)
         Assert.Equal(0, Count(db, "OvertimeAssignments"));
         Assert.Equal(0, Count(db, "WorkerSchedules"));
-        Assert.Equal(0, Count(db, "UserUnitDesignations WHERE IsSupervisor = 1")); // no supervisor: Planning reviews as the flagged fallback
+        Assert.Equal(1, Count(db, "UserUnitDesignations WHERE IsSupervisor = 1")); // the demonstration supervisor of MILLING (a demonstration choice; real supervisors are the owner's data)
         Assert.Equal(0, Count(db, "DailyJobReports"));
         Assert.Equal(0, Count(db, "ItemCostCalculations"));
 
@@ -65,7 +67,7 @@ public class DemoMasterDataTests
             {
                 "ProductionUnitAdded|demo.planning", "ProductionUnitAdded|demo.planning", "MachineAdded|demo.planning", "MachineRateChanged|demo.planning", "MachineAdded|demo.planning", "MachineRateChanged|demo.planning",
                 "ShiftTemplateAdded|demo.planning", "UnitShiftAdded|demo.planning", "UnitShiftAdded|demo.planning", "MaterialAdded|demo.warehouse", "MaterialPriceChanged|demo.warehouse",
-                "OperatorRegistered|demo.planning", "UnitDesignationAssigned|demo.planning",
+                "OperatorRegistered|demo.planning", "UnitDesignationAssigned|demo.planning", "OperatorMachineAssigned|demo.planning", "OperatorQualificationRecorded|demo.planning", "UnitDesignationAssigned|demo.planning", "UnitSupervisorChanged|demo.planning",
             },
             seeded);
     }
@@ -85,7 +87,7 @@ public class DemoMasterDataTests
             new EfUnitQueueRepository(db.ContextFactory), PersistenceTestData.Dates, actors, new DateTime(2026, 10, 23, 5, 0, 0, DateTimeKind.Utc)).SeedAsync(Token);
 
         Assert.Equal(0, again.Added);
-        Assert.Equal(13, again.Existing);
+        Assert.Equal(17, again.Existing);
         Assert.Equal(before, MasterSnapshot(db));
 
         await DemoDatabase.ResetAsync(db.Path, PersistenceTestData.Dates, db.NextCredentialPath(), SecurityFixture.FastPolicy, Token);

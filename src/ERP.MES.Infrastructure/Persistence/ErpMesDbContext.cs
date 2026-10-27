@@ -281,8 +281,28 @@ public sealed class ErpMesDbContext(DbContextOptions<ErpMesDbContext> options) :
         }
     }
 
-    protected override void OnModelCreating(ModelBuilder modelBuilder) =>
+    /// <summary>The provider name of the SQL Server provider (compared as text so that this project does not reference the provider package).</summary>
+    public const string SqlServerProviderName = "Microsoft.EntityFrameworkCore.SqlServer";
+
+    /// <summary>
+    /// The binary (code-point, case-sensitive) collation that replaces SQLite's <c>BINARY</c> on SQL Server (Decision Log #117). Business keys such as the customer's request number are compared
+    /// case-sensitively (Decision Log #1, #31); SQL Server's default collation is case-insensitive, so those columns need an explicit binary collation there.
+    /// </summary>
+    public const string SqlServerBinaryCollation = "Latin1_General_100_BIN2";
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(ErpMesDbContext).Assembly);
+
+        // The configurations say "BINARY" (the SQLite collation). The model of one process is built for one provider, so the replacement is applied here, in one place, instead of in every configuration.
+        if (Database.ProviderName == SqlServerProviderName)
+        {
+            foreach (var property in modelBuilder.Model.GetEntityTypes().SelectMany(e => e.GetProperties()).Where(p => p.GetCollation() == "BINARY"))
+            {
+                property.SetCollation(SqlServerBinaryCollation);
+            }
+        }
+    }
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
