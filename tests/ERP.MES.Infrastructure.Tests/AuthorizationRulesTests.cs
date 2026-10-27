@@ -58,6 +58,11 @@ public class AuthorizationRulesTests
         // Demonstration stage flow (Decision Log #79): demo-only mapping approved by the owner (Decision Log #80), not a finalized production matrix. QC approval uses InspectOrCorrectQc above.
         [Permission.ReleaseStage] = (["PLANNING"], null),
         [Permission.RunStage] = (["PRODUCTION"], null),
+        [Permission.ViewWorkSessions] = (["PRODUCTION", "PLANNING", "MANAGEMENT"], null),
+        [Permission.OperateWorkSessions] = (["PRODUCTION"], null),
+        [Permission.CorrectWorkSessions] = (["PLANNING"], null),
+        [Permission.ApproveSessionTime] = (["PLANNING"], null),
+        [Permission.ManagePauseReasons] = (["PLANNING"], null),
         [Permission.ViewUnitQueue] = (["MANAGEMENT", "PLANNING", "PRODUCTION"], null),
         [Permission.OrderUnitQueue] = (["PLANNING"], null),
         [Permission.ManageStageHold] = (["PLANNING", "PRODUCTION"], null),

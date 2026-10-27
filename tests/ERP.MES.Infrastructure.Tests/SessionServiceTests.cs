@@ -113,7 +113,7 @@ public class SessionServiceTests
 
         // No session, token or login table exists: the session is in memory only, so nothing can survive a restart.
         var tables = scene.Fixture.Db.Query("SELECT name FROM sqlite_master WHERE type = 'table'");
-        Assert.DoesNotContain(tables, t => t.Contains("session", StringComparison.OrdinalIgnoreCase) || t.Contains("token", StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain(tables, t => !t.StartsWith("WorkSession", StringComparison.Ordinal) && t.Contains("session", StringComparison.OrdinalIgnoreCase) || t.Contains("token", StringComparison.OrdinalIgnoreCase));
         Assert.Empty(SessionAudit(scene.Fixture));
     }
 

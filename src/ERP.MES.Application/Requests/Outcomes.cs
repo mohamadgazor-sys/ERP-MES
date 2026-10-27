@@ -225,6 +225,66 @@ public enum ValidationIssue
     /// <summary>The item already has this contract decision.</summary>
     ItemContractUnchanged,
 
+    /// <summary>The stage is not released and waiting or in progress, so no session can be dispatched on it.</summary>
+    SessionStageNotOperational,
+
+    /// <summary>The machine does not belong to the stage's production unit.</summary>
+    SessionMachineNotInUnit,
+
+    /// <summary>The machine is inactive or does not exist.</summary>
+    SessionMachineUnusable,
+
+    /// <summary>The operator is inactive, absent that day or not authorized for the unit.</summary>
+    SessionOperatorUnavailable,
+
+    /// <summary>The operator is not scheduled in a running shift or approved overtime now; a reason for working outside the shift is required.</summary>
+    SessionOutsideShiftReasonRequired,
+
+    /// <summary>The machine already has an open work interval (another session is running on it).</summary>
+    SessionMachineBusy,
+
+    /// <summary>The operator already has an open work interval on another session.</summary>
+    SessionOperatorBusy,
+
+    /// <summary>The user is not a supervisor of the stage's production unit.</summary>
+    SessionNotSupervisor,
+
+    /// <summary>The user may act only on their own sessions.</summary>
+    SessionNotOwn,
+
+    /// <summary>The stage is already tracked by daily job reports (or by sessions) and cannot use the other basis.</summary>
+    SessionTimeBasisConflict,
+
+    /// <summary>The pause reason does not exist or is inactive.</summary>
+    SessionPauseReasonInvalid,
+
+    /// <summary>This pause reason needs a note.</summary>
+    SessionPauseNoteRequired,
+
+    /// <summary>A handover needs a different operator.</summary>
+    SessionHandoverSameOperator,
+
+    /// <summary>The correction is invalid (order, future, reason).</summary>
+    SessionCorrectionInvalid,
+
+    /// <summary>The correction is refused because the stage was already submitted to QC; Planning first undoes the submission.</summary>
+    SessionCorrectionAfterSubmission,
+
+    /// <summary>The approver of a session's time may not be the person who dispatched or started it.</summary>
+    SessionApproverIsActor,
+
+    /// <summary>The stage cannot be submitted to QC while sessions are assigned, active or paused.</summary>
+    SubmitBlockedBySessions,
+
+    /// <summary>The stage is tracked by sessions but none has recorded work yet.</summary>
+    SubmitNoFinishedSession,
+
+    /// <summary>There is no active session to pause.</summary>
+    SessionNothingToPause,
+
+    /// <summary>The pause reason code is invalid or already exists.</summary>
+    PauseReasonCodeInvalid,
+
     /// <summary>The material does not exist or is not active.</summary>
     MaterialInvalid,
 

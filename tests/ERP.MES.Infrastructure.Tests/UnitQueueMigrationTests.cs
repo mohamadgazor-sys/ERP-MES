@@ -40,7 +40,7 @@ public class UnitQueueMigrationTests
         Assert.Empty(db.Query("SELECT * FROM QueueOverrideHistory"));
         Assert.Empty(db.Query("SELECT * FROM UserUnitDesignations"));
         Assert.Empty(db.Query("PRAGMA foreign_key_check"));
-        Assert.Equal(22, db.Query("SELECT MigrationId FROM __EFMigrationsHistory").Count);
+        Assert.Equal(23, db.Query("SELECT MigrationId FROM __EFMigrationsHistory").Count);
 
         var keys = new List<string>();
         foreach (var table in new[] { "QueueOverrides", "QueueOverrideHistory", "UserUnitDesignations" })

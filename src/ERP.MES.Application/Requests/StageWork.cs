@@ -61,7 +61,7 @@ public sealed record StageActionResult(StageAction Action, int StageNo, ItemStag
 /// GUARANTEE (per row, not per aggregate - Decision Log #77): the named rows are protected against a stale view, and every row the change touches is protected until it is saved.
 /// A row of the same request that the action neither names nor changes is not compared.
 /// </summary>
-public sealed class StageWorkService(IRequestRepository requests, CurrentAuthorization authorization, IClock clock, IAuditContext auditContext, RequestGateService gates, IUnitQueueRepository unitStore)
+public sealed class StageWorkService(IRequestRepository requests, CurrentAuthorization authorization, IClock clock, IAuditContext auditContext, RequestGateService gates, IUnitQueueRepository unitStore, IWorkSessionRepository workSessions)
 {
     /// <summary>
     /// Planning corrects an erroneous stage start (back to waiting) or submission (back to in progress) with a mandatory reason, audited (Decision Log #95 D8, #102). It is refused once QC has decided
@@ -256,6 +256,26 @@ public sealed class StageWorkService(IRequestRepository requests, CurrentAuthori
             if (gate is not { Satisfied: true })
             {
                 return Outcome<StageActionResult>.Invalid(ValidationIssue.StageGateNotSatisfied);
+            }
+        }
+
+        // Work sessions (Decision Log #112): the legacy whole-stage Start cannot be used on a stage that sessions track, and a stage that sessions track goes to QC only when every session is finished or withdrawn.
+        if (action == StageAction.Start && await workSessions.StageHasSessionsAsync(target.ItemId, target.StageNo, cancellationToken))
+        {
+            return Outcome<StageActionResult>.Invalid(ValidationIssue.SessionTimeBasisConflict);
+        }
+
+        if (action == StageAction.SubmitForQc)
+        {
+            var rows = await workSessions.ListForStageAsync(target.ItemId, target.StageNo, cancellationToken);
+            if (rows.Any(r => r.Session.Value.IsUnfinished))
+            {
+                return Outcome<StageActionResult>.Invalid(ValidationIssue.SubmitBlockedBySessions);
+            }
+
+            if (rows.Count > 0 && rows.All(r => r.Session.Value.Status == Domain.Production.WorkSessionStatus.Cancelled))
+            {
+                return Outcome<StageActionResult>.Invalid(ValidationIssue.SubmitNoFinishedSession);
             }
         }
 

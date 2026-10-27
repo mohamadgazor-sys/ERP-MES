@@ -1,3 +1,5 @@
+using ERP.MES.Domain.Production;
+using ERP.MES.Application.Production;
 using ERP.MES.Application.Persistence;
 using ERP.MES.Application.Requests;
 using ERP.MES.Application.Security;
@@ -173,3 +175,138 @@ internal sealed class KitWorld : IDisposable
         return itemId;
     }
 }
+
+/// <summary>
+/// A running production floor for the work-session tests: unit MILLING (shift D 08:00-17:00 with a 12:00-13:00 break, Saturday 2026-10-24 is a working day), a second unit TURNING, machines M1/M2 in MILLING
+/// and T1 in TURNING, operators OP1/OP2 (linked to Production users, assigned to M1/M2, scheduled) and OP3 (not scheduled, no assignment), a supervisor of MILLING and one of TURNING, and two released items.
+/// The display zone of the tests is UTC, so local time equals UTC.
+/// </summary>
+internal sealed class SessionScene : IDisposable
+{
+    public static readonly DateTime Day = new(2026, 10, 24, 0, 0, 0, DateTimeKind.Utc);
+
+    public required KitWorld W { get; init; }
+
+    public long Milling { get; init; }
+
+    public long Turning { get; init; }
+
+    public long Template { get; init; }
+
+    public long M1 { get; init; }
+
+    public long M2 { get; init; }
+
+    public long T1 { get; init; }
+
+    public long Op1 { get; init; }
+
+    public long Op2 { get; init; }
+
+    public long Op3 { get; init; }
+
+    public long RequestId { get; init; }
+
+    /// <summary>Item A: stage 1 in MILLING (released), stage 2 in TURNING.</summary>
+    public long ItemA { get; init; }
+
+    /// <summary>Item B: one stage in MILLING (released).</summary>
+    public long ItemB { get; init; }
+
+    public required Principal SupervisorTurning { get; init; }
+
+    public Principal Supervisor => W.Supervisor;
+
+    public Principal Operator1 => W.Production;
+
+    public Principal Operator2 => W.OtherOperator;
+
+
+    public static DateTime At(int hour, int minute = 0) => Day.AddHours(hour).AddMinutes(minute);
+
+    public void SetNow(int hour, int minute = 0) => W.Fixture.Clock.UtcNow = At(hour, minute);
+
+    public void Dispose() => W.Dispose();
+
+    public static async Task<SessionScene> CreateAsync()
+    {
+        var w = await KitWorld.StartAsync();
+        w.Fixture.Clock.UtcNow = At(7);
+        var milling = await w.AddUnitAsync("MILLING");
+        var turning = await w.AddUnitAsync("TURNING");
+        var template = (await w.Services.Calendar.AddTemplateAsync(w.Planning, "D", "شیفت D", new TimeOnly(8, 0), new TimeOnly(17, 0), new TimeOnly(12, 0), new TimeOnly(13, 0), KitWorld.Token)).Value!.Value.Id;
+        Assert.True((await w.Services.Calendar.AddUnitShiftAsync(w.Planning, milling, template, 3, 1, false, KitWorld.Token)).Succeeded);
+        var m1 = await w.AddMachineAsync("M1", milling);
+        var m2 = await w.AddMachineAsync("M2", milling);
+        var t1 = await w.AddMachineAsync("T1", turning);
+        await w.MaterialAsync();
+
+        var supervisorTurning = await ExtraUserAsync(w, "supervisor.two");
+        foreach (var user in new[] { w.Production, w.OtherOperator, w.Supervisor })
+        {
+            Assert.True((await w.Services.UnitDesignations.AssignAsync(w.Planning, user.UserId, milling, KitWorld.Token)).Succeeded);
+        }
+
+        Assert.True((await w.Services.UnitDesignations.AssignAsync(w.Planning, supervisorTurning.UserId, turning, KitWorld.Token)).Succeeded);
+        foreach (var (user, unit) in new[] { (w.Supervisor, milling), (supervisorTurning, turning) })
+        {
+            var row = (await w.Services.UnitDesignations.LoadAsync(w.Planning, KitWorld.Token)).Value!.Rows.Single(r => r.UserId == user.UserId && r.UnitId == unit);
+            Assert.True((await w.Services.UnitDesignations.SetSupervisorAsync(w.Planning, row.DesignationId, row.Version, true, KitWorld.Token)).Succeeded);
+        }
+
+        var op1 = (await w.Services.Operators.RegisterAsync(w.Planning, "OP1", "علی رضایی", w.Production.UserId, KitWorld.Token)).Value!.Value.Id;
+        var op2 = (await w.Services.Operators.RegisterAsync(w.Planning, "OP2", "حسن کریمی", w.OtherOperator.UserId, KitWorld.Token)).Value!.Value.Id;
+        var op3 = (await w.Services.Operators.RegisterAsync(w.Planning, "OP3", "رضا احمدی", null, KitWorld.Token)).Value!.Value.Id;
+        foreach (var op in new[] { op1, op2 })
+        {
+            foreach (var machine in new[] { m1, m2 })
+            {
+                Assert.True((await w.Services.Operators.AssignAsync(w.Planning, op, machine, "1405/01/01", false, null, KitWorld.Token)).Succeeded);
+            }
+
+            Assert.True((await w.Services.WorkerSchedule.ScheduleAsync(w.Planning, op, DateOnly.FromDateTime(Day), milling, template, null, null, null, KitWorld.Token)).Succeeded);
+        }
+
+        // OP1 is qualified on M1 only.
+        Assert.True((await w.Services.Operators.RecordQualificationAsync(w.Planning, op1, m1, "1405/01/01", null, KitWorld.Token)).Succeeded);
+
+        var (requestId, _) = await w.ReadyRequestAsync("R-1", contractRequired: false);
+        var itemA = await w.DefineItemAsync(requestId, "A", [milling, turning], release: true);
+        var itemB = await w.DefineItemAsync(requestId, "B", [milling], release: true);
+        w.Fixture.Clock.UtcNow = At(9);
+        return new SessionScene { W = w, Milling = milling, Turning = turning, Template = template, M1 = m1, M2 = m2, T1 = t1, Op1 = op1, Op2 = op2, Op3 = op3, RequestId = requestId, ItemA = itemA, ItemB = itemB, SupervisorTurning = supervisorTurning };
+    }
+
+    private static async Task<Principal> ExtraUserAsync(KitWorld w, string name)
+    {
+        await w.Fixture.CreateUserAsync(w.Admin, name, "Staff-Pass-Phrase-2", DepartmentCodes.Production, RoleCodes.Staff, KitWorld.Token);
+        var first = await w.Fixture.SignInAsync(name, "Staff-Pass-Phrase-2", KitWorld.Token);
+        await w.Fixture.Services.Accounts.ChangeOwnPasswordAsync(first, "Staff-Pass-Phrase-2", "My-Own-Pass-Phrase-3", KitWorld.Token);
+        return await w.Fixture.SignInAsync(name, "My-Own-Pass-Phrase-3", KitWorld.Token);
+    }
+
+    /// <summary>The row version of the stage as the queue would show it.</summary>
+    public async Task<long> StageVersionAsync(long itemId, int stageNo) =>
+        (await W.Services.Requests.GetAsync(W.Qc, RequestId, KitWorld.Token)).Value!.Versions.Stages[new StageRef(itemId, stageNo)];
+
+    public async Task<ItemStageStatus> StageStatusAsync(long itemId, int stageNo) =>
+        (await W.Services.Requests.GetAsync(W.Qc, RequestId, KitWorld.Token)).Value!.Request.Value.Items.Single(i => i.Id == itemId).Stages.Single(s => s.StageNo == stageNo).Status;
+
+    public DispatchCommand Dispatch(long item, long machine, long op, bool startNow = true, int stage = 1, string? outsideShift = null) =>
+        new(item, stage, machine, op, null, outsideShift, startNow);
+
+    /// <summary>Dispatches and starts; the test fails when the command is refused.</summary>
+    public async Task<Stored<WorkSession>> StartedAsync(long item, long machine, long op, int stage = 1)
+    {
+        var outcome = await W.Services.WorkSessions.DispatchAsync(Supervisor, Dispatch(item, machine, op, true, stage), KitWorld.Token);
+        Assert.True(outcome.Succeeded, outcome.Status + " " + outcome.Issue);
+        return outcome.Value!;
+    }
+
+    public async Task<Stored<WorkSession>> ReloadAsync(long sessionId)
+    {
+        var row = (await W.Services.WorkSessions.LoadUnitAsync(Supervisor, Milling, 30, KitWorld.Token)).Value!.Sessions.Single(r => r.Session.Value.Id == sessionId);
+        return row.Session;
+    }
+}
+
