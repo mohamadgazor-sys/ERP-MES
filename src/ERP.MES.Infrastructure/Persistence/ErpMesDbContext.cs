@@ -54,6 +54,8 @@ public sealed class ErpMesDbContext(DbContextOptions<ErpMesDbContext> options) :
 
     public DbSet<ContractHistoryEntry> ContractHistory => Set<ContractHistoryEntry>();
 
+    public DbSet<ItemContractDecision> ItemContractDecisions => Set<ItemContractDecision>();
+
     public DbSet<DailyJobReport> DailyJobReports => Set<DailyJobReport>();
 
     public DbSet<JobReportLine> JobReportLines => Set<JobReportLine>();
@@ -237,6 +239,12 @@ public sealed class ErpMesDbContext(DbContextOptions<ErpMesDbContext> options) :
         if (ChangeTracker.Entries<ContractHistoryEntry>().Any(e => e.State is EntityState.Modified or EntityState.Deleted))
         {
             throw new InvalidOperationException("The contract history is append-only: entries cannot be changed or deleted.");
+        }
+
+        // The item-level contract decisions are append-only: a change of mind is a new row.
+        if (ChangeTracker.Entries<ItemContractDecision>().Any(e => e.State is EntityState.Modified or EntityState.Deleted))
+        {
+            throw new InvalidOperationException("The item contract decisions are append-only: entries cannot be changed or deleted.");
         }
 
         foreach (var entry in ChangeTracker.Entries().Where(e => VersionedTypes.Contains(e.Metadata.ClrType)).ToList())

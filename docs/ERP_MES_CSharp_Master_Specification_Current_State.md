@@ -1702,6 +1702,8 @@ The contract record remains associated with the request and customer and is inde
 
 `ContractRequired` belongs to the request, not individual request items.
 
+> **Superseded/clarified (2026-10-27, Decision Log #111):** the contract document and Management's approval stay at request level, but Planning now also records a contract decision **per item** (append-only, with a reason). An item decided "not required" is not held by the contract; an item without a decision follows the request. The text above is kept as history.
+
 When `ContractRequired = true`, production release requires:
 
 - an active/current approved contract

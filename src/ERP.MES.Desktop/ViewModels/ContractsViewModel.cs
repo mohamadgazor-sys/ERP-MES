@@ -11,6 +11,8 @@ public sealed record ContractListRow(long RequestId, string RequestNo, string Cu
 
 public sealed record ContractVersionRow(int VersionNo, string ContractNo, string DateText, string StateText, string PdfText, string DecisionText, string DecisionNoteText);
 
+public sealed record ItemContractRow(long ItemId, string ItemNo, string PartName, string EffectiveText, string ReasonText, bool IsInProduction);
+
 public sealed record ContractHistoryRow(string DateText, string ActionText, string StatusChangeText, string DepartmentText, string NoteText);
 
 /// <summary>
@@ -24,6 +26,8 @@ public sealed class ContractsViewModel(ContractService service, RequestGateServi
     private readonly ObservableCollection<ContractListRow> _rows = [];
     private readonly ObservableCollection<ContractVersionRow> _versions = [];
     private readonly ObservableCollection<ContractHistoryRow> _history = [];
+    private readonly ObservableCollection<ItemContractRow> _itemRows = [];
+    private ItemContractRow? _selectedItem;
     private ContractCapabilities _capabilities = ContractCapabilities.None;
     private ContractDetail? _detail;
     private ProductionGateStatus? _readiness;
@@ -37,6 +41,24 @@ public sealed class ContractsViewModel(ContractService service, RequestGateServi
     public ObservableCollection<ContractVersionRow> Versions => _versions;
 
     public ObservableCollection<ContractHistoryRow> History => _history;
+
+    /// <summary>The request's items with their contract decision (Decision Log #111): "required" follows the request's contract, "not required" releases the item from it.</summary>
+    public ObservableCollection<ItemContractRow> ItemRows => _itemRows;
+
+    public ItemContractRow? SelectedItemRow
+    {
+        get => _selectedItem;
+        set
+        {
+            if (SetProperty(ref _selectedItem, value))
+            {
+                OnPropertyChanged(nameof(CanDecideItem));
+            }
+        }
+    }
+
+    /// <summary>Planning may decide an item once the request itself has a contract decision and the item's stages are not yet released.</summary>
+    public bool CanDecideItem => _capabilities.CanPrepare && Eligible && _detail?.Contract is not null && _selectedItem is { IsInProduction: false };
 
     public ContractListRow? SelectedRow
     {
@@ -117,6 +139,40 @@ public sealed class ContractsViewModel(ContractService service, RequestGateServi
 
     public Task<bool> ChangeRequirementAsync(bool required, string? reason, CancellationToken cancellationToken = default) =>
         ChangeAsync((id, v) => service.ChangeRequirementAsync(currentUser(), id, v, required ? ContractRequirement.Required : ContractRequirement.NotRequired, reason, cancellationToken), "تصمیم تغییر کرد.");
+
+    /// <summary>Planning decides the selected item's contract requirement with a reason (Decision Log #111).</summary>
+    public async Task<bool> DecideItemAsync(bool required, string? reason, CancellationToken cancellationToken = default)
+    {
+        if (_detail is null || _selectedItem is null)
+        {
+            Message = Messages.NothingSelected;
+            return false;
+        }
+
+        var saved = false;
+        var requestId = _detail.RequestId;
+        var itemId = _selectedItem.ItemId;
+        await RunAsync(async () =>
+        {
+            var outcome = await service.DecideItemAsync(currentUser(), requestId, itemId, required ? ContractRequirement.Required : ContractRequirement.NotRequired, reason, cancellationToken);
+            if (!outcome.Succeeded)
+            {
+                var text = Messages.For(outcome);
+                if (outcome.Status != OperationStatus.NotAuthorized)
+                {
+                    await ReloadAsync(requestId, CancellationToken.None);
+                }
+
+                Message = text;
+                return;
+            }
+
+            saved = true;
+            await ReloadAsync(requestId, CancellationToken.None);
+            Message = "تصمیم قرارداد آیتم ثبت شد.";
+        });
+        return saved;
+    }
 
     public Task<bool> SaveDraftAsync(string? contractNo, string? dateText, string? title, string? note, CancellationToken cancellationToken = default) =>
         ChangeAsync((id, v) => service.SaveDraftAsync(currentUser(), id, v, contractNo, dateText, title, note, cancellationToken), "پیش‌نویس ذخیره شد.");
@@ -254,6 +310,22 @@ public sealed class ContractsViewModel(ContractService service, RequestGateServi
         _readiness = readiness.Value;
         _versions.Clear();
         _history.Clear();
+        var decisions = await service.ListItemDecisionsAsync(currentUser(), requestId, cancellationToken);
+        var latest = (decisions.Value ?? []).GroupBy(d => d.ItemId).ToDictionary(g => g.Key, g => g.Last());
+        var keep = _selectedItem?.ItemId;
+        _itemRows.Clear();
+        foreach (var item in _detail!.Items)
+        {
+            latest.TryGetValue(item.Id, out var decision);
+            var requirement = decision?.Requirement ?? _detail.Contract?.Value.Requirement;
+            _itemRows.Add(new ItemContractRow(
+                item.Id, item.ItemNo, item.PartName,
+                requirement is null ? "تصمیم درخواست ثبت نشده" : requirement == ContractRequirement.Required ? "قرارداد لازم است" : "قرارداد لازم نیست",
+                decision is null ? (_detail.Contract is null ? string.Empty : "مطابق تصمیم درخواست") : decision.Reason, item.HasReleasedStage));
+        }
+
+        _selectedItem = _itemRows.FirstOrDefault(r => r.ItemId == keep);
+        OnPropertyChanged(nameof(SelectedItemRow));
         if (_detail!.Contract?.Value is { } contract)
         {
             foreach (var v in contract.Versions)
@@ -282,6 +354,8 @@ public sealed class ContractsViewModel(ContractService service, RequestGateServi
         _readiness = null;
         _versions.Clear();
         _history.Clear();
+        _itemRows.Clear();
+        _selectedItem = null;
     }
 
     private void NotifyAll()
@@ -289,7 +363,7 @@ public sealed class ContractsViewModel(ContractService service, RequestGateServi
         foreach (var name in new[]
                  {
                      nameof(HasDetail), nameof(DetailHeading), nameof(StatusLine), nameof(GateLine), nameof(CanView), nameof(CanDecide), nameof(CanChangeRequirement), nameof(CanEditDraft),
-                     nameof(CanStartRevision), nameof(CanDecideContract), nameof(CanViewPdf),
+                     nameof(CanStartRevision), nameof(CanDecideContract), nameof(CanViewPdf), nameof(CanDecideItem),
                  })
         {
             OnPropertyChanged(name);

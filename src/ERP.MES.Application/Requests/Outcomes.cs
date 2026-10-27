@@ -213,6 +213,18 @@ public enum ValidationIssue
     /// <summary>The contract decision is already recorded for this request.</summary>
     ContractAlreadyDecided,
 
+    /// <summary>An item contract decision needs the request's own contract decision first (Decision Log #111).</summary>
+    ItemContractRequestUndecided,
+
+    /// <summary>The request has no contract (decided "not required"), so no item can be made to require one; change the request's requirement first.</summary>
+    ItemContractRequestNotRequired,
+
+    /// <summary>The item already has a released or started stage; its contract decision can no longer change.</summary>
+    ItemContractInProduction,
+
+    /// <summary>The item already has this contract decision.</summary>
+    ItemContractUnchanged,
+
     /// <summary>The material does not exist or is not active.</summary>
     MaterialInvalid,
 

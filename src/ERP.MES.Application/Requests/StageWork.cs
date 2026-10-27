@@ -252,7 +252,7 @@ public sealed class StageWorkService(IRequestRepository requests, CurrentAuthori
 
         if (action is StageAction.Release or StageAction.Start)
         {
-            var gate = await gates.EvaluateAsync(target.RequestId, cancellationToken);
+            var gate = await gates.EvaluateAsync(target.RequestId, target.ItemId, cancellationToken);
             if (gate is not { Satisfied: true })
             {
                 return Outcome<StageActionResult>.Invalid(ValidationIssue.StageGateNotSatisfied);

@@ -17,6 +17,7 @@ public sealed class EfCostingRepository(IDbContextFactory<ErpMesDbContext> conte
         await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
         var requests = await EfRequestRepository.LoadAggregate(context).AsNoTracking().ToListAsync(cancellationToken);
         var contracts = (await context.RequestContracts.AsNoTracking().ToListAsync(cancellationToken)).ToDictionary(c => c.RequestId);
+        var notRequired = await NotRequiredItemsAsync(context, cancellationToken);
         var calculations = await context.ItemCostCalculations.Include(c => c.Lines).AsNoTracking().OrderBy(c => c.SequenceNo).ToListAsync(cancellationToken);
         var decisions = await context.ItemPriceDecisions.AsNoTracking().OrderBy(d => d.Id).ToListAsync(cancellationToken);
         var result = new List<CostingItemSummary>();
@@ -27,7 +28,7 @@ public sealed class EfCostingRepository(IDbContextFactory<ErpMesDbContext> conte
                 var latest = calculations.LastOrDefault(c => c.RequestItemId == item.Id);
                 var decision = latest is null ? null : decisions.LastOrDefault(d => d.CalculationId == latest.Id);
                 result.Add(new CostingItemSummary(
-                    request.Id, request.RequestNo.Value, item.Id, item.ItemNo, item.PartName, request.WorkType, IsContractApproved(contracts, request.Id), item.Stages.OrderBy(s => s.StageNo).Last().AcceptedBaseUnits,
+                    request.Id, request.RequestNo.Value, item.Id, item.ItemNo, item.PartName, request.WorkType, IsContractApproved(contracts, request.Id) && !notRequired.Contains(item.Id), item.Stages.OrderBy(s => s.StageNo).Last().AcceptedBaseUnits,
                     latest is null ? null : new Stored<ItemCostCalculation>(latest, 0),
                     decision is null ? null : new Stored<ItemPriceDecision>(decision, VersionOf(context, decision.Id))));
             }
@@ -56,6 +57,7 @@ public sealed class EfCostingRepository(IDbContextFactory<ErpMesDbContext> conte
             ?? throw new RecordNotFoundException("request item", requestItemId);
         var item = request.Items.Single(i => i.Id == requestItemId);
         var contract = await context.RequestContracts.AsNoTracking().FirstOrDefaultAsync(c => c.RequestId == request.Id, cancellationToken);
+        var itemNotRequired = (await NotRequiredItemsAsync(context, cancellationToken)).Contains(item.Id);
         var stages = item.Stages.OrderBy(s => s.StageNo).ToList();
 
         var reports = await context.DailyJobReports.Include(r => r.Lines).AsNoTracking()
@@ -69,7 +71,7 @@ public sealed class EfCostingRepository(IDbContextFactory<ErpMesDbContext> conte
         var next = (await context.ItemCostCalculations.Where(c => c.RequestItemId == requestItemId).Select(c => (int?)c.SequenceNo).MaxAsync(cancellationToken) ?? 0) + 1;
 
         var inputs = new CostInputs(
-            item.Id, request.Id, request.RequestNo.Value, item.ItemNo, request.WorkType, IsContractApproved(contract), item.IsRouteCompleted, stages.FirstOrDefault()?.AvailableSinceUtc,
+            item.Id, request.Id, request.RequestNo.Value, item.ItemNo, request.WorkType, IsContractApproved(contract) && !itemNotRequired, item.IsRouteCompleted, stages.FirstOrDefault()?.AvailableSinceUtc,
             stages.FirstOrDefault()?.InputBaseUnits, stages.LastOrDefault()?.AcceptedBaseUnits ?? 0, item.MaterialId, material?.Code, item.WeightKgPerBaseUnit, lines, rates, codes, prices, next);
         var built = build(inputs);
         if (built.Refusal != ValidationIssue.None)
@@ -110,6 +112,13 @@ public sealed class EfCostingRepository(IDbContextFactory<ErpMesDbContext> conte
         context.AuditLog.Add(audit);
         await PersistenceSave.SaveAsync(context, cancellationToken);
         return (new Stored<ItemPriceDecision>(row, context.GetRowVersion(row)), ValidationIssue.None);
+    }
+
+    // Items whose latest contract decision is "not required" (Decision Log #111): the approved request contract does not make their price contract-basis.
+    private static async Task<HashSet<long>> NotRequiredItemsAsync(ErpMesDbContext context, CancellationToken cancellationToken)
+    {
+        var rows = await context.ItemContractDecisions.AsNoTracking().OrderBy(d => d.Id).Select(d => new { d.RequestItemId, d.Requirement }).ToListAsync(cancellationToken);
+        return rows.GroupBy(r => r.RequestItemId).Where(g => g.Last().Requirement == ContractRequirement.NotRequired).Select(g => g.Key).ToHashSet();
     }
 
     private static bool IsContractApproved(IReadOnlyDictionary<long, RequestContract> contracts, long requestId) => contracts.TryGetValue(requestId, out var c) && IsContractApproved(c);

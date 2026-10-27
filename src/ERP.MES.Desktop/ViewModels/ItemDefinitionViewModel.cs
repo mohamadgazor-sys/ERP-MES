@@ -105,12 +105,12 @@ public sealed class ItemDefinitionViewModel(
 
     public string GateText => _gate is null
         ? string.Empty
-        : _gate.Satisfied
+        : _gate.DefinitionAllowed
             ? "دروازه‌ها برقرار است؛ تعریف آیتم ممکن است."
             : "تعریف آیتم ممکن نیست. موانع: " + (_gate.DefinitionBlock != ERP.MES.Domain.Contracts.DefinitionBlock.None ? Messages.DefinitionBlockText(_gate.DefinitionBlock) + "؛ " : string.Empty)
                 + string.Join("؛ ", _gate.Blockers.Where(b => b != GateBlocker.DefinitionGate).Select(Messages.GateBlockerText));
 
-    public bool CanDefineItem => _detail is not null && _gate is { Satisfied: true }
+    public bool CanDefineItem => _detail is not null && _gate is { DefinitionAllowed: true }
         && (_detail.Request.Value.WorkType == WorkType.Make ? _capabilities.CanDefineMake : _capabilities.CanDefineRepair);
 
     public bool CanDefineStage => CanDefineItem && _selectedItem is not null;
