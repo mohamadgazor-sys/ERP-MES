@@ -81,6 +81,9 @@ public sealed record UnitQueueEntry(
 
     public bool IsActionable => Block == QueueBlock.None;
 
+    /// <summary>The item's production gate state when it does not hold (Management, Drawing, the item's contract decision, inquiries, clarifications), so the screen can name the exact reason (Decision Log #115); null when the gates hold.</summary>
+    public ProductionGateStatus? Gate { get; init; }
+
     public bool IsOverridden => OverrideRank is not null;
 
     public long RequestVersion { get; init; }

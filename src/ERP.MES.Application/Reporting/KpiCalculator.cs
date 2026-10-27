@@ -51,7 +51,7 @@ public static class KpiCalculator
             return date >= from && date <= toInclusive;
         }
 
-        var lines = facts.Lines.Where(l => l.WorkDate >= from && l.WorkDate <= toInclusive && Visible(l.UnitId)).ToList();
+        var lines = facts.Lines.Concat(SessionLines(facts.SessionIntervals ?? [], toLocal)).Where(l => l.WorkDate >= from && l.WorkDate <= toInclusive && Visible(l.UnitId)).ToList();
         var inspections = facts.Inspections.Where(i => InRange(i.DecidedAtUtc) && Visible(i.UnitId)).ToList();
         var completed = facts.CompletedStages.Where(c => InRange(c.CompletedAtUtc) && Visible(c.UnitId)).ToList();
         var scheduled = facts.Scheduled.Where(r => r.Date >= from && r.Date <= toInclusive && Visible(r.UnitId)).ToList();
@@ -87,6 +87,33 @@ public static class KpiCalculator
             .ToList();
 
         return new KpiReport(from, toInclusive, runAtUtc, units, ranked, units.Sum(u => u.PendingReports));
+    }
+
+    // Time-approved work sessions enter as operator labour lines, one per local day (a stretch across midnight is split at local midnight); ReportId is the negative session id.
+    private static IEnumerable<KpiApprovedLine> SessionLines(IReadOnlyList<KpiSessionInterval> intervals, Func<DateTime, DateTime> toLocal)
+    {
+        foreach (var interval in intervals)
+        {
+            var cursor = interval.StartUtc;
+            while (cursor < interval.EndUtc)
+            {
+                var local = toLocal(cursor);
+                var nextMidnightLocal = local.Date.AddDays(1);
+                var sliceEnd = cursor + (nextMidnightLocal - local);
+                if (sliceEnd > interval.EndUtc || sliceEnd <= cursor)
+                {
+                    sliceEnd = interval.EndUtc;
+                }
+
+                var minutes = (int)decimal.Round((decimal)(sliceEnd - cursor).TotalMinutes, 0, MidpointRounding.AwayFromZero);
+                if (minutes > 0)
+                {
+                    yield return new KpiApprovedLine(-interval.SessionId, interval.OperatorId, interval.UnitId, DateOnly.FromDateTime(local), cursor, sliceEnd, minutes);
+                }
+
+                cursor = sliceEnd;
+            }
+        }
     }
 
     private static decimal? Ratio(long part, long whole) => whole > 0 ? decimal.Round((decimal)part / whole, 4) : null;

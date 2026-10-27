@@ -50,6 +50,7 @@ public sealed class ItemCostLineConfiguration : IEntityTypeConfiguration<ItemCos
         builder.Property(l => l.LineNo).IsRequired();
         builder.Property(l => l.Kind).HasConversion<int>().IsRequired();
         builder.Property(l => l.JobReportLineId);
+        builder.Property(l => l.SessionIds).HasMaxLength(500);
         builder.HasOne<ERP.MES.Domain.Reporting.JobReportLine>().WithMany().HasForeignKey(l => l.JobReportLineId).IsRequired(false).OnDelete(DeleteBehavior.Restrict);
         builder.Property(l => l.MachineId);
         builder.HasOne<Machine>().WithMany().HasForeignKey(l => l.MachineId).IsRequired(false).OnDelete(DeleteBehavior.Restrict);

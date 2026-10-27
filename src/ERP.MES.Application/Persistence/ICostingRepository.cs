@@ -29,7 +29,13 @@ public sealed record CostInputs(
     IReadOnlyList<MachineHourlyRate> Rates,
     IReadOnlyDictionary<long, string> MachineCodes,
     IReadOnlyList<MaterialPrice> Prices,
-    int NextSequenceNo);
+    int NextSequenceNo,
+    IReadOnlyList<ERP.MES.Domain.Production.WorkSession>? Sessions = null,
+    int UnapprovedFinishedSessions = 0)
+{
+    /// <summary>The item's time-approved work sessions (Decision Log #114); machine runtime of these, counted once per machine, is costed beside the approved job report lines.</summary>
+    public IReadOnlyList<ERP.MES.Domain.Production.WorkSession> ApprovedSessions { get; } = Sessions ?? [];
+}
 
 /// <summary>The outcome of building a snapshot: the calculation and its decision, or the refusal and the named gaps.</summary>
 public sealed record CostBuild(ItemCostCalculation? Calculation, ItemPriceDecision? Decision, ValidationIssue Refusal, IReadOnlyList<string> Gaps);

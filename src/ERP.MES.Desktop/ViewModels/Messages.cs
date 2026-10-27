@@ -119,6 +119,7 @@ public static class Messages
         ValidationIssue.SessionApproverIsActor => "تأییدکنندهٔ زمان نباید همان کسی باشد که نوبت را ثبت یا شروع کرده است.",
         ValidationIssue.SubmitBlockedBySessions => "تا زمانی که نوبت کاری تخصیص‌یافته، در حال اجرا یا متوقف وجود دارد، مرحله به کنترل کیفیت ارسال نمی‌شود؛ آن‌ها را پایان دهید یا لغو کنید.",
         ValidationIssue.SubmitNoFinishedSession => "این مرحله با نوبت کاری ثبت می‌شود اما هنوز نوبت پایان‌یافته‌ای ندارد.",
+        ValidationIssue.CostingSessionsNotApproved => "زمان واقعی برخی نوبت‌های کاری پایان‌یافتهٔ این آیتم هنوز توسط برنامه‌ریزی تأیید نشده است؛ ابتدا آن‌ها را تأیید کنید.",
         ValidationIssue.SessionNothingToPause => "نوبت کاری فعالی برای توقف وجود ندارد.",
         ValidationIssue.PauseReasonCodeInvalid => "کد دلیل توقف نامعتبر یا تکراری است.",
         ValidationIssue.ItemContractUnchanged => "آیتم از قبل همین تصمیم را دارد.",

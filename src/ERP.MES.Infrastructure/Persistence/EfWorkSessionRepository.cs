@@ -130,8 +130,9 @@ public sealed class EfWorkSessionRepository(IDbContextFactory<ErpMesDbContext> c
                            join r in context.Requests.AsNoTracking() on EF.Property<long>(i, "RequestId") equals r.Id
                            where itemIds.Contains(i.Id)
                            select new { i.Id, i.ItemNo, i.PartName, RequestNo = r.RequestNo.Value }).ToDictionaryAsync(x => x.Id, cancellationToken);
-        var stageTitles = (await context.ItemStages.AsNoTracking().Where(s => itemIds.Contains(EF.Property<long>(s, "RequestItemId"))).Select(s => new { ItemId = EF.Property<long>(s, "RequestItemId"), s.StageNo, s.StageTitle }).ToListAsync(cancellationToken))
-            .ToDictionary(x => (x.ItemId, x.StageNo), x => x.StageTitle);
+        var stageInfo = (await context.ItemStages.AsNoTracking().Where(s => itemIds.Contains(EF.Property<long>(s, "RequestItemId")))
+                .Select(s => new { ItemId = EF.Property<long>(s, "RequestItemId"), s.StageNo, s.StageTitle, s.PlannedMinutesPerPiece, s.PlannedQuantity }).ToListAsync(cancellationToken))
+            .ToDictionary(x => (x.ItemId, x.StageNo));
         var machineIds = sessions.Select(s => s.MachineId).Distinct().ToList();
         var machines = await context.Machines.AsNoTracking().Where(m => machineIds.Contains(m.Id)).ToDictionaryAsync(m => m.Id, m => m.Code, cancellationToken);
         var operatorIds = sessions.Select(s => s.OperatorId).Distinct().ToList();
@@ -143,8 +144,8 @@ public sealed class EfWorkSessionRepository(IDbContextFactory<ErpMesDbContext> c
             var item = items[s.RequestItemId];
             var op = operators[s.OperatorId];
             return new SessionRow(
-                new Stored<WorkSession>(s, context.GetRowVersion(s)), item.RequestNo, item.ItemNo, item.PartName, stageTitles.GetValueOrDefault((s.RequestItemId, s.StageNo), string.Empty),
-                units[s.ProductionUnitId], machines[s.MachineId], op.FullName, op.Code);
+                new Stored<WorkSession>(s, context.GetRowVersion(s)), item.RequestNo, item.ItemNo, item.PartName, stageInfo.TryGetValue((s.RequestItemId, s.StageNo), out var info) ? info.StageTitle : string.Empty,
+                units[s.ProductionUnitId], machines[s.MachineId], op.FullName, op.Code, info is null ? 0m : info.PlannedMinutesPerPiece * info.PlannedQuantity);
         }).ToList();
     }
 

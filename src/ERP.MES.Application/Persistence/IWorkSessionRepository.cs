@@ -64,7 +64,7 @@ public sealed record SessionCommitResult(IReadOnlyList<Stored<WorkSession>> Sess
 
 /// <summary>A session with the names the screens show.</summary>
 public sealed record SessionRow(
-    Stored<WorkSession> Session, string RequestNo, string ItemNo, string PartName, string StageTitle, string UnitCode, string MachineCode, string OperatorName, string OperatorCode);
+    Stored<WorkSession> Session, string RequestNo, string ItemNo, string PartName, string StageTitle, string UnitCode, string MachineCode, string OperatorName, string OperatorCode, decimal PlannedMinutes = 0m);
 
 /// <summary>Persistence of work sessions, pause reasons and outage events (Decision Log #112).</summary>
 public interface IWorkSessionRepository

@@ -488,6 +488,10 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
                     b.Property<long?>("RateId")
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("SessionIds")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
                     b.Property<decimal>("UnitPriceRial")
                         .HasColumnType("TEXT");
 

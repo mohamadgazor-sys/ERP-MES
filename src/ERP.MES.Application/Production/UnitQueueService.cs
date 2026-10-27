@@ -548,6 +548,7 @@ public sealed class UnitQueueService(
                         OverrideVersion = stored?.Version,
                         ReworkBaseUnits = stage.ReworkBaseUnits,
                         StageVersions = versions,
+                        Gate = gateOk ? null : requestGates?.For(item.Id),
                     };
                     (released ? queue : pending).Add(entry);
                 }

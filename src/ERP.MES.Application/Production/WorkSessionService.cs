@@ -28,6 +28,14 @@ public sealed record OutageRecorded(OutageEvent Outage, IReadOnlyList<Stored<Wor
 /// <summary>The result of resuming the sessions of an ended outage: each session that was resumed and each that stays paused with the reason.</summary>
 public sealed record OutageResumeResult(IReadOnlyList<Stored<WorkSession>> Resumed, IReadOnlyList<(long SessionId, ValidationIssue Issue)> StillPaused);
 
+/// <summary>The machines of a unit and the operators who may be dispatched on it, for the dispatch form (the commands re-check everything).</summary>
+public sealed record DispatchChoices(IReadOnlyList<MachineChoice> Machines, IReadOnlyList<OperatorChoice> Operators);
+
+public sealed record MachineChoice(long MachineId, string Code, string Name);
+
+/// <summary>An active operator authorized for the unit; <see cref="QualifiedMachineIds"/> lists the unit's machines the operator is currently qualified on (a missing one is a warning, not a block).</summary>
+public sealed record OperatorChoice(long OperatorId, string Code, string Name, IReadOnlySet<long> QualifiedMachineIds);
+
 /// <summary>Raised inside a session command when a business rule refuses it; nothing is saved.</summary>
 public sealed class SessionRefusedException(ValidationIssue issue) : InvalidOperationException("The work session command was refused: " + issue)
 {
@@ -98,6 +106,38 @@ public sealed class WorkSessionService(
         });
     }
 
+    /// <summary>Active machines of the unit and active operators authorized for it (an active assignment to one of its machines, or a linked user designated to it), for the dispatch form.</summary>
+    public async Task<Outcome<DispatchChoices>> LoadChoicesAsync(Principal? principal, long unitId, CancellationToken cancellationToken = default)
+    {
+        var decision = await authorization.CheckAsync(principal, Permission.ViewWorkSessions, cancellationToken);
+        if (!decision.IsAllowed)
+        {
+            return Outcome<DispatchChoices>.Fail(OperationStatus.NotAuthorized);
+        }
+
+        var user = decision.Current!;
+        if (user.DepartmentCode == DepartmentCodes.Production && await DesignationAsync(user, unitId, cancellationToken) is null)
+        {
+            return Outcome<DispatchChoices>.Fail(OperationStatus.NotAuthorized);
+        }
+
+        return await CustomerService.GuardAsync(async () =>
+        {
+            var (date, _) = dates.UtcToLocal(clock.UtcNow);
+            var machines = (await planning.ListMachinesAsync(cancellationToken)).Select(m => m.Value).Where(m => m.ProductionUnitId == unitId && m.IsActive).OrderBy(m => m.Code, StringComparer.Ordinal).ToList();
+            var unitMachines = machines.Select(m => m.Id).ToHashSet();
+            var assignments = (await operators.ListAssignmentsAsync(cancellationToken)).Select(a => a.Value).Where(a => a.CoversDate(date) && unitMachines.Contains(a.MachineId)).ToList();
+            var qualifications = (await operators.ListQualificationsAsync(cancellationToken)).Select(q => q.Value).ToList();
+            var designated = (await unitStore.ListDesignationsAsync(cancellationToken)).Where(d => d.Value.IsActive && d.Value.ProductionUnitId == unitId).Select(d => d.Value.UserId).ToHashSet();
+            var choices = (await operators.ListOperatorsAsync(cancellationToken)).Select(o => o.Value)
+                .Where(o => o.IsActive && (assignments.Any(a => a.OperatorId == o.Id) || o.UserId is { } linked && designated.Contains(linked)))
+                .OrderBy(o => o.Code, StringComparer.Ordinal)
+                .Select(o => new OperatorChoice(o.Id, o.Code, o.FullName, machines.Where(m => OperatorMachineRules.IsQualified(qualifications, o.Id, m.Id, date)).Select(m => m.Id).ToHashSet()))
+                .ToList();
+            return Outcome<DispatchChoices>.Ok(new DispatchChoices(machines.Select(m => new MachineChoice(m.Id, m.Code, m.Name)).ToList(), choices));
+        });
+    }
+
     /// <summary>The signed-in operator's own sessions (the operator record linked to the user).</summary>
     public async Task<Outcome<IReadOnlyList<SessionRow>>> LoadMineAsync(Principal? principal, int finishedWithinDays = 7, CancellationToken cancellationToken = default)
     {
@@ -135,6 +175,20 @@ public sealed class WorkSessionService(
 
             return Outcome<IReadOnlyList<SessionRow>>.Ok(rows);
         });
+    }
+
+    /// <summary>The five distinct actual-time metrics of one stage (machine-hours, labour-hours, elapsed, paused by reason, planned vs actual) from the recorded instants of its sessions.</summary>
+    public async Task<Outcome<StageMetrics>> LoadStageMetricsAsync(Principal? principal, long itemId, int stageNo, bool approvedOnly = false, CancellationToken cancellationToken = default)
+    {
+        var rows = await LoadStageAsync(principal, itemId, stageNo, cancellationToken);
+        if (!rows.Succeeded)
+        {
+            return Outcome<StageMetrics>.Fail(rows.Status);
+        }
+
+        var planned = rows.Value!.Count == 0 ? 0m : rows.Value[0].PlannedMinutes;
+        return Outcome<StageMetrics>.Ok(SessionMetricsCalculator.Compute(
+            rows.Value.Select(r => r.Session.Value), [new StagePlan(itemId, stageNo, planned)], clock.UtcNow, approvedOnly ? s => s.IsTimeApproved : null));
     }
 
     // ---- dispatch and start ----

@@ -13,6 +13,7 @@ public sealed class ShellViewModel : ObservableObject
     public const string RequestsKey = "requests";
     public const string QueueKey = "queue";
     public const string UnitQueueKey = "unitqueue";
+    public const string WorkBoardKey = "workboard";
     public const string CalendarKey = "calendar";
     public const string QcInspectionKey = "qcinspection";
     public const string JobReportsKey = "jobreports";
@@ -49,6 +50,7 @@ public sealed class ShellViewModel : ObservableObject
             new NavigationItem(RequestsKey, "درخواست‌ها", true),
             new NavigationItem(QueueKey, "صف تولید", true),
             new NavigationItem(UnitQueueKey, "صف واحدهای تولید", true),
+            new NavigationItem(WorkBoardKey, "نوبت‌های کاری", true),
             new NavigationItem(QcInspectionKey, "بازرسی کنترل کیفیت", true),
             new NavigationItem(JobReportsKey, "گزارش کار روزانه", true),
             new NavigationItem(OvertimeKey, "اضافه‌کاری", true),
