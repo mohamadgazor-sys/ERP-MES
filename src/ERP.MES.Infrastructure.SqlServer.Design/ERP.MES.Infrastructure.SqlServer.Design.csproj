@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Startup project for the dotnet-ef tool when it generates the SQL Server migrations (the migrations project is a library), like ERP.MES.Provisioning does for SQLite. Design-time only; not part of
+       ERP-MES.sln and never shipped. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ERP.MES.Infrastructure.SqlServer\ERP.MES.Infrastructure.SqlServer.csproj" />
+  </ItemGroup>
+
+</Project>

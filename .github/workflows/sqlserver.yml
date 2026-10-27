@@ -19,6 +19,7 @@ concurrency:
 
 jobs:
   sqlserver:
+    if: ${{ github.event_name != 'workflow_dispatch' }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
@@ -94,3 +95,37 @@ jobs:
       - name: Stop SQL Server
         if: ${{ always() }}
         run: docker rm -f mssql || true
+
+  # Manual only (workflow_dispatch): generates the SQL Server migrations with the pinned dotnet-ef and prints them as a gzip+base64 block between markers, so that they can be committed
+  # without a developer machine that can reach the provider package (docs/SQL_SERVER_PASS.md). Nothing is committed or pushed by this job.
+  generate-migrations:
+    if: ${{ github.event_name == 'workflow_dispatch' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up .NET SDK from global.json
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: global.json
+
+      - name: Restore local .NET tools
+        run: dotnet tool restore
+
+      - name: Generate the SQL Server migration
+        run: |
+          dotnet ef migrations add InitialSqlServer --project src/ERP.MES.Infrastructure.SqlServer --startup-project src/ERP.MES.Infrastructure.SqlServer.Design --context ErpMesDbContext --output-dir Migrations
+          ls -la src/ERP.MES.Infrastructure.SqlServer/Migrations
+
+      - name: Print the migration files (gzip + base64)
+        run: |
+          tar czf migrations.tgz -C src/ERP.MES.Infrastructure.SqlServer Migrations
+          ls -la migrations.tgz
+          echo "BEGIN_MIGRATIONS_B64"
+          base64 -w 0 migrations.tgz
+          echo
+          echo "END_MIGRATIONS_B64"
