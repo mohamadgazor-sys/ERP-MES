@@ -1,6 +1,6 @@
 # Work sessions, dispatch and actual time — design (owner direction of 2026-10-27)
 
-Status: phases 10b-10f of the delivery sequence. Decision Log #111 (item-scoped contract) and #112 (this model). Everything marked **labelled default** is a recommendation that the owner may change; it is not an approved business rule.
+Status: implemented in phases 10a-10f (Decision Log #111-#115, #116); the WPF window is compiled and its view model is tested but has not been run by a person on Windows. Decision Log #111 (item-scoped contract) and #112 (this model). Everything marked **labelled default** is a recommendation that the owner may change; it is not an approved business rule.
 
 ## 1. Review of the merged implementation (what is reused, what is new)
 

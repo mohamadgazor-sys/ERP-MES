@@ -2112,3 +2112,32 @@ Append one dated entry after every substantial session. Do not replace prior ent
 
 ### Recommended exact next action
 - Merge after CI; then final status for the owner (9d needs approval).
+
+---
+
+### Date / session
+- Date: 2026-10-27
+- Claude Code session ID (if useful): session_01UwqjPjBXLd2apjZb2urjds (owner work-session requirements, phases 10a-10f)
+
+### Goal
+- Implement the owner's requirements: per-unit queues with explicit reasons, supervisor dispatch, individual work sessions with pauses, actual-time metrics and costing, item-scoped contract decisions, UI, end-to-end acceptance, SQL Server pass.
+
+### Completed
+- 10a item-scoped contract decision (PR 54); 10b+10c work sessions and use cases (PR 55); 10d metrics/costing/KPI and 10e work board (PR 56); 10f demo, E2E, docs (this PR). See Decision Log #111-#117 and `docs/WORK_SESSIONS_DESIGN.md`.
+
+### Decisions newly approved
+- None by the owner after the requirement message. The owner pre-authorized resolving the item-scoped contract conflict; the labelled defaults of #111-#117 (time approval by Planning, outside-shift reason, operator self-service on own sessions, exact handover only, sessions-or-reports per stage, rounding per machine-day, no labour cost) await confirmation: `docs/WORK_SESSIONS_DESIGN.md` section 7.
+
+### Changed files
+- Domain Production/Contracts/Costing; Application Production/Requests/Costing/Reporting; Infrastructure persistence, migrations AddItemContractDecisions, AddWorkSessions, AddSessionCostLines; Desktop WorkBoard + Contracts; demo seed; tests; docs.
+
+### Unresolved questions / risks
+- The WPF windows (work board, contracts item grid) have not been run on Windows.
+- Legacy whole-stage Start and daily job reports remain for stages without sessions; retiring them is an owner decision.
+- SQL Server: see Decision Log #117 for the exact status.
+
+### Commands/tests actually run and results
+- Per PR: local `dotnet test` (Domain, Application, Infrastructure, Desktop LocalLinux) and the Windows CI totals reported in each pull request.
+
+### Recommended exact next action
+- Owner: walk through `docs/DEMO_WALKTHROUGH.md` on Windows, run checklist Y, answer `docs/WORK_SESSIONS_DESIGN.md` section 7, and confirm the SQL Server instance for the integration pass.

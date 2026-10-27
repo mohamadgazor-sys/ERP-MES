@@ -8,7 +8,7 @@ using ERP.MES.Domain.Scheduling;
 namespace ERP.MES.Infrastructure.Demo;
 
 /// <summary>The demonstration accounts the master data is attributed to (real users; the platform's authorization still refuses them until their one-time password is replaced).</summary>
-public sealed record DemoMasterActors(long PlanningUserId, long WarehouseUserId, long ProductionUserId);
+public sealed record DemoMasterActors(long PlanningUserId, long WarehouseUserId, long ProductionUserId, long SupervisorUserId);
 
 /// <summary>What one master-data seeding run did. Running it again on a seeded database adds nothing.</summary>
 public sealed record DemoMasterSummary(int Added, int Existing);
@@ -120,12 +120,13 @@ public sealed class DemoMasterDataSeeder(
         }
 
         var person = (await operators.ListOperatorsAsync(cancellationToken)).FirstOrDefault(o => string.Equals(o.Value.Code, OperatorCode, StringComparison.Ordinal));
+        var operatorId = person?.Value.Id;
         if (person is null)
         {
-            await operators.AddOperatorAsync(
+            operatorId = (await operators.AddOperatorAsync(
                 new Operator(0, OperatorCode, "اپراتور نمونه " + DemoDataSeeder.DemoNameSuffix, actors.ProductionUserId, actors.PlanningUserId, atUtc),
                 [Audit(actors.PlanningUserId, AuditActions.OperatorRegistered, "Operator", OperatorCode, $"Operator {OperatorCode} registered and linked to the demonstration production account")],
-                cancellationToken);
+                cancellationToken)).Value.Id;
         }
 
         Count(person is not null);
@@ -138,6 +139,63 @@ public sealed class DemoMasterDataSeeder(
             await unitQueue.AssignDesignationAsync(
                 actors.ProductionUserId, units[MillingCode], actors.PlanningUserId, atUtc,
                 Audit(actors.PlanningUserId, AuditActions.UnitDesignationAssigned, "UserUnitDesignation", $"{actors.ProductionUserId}/{MillingCode}", "The demonstration production account designated to the milling unit"),
+                cancellationToken);
+            Count(false);
+        }
+
+        // The work-session demonstration (docs/DEMO_WALKTHROUGH.md): the operator is assigned to and qualified on the milling machine, and a separate demonstration account is the milling unit's supervisor, who
+        // dispatches. The supervisor is a demonstration choice; who supervises a real unit is the owner's data. The worker schedule stays empty (Planning schedules the day, or the supervisor records the reason).
+        var milling = units[MillingCode];
+        var machine = (await planning.ListMachinesAsync(cancellationToken)).First(m => string.Equals(m.Value.Code, "FCC-06", StringComparison.Ordinal)).Value.Id;
+        if ((await operators.ListAssignmentsAsync(cancellationToken)).Any(a => a.Value.OperatorId == operatorId && a.Value.MachineId == machine))
+        {
+            Count(true);
+        }
+        else
+        {
+            await operators.AddAssignmentAsync(
+                new OperatorMachineAssignment(0, operatorId!.Value, machine, effectiveFrom, true, "تخصیص نمونه", actors.PlanningUserId, atUtc),
+                [Audit(actors.PlanningUserId, AuditActions.OperatorMachineAssigned, "OperatorMachineAssignment", $"{OperatorCode}/FCC-06", "Operator OP-DEMO assigned to FCC-06 (demonstration)")],
+                cancellationToken);
+            Count(false);
+        }
+
+        if ((await operators.ListQualificationsAsync(cancellationToken)).Any(q => q.Value.OperatorId == operatorId && q.Value.MachineId == machine))
+        {
+            Count(true);
+        }
+        else
+        {
+            await operators.AddQualificationAsync(
+                new OperatorMachineQualification(0, operatorId!.Value, machine, effectiveFrom, "صلاحیت نمونه", actors.PlanningUserId, atUtc),
+                [Audit(actors.PlanningUserId, AuditActions.OperatorQualificationRecorded, "OperatorMachineQualification", $"{OperatorCode}/FCC-06", "Operator OP-DEMO qualified on FCC-06 (demonstration)")],
+                cancellationToken);
+            Count(false);
+        }
+
+        var supervisorRow = (await unitQueue.ListDesignationsAsync(cancellationToken)).FirstOrDefault(d => d.Value.IsActive && d.Value.UserId == actors.SupervisorUserId && d.Value.ProductionUnitId == milling);
+        if (supervisorRow is null)
+        {
+            supervisorRow = await unitQueue.AssignDesignationAsync(
+                actors.SupervisorUserId, milling, actors.PlanningUserId, atUtc,
+                Audit(actors.PlanningUserId, AuditActions.UnitDesignationAssigned, "UserUnitDesignation", $"{actors.SupervisorUserId}/{MillingCode}", "The demonstration supervisor account designated to the milling unit"),
+                cancellationToken);
+            Count(false);
+        }
+        else
+        {
+            Count(true);
+        }
+
+        if (supervisorRow.Value.IsSupervisor)
+        {
+            Count(true);
+        }
+        else
+        {
+            await unitQueue.SetSupervisorAsync(
+                supervisorRow.Value.Id, supervisorRow.Version, true,
+                Audit(actors.PlanningUserId, AuditActions.UnitSupervisorChanged, "UserUnitDesignation", $"{actors.SupervisorUserId}/{MillingCode}", "The demonstration supervisor account marked as supervisor of the milling unit"),
                 cancellationToken);
             Count(false);
         }
