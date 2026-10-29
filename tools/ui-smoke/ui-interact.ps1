@@ -458,10 +458,10 @@ try {
     Fill 'OutsideBox' 'کار خارج از شیفت برای آزمون رابط'
     Click-Btn 'تخصیص و شروع'
     Start-Sleep -Seconds 3
-    $sessionGrid = Find-ById $script:Main 'SessionGrid' 5
-    $sessions = if ($sessionGrid) { @(Get-GridRows $sessionGrid) } else { @() }
-    Check ($sessions.Count -ge 1) 'PRODUCTION SESSION: the supervisor dispatched the stage to a machine of the unit and an operator, and a work session appears' ("no session row; screen: $(Screen-Texts 50)")
-    if ($sessions.Count -ge 1) { Note ('  session row: ' + $sessions[0].Joined) }
+    $stageNow = Get-RowText (Find-ById $script:Main 'StageGrid' 5) 'UI.1'
+    Note ('  stage row after dispatch: ' + $stageNow)
+    Check ($stageNow -like '*در حال اجرا*' -and $stageNow -like '*فعال ۱*') 'PRODUCTION SESSION: the supervisor dispatched the stage to machine FCC-06 and an operator; the stage is "in progress" with one active session' ("session not started; stage row: $stageNow; screen: $(Screen-Texts 50)")
+    Check ((Screen-Texts 60) -like '*نوبت کاری ثبت و شروع شد*') 'the screen confirms: work session recorded and started' 'no confirmation message'
     Save-Shot 'interact-9-session-started'
     Sign-Out
 
@@ -470,11 +470,14 @@ try {
     Open-Page 'نوبت‌های کاری'
     Pick-Combo 'UnitBox' 'فرزکاری' | Out-Null
     Start-Sleep -Seconds 2
+    Save-Shot 'interact-10-operator-board'
+    $mineRows = @(Get-GridRows $script:Main | Where-Object { $_.Joined -like '*UI.1*' -and $_.Joined -like '*فعال*' })
+    Note ('  rows with UI.1 and active: ' + $mineRows.Count + ' ; MineGrid present: ' + [bool](Find-ById $script:Main 'MineGrid' 2))
     $mine = Find-ById $script:Main 'MineGrid' 5
-    $mineRows = if ($mine) { @(Get-GridRows $mine) } else { @() }
-    Check ($mineRows.Count -ge 1) 'the operator sees the session in "my sessions"' ("operator sees no session; screen: $(Screen-Texts 50)")
-    if ($mineRows.Count -ge 1) {
-        Select-Item $mineRows[0].Element; Start-Sleep -Milliseconds 600
+    $mineOnly = if ($mine) { @(Get-GridRows $mine) } else { @() }
+    Check ($mineOnly.Count -ge 1) 'the operator sees the session in "my sessions"' ("operator sees no session in MineGrid; screen: $(Screen-Texts 70)")
+    if ($mineOnly.Count -ge 1) {
+        Select-Item $mineOnly[0].Element; Start-Sleep -Milliseconds 600
         Pick-Combo 'ReasonBox' $null | Out-Null
         Click-Btn 'توقف…'
         $okPause = Dialog-Ok 'توقف نوبت'
@@ -491,8 +494,8 @@ try {
         $stageAfter = Get-RowText (Find-ById $script:Main 'StageGrid' 5) 'UI.1'
         Note ('  stage after the QC attempt: ' + $stageAfter)
         Check ($stageAfter -notlike '*در انتظار کنترل کیفیت*') 'PREMATURE ACTION: submitting the stage to QC is refused while the work session is open (the stage did not move to "waiting for QC")' "stage moved to QC: $stageAfter"
-        Note ('  messages: ' + (Screen-Texts 30))
-        Save-Shot 'interact-10-qc-blocked'
+        Note ('  messages: ' + (Screen-Texts 12))
+        Save-Shot 'interact-11-qc-blocked'
     }
     Sign-Out
 

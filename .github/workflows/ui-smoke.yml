@@ -75,5 +75,5 @@ jobs:
       - name: Print selected screenshots (fictional data) into the log
         if: ${{ always() }}
         shell: pwsh
-        run: ./tools/ui-smoke/Print-Screenshots.ps1 -Names 'interact-1-central-requests','interact-2-management-approved','interact-3-drawing','interact-4-contract-items','interact-6-item-and-stage','interact-7-release-refused','interact-8-released','interact-9-session-started','interact-10-qc-blocked','interact-5-management-contracts','interact-error'
+        run: ./tools/ui-smoke/Print-Screenshots.ps1 -Names 'interact-1-central-requests','interact-2-management-approved','interact-3-drawing','interact-4-contract-items','interact-6-item-and-stage','interact-7-release-refused','interact-8-released','interact-9-session-started','interact-10-operator-board','interact-11-qc-blocked','interact-5-management-contracts','interact-error'
 
