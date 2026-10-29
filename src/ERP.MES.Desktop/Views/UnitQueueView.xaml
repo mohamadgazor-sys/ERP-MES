@@ -4,6 +4,7 @@
              xmlns:vm="clr-namespace:ERP.MES.Desktop.ViewModels"
              Loaded="OnLoaded">
     <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
         <Style x:Key="MessageStyle" TargetType="TextBlock">
             <Setter Property="TextWrapping" Value="Wrap" />
             <Setter Property="FontWeight" Value="SemiBold" />
