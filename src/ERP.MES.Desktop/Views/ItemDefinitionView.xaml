@@ -16,7 +16,7 @@
             <DataGrid ItemsSource="{Binding Requests}" SelectedItem="{Binding SelectedRequest, Mode=TwoWay}" SelectionChanged="OnRequestSelected" AutoGenerateColumns="False" IsReadOnly="True"
                       SelectionMode="Single" HeadersVisibility="Column" CanUserAddRows="False" CanUserDeleteRows="False" MaxHeight="200" Background="{StaticResource CardBrush}">
                 <DataGrid.Columns>
-                    <DataGridTextColumn Header="شمارهٔ درخواست" Binding="{Binding RequestNo}" Width="140" />
+                    <DataGridTextColumn Header="شمارهٔ درخواست" Binding="{Binding RequestNo}" ElementStyle="{StaticResource LtrCell}" Width="140" />
                     <DataGridTextColumn Header="مشتری" Binding="{Binding CustomerName}" Width="*" />
                     <DataGridTextColumn Header="نوع کار" Binding="{Binding WorkTypeText}" Width="80" />
                     <DataGridTextColumn Header="وضعیت" Binding="{Binding StatusText}" Width="*" />
@@ -32,7 +32,7 @@
                 <DataGrid ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedItem, Mode=TwoWay}" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single"
                           HeadersVisibility="Column" CanUserAddRows="False" CanUserDeleteRows="False" MaxHeight="200" Background="{StaticResource CardBrush}">
                     <DataGrid.Columns>
-                        <DataGridTextColumn Header="شمارهٔ آیتم" Binding="{Binding ItemNo}" Width="110" />
+                        <DataGridTextColumn Header="شمارهٔ آیتم" Binding="{Binding ItemNo}" ElementStyle="{StaticResource LtrCell}" Width="110" />
                         <DataGridTextColumn Header="نام قطعه" Binding="{Binding PartName}" Width="*" />
                         <DataGridTextColumn Header="تعداد" Binding="{Binding QuantityText}" Width="80" />
                         <DataGridTextColumn Header="مشخصات" Binding="{Binding SpecificationText}" Width="2*" />

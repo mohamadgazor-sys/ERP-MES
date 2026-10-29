@@ -97,17 +97,31 @@ function Count-Type($parent, $controlType) {
 function Save-Screenshot([string] $name) {
     try {
         Add-Type -AssemblyName System.Drawing
-        $bounds = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
-        $bitmap = New-Object System.Drawing.Bitmap($bounds.Width, $bounds.Height)
+        $screen = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
+        # Crop to the application's window (not the whole runner desktop, which also shows the CI agent console).
+        $rect = $screen
+        $pidNow = $null
+        if (Get-Variable -Name Process -Scope Script -ErrorAction SilentlyContinue) { if ($script:Process) { $pidNow = $script:Process.Id } }
+        if (-not $pidNow -and (Get-Variable -Name ShotPid -Scope Script -ErrorAction SilentlyContinue)) { $pidNow = $script:ShotPid }
+        if ($pidNow) {
+            $w = $AE::RootElement.FindFirst($Scope::Children, (New-Object System.Windows.Automation.PropertyCondition($AE::ProcessIdProperty, $pidNow)))
+            if ($w) {
+                $b = $w.Current.BoundingRectangle
+                $x = [int][Math]::Max(0, $b.X); $y = [int][Math]::Max(0, $b.Y)
+                $wd = [int][Math]::Min($screen.Width - $x, $b.Width); $ht = [int][Math]::Min($screen.Height - $y, $b.Height)
+                if ($wd -gt 100 -and $ht -gt 100) { $rect = New-Object System.Drawing.Rectangle($x, $y, $wd, $ht) }
+            }
+        }
+        $bitmap = New-Object System.Drawing.Bitmap($rect.Width, $rect.Height)
         $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
-        $graphics.CopyFromScreen($bounds.Location, [System.Drawing.Point]::Empty, $bounds.Size)
-        $factor = [Math]::Min(1.0, 1100.0 / $bounds.Width)
-        $scaled = New-Object System.Drawing.Bitmap($bitmap, [int]($bounds.Width * $factor), [int]($bounds.Height * $factor))
+        $graphics.CopyFromScreen($rect.Location, [System.Drawing.Point]::Empty, $rect.Size)
+        $factor = [Math]::Min(1.0, 1100.0 / $rect.Width)
+        $scaled = New-Object System.Drawing.Bitmap($bitmap, [int]($rect.Width * $factor), [int]($rect.Height * $factor))
         $dir = Join-Path $env:RUNNER_TEMP 'ui-smoke-screens'
         New-Item -ItemType Directory -Force -Path $dir | Out-Null
         $codec = [System.Drawing.Imaging.ImageCodecInfo]::GetImageEncoders() | Where-Object { $_.MimeType -eq 'image/jpeg' } | Select-Object -First 1
         $parameters = New-Object System.Drawing.Imaging.EncoderParameters(1)
-        $parameters.Param[0] = New-Object System.Drawing.Imaging.EncoderParameter([System.Drawing.Imaging.Encoder]::Quality, [long]55)
+        $parameters.Param[0] = New-Object System.Drawing.Imaging.EncoderParameter([System.Drawing.Imaging.Encoder]::Quality, [long]60)
         $scaled.Save((Join-Path $dir "$name.jpg"), $codec, $parameters)
         $graphics.Dispose(); $bitmap.Dispose(); $scaled.Dispose()
     } catch { Note "(screenshot $name not taken: $($_.Exception.Message))" }

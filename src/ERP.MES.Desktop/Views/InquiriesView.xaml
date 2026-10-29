@@ -16,7 +16,7 @@
             <DataGrid ItemsSource="{Binding Requests}" SelectedItem="{Binding SelectedRequest, Mode=TwoWay}" SelectionChanged="OnRequestSelected" AutoGenerateColumns="False" IsReadOnly="True"
                       SelectionMode="Single" HeadersVisibility="Column" CanUserAddRows="False" CanUserDeleteRows="False" MaxHeight="180" Background="{StaticResource CardBrush}">
                 <DataGrid.Columns>
-                    <DataGridTextColumn Header="شمارهٔ درخواست" Binding="{Binding RequestNo}" Width="140" />
+                    <DataGridTextColumn Header="شمارهٔ درخواست" Binding="{Binding RequestNo}" ElementStyle="{StaticResource LtrCell}" Width="140" />
                     <DataGridTextColumn Header="مشتری" Binding="{Binding CustomerName}" Width="*" />
                     <DataGridTextColumn Header="وضعیت درخواست" Binding="{Binding RequestStatusText}" Width="*" />
                     <DataGridTextColumn Header="استعلام" Binding="{Binding InquiryText}" Width="*" />

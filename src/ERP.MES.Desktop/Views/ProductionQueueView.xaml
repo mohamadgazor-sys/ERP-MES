@@ -29,10 +29,10 @@
                   Visibility="{Binding ShowRows, Converter={StaticResource BoolToVisibility}}">
             <DataGrid.Columns>
                 <DataGridTextColumn Header="ردیف" Binding="{Binding Position}" Width="50" />
-                <DataGridTextColumn Header="شمارهٔ درخواست" Binding="{Binding RequestNo}" Width="120" />
+                <DataGridTextColumn Header="شمارهٔ درخواست" Binding="{Binding RequestNo}" ElementStyle="{StaticResource LtrCell}" Width="120" />
                 <DataGridTextColumn Header="مشتری" Binding="{Binding CustomerName}" Width="140" />
                 <DataGridTextColumn Header="وضعیت درخواست" Binding="{Binding RequestStatusText}" Width="150" />
-                <DataGridTextColumn Header="شمارهٔ آیتم" Binding="{Binding ItemNo}" Width="90" />
+                <DataGridTextColumn Header="شمارهٔ آیتم" Binding="{Binding ItemNo}" ElementStyle="{StaticResource LtrCell}" Width="90" />
                 <DataGridTextColumn Header="نام قطعه" Binding="{Binding PartName}" Width="140" />
                 <DataGridTextColumn Header="نوع کار" Binding="{Binding WorkTypeText}" Width="70" />
                 <DataGridTextColumn Header="تعداد" Binding="{Binding QuantityText}" Width="70" />

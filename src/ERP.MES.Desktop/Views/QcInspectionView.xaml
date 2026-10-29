@@ -25,8 +25,8 @@
             <DataGrid x:Name="Grid" ItemsSource="{Binding Rows}" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single" HeadersVisibility="Column" CanUserAddRows="False"
                       MaxHeight="300" Background="{StaticResource CardBrush}" SelectionChanged="OnSelectionChanged">
                 <DataGrid.Columns>
-                    <DataGridTextColumn Header="درخواست" Binding="{Binding RequestNo}" Width="90" />
-                    <DataGridTextColumn Header="آیتم" Binding="{Binding ItemNo}" Width="80" />
+                    <DataGridTextColumn Header="درخواست" Binding="{Binding RequestNo}" ElementStyle="{StaticResource LtrCell}" Width="90" />
+                    <DataGridTextColumn Header="آیتم" Binding="{Binding ItemNo}" ElementStyle="{StaticResource LtrCell}" Width="80" />
                     <DataGridTextColumn Header="قطعه" Binding="{Binding PartName}" Width="*" />
                     <DataGridTextColumn Header="مرحله" Binding="{Binding StageText}" Width="*" />
                     <DataGridTextColumn Header="وضعیت" Binding="{Binding StatusText}" Width="*" />

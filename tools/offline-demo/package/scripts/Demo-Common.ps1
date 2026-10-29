@@ -37,7 +37,7 @@ function Get-WindowsFacts {
     $build = [int]$key.CurrentBuildNumber
     $display = ''
     if ($key.PSObject.Properties.Name -contains 'DisplayVersion') { $display = [string]$key.DisplayVersion } elseif ($key.PSObject.Properties.Name -contains 'ReleaseId') { $display = [string]$key.ReleaseId }
-    $name = if ($build -ge 22000) { 'Windows 11' } else { [string]$key.ProductName }
+    $name = if ($key.PSObject.Properties.Name -contains 'InstallationType' -and $key.InstallationType -eq 'Server') { [string]$key.ProductName } elseif ($build -ge 22000) { 'Windows 11' } else { [string]$key.ProductName }
     return [pscustomobject]@{ Name = $name; Display = $display; Build = $build; Ubr = $key.UBR; Is64 = [Environment]::Is64BitOperatingSystem; Arch = $env:PROCESSOR_ARCHITECTURE }
 }
 
@@ -49,6 +49,7 @@ function Test-DemoPreflight {
     $os = Get-WindowsFacts
     $osText = '{0} {1} (build {2}.{3}), {4}' -f $os.Name, $os.Display, $os.Build, $os.Ubr, $(if ($os.Is64) { '64-bit' } else { '32-bit' })
     if (-not $os.Is64) { Add 'FAIL' ('This package is for 64-bit (x64) Windows. This computer: ' + $osText) }
+    elseif ($os.Name -like '*Server*') { Add 'WARN' ('This is ' + $osText + ' (a Windows Server edition, used for automated testing). The demo is meant for Windows 11 client; it runs here, but check it on the real presentation computer.') }
     elseif ($os.Build -ge 26100) { Add 'OK' ('Windows version ' + $osText + ' - listed by Microsoft as supported for .NET 10 (Windows 11 24H2 or newer).') }
     elseif ($os.Build -eq 22631) { Add 'WARN' ('Windows version ' + $osText + ' - Windows 11 23H2: .NET 10 lists it only for Enterprise/Education editions and Microsoft ended Home/Pro servicing. It is likely to work but is not an officially supported combination for Home/Pro. Prefer upgrading to 24H2 or newer before the presentation.') }
     elseif ($os.Build -ge 22000) { Add 'WARN' ('Windows version ' + $osText + ' - this Windows 11 version is NOT in the .NET 10 supported list (22H2 is out of Microsoft servicing). The demo may still run, but it is not officially supported: upgrade to Windows 11 24H2 or newer before the presentation and run Check-Demo again.') }
