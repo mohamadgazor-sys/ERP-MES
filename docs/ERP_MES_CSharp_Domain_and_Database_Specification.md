@@ -1618,6 +1618,8 @@ The following should be enforced by the application/domain layer and, where prac
 14. Queue overrides require user, timestamp, old order/priority, new order/priority, and reason.
 15. A required contract blocks production until approved.
 16. Contract requirement applies to the entire request.
+
+> **Superseded/clarified (2026-10-27, Decision Log #111; recorded 2026-10-29):** the contract DOCUMENT and its approval stay request-level, but the contract DECISION and the production gate are evaluated per item (append-only `ItemContractDecisions`; an item with no decision follows the request).
 17. Contract rejection follows correct-and-resubmit.
 18. Warehouse inquiry does not deduct inventory.
 19. Final warehouse receipt is distinct from external return-to-QC.

@@ -2,6 +2,8 @@
 
 Approved in Decision Log #50 as the check for the shell until a UI-automation approach is chosen. Windows CI proves the application **builds** and the unit tests pass; it cannot show how the screens look. Run this list on a Windows 10 or 11 machine with a CI-built or locally built application and report what you see (a screenshot per failed item helps).
 
+**Automation status (2026-10-29):** the workflow `UI smoke` (`docs/UI_SMOKE.md`) launches the real application on a Windows runner, signs in, replaces the one-time password and opens all 23 navigation pages for three accounts, asserting the page headings and the seeded row counts. That covers the *opening* of every screen in sections A-Y (it found and fixed a page that could not be opened). It does **not** cover appearance, right-to-left rendering, DPI, or any button click; those rows below still need a person. Nothing on this list was run by a person.
+
 **Status:** the list covers the shell of PR "Demo shell and navigation". It grows with each screen. Nothing on it has been run by me; I cannot run WPF in my environment.
 
 ## A. Shell and navigation (this change)

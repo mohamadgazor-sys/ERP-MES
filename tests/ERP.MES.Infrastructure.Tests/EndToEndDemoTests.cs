@@ -172,4 +172,90 @@ public class EndToEndDemoTests
         Assert.Equal(0, Count(db, "OvertimeLimits")); // the owner-decision settings stay empty until Planning configures them
         Assert.Equal(0, Count(db, "DailyJobReports")); // the stage is tracked by its session, not by a job report
     }
+
+    [Fact]
+    public async Task Two_items_of_one_contract_request_carry_different_decisions_and_neither_gates_the_other_through_the_unit_queue()
+    {
+        using var db = new TempDatabase();
+        var dates = PersistenceTestData.Dates;
+        var result = await DemoDatabase.InitializeAsync(db.Path, dates, db.NextCredentialPath(), SecurityFixture.FastPolicy, Token);
+        var credentials = ReadCredentials(result.CredentialFile!);
+        var security = SecurityServices.Create(db.ContextFactory, SecurityFixture.FastPolicy, hasher: new LowCostHasher());
+        var clock = new FakeClock { UtcNow = new DateTime(2026, 10, 24, 7, 30, 0, DateTimeKind.Utc) };
+        var w = WorkflowServices.Create(db.ContextFactory, security.Authorization, dates, clock);
+        var central = await SignedInAsync(security, "demo.central", credentials["demo.central"]);
+        var manager = await SignedInAsync(security, "demo.management", credentials["demo.management"]);
+        var planning = await SignedInAsync(security, "demo.planning", credentials["demo.planning"]);
+        var drawing = await SignedInAsync(security, "demo.drawing", credentials["demo.drawing"]);
+        var qc = await SignedInAsync(security, "demo.qc", credentials["demo.qc"]);
+        var warehouse = await SignedInAsync(security, "demo.warehouse", credentials["demo.warehouse"]);
+        var supervisor = await SignedInAsync(security, "demo.supervisor", credentials["demo.supervisor"]);
+
+        // A request through Management and Drawing; Planning requires a contract for the request and submits it, but Management has NOT approved it yet.
+        var customer = (await w.Customers.CreateAsync(central, "مشتری آزمون قرارداد هر آیتم", Token)).Value!;
+        var created = (await w.Requests.CreateAsync(central, new CreateRequestCommand(customer.Value.Id, "E2E-2", WorkType.Make, "1405/08/01", null, null), Token)).Value!;
+        var withPdf = (await w.Documents.AttachRequestPdfAsync(central, created.Value.Id, created.Version, "request.pdf", Pdf("request"), Token)).Value!;
+        var sent = (await w.Requests.SubmitToManagementAsync(central, withPdf.Value.Id, withPdf.Version, Token)).Value!;
+        var approved = (await w.Lifecycle.ApproveAsync(manager, sent.Value.Id, sent.Version, Token)).Value!;
+        var forwarded = (await w.Lifecycle.ForwardToDrawingAsync(planning, approved.Value.Id, approved.Version, Token)).Value!;
+        Assert.True((await w.Lifecycle.RecordDrawingResultAsync(drawing, forwarded.Value.Id, forwarded.Version, DrawingOutcome.FullyAccepted, null, Token)).Succeeded);
+        var requestId = created.Value.Id;
+        var decided = (await w.Contracts.DecideRequirementAsync(planning, requestId, ContractRequirement.Required, null, Token)).Value!;
+        var draft = (await w.Contracts.SaveDraftAsync(planning, requestId, decided.Version, "CN-E2E-2", "1405/08/02", "قرارداد آزمون", null, Token)).Value!;
+        var contractPdf = (await w.Contracts.AttachPdfAsync(planning, requestId, draft.Version, "contract.pdf", Pdf("contract"), Token)).Value!;
+        var contractSent = (await w.Contracts.SubmitAsync(planning, requestId, contractPdf.Version, Token)).Value!;
+
+        // Two items, one stage each in the milling unit (items may be defined while the contract waits for Management).
+        var piece = (await w.QcMaster.LoadAsync(qc, Token)).Value!.QuantityTypes.First(t => t.Value.Code == "PIECE").Value.Id;
+        var material = (await w.Materials.LoadAsync(warehouse, Token)).Value!.Materials.Single(m => m.Value.Code == "ST37-R30").Value.Id;
+        var milling = (await w.PlanningMaster.LoadAsync(planning, Token)).Value!.Units.Single(u => u.Value.Code == "MILLING").Value.Id;
+        var ids = new Dictionary<string, long>();
+        foreach (var itemNo in new[] { "E2E2.10", "E2E2.20" })
+        {
+            var version = (await w.Requests.GetAsync(planning, requestId, Token)).Value!.Request.Version;
+            var defined = await w.ItemDefinition.DefineItemAsync(planning, requestId, version, new DefineItemCommand(itemNo, "قطعه " + itemNo, 5m, Priority.Normal, piece, material, 1m, null, null), Token);
+            Assert.True(defined.Succeeded, defined.Status + " " + defined.Issue);
+            var itemId = defined.Value!.Value.Items.Single(i => i.ItemNo == itemNo).Id;
+            var current = (await w.Requests.GetAsync(planning, requestId, Token)).Value!;
+            var staged = await w.ItemDefinition.DefineStageAsync(planning, requestId, current.Request.Version, itemId, current.Versions.ItemVersion(itemId), new DefineStageCommand("فرزکاری", 2m, milling, null), Token);
+            Assert.True(staged.Succeeded, staged.Status + " " + staged.Issue);
+            ids[itemNo] = itemId;
+        }
+
+        async Task<StageTarget> TargetAsync(long itemId)
+        {
+            var latest = (await w.Requests.GetAsync(planning, requestId, Token)).Value!;
+            return new StageTarget(requestId, itemId, 1, latest.Request.Version, latest.Versions.ItemVersion(itemId), latest.Versions.Stages.Where(s => s.Key.ItemId == itemId).ToDictionary(s => s.Key.StageNo, s => s.Value));
+        }
+
+        // Planning decides that the first item does not need the contract; the second follows the request (decision: required).
+        var free = ids["E2E2.10"];
+        var held = ids["E2E2.20"];
+        Assert.True((await w.Contracts.DecideItemAsync(planning, requestId, free, ContractRequirement.NotRequired, "قطعه بدون قرارداد", Token)).Succeeded);
+
+        // Gates: the free item is released; the held item is refused for the unapproved contract, and the unit queue shows only the free one, actionable.
+        Assert.True((await w.StageWork.PerformAsync(planning, StageAction.Release, await TargetAsync(free), Token)).Succeeded);
+        var refused = await w.StageWork.PerformAsync(planning, StageAction.Release, await TargetAsync(held), Token);
+        Assert.False(refused.Succeeded);
+        Assert.Equal(ValidationIssue.StageGateNotSatisfied, refused.Issue);
+        var queue = (await w.UnitQueue.LoadAsync(supervisor, milling, Token)).Value!;
+        var freeEntry = Assert.Single(queue.Queue, e => e.RequestNo == "E2E-2" && e.ItemNo == "E2E2.10");
+        Assert.True(freeEntry.IsActionable);
+        Assert.DoesNotContain(queue.Queue, e => e.ItemNo == "E2E2.20"); // not released, so it is not in any unit queue yet
+
+        // Decisions after release are refused for the released item; the history keeps one append-only row, and the held item still cannot be marked "not required" by anyone but Planning.
+        Assert.Equal(ValidationIssue.ItemContractInProduction, (await w.Contracts.DecideItemAsync(planning, requestId, free, ContractRequirement.Required, "تغییر نظر", Token)).Issue);
+        Assert.False((await w.Contracts.DecideItemAsync(manager, requestId, held, ContractRequirement.NotRequired, "مدیریت", Token)).Succeeded);
+        Assert.Equal(1, Count(db, "ItemContractDecisions"));
+
+        // Management approves the request's contract: now the held item may be released too, and both are actionable in the queue.
+        var contractNow = (await w.Contracts.GetAsync(manager, requestId, Token)).Value!.Contract!;
+        var contractApproved = await w.Contracts.ApproveAsync(manager, requestId, contractNow.Version, null, Token);
+        Assert.True(contractApproved.Succeeded, contractApproved.Status + " " + contractApproved.Issue);
+        var releasedHeld = await w.StageWork.PerformAsync(planning, StageAction.Release, await TargetAsync(held), Token);
+        Assert.True(releasedHeld.Succeeded, releasedHeld.Status + " " + releasedHeld.Issue);
+        queue = (await w.UnitQueue.LoadAsync(supervisor, milling, Token)).Value!;
+        Assert.All(queue.Queue.Where(e => e.RequestNo == "E2E-2"), e => Assert.True(e.IsActionable));
+        Assert.Equal(2, queue.Queue.Count(e => e.RequestNo == "E2E-2"));
+    }
 }

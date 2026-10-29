@@ -13,7 +13,7 @@
 | A1 | #103 (D5) | Overtime limits: how many minutes per operator per day and per week? | None configured; overtime cannot be approved until Planning enters them | Planning enters them in the overtime screen; no application change |
 | A2 | #104 (D4) | Where does the contract amount live? Contracts store number, date, title, note and PDF but no amount | Management types the amount and the contract number when it approves the price of a contract item | Add a contract amount that Planning enters and Management approves with the contract; the price screen then proposes it |
 | A3 | #102 (D8) | Who is the supervisor of each production unit? | No unit has one; Planning reviews job reports as a flagged fallback | Planning designates one supervisor per unit in the designation screen |
-| A4 | #108 | SQL Server (phase 9d): approve adding the SQL Server provider package and name an instance for the test pass | Not started; SQLite only | Approve; the pass checks migrations and the whole suite against SQL Server |
+| A4 | #117 | SQL Server: **technical pass done** (provider, committed migration, integration tests against a throw-away SQL Server 2022 container in CI). **Still yours:** which edition/instance is the production database, its collation, backups and connection-string handling, and when the provider package is approved for production | The test pass is green on `main` (3 tests, 0 skipped); production use needs your approval of the instance | Name the instance and edition; nothing else is blocked |
 
 ## B. Business rules I filled with a labelled default
 
@@ -38,10 +38,21 @@
 
 | # | Item |
 |---|---|
-| C1 | Walk through `docs/DEMO_WALKTHROUGH.md` on Windows in the WPF application with the eight demonstration accounts (the automated end-to-end test performs the same steps; no person has done it in the application yet). Report what looks wrong. |
-| C2 | The manual checklist sections O to X in `docs/MANUAL_UI_CHECKLIST.md` (phases 5a to 8) have been covered by automated tests only. |
-| C3 | Decide whether the six `DEMO-` sample requests should be converted to routes in production units with quantity decisions (Decision Log #109 froze them) or removed from the demonstration. |
+| C1 | Walk through `docs/DEMO_WALKTHROUGH.md` on Windows in the WPF application with the nine demonstration accounts (the automated end-to-end test performs the same steps at the service level, and the UI smoke test opens every page of the real application on a Windows runner - `docs/UI_SMOKE.md` - but no person has clicked through the business steps yet). Report what looks wrong. |
+| C2 | The manual checklist sections O to X in `docs/MANUAL_UI_CHECKLIST.md` (phases 5a to 8) have been covered by automated tests only; the pages themselves are opened by the UI smoke test, buttons are not clicked. |
+| C3 | ~~Decide what to do with the six `DEMO-` sample requests~~ **Resolved by Decision Log #118:** the four built on the retired unit-less stages are no longer seeded; two valid pre-approval requests remain. Tell me if you want them back as converted examples. |
 
 ## D. State of the roadmap
 
-Phases 1a to 9c and the test-speed work 9a and 9e are merged (pull requests #37 to #52). Phase 9d (SQL Server pass) waits for A4. The Windows CI job now takes about 17 minutes (it was about 54 minutes before 9a) against a 90-minute limit.
+Phases 1a to 9c, the test-speed work 9a and 9e, the work-session phases 10a to 10g (item-scoped contract decisions, sessions, dispatch, actual-time costing, work board, end-to-end test, SQL Server pass) and the demo-readiness work 11 are merged (pull requests #37 to #59 and later). The SQL Server pass (formerly 9d) is done technically; see A4. The Windows CI job now takes about 17 minutes (it was about 54 minutes before 9a) against a 90-minute limit.
+
+## E. Work sessions: defaults in force that need your decision (`docs/WORK_SESSIONS_DESIGN.md` section 7, Decision Log #112-#116)
+
+| # | Topic | Current default |
+|---|---|---|
+| E1 | Who approves session time | Planning, and never the person who dispatched or started the session |
+| E2 | Legacy `Start` by a plain Production operator for stages tracked by job reports | Allowed until the legacy path is retired |
+| E3 | Overlapping shift handover on one machine | Not allowed; exact handover only |
+| E4 | Labour cost | No labour-cost rule; labour hours are reported separately |
+| E5 | Pause reasons: scopes and which are billable | Pauses are never machine runtime for costing; a missing operator qualification is a warning kept on the session, not a refusal; an operator outside the scheduled shift needs a recorded reason |
+| E6 | The demonstration-only supervisor account `demo.supervisor` | A demonstration choice, not a business decision |

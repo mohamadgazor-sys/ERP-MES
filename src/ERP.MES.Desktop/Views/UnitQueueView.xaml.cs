@@ -19,7 +19,6 @@ public partial class UnitQueueView : UserControl
         _viewModel = viewModel ?? throw new ArgumentNullException(nameof(viewModel));
         InitializeComponent();
         DataContext = _viewModel;
-        Resources.Add("BoolToVisibility", new BooleanToVisibilityConverter());
     }
 
     private async void OnLoaded(object sender, RoutedEventArgs e) => await ReloadAsync();
