@@ -2175,3 +2175,39 @@ Append one dated entry after every substantial session. Do not replace prior ent
 
 ### Recommended exact next action
 - Owner: answer the open rows of `docs/OWNER_REVIEW_PACKET_2.md`; a person walks `docs/DEMO_WALKTHROUGH.md` in the window on Windows and runs the visual rows of `docs/MANUAL_UI_CHECKLIST.md`.
+
+
+---
+
+### Date / session
+- Date: 2026-10-29
+- Claude Code session ID (if useful): session_01UwqjPjBXLd2apjZb2urjds (owner request: finish demo readiness, verify UI interactions, build a fully offline Windows demo)
+
+### Goal
+- Make the SQLite demo presentable without internet, company network or SQL Server: real UI interaction tests, a self-contained win-x64 package with launcher and guide, and an offline proof from the ZIP.
+
+### Completed
+- PR 61 (merged as `e26dec2`): interaction test `tools/ui-smoke/ui-interact.ps1` (30 checks through the real WPF window: sign-in, request approval, item-scoped contract decision, release gating, work session start/pause/resume, refused premature QC and refused unauthorised dispatch, persistence across restart); presentation mode `demo-init --presentation` (one-time passwords replaced via the real services with the demo-only passphrase in `DEMO-ACCOUNTS.txt`); local diagnostic log; right-to-left fixes (Latin codes in cells, window size clamp, outside-shift reason prompt in the work board); offline package builder, launcher/preflight scripts, `docs/OFFLINE_DEMO_GUIDE.md`, from-the-ZIP offline proof; Decision Log #120.
+- Merged this segment: PR 59, PR 60, PR 61.
+
+### Package (built by CI on main `e26dec2`, workflow "Offline demo package")
+- Artifact `erp-mes-offline-demo` (run 40967386791, artifact id 12939485757, 110,519,689 bytes as a GitHub artifact wrapper, kept 30 days). Inside: `ERP-MES-OfflineDemo-2026.10.29-e26dec2-win-x64.zip`, 105.8 MB, SHA-256 `0352db1c87ddd2243b0f6941adf994e8f6d4a9256b1b7237a3b1ba134e5843be`, plus its `.sha256`. 653 files, 239.3 MB unpacked.
+- The ZIP is rebuilt by each run; compare the checksum with the `.sha256` file beside the ZIP, not with this entry, after any rebuild.
+
+### Verified environments (CI only, not Windows 11 client)
+- Windows Server 2025 (build 26100) and Windows Server 2022 (build 20348) GitHub runners: package extracted from the ZIP, .NET and NuGet hidden, firewall rules blocking the package programs (control proves they work), no non-loopback connections, all nine accounts sign in through the UI, reset works, passphrase absent from logs.
+
+### Decisions newly approved
+- None by the owner. #120 is a demo-only engineering decision inside the owner's authorization.
+
+### Unresolved questions / risks
+- Not verified: a real Windows 11 client (22H2 is not on the .NET 10 supported list; 24H2/25H2 recommended), a physically disconnected computer, other DPI or screen sizes, Ctrl+L session lock through the UI, the remaining business buttons through the UI (covered at service level by `EndToEndDemoTests`), antivirus/SmartScreen/AppLocker on the target; the package is not code-signed.
+- Owner decisions still open: `docs/OWNER_REVIEW_PACKET_2.md` sections A, B, E.
+- The company's SQL Server 2008 R2 system was never touched or contacted.
+
+### Commands/tests actually run and results
+- Windows CI `build-test` on the final PR 61 head `c7224ee`: Application 41, Domain 548, Desktop 180, Infrastructure 711 passed, 0 failed.
+- `SQL Server integration`, `UI smoke` (30 interaction checks) and both `Offline demo package` jobs: success on PR 61 head and on main `e26dec2`.
+
+### Recommended exact next action
+- On the presentation computer: run `winver` (expect 24H2 or newer), unzip, run `Check-Demo.cmd`, rehearse once with Wi-Fi off, and check the projector resolution/DPI (`docs/OFFLINE_DEMO_GUIDE.md`).
