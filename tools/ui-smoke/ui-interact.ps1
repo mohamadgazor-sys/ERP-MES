@@ -474,6 +474,7 @@ try {
     $mineRows = @(Get-GridRows $script:Main | Where-Object { $_.Joined -like '*UI.1*' -and $_.Joined -like '*فعال*' })
     Note ('  rows with UI.1 and active: ' + $mineRows.Count + ' ; MineGrid present: ' + [bool](Find-ById $script:Main 'MineGrid' 2))
     $mine = Find-ById $script:Main 'MineGrid' 5
+    if ($mine) { try { $mine.SetFocus() } catch { }; Start-Sleep -Milliseconds 800; $si = $null; if ($mine.TryGetCurrentPattern([System.Windows.Automation.ScrollItemPattern]::Pattern, [ref] $si)) { try { $si.ScrollIntoView() } catch { } }; Start-Sleep -Milliseconds 600; Save-Shot 'interact-10b-mine-scrolled'; Note ('  MineGrid offscreen=' + $mine.Current.IsOffscreen + ' bounds=' + $mine.Current.BoundingRectangle + ' children=' + $mine.FindAll($Scope::Children, [System.Windows.Automation.Condition]::TrueCondition).Count) }
     $mineOnly = if ($mine) { @(Get-GridRows $mine) } else { @() }
     Check ($mineOnly.Count -ge 1) 'the operator sees the session in "my sessions"' ("operator sees no session in MineGrid; screen: $(Screen-Texts 70)")
     if ($mineOnly.Count -ge 1) {
