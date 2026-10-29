@@ -38,8 +38,8 @@
 
 | # | Item |
 |---|---|
-| C1 | Walk through `docs/DEMO_WALKTHROUGH.md` on Windows in the WPF application with the nine demonstration accounts (the automated end-to-end test performs the same steps; no person has done it in the application yet). Report what looks wrong. |
-| C2 | The manual checklist sections O to X in `docs/MANUAL_UI_CHECKLIST.md` (phases 5a to 8) have been covered by automated tests only. |
+| C1 | Walk through `docs/DEMO_WALKTHROUGH.md` on Windows in the WPF application with the nine demonstration accounts (the automated end-to-end test performs the same steps at the service level, and the UI smoke test opens every page of the real application on a Windows runner - `docs/UI_SMOKE.md` - but no person has clicked through the business steps yet). Report what looks wrong. |
+| C2 | The manual checklist sections O to X in `docs/MANUAL_UI_CHECKLIST.md` (phases 5a to 8) have been covered by automated tests only; the pages themselves are opened by the UI smoke test, buttons are not clicked. |
 | C3 | ~~Decide what to do with the six `DEMO-` sample requests~~ **Resolved by Decision Log #118:** the four built on the retired unit-less stages are no longer seeded; two valid pre-approval requests remain. Tell me if you want them back as converted examples. |
 
 ## D. State of the roadmap

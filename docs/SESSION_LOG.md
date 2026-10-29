@@ -2141,3 +2141,37 @@ Append one dated entry after every substantial session. Do not replace prior ent
 
 ### Recommended exact next action
 - Owner: walk through `docs/DEMO_WALKTHROUGH.md` on Windows, run checklist Y, answer `docs/WORK_SESSIONS_DESIGN.md` section 7, and confirm the SQL Server instance for the integration pass.
+
+
+---
+
+### Date / session
+- Date: 2026-10-29
+- Claude Code session ID (if useful): session_01UwqjPjBXLd2apjZb2urjds (owner request: finish and validate the demo)
+
+### Goal
+- Establish the real state, make the demo reproducible and coherent, correct documentation drift, validate the Windows application with what automation exists, and confirm the SQL Server pass without touching production.
+
+### Completed
+- Audit: main at `dde2706` (PR 58) had green Windows CI and green SQL Server integration; no open PRs. SQL Server provider, committed migration `InitialSqlServer`, integration tests (MigrateAsync + model-drift check) were already done: not redone.
+- PR 59: removed the four sample requests built on the retired unit-less stage flow (Decision Log #118); two valid pre-approval requests remain; tests and docs updated. Windows CI: 41 + 548 + 180 + 710 passed, 0 failed.
+- PR 60 (see its final head): UI smoke workflow (Decision Log #119) which found and fixed a page that could not be opened; end-to-end test for item-scoped contract decisions on the seeded database; dependency inventory batch 4 (SQL Server provider graph, 52 packages from the CI licence evidence); documentation corrections (`CLAUDE.md` item-scoped contract decision, .NET 10, SQL Server status; owner review packet; Master/Domain spec annotations; nine accounts).
+
+### Decisions newly approved
+- None by the owner. #118 and #119 are demo-only engineering decisions inside the owner's authorization; no production business rule changed.
+
+### Changed files
+- Seed and tests: `DemoDataSeeder.cs`, `DemoDatabaseTests`, `DemoAccountsTests`, `EndToEndDemoTests`; Desktop `UnitQueueView.xaml(.cs)`; `.github/workflows/ui-smoke.yml`, `sqlserver.yml`; `tools/ui-smoke/ui-smoke.ps1`; docs (`UI_SMOKE.md` new, `DEMO_SEED_AND_RESET`, `DEMO_WALKTHROUGH`, `AUTHENTICATION`, `MANUAL_UI_CHECKLIST`, `OWNER_REVIEW_PACKET_2`, `DEPENDENCY_LICENCE_INVENTORY`, `DECISION_LOG`, `CLAUDE.md`, two spec annotations).
+
+### Unresolved questions / risks
+- Owner decisions still open: `docs/OWNER_REVIEW_PACKET_2.md` sections A, B, E (overtime limits, contract amount, unit supervisors, production SQL Server instance/edition, work-session defaults).
+- UI not verified by anything: appearance, RTL rendering, DPI, clicking the business buttons, lock/idle behaviour, a physical Windows 10 machine (`docs/UI_SMOKE.md` section 4). The UI smoke screenshots are taken but not uploaded or viewed.
+- Two SQL Server native-component packages declare their licence only as a file that was not read (`DEPENDENCY_LICENCE_INVENTORY.md` batch 4, G1).
+- The company's SQL Server 2008 R2 system was never touched or contacted.
+
+### Commands/tests actually run and results
+- Local Linux: Domain 548, Application 41, Infrastructure 706, Desktop LocalLinux 137 passed (before PR 59); `EndToEndDemoTests` (2 tests) passed locally for the new test; `EfToolingTests` passed locally.
+- Windows CI per PR (build-test) and `SQL Server integration`, `UI smoke` workflows: see the pull requests' final heads.
+
+### Recommended exact next action
+- Owner: answer the open rows of `docs/OWNER_REVIEW_PACKET_2.md`; a person walks `docs/DEMO_WALKTHROUGH.md` in the window on Windows and runs the visual rows of `docs/MANUAL_UI_CHECKLIST.md`.

@@ -209,3 +209,4 @@ Invoke-Session 'demo.central' $passwords['demo.central'] @('درخواست‌ه�
 Note "Visited pages: $($visited.Count)"
 if ($failures.Count -gt 0) { Note "FAILURES: $($failures.Count)"; $failures | ForEach-Object { Note " - $_" }; exit 1 }
 Note 'UI smoke test passed: every listed page opened with its heading.'
+exit 0

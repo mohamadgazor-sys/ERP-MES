@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | Implemented and covered by the automated end-to-end acceptance test `EndToEndDemoTests` (Decision Log #108, updated for work sessions by #112-#115). A person has not yet walked it through the Desktop application on Windows; the manual checklist sections O to Y in `docs/MANUAL_UI_CHECKLIST.md` list what to look at on each screen. |
+| **Status** | Implemented and covered by the automated end-to-end acceptance test `EndToEndDemoTests` (Decision Log #108, updated for work sessions by #112-#115). The application windows are opened and navigated by an automated UI test on a Windows runner (`docs/UI_SMOKE.md`: sign-in, one-time password replacement and all 23 pages for three accounts), but a person has not yet walked the business steps through the Desktop application on Windows; the manual checklist sections O to Y in `docs/MANUAL_UI_CHECKLIST.md` list what to look at on each screen. |
 | **Database** | A demonstration database created with `demo-init` (see `docs/DEMO_SEED_AND_RESET.md`). It contains two sample requests that precede Management's decision (`DEMO-1405-014` waiting for Management, `DEMO-1405-015` just created without a PDF) and the master data below; the nine demonstration accounts each have a random one-time password in the protected credentials file and must replace it at the first sign-in. |
 | **Everything is fictional.** | Names end with `(نمونه آزمایشی)`. Currency is Iranian Rial. Dates are Jalali. |
 
