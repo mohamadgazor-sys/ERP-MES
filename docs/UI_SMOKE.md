@@ -54,7 +54,9 @@ What it checks (each line is a `CHECK OK` in the log; the run is one process per
 | 7 | **Visible release gating**: the unit-queue page lists the stage with the reason "شرط‌های آزادسازی تولید برقرار نیست"; pressing release does **not** release it (not in the queue); after the item-level decision "no contract needed" the same stage is released and appears in the MILLING queue | grid rows, queue grid |
 | 8 | **Unauthorized action**: the operator (`demo.production`) cannot dispatch (button disabled) | button state |
 | 9 | **Production session**: the supervisor dispatches `UI.1` to machine `FCC-06` and the unit's operator and starts it: confirmation "نوبت کاری ثبت و شروع شد", the stage shows "در حال اجرا" with one active session | stage row, message |
-| 10 | The operator pauses the session with a reason (a real dialog is confirmed), resumes it, and a QC submission **is refused while the session is open** (the stage does not move to "waiting for QC") | session row, stage row |
+| 10 | The operator pauses the session with the reason "قطع برق" (a real modal dialog is answered); the session shows "متوقف"; resuming it outside the shift **needs a reason**, which the application now asks for in a prompt (see below); then a QC submission **is refused while the session is open**: the screen shows "the stage is not sent to QC while an assigned, running or paused work session exists" and the stage does not move to "waiting for QC" | session row, stage row, message |
+
+**A real defect found here:** the operator's page had no way to give the out-of-shift reason (the box exists only in the supervisor's dispatch panel), so an operator could not resume a paused session outside shift hours: the rule was enforced, but unanswerable. The window now answers a refused start/resume "reason required" with a prompt and retries (`WorkBoardView`, `WorkBoardViewModel.LastIssue`). The business rule itself is unchanged.
 
 Run result and the exact lines: see the workflow run of the pull request that added it (listed in `docs/SESSION_LOG.md`). The checks are only as strong as what a UI Automation tree exposes: a status that is not shown as text cannot be asserted.
 
@@ -66,7 +68,7 @@ The workflow prints a few screenshots, cropped to the application window, into t
 |---|---|---|
 | Right-to-left layout, navigation on the right, Persian text and the Tahoma font render correctly; the yellow demo banner, status bar with Jalali date/time, buttons and grids are readable | - | none needed |
 | The main window (designed 1100 px wide) was cut off at the screen edge on a 1024 px screen | fixed width larger than the screen | the window is limited to the work area at start (`MainWindow`) |
-| Request numbers such as `DEMO-1405-015` were shown reversed (`015-1405-DEMO`) in the right-to-left grids, and also inside Persian sentences (headings, PDF file name) | bidirectional text reordering of free-form Latin text | grid columns for request, item and contract numbers use a left-to-right cell style (`LtrCell`); view-model sentences wrap such text in a left-to-right isolate (`Messages.Ltr`) |
+| Request numbers such as `DEMO-1405-015` were shown reversed (`015-1405-DEMO`) in the right-to-left grids, and also inside Persian sentences (headings, PDF file name, machine code `FCC-06` shown as `06-FCC`) | bidirectional text reordering of free-form Latin text | grid columns for request, item and contract numbers use a left-to-right cell style (`LtrCell`); view-model sentences wrap such text in a left-to-right **embedding** (`Messages.Ltr`, U+202A...U+202C). A first attempt with Unicode isolates (U+2066...) was visible in a screenshot as ineffective: WPF does not honour isolates |
 
 Not judged by this: whether the layout is pleasing, spacing, colours, the look at 125-150 % scaling (the runner has one resolution and 100 % scaling), the projector, an actual Windows 11 client.
 

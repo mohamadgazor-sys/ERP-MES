@@ -101,9 +101,34 @@ Double-click **`Collect-Diagnostics.cmd`**. It writes `erpmes-diagnostics-<date>
 
 ## 12. What was verified, and what was not
 
-(Filled in from the build and test results of the package; see `docs/SESSION_LOG.md` for the dated entry.)
+(From the CI runs of the pull request that added this guide; see `docs/SESSION_LOG.md` for the dated entry.)
 
-PLACEHOLDER_EVIDENCE
+**Verified automatically** (workflow `Offline demo package`, jobs on `windows-latest` = Windows Server 2025 Datacenter 24H2, build 26100, and on `windows-2022` = Windows Server 2022 Datacenter 21H2, build 20348; both green; the lines are in the job logs of the pull request that added this guide):
+
+| What | Result |
+|---|---|
+| Package size | 653 files, 239.3 MB unpacked, **105.8 MB ZIP**; the ZIP's SHA-256 equals its `.sha256` file; every file equals `FILES.sha256` after extraction into a new folder |
+| Contents | `app\` (self-contained .NET 10 + WPF + `e_sqlite3.dll`), `tools\provisioning\`, launcher `.cmd`/`scripts\`, `DEMO-ACCOUNTS.txt`, guide, walkthrough, `MANIFEST.txt`, `FILES.sha256`; **no** SQL Server provider, no `appsettings.Local.json`, no database |
+| Prerequisites | the import tables of `e_sqlite3.dll`, `coreclr.dll`, `clrjit.dll`, `hostfxr.dll` and the WPF native files were listed with `dumpbin`: only Windows system libraries and the Windows C runtime (`api-ms-win-crt-*`); **no** `VCRUNTIME140.dll`/`MSVCP140.dll` import; the runtime bundles its own `vcruntime140_cor3.dll`. So no Visual C++ redistributable is required **on these machines** (a machine with an unusual C runtime state was not tested) |
+| No .NET on the machine | the test renames `C:\Program Files\dotnet`, clears `DOTNET_*` and `PATH`, deletes the NuGet caches, and shows that `dotnet` cannot be resolved - then everything below runs |
+| No network for the package | Windows Firewall blocks inbound and outbound traffic of the package programs; a control proves the mechanism works (a blocked copy of `curl` placed in the package folder cannot reach `example.com` while the system `curl` gets HTTP 200); the application holds **0 non-loopback TCP connections and 0 UDP endpoints** in every one of the ~20 sessions of the run |
+| Start | `Check-Demo` (no FAIL), `Start-Demo` creates the database and starts the application in about 18-19 s; `demo-status` says `Demo` |
+| Accounts | all nine accounts sign in through the real sign-in window with the demo passphrase; no change-password panel appears |
+| Pages | `demo.supervisor`, `demo.planning`, `demo.central` open all 23 navigation pages (69 visits) with their headings; customers grid 3 rows, requests grid 2 rows |
+| Reset | `Reset-Demo -Yes` succeeds, the file is still a marked demonstration database, the accounts sign in again |
+| Logs | the demo passphrase appears in no log file; no one-time credential file is left in `%TEMP%`; the application log records its start facts (`.NET 10.0.12`, Windows 10.0.26100, X64, database path) |
+| UI behaviour on real screens | see `docs/UI_SMOKE.md` sections 5 and 6: item-scoped contract decisions, release gating, a work session with pause/resume, QC refused while a session is open, and the three visual defects that were found and fixed |
+
+**NOT verified (read these):**
+
+1. **Windows 11 22H2 and every other Windows 11 client build.** GitHub's runners are Windows Server editions (2025 and 2022), not Windows 11 client. Server 2025 shares the 24H2 (26100) code base, which is the recommended target, so the closest evidence is for 24H2; the Server 2022 job shows the same package also runs on an older, officially supported kernel. A run on a real **22H2 (build 22621)** machine did **not** happen, and 22H2 is not on Microsoft's .NET 10 supported list (section 1).
+2. **A physically disconnected machine.** The runner cannot be unplugged because its own agent needs the network. The evidence is: no .NET on the machine, no network for the package programs (proved effective by a control), no connection held by the application. A person should still switch the network off once on the real computer (checklist section 13).
+3. **A computer that never had .NET or Visual Studio installed.** The runner has Visual Studio and the .NET SDK; the test hides the SDK and runtimes but cannot remove everything Windows or Visual Studio installed (for example the C++ redistributable).
+4. **Appearance on the presentation screen:** colours, spacing, 125-150 % scaling, projector, a larger display. The screenshots are 1024x768 at 100 % scaling (the window now fits that size).
+5. **Session lock** (15 minutes, Ctrl+L, Windows lock): covered by unit tests, not exercised through the window.
+6. **Clicking through the whole presentation path in the window.** The interaction test covers request approval, Drawing, item-level contract decisions, item/stage definition, release gating, work-session start/pause/resume and the QC refusal; it does not click the contract PDF attachment, finishing and approving session time, QC inspection, receipt, costing, price approval, dispatch and the metrics page (these are covered at the service level by `EndToEndDemoTests`).
+7. **Antivirus / AppLocker / SmartScreen on the presentation computer.** Unknown; see section 9.
+
 
 ## 13. Pre-presentation checklist (do this the day before, on the presentation computer)
 

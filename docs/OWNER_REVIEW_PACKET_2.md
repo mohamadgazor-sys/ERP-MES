@@ -56,3 +56,12 @@ Phases 1a to 9c, the test-speed work 9a and 9e, the work-session phases 10a to 1
 | E4 | Labour cost | No labour-cost rule; labour hours are reported separately |
 | E5 | Pause reasons: scopes and which are billable | Pauses are never machine runtime for costing; a missing operator qualification is a warning kept on the session, not a refusal; an operator outside the scheduled shift needs a recorded reason |
 | E6 | The demonstration-only supervisor account `demo.supervisor` | A demonstration choice, not a business decision |
+
+## F. Presentation day (offline demo; 2026-10-29)
+
+| # | Item | State |
+|---|---|---|
+| F1 | **The presentation computer's Windows version.** Windows 11 **22H2 is not on Microsoft's .NET 10 supported list**; 24H2 or 25H2 is. Check with `winver`; if it is 22H2 (or older), update it **before** the day, with internet and time (`docs/OFFLINE_DEMO_GUIDE.md` section 1). | needs a person / IT |
+| F2 | The demo passphrase for the nine fictional accounts is a demo-only value in `DEMO-ACCOUNTS.txt` (Decision Log #120, a labelled default). Change it if you prefer another; it protects nothing real. | owner may change |
+| F3 | Antivirus / AppLocker / SmartScreen on the presentation computer may block an unsigned application: ask IT to allow the extracted folder, or test it on that computer early. The application and the package are not code-signed. | needs IT |
+| F4 | One real offline rehearsal on that computer: Wi-Fi off, `Check-Demo`, `Start-Demo`, the steps you will show, then `Reset-Demo` (guide section 13). | needs a person |
