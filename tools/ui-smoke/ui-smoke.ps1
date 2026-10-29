@@ -155,27 +155,40 @@ function Invoke-Session([string] $username, [string] $oneTimePassword, [string[]
         if (-not $main) { Fail "$username`: the main window with the navigation list did not appear"; Save-Screenshot "$username-3-nomain"; return }
         Note "Main window: '$($main.Current.Name)'"
         $nav = Find-ById $main 'NavigationList'
-        $items = $nav.FindAll($Scope::Children, (New-Object System.Windows.Automation.PropertyCondition($AE::ControlTypeProperty, [System.Windows.Automation.ControlType]::ListItem)))
-        $titles = @(); foreach ($i in $items) { $titles += $i.Current.Name }
-        Note "Navigation ($($titles.Count)): $($titles -join ' | ')"
-        foreach ($required in $mustSee) { if ($titles -notcontains $required) { Fail "$username`: the navigation lacks '$required'" } }
-
-        foreach ($item in $items) {
-            $title = $item.Current.Name
-            Select-Item $item
-            Start-Sleep -Milliseconds 700
-            $heading = Find-ByName $main $title ([System.Windows.Automation.ControlType]::Text) 5
-            $texts = Read-Texts $main 12
-            $grids = Count-Type $main ([System.Windows.Automation.ControlType]::DataGrid)
-            $buttons = Count-Type $main ([System.Windows.Automation.ControlType]::Button)
-            $rows = Count-Type $main ([System.Windows.Automation.ControlType]::DataItem)
-            $errorDialog = Get-AppWindow $process.Id 1
-            Note ("PAGE '{0}': heading={1} datagrids={2} rows={3} buttons={4}" -f $title, [bool]$heading, $grids, $rows, $buttons)
-            Note ("  texts: {0}" -f (($texts | Select-Object -First 8) -join ' / '))
-            if (-not $heading) { Fail "$username`: opening '$title' did not show its heading" }
-            $visited.Add("$username/$title")
-            if ($title -in $mustSee) { Save-Screenshot ("{0}-{1}" -f $username, ($visited.Count)) }
+        $listItemCondition = New-Object System.Windows.Automation.PropertyCondition($AE::ControlTypeProperty, [System.Windows.Automation.ControlType]::ListItem)
+        # The list is virtualised: only the realised rows exist in the UI Automation tree, so the walk scrolls with PageDown until no new row appears.
+        # A row's own Name is the view-model's ToString(); the visible title is its Text child.
+        function Get-Rows { $r = @(); foreach ($i in $nav.FindAll($Scope::Children, $listItemCondition)) { $t = Read-Texts $i 1; if ($t.Count -gt 0) { $r += [pscustomobject]@{ Title = $t[0]; Element = $i } } }; return $r }
+        $seen = New-Object System.Collections.Generic.List[string]
+        for ($round = 0; $round -lt 8; $round++) {
+            $fresh = @(Get-Rows | Where-Object { $seen -notcontains $_.Title })
+            if ($fresh.Count -eq 0) { break }
+            foreach ($row in $fresh) {
+                $title = $row.Title
+                $seen.Add($title)
+                Select-Item $row.Element
+                Start-Sleep -Milliseconds 700
+                $headings = $main.FindAll($Scope::Descendants, (New-Object System.Windows.Automation.AndCondition(
+                    (New-Object System.Windows.Automation.PropertyCondition($AE::NameProperty, $title)),
+                    (New-Object System.Windows.Automation.PropertyCondition($AE::ControlTypeProperty, [System.Windows.Automation.ControlType]::Text)))))
+                $grids = Count-Type $main ([System.Windows.Automation.ControlType]::DataGrid)
+                $buttons = Count-Type $main ([System.Windows.Automation.ControlType]::Button)
+                $rows = Count-Type $main ([System.Windows.Automation.ControlType]::DataItem)
+                # One match is the navigation entry itself; a second is the page heading.
+                Note ("PAGE '{0}': heading={1} datagrids={2} rows={3} buttons={4}" -f $title, ($headings.Count -ge 2), $grids, $rows, $buttons)
+                if ($headings.Count -lt 2) { Fail "$username`: opening '$title' did not show its heading" }
+                # What the seeded database must show on these pages (docs/DEMO_SEED_AND_RESET.md): 3 fictional customers, 2 sample requests.
+                if ($title -eq 'مشتریان' -and $rows -lt 3) { Fail "$username`: the customers grid shows $rows rows, expected at least 3" }
+                if ($title -eq 'درخواست‌ها' -and $rows -lt 2) { Fail "$username`: the requests grid shows $rows rows, expected at least 2" }
+                if ($title -eq 'نوبت‌های کاری' -and $grids -lt 1) { Fail "$username`: the work board shows no grid" }
+                $visited.Add("$username/$title")
+                Save-Screenshot ("{0}-{1}" -f $username, $visited.Count)
+            }
+            $row0 = Get-Rows | Select-Object -Last 1
+            if ($row0) { try { $row0.Element.SetFocus() } catch { }; [System.Windows.Forms.SendKeys]::SendWait('{PGDN}'); Start-Sleep -Milliseconds 500 }
         }
+        Note "Navigation ($($seen.Count)): $($seen -join ' | ')"
+        foreach ($required in $mustSee) { if ($seen -notcontains $required) { Fail "$username`: the navigation lacks '$required'" } }
         return $main
     } finally {
         if (-not $process.HasExited) { $process.CloseMainWindow() | Out-Null; Start-Sleep -Seconds 2; if (-not $process.HasExited) { $process.Kill() } }
