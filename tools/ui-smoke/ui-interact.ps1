@@ -493,9 +493,11 @@ try {
         # The lists are reloaded after every action, which clears the selection: select the session again.
         $again = Get-GridRows $script:Main | Where-Object { $_.Joined -like '*FCC-06*' } | Select-Object -First 1
         if ($again) { Select-Item $again.Element; Start-Sleep -Milliseconds 600 }
+        Fill 'OutsideBox' 'ازسرگیری خارج از شیفت برای آزمون رابط'
         Click-Btn 'ازسرگیری'
         Start-Sleep -Seconds 2
         $afterResume = Get-RowText $script:Main 'FCC-06'
+        if ($afterResume -like '*متوقف*') { Note ('  screen after the resume attempt: ' + (Screen-Texts 60)) }
         Check ($afterResume -notlike '*متوقف*') 'RESUME: the session is active again' "still paused: $afterResume"
         Select-GridRow (Find-ById $script:Main 'StageGrid' 5) 'UI.1' | Out-Null
         Click-Btn 'ارسال مرحله به کنترل کیفیت'
