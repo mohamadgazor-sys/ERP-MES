@@ -12,6 +12,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+$SignInOnly = @($SignInOnly | ForEach-Object { $_ -split ',' } | ForEach-Object { $_.Trim() } | Where-Object { $_ })   # -File passes one string; accept a comma list
 Add-Type -AssemblyName UIAutomationClient, UIAutomationTypes, System.Windows.Forms
 $AE = [System.Windows.Automation.AutomationElement]
 $Scope = [System.Windows.Automation.TreeScope]

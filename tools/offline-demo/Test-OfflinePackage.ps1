@@ -67,8 +67,18 @@ Get-ChildItem (Join-Path $pkg 'app') -Filter 'msvcp*.dll' | ForEach-Object { Wri
 $hidden = @()
 try {
     Section '2 Remove every way this machine could supply .NET or packages'
+    # Stop everything that still holds files in the SDK folder (build servers, MSBuild nodes, the compiler server), then hide the folders.
+    & dotnet build-server shutdown 2>&1 | Out-Null
+    Get-Process -Name 'dotnet', 'VBCSCompiler', 'MSBuild', 'msbuild', 'vbcscompiler' -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+    Start-Sleep -Seconds 3
     foreach ($d in 'C:\Program Files\dotnet', 'C:\Program Files (x86)\dotnet') {
-        if (Test-Path $d) { Rename-Item -LiteralPath $d -NewName ((Split-Path -Leaf $d) + '.hidden-for-offline-test'); $hidden += $d }
+        if (-not (Test-Path $d)) { continue }
+        $renamed = $false
+        for ($try = 1; $try -le 6 -and -not $renamed; $try++) {
+            try { Rename-Item -LiteralPath $d -NewName ((Split-Path -Leaf $d) + '.hidden-for-offline-test') -ErrorAction Stop; $renamed = $true; $hidden += $d }
+            catch { Write-Host "  rename of $d attempt $try failed: $($_.Exception.Message)"; Get-Process | Where-Object { $_.Path -like "$d*" } | ForEach-Object { Write-Host ('    still running from there: ' + $_.Name + ' ' + $_.Id) }; Start-Sleep -Seconds 5 }
+        }
+        if (-not $renamed) { throw "Could not hide $d from this machine; the offline test would not be clean." }
     }
     foreach ($v in 'DOTNET_ROOT', 'DOTNET_ROOT(x86)', 'DOTNET_HOST_PATH', 'DOTNET_MULTILEVEL_LOOKUP', 'MSBuildSDKsPath', 'NUGET_PACKAGES') { Remove-Item "Env:$v" -ErrorAction SilentlyContinue }
     $env:PATH = (($env:PATH -split ';') | Where-Object { $_ -and $_ -notmatch '(?i)\\dotnet(\\|$)' }) -join ';'
@@ -114,7 +124,7 @@ try {
     $ui = Join-Path $repo 'tools\ui-smoke\ui-smoke.ps1'
     $accounts = Join-Path $pkg 'DEMO-ACCOUNTS.txt'
     $exe = Join-Path $pkg 'app\ERP.MES.Desktop.exe'
-    & $ps -NoProfile -ExecutionPolicy Bypass -File $ui -ExePath $exe -DatabasePath $db -AccountsFile $accounts -SignInOnly demo.admin, demo.management, demo.drawing, demo.qc, demo.warehouse, demo.production
+    & $ps -NoProfile -ExecutionPolicy Bypass -File $ui -ExePath $exe -DatabasePath $db -AccountsFile $accounts -SignInOnly 'demo.admin,demo.management,demo.drawing,demo.qc,demo.warehouse,demo.production'
     if ($LASTEXITCODE -eq 0) { Pass 'UI automation: all nine accounts signed in; 3 accounts walked 23 pages each; no network connection held' } else { Bad "UI automation exit code $LASTEXITCODE" }
 
     Section '4b Reset and sign in again'
@@ -122,7 +132,7 @@ try {
     if ($LASTEXITCODE -eq 0) { Pass 'Reset-Demo succeeded' } else { Bad "Reset-Demo exit code $LASTEXITCODE" }
     $state = (& (Join-Path $pkg 'tools\provisioning\ERP.MES.Provisioning.exe') demo-status $db | Out-String).Trim()
     if ($state -eq 'Demo') { Pass 'after the reset the file is still a marked demonstration database' } else { Bad "demo-status after reset: $state" }
-    & $ps -NoProfile -ExecutionPolicy Bypass -File $ui -ExePath $exe -DatabasePath $db -AccountsFile $accounts -SkipWalk -SignInOnly demo.central, demo.planning, demo.management
+    & $ps -NoProfile -ExecutionPolicy Bypass -File $ui -ExePath $exe -DatabasePath $db -AccountsFile $accounts -SkipWalk -SignInOnly 'demo.central,demo.planning,demo.management'
     if ($LASTEXITCODE -eq 0) { Pass 'after the reset the accounts sign in with the demo passphrase (persisted in the reset database)' } else { Bad "post-reset UI automation exit code $LASTEXITCODE" }
 
     Section '5 Logs and leftovers'
