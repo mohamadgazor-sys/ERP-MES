@@ -168,9 +168,12 @@ function Invoke-Session([string] $username, [string] $oneTimePassword, [string[]
                 $seen.Add($title)
                 Select-Item $row.Element
                 Start-Sleep -Milliseconds 700
-                $headings = $main.FindAll($Scope::Descendants, (New-Object System.Windows.Automation.AndCondition(
+                $headingCondition = New-Object System.Windows.Automation.AndCondition(
                     (New-Object System.Windows.Automation.PropertyCondition($AE::NameProperty, $title)),
-                    (New-Object System.Windows.Automation.PropertyCondition($AE::ControlTypeProperty, [System.Windows.Automation.ControlType]::Text)))))
+                    (New-Object System.Windows.Automation.PropertyCondition($AE::ControlTypeProperty, [System.Windows.Automation.ControlType]::Text)))
+                $headings = $main.FindAll($Scope::Descendants, $headingCondition)
+                for ($wait = 0; $headings.Count -lt 2 -and $wait -lt 8; $wait++) { Start-Sleep -Milliseconds 500; $headings = $main.FindAll($Scope::Descendants, $headingCondition) }
+                if ($headings.Count -lt 2) { Note ("  heading not found; texts on screen: {0}" -f ((Read-Texts $main 60) -join ' / ')) }
                 $grids = Count-Type $main ([System.Windows.Automation.ControlType]::DataGrid)
                 $buttons = Count-Type $main ([System.Windows.Automation.ControlType]::Button)
                 $rows = Count-Type $main ([System.Windows.Automation.ControlType]::DataItem)
