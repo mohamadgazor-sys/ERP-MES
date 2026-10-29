@@ -224,6 +224,45 @@ function Wait-Enabled([string] $name, [int] $seconds = 12) {
     do { $b = Find-Btn $name 1; if ($b -and $b.Current.IsEnabled) { return $b }; Start-Sleep -Milliseconds 500 } while ((Get-Date) -lt $deadline)
     return $b
 }
+
+function Pick-Combo([string] $id, [string] $contains) {
+    $c = Find-ById $script:Main $id 10
+    if (-not $c) { throw "combo '$id' not found" }
+    $p = $null
+    if ($c.TryGetCurrentPattern([System.Windows.Automation.ExpandCollapsePattern]::Pattern, [ref] $p)) { $p.Expand(); Start-Sleep -Milliseconds 600 }
+    $cond = New-Object System.Windows.Automation.PropertyCondition($AE::ControlTypeProperty, [System.Windows.Automation.ControlType]::ListItem)
+    $found = $null
+    $texts = @()
+    foreach ($it in $c.FindAll($Scope::Descendants, $cond)) {
+        $t = (@(Read-Texts $it 4) -join ' ')
+        $texts += $t
+        if (-not $found -and ((-not $contains) -or $t -like "*$contains*")) { $found = $it; $foundText = $t }
+    }
+    if (-not $found) { throw "combo '$id': no option containing '$contains' (options: $($texts -join ' ; '))" }
+    Select-Item $found
+    Start-Sleep -Milliseconds 400
+    if ($c.TryGetCurrentPattern([System.Windows.Automation.ExpandCollapsePattern]::Pattern, [ref] $p)) { try { $p.Collapse() } catch { } }
+    Note "  picked '$foundText' in $id"
+    return $foundText
+}
+function Fill([string] $id, [string] $text) { $e = Find-ById $script:Main $id 10; if (-not $e) { throw "text box '$id' not found" }; Set-Text $e $text }
+function Click-Btn([string] $name) { $b = Wait-Enabled $name 12; if (-not $b) { throw "button '$name' not found" }; if (-not $b.Current.IsEnabled) { throw "button '$name' is disabled" }; Click $b }
+function Grid-Has($rootId, [string] $contains) { $g = Find-ById $script:Main $rootId 5; if (-not $g) { return $false }; return [bool](Get-GridRows $g | Where-Object { $_.Joined -like "*$contains*" } | Select-Object -First 1) }
+function Wait-Grid-Has($rootId, [string] $contains, [int] $seconds = 12) { $d = (Get-Date).AddSeconds($seconds); do { if (Grid-Has $rootId $contains) { return $true }; Start-Sleep -Milliseconds 600 } while ((Get-Date) -lt $d); return $false }
+function Dialog-Ok([string] $title) {
+    $deadline = (Get-Date).AddSeconds(10)
+    while ((Get-Date) -lt $deadline) {
+        foreach ($w in $AE::RootElement.FindAll($Scope::Children, (New-Object System.Windows.Automation.PropertyCondition($AE::ProcessIdProperty, $script:Process.Id)))) {
+            if ($w.Current.Name -eq $title) {
+                $b = Find-ByName $w 'تأیید' ([System.Windows.Automation.ControlType]::Button) 3
+                if ($b) { Click $b; Start-Sleep -Milliseconds 800; return $true }
+            }
+        }
+        Start-Sleep -Milliseconds 400
+    }
+    return $false
+}
+
 function Screen-Texts([int] $n = 40) { return ((Read-Texts $script:Main $n) -join ' / ') }
 function Wait-RowChange($root, [string] $contains, [string] $before, [int] $seconds = 15) {
     $deadline = (Get-Date).AddSeconds($seconds)
@@ -331,6 +370,130 @@ try {
     Check ($after310 -eq $before310) 'ITEM-SCOPED: item 3.10 is unchanged (still follows the request) - one item decision does not alter the other' 'item 3.10 changed when only 3.20 was decided'
     Check ($after310 -ne $after320) 'ITEM-SCOPED: the two items of one request show different decisions' 'both items show the same decision'
     Save-Shot 'interact-4-contract-items'
+    Sign-Out
+
+
+    # ---- 7. Planning defines a new item and its stage (real forms) ----
+    Sign-In 'demo.planning' | Out-Null
+    Open-Page 'تعریف آیتم‌ها و مرحله‌ها'
+    Select-GridRow $script:Main $R14 | Out-Null
+    Start-Sleep -Seconds 1
+    Fill 'ItemNoBox' 'UI.1'; Fill 'PartNameBox' 'قطعه آزمون رابط'; Fill 'QuantityBox' '10'
+    Pick-Combo 'TypeBox' 'قطعه' | Out-Null
+    Pick-Combo 'MaterialBox' 'ST37' | Out-Null
+    Fill 'WeightBox' '1'
+    Pick-Combo 'PriorityBox' $null | Out-Null
+    Click-Btn 'ثبت آیتم'
+    Start-Sleep -Seconds 2
+    $defined = $false
+    foreach ($r in (Get-GridRows $script:Main)) { if ($r.Joined -like '*UI.1*') { $defined = $true } }
+    Check $defined 'a new item (UI.1) was defined through the item form and appears in the item grid' ("item UI.1 did not appear; screen: $(Screen-Texts 40)")
+    Select-GridRow $script:Main 'UI.1' | Out-Null
+    Fill 'StageTitleBox' 'فرزکاری آزمون رابط'; Fill 'MinutesBox' '2'
+    Pick-Combo 'UnitBox' 'فرزکاری' | Out-Null
+    Click-Btn 'ثبت مرحله'
+    Start-Sleep -Seconds 2
+    $staged = [bool](Get-GridRows $script:Main | Where-Object { $_.Joined -like '*فرزکاری آزمون رابط*' } | Select-Object -First 1)
+    Check $staged 'a stage in the MILLING unit was defined through the stage form' ("stage did not appear; screen: $(Screen-Texts 40)")
+    Save-Shot 'interact-6-item-and-stage'
+
+    # ---- 8. Visible release gating: the item follows the unapproved request contract, so release is refused ----
+    Open-Page 'صف واحدهای تولید'
+    Pick-Combo 'UnitBox' 'فرزکاری' | Out-Null
+    Start-Sleep -Seconds 2
+    $pendingBefore = [bool](Get-GridRows $script:Main | Where-Object { $_.Joined -like '*UI.1*' } | Select-Object -First 1)
+    Check $pendingBefore 'the new item is listed in the unit queue page as waiting for release' ("UI.1 not listed on the unit queue page; screen: $(Screen-Texts 50)")
+    $pending = Get-GridRows $script:Main | Where-Object { $_.Joined -like '*UI.1*' } | Select-Object -First 1
+    if ($pending) { Select-Item $pending.Element; Start-Sleep -Milliseconds 600 }
+    Note ('  pending row: ' + $pending.Joined)
+    Click-Btn 'آزادسازی مرحلهٔ اول (برنامه‌ریزی)'
+    Start-Sleep -Seconds 2
+    $queueGrid = Find-ById $script:Main 'QueueGrid' 5
+    $releasedWrongly = $queueGrid -and (Get-GridRows $queueGrid | Where-Object { $_.Joined -like '*UI.1*' })
+    Check (-not $releasedWrongly) 'RELEASE GATE: the stage of the item that still needs the unapproved contract was NOT released (it is not in the queue)' 'the stage was released although the contract is not approved'
+    Note ('  message after the refused release: ' + (Screen-Texts 30))
+    Save-Shot 'interact-7-release-refused'
+
+    # ---- 9. Planning decides this item does not need the contract; release now works ----
+    Open-Page 'قراردادها'
+    Select-GridRow $script:Main $R14 | Out-Null
+    Start-Sleep -Seconds 1
+    Select-GridRow $script:Main 'UI.1' | Out-Null
+    $note2 = Find-ById $script:Main 'NoteBox' 5
+    if ($note2) { Type-Into $note2 'قطعه آزمون رابط بدون قرارداد' }
+    Click-Btn 'این آیتم: قرارداد لازم نیست'
+    Start-Sleep -Seconds 2
+    Check ((Get-RowText $script:Main 'UI.1') -like '*لازم نیست*') 'ITEM-SCOPED: the new item UI.1 now shows its own decision "contract not required"' ("UI.1 row: $(Get-RowText $script:Main 'UI.1')")
+    Open-Page 'صف واحدهای تولید'
+    Pick-Combo 'UnitBox' 'فرزکاری' | Out-Null
+    Start-Sleep -Seconds 2
+    $pending = Get-GridRows $script:Main | Where-Object { $_.Joined -like '*UI.1*' } | Select-Object -First 1
+    if ($pending) { Select-Item $pending.Element; Start-Sleep -Milliseconds 600 }
+    Click-Btn 'آزادسازی مرحلهٔ اول (برنامه‌ریزی)'
+    Start-Sleep -Seconds 2
+    $queueGrid = Find-ById $script:Main 'QueueGrid' 5
+    Check ($queueGrid -and (Get-GridRows $queueGrid | Where-Object { $_.Joined -like '*UI.1*' })) 'RELEASE GATE: after the item-level decision the same stage can be released and appears in the MILLING queue' ("UI.1 not in the queue after release; screen: $(Screen-Texts 40)")
+    Save-Shot 'interact-8-released'
+    Sign-Out
+
+    # ---- 10. Operator cannot dispatch; supervisor dispatches and starts a work session ----
+    Sign-In 'demo.production' | Out-Null
+    Open-Page 'نوبت‌های کاری'
+    Pick-Combo 'UnitBox' 'فرزکاری' | Out-Null
+    Start-Sleep -Seconds 2
+    Select-GridRow (Find-ById $script:Main 'StageGrid' 5) 'UI.1' | Out-Null
+    $dispatchOp = Find-Btn 'تخصیص و شروع' 3
+    Check (-not $dispatchOp -or -not $dispatchOp.Current.IsEnabled) 'UNAUTHORIZED: the operator cannot dispatch/start a stage (button disabled)' 'the operator can dispatch'
+    Sign-Out
+
+    Sign-In 'demo.supervisor' | Out-Null
+    Open-Page 'نوبت‌های کاری'
+    Pick-Combo 'UnitBox' 'فرزکاری' | Out-Null
+    Start-Sleep -Seconds 2
+    $stageGrid = Find-ById $script:Main 'StageGrid' 5
+    $stageRow = Select-GridRow $stageGrid 'UI.1'
+    Note ('  stage row: ' + $stageRow.Joined)
+    Pick-Combo 'MachineBox' 'FCC-06' | Out-Null
+    Pick-Combo 'OperatorBox' $null | Out-Null
+    Fill 'OutsideBox' 'کار خارج از شیفت برای آزمون رابط'
+    Click-Btn 'تخصیص و شروع'
+    Start-Sleep -Seconds 3
+    $sessionGrid = Find-ById $script:Main 'SessionGrid' 5
+    $sessions = if ($sessionGrid) { @(Get-GridRows $sessionGrid) } else { @() }
+    Check ($sessions.Count -ge 1) 'PRODUCTION SESSION: the supervisor dispatched the stage to a machine of the unit and an operator, and a work session appears' ("no session row; screen: $(Screen-Texts 50)")
+    if ($sessions.Count -ge 1) { Note ('  session row: ' + $sessions[0].Joined) }
+    Save-Shot 'interact-9-session-started'
+    Sign-Out
+
+    # ---- 11. Operator pauses with a reason, resumes; QC submission is blocked while the session is open ----
+    Sign-In 'demo.production' | Out-Null
+    Open-Page 'نوبت‌های کاری'
+    Pick-Combo 'UnitBox' 'فرزکاری' | Out-Null
+    Start-Sleep -Seconds 2
+    $mine = Find-ById $script:Main 'MineGrid' 5
+    $mineRows = if ($mine) { @(Get-GridRows $mine) } else { @() }
+    Check ($mineRows.Count -ge 1) 'the operator sees the session in "my sessions"' ("operator sees no session; screen: $(Screen-Texts 50)")
+    if ($mineRows.Count -ge 1) {
+        Select-Item $mineRows[0].Element; Start-Sleep -Milliseconds 600
+        Pick-Combo 'ReasonBox' $null | Out-Null
+        Click-Btn 'توقف…'
+        $okPause = Dialog-Ok 'توقف نوبت'
+        Start-Sleep -Seconds 2
+        $afterPause = Get-RowText (Find-ById $script:Main 'MineGrid' 5) ''
+        Note ('  after pause: ' + $afterPause)
+        Check ($afterPause -like '*متوقف*') 'PAUSE: the session shows as paused with the chosen reason' ("pause not shown; dialog handled: $okPause; row: $afterPause")
+        Click-Btn 'ازسرگیری'
+        Start-Sleep -Seconds 2
+        $afterResume = Get-RowText (Find-ById $script:Main 'MineGrid' 5) ''
+        Check ($afterResume -notlike '*متوقف*') 'RESUME: the session is active again' "still paused: $afterResume"
+        Click-Btn 'ارسال مرحله به کنترل کیفیت'
+        Start-Sleep -Seconds 2
+        $stageAfter = Get-RowText (Find-ById $script:Main 'StageGrid' 5) 'UI.1'
+        Note ('  stage after the QC attempt: ' + $stageAfter)
+        Check ($stageAfter -notlike '*در انتظار کنترل کیفیت*') 'PREMATURE ACTION: submitting the stage to QC is refused while the work session is open (the stage did not move to "waiting for QC")' "stage moved to QC: $stageAfter"
+        Note ('  messages: ' + (Screen-Texts 30))
+        Save-Shot 'interact-10-qc-blocked'
+    }
     Sign-Out
 
     # ---- 6. Management cannot decide per-item ----
