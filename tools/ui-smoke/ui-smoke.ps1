@@ -158,7 +158,7 @@ function Invoke-Session([string] $username, [string] $oneTimePassword, [string[]
         $listItemCondition = New-Object System.Windows.Automation.PropertyCondition($AE::ControlTypeProperty, [System.Windows.Automation.ControlType]::ListItem)
         # The list is virtualised: only the realised rows exist in the UI Automation tree, so the walk scrolls with PageDown until no new row appears.
         # A row's own Name is the view-model's ToString(); the visible title is its Text child.
-        function Get-Rows { $r = @(); foreach ($i in $nav.FindAll($Scope::Children, $listItemCondition)) { $t = Read-Texts $i 1; if ($t.Count -gt 0) { $r += [pscustomobject]@{ Title = $t[0]; Element = $i } } }; return $r }
+        function Get-Rows { $r = @(); foreach ($i in $nav.FindAll($Scope::Children, $listItemCondition)) { $t = @(Read-Texts $i 1); if ($t.Count -gt 0) { $r += [pscustomobject]@{ Title = [string]$t[0]; Element = $i } } }; return $r }
         $seen = New-Object System.Collections.Generic.List[string]
         for ($round = 0; $round -lt 8; $round++) {
             $fresh = @(Get-Rows | Where-Object { $seen -notcontains $_.Title })
