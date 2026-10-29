@@ -498,7 +498,8 @@ try {
         Click-Btn 'ازسرگیری'
         Start-Sleep -Seconds 2
         $afterResume = Get-RowText $script:Main 'FCC-06'
-        Note ('  screen after the resume attempt: ' + (Screen-Texts 100))
+        Note ('  long messages after the resume attempt: ' + ((Read-Texts $script:Main 200 | Where-Object { $_.Length -gt 40 -and $_ -notlike '*نسخه نمایشی*' }) -join ' // '))
+        Save-Shot 'interact-10c-after-resume'
         Check ($afterResume -notlike '*متوقف*') 'RESUME: the session is active again' "still paused: $afterResume"
         Select-GridRow (Find-ById $script:Main 'StageGrid' 5) 'UI.1' | Out-Null
         Click-Btn 'ارسال مرحله به کنترل کیفیت'
