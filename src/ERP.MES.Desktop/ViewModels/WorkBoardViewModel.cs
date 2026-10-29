@@ -406,6 +406,9 @@ public sealed class WorkBoardViewModel(
     private static Outcome<int> Map<T>(Outcome<T> outcome, string? warning = null) =>
         outcome.Succeeded ? Outcome<int>.Ok(1, warning is null ? null : [warning]) : new Outcome<int>(outcome.Status, 0, outcome.Issue, outcome.DateError);
 
+    /// <summary>The validation issue of the last refused command (None after a success). The window uses it to ask the operator for the reason that is required for work outside the scheduled shift.</summary>
+    public ValidationIssue LastIssue { get; private set; }
+
     private async Task CommandAsync(string success, Func<CancellationToken, Task<Outcome<int>>> command)
     {
         if (IsBusy)
@@ -416,6 +419,7 @@ public sealed class WorkBoardViewModel(
         await RunAsync(async () =>
         {
             var outcome = await command(CancellationToken.None);
+            LastIssue = outcome.Succeeded ? ValidationIssue.None : outcome.Issue;
             if (outcome.Succeeded)
             {
                 Succeed(success + (outcome.WarningList.Count > 0 ? " " + string.Join(" ", outcome.WarningList) : string.Empty));

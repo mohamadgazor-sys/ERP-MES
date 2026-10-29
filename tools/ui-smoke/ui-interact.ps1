@@ -249,7 +249,7 @@ function Fill([string] $id, [string] $text) { $e = Find-ById $script:Main $id 10
 function Click-Btn([string] $name) { $b = Wait-Enabled $name 12; if (-not $b) { throw "button '$name' not found" }; if (-not $b.Current.IsEnabled) { throw "button '$name' is disabled" }; Click $b }
 function Grid-Has($rootId, [string] $contains) { $g = Find-ById $script:Main $rootId 5; if (-not $g) { return $false }; return [bool](Get-GridRows $g | Where-Object { $_.Joined -like "*$contains*" } | Select-Object -First 1) }
 function Wait-Grid-Has($rootId, [string] $contains, [int] $seconds = 12) { $d = (Get-Date).AddSeconds($seconds); do { if (Grid-Has $rootId $contains) { return $true }; Start-Sleep -Milliseconds 600 } while ((Get-Date) -lt $d); return $false }
-function Dialog-Ok([string] $title) {
+function Dialog-Ok([string] $title, [string] $text = '') {
     # An owned (modal) window is exposed by UI Automation as a child of its owner, so look for it under the main window as well as at the top level.
     $windowCond = New-Object System.Windows.Automation.AndCondition((New-Object System.Windows.Automation.PropertyCondition($AE::NameProperty, $title)), (New-Object System.Windows.Automation.PropertyCondition($AE::ControlTypeProperty, [System.Windows.Automation.ControlType]::Window)))
     $deadline = (Get-Date).AddSeconds(12)
@@ -258,7 +258,10 @@ function Dialog-Ok([string] $title) {
         if (-not $w) { $w = $AE::RootElement.FindFirst($Scope::Descendants, $windowCond) }
         if ($w) {
             $b = Find-ByName $w 'تأیید' ([System.Windows.Automation.ControlType]::Button) 3
-            if ($b) { Click $b; Start-Sleep -Milliseconds 800; return $true }
+            if ($b) {
+                if ($text) { $edit = $w.FindFirst($Scope::Descendants, (New-Object System.Windows.Automation.PropertyCondition($AE::ControlTypeProperty, [System.Windows.Automation.ControlType]::Edit))); if ($edit) { Set-Text $edit $text } }
+                Click $b; Start-Sleep -Milliseconds 800; return $true
+            }
         }
         Start-Sleep -Milliseconds 400
     }
@@ -493,9 +496,10 @@ try {
         # The lists are reloaded after every action, which clears the selection: select the session again.
         $again = Get-GridRows $script:Main | Where-Object { $_.Joined -like '*FCC-06*' } | Select-Object -First 1
         if ($again) { Select-Item $again.Element; Start-Sleep -Milliseconds 600 }
-        $ob = Find-ById $script:Main 'OutsideBox' 2   # only the supervisor's dispatch panel has this box
-        if ($ob) { Set-Text $ob 'ازسرگیری خارج از شیفت برای آزمون رابط' }
         Click-Btn 'ازسرگیری'
+        # Outside the operator's shift the application asks for the reason in a prompt (found and fixed through this test; before, the operator had no way to give it).
+        $okShift = Dialog-Ok 'کار خارج از شیفت' 'ازسرگیری خارج از شیفت برای آزمون رابط'
+        Note ('  outside-shift prompt shown and answered: ' + $okShift)
         Start-Sleep -Seconds 2
         $afterResume = Get-RowText $script:Main 'FCC-06'
         Note ('  long messages after the resume attempt: ' + ((Read-Texts $script:Main 200 | Where-Object { $_.Length -gt 40 -and $_ -notlike '*نسخه نمایشی*' }) -join ' // '))
