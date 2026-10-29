@@ -77,7 +77,7 @@ public class RequestsViewModelTests
         Assert.Equal(0, row.ItemCount);
         Assert.True(vm.HasDetail);
         Assert.True(vm.HasNoItems);
-        Assert.Contains("wsj-898", vm.DetailHeading, StringComparison.Ordinal);
+        Assert.Contains(Messages.Ltr("wsj-898"), vm.DetailHeading, StringComparison.Ordinal);
         Assert.False(vm.CanSubmit);
         Assert.True(vm.CanAttachPdf);
 
@@ -289,7 +289,7 @@ public class RequestsViewModelTests
 
         Assert.True(central.HasPdf);
         Assert.Equal("فایل PDF درخواست پیوست شد.", central.Message);
-        Assert.Contains("Order 7.pdf", central.PdfText, StringComparison.Ordinal);
+        Assert.Contains(Messages.Ltr("Order 7.pdf"), central.PdfText, StringComparison.Ordinal);
         Assert.Contains("کیلوبایت", central.PdfText, StringComparison.Ordinal);
         var file = await central.LoadPdfAsync(Token);
         Assert.NotNull(file);
@@ -317,7 +317,7 @@ public class RequestsViewModelTests
         Assert.True(await central.AttachPdfAsync("one.pdf", Pdf(), Token));
         h.Clock.Advance(TimeSpan.FromMinutes(1));
         Assert.True(await central.AttachPdfAsync("two.pdf", Pdf(), Token));
-        Assert.Contains("two.pdf", central.PdfText, StringComparison.Ordinal);
+        Assert.Contains(Messages.Ltr("two.pdf"), central.PdfText, StringComparison.Ordinal);
 
         Assert.True(await central.SubmitAsync(Token));
         Assert.False(central.CanAttachPdf);

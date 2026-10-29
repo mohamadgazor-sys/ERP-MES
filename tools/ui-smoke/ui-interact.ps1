@@ -206,7 +206,7 @@ function Get-GridRows($root) {
     $cond = New-Object System.Windows.Automation.PropertyCondition($AE::ControlTypeProperty, [System.Windows.Automation.ControlType]::DataItem)
     $out = @()
     foreach ($r in $root.FindAll($Scope::Descendants, $cond)) {
-        $texts = @(); foreach ($d in $r.FindAll($Scope::Descendants, [System.Windows.Automation.Condition]::TrueCondition)) { $n = $d.Current.Name; if ($n -and $n -notlike 'Item:*Column Display Index*' -and $texts -notcontains $n) { $texts += $n } }
+        $texts = @(); foreach ($d in $r.FindAll($Scope::Descendants, [System.Windows.Automation.Condition]::TrueCondition)) { $n = ([string]$d.Current.Name) -replace '[\u200E\u202A\u202C]', ''; if ($n -and $n -notlike 'Item:*Column Display Index*' -and $texts -notcontains $n) { $texts += $n } }
         $out += [pscustomobject]@{ Element = $r; Texts = $texts; Joined = ($texts -join ' | ') }
     }
     return $out
