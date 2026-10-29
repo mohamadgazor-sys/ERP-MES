@@ -490,10 +490,14 @@ try {
         $afterPause = Get-RowText $script:Main 'FCC-06'
         Note ('  after pause: ' + $afterPause)
         Check ($afterPause -like '*متوقف*') 'PAUSE: the session shows as paused with the chosen reason' ("pause not shown; dialog handled: $okPause; row: $afterPause")
+        # The lists are reloaded after every action, which clears the selection: select the session again.
+        $again = Get-GridRows $script:Main | Where-Object { $_.Joined -like '*FCC-06*' } | Select-Object -First 1
+        if ($again) { Select-Item $again.Element; Start-Sleep -Milliseconds 600 }
         Click-Btn 'ازسرگیری'
         Start-Sleep -Seconds 2
         $afterResume = Get-RowText $script:Main 'FCC-06'
         Check ($afterResume -notlike '*متوقف*') 'RESUME: the session is active again' "still paused: $afterResume"
+        Select-GridRow (Find-ById $script:Main 'StageGrid' 5) 'UI.1' | Out-Null
         Click-Btn 'ارسال مرحله به کنترل کیفیت'
         Start-Sleep -Seconds 2
         $stageAfter = Get-RowText (Find-ById $script:Main 'StageGrid' 5) 'UI.1'
