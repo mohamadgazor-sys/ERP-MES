@@ -49,7 +49,7 @@ Start the Desktop application against `<file>`, sign in as each account in the o
 
 ## 3. Honest limits
 
-- The sample requests (`DEMO-...`) have stages without a production unit; they are frozen examples for the list and overview screens - the demonstration stage flow that advanced them was retired (Decision Log #109), so they cannot be released, started or inspected. The walkthrough request does not use them.
+- The two sample requests (`DEMO-1405-014`, `DEMO-1405-015`) precede Management's decision and carry no stages (Decision Log #118); the walkthrough request does not use them. They are useful to show the list screens and the "attach the PDF before submitting" rule.
 - A person has not yet performed this walkthrough in the WPF application on Windows; the automated test performs the same use cases. The work-board window (`WorkBoardView`) in particular has been compiled and its view model tested against the real services, but its rendering and button behaviour have not been seen on a Windows desktop (checklist section Y).
 - The worker schedule is not seeded: without step 6, dispatch is refused until the supervisor writes the reason for working outside the shift, which is the intended behaviour.
 - The legacy daily job reports still exist for stages that are tracked by reports; a stage is tracked by sessions or by reports, never both (Decision Log #113).

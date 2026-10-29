@@ -130,7 +130,7 @@ public sealed class ClarificationsViewModel(ClarificationService service, IJalal
         }
 
         var review = await service.ListUnderReviewAsync(currentUser(), cancellationToken);
-        _requestChoices = review.Succeeded ? review.Value!.Select(r => new Choice<long>(r.RequestId, r.RequestNo + " — " + r.CustomerName)).ToList() : [];
+        _requestChoices = review.Succeeded ? review.Value!.Select(r => new Choice<long>(r.RequestId, Messages.Ltr(r.RequestNo) + " — " + r.CustomerName)).ToList() : [];
         OnPropertyChanged(nameof(RequestChoices));
         _selected = _rows.FirstOrDefault(r => r.ClarificationId == keepId);
         OnPropertyChanged(nameof(SelectedRow));

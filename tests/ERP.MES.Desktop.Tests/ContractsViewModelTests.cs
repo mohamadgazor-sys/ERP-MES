@@ -55,7 +55,7 @@ public class ContractsViewModelTests
 
         Assert.Equal("در انتظار مدیریت", planning.Rows.Single().StatusText);
         Assert.Equal("۱۴۰۵/۰۷/۲۵", planning.Versions.Single().DateText);
-        Assert.Equal("contract.pdf", planning.Versions.Single().PdfText);
+        Assert.Equal(Messages.Ltr("contract.pdf"), planning.Versions.Single().PdfText);
         Assert.False(planning.CanEditDraft);
         Assert.False(planning.CanDecideContract);
         Assert.Equal("ارسال به مدیریت", planning.History[0].ActionText);

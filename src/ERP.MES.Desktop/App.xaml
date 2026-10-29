@@ -6,6 +6,12 @@
         <!-- Persian UI font: Tahoma first, with the system fallbacks (Decision Log #48). No font is bundled. -->
         <FontFamily x:Key="UiFont">Tahoma, Segoe UI, Arial</FontFamily>
 
+        <!-- Request, item and contract numbers are free-form Latin text/digits (for example DEMO-1405-015): in the right-to-left window they must read left to right, otherwise their parts are shown in reverse order. -->
+        <Style x:Key="LtrCell" TargetType="TextBlock">
+            <Setter Property="FlowDirection" Value="LeftToRight" />
+            <Setter Property="TextAlignment" Value="Right" />
+        </Style>
+
         <SolidColorBrush x:Key="PrimaryBrush" Color="#1F4E79" />
         <SolidColorBrush x:Key="PrimaryTextBrush" Color="#FFFFFF" />
         <SolidColorBrush x:Key="SurfaceBrush" Color="#F4F6F8" />

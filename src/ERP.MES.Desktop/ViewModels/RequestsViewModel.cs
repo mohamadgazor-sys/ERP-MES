@@ -121,7 +121,7 @@ public sealed class RequestsViewModel(
 
     public string DetailHeading => _detail is null
         ? string.Empty
-        : $"درخواست {_detail.Value.RequestNo.Value} — {_detailCustomer}";
+        : $"درخواست {Messages.Ltr(_detail.Value.RequestNo.Value)} — {_detailCustomer}";
 
     public string DetailLine => _detail is null
         ? string.Empty
@@ -143,7 +143,7 @@ public sealed class RequestsViewModel(
 
     /// <summary>The PDF of the selected request in Persian, or the reminder that it is missing.</summary>
     public string PdfText => _detail?.Value.CurrentRequestPdf is { } pdf
-        ? $"فایل PDF درخواست: {pdf.FileName} ({SizeText(pdf.ContentLength)})"
+        ? $"فایل PDF درخواست: {Messages.Ltr(pdf.FileName)} ({SizeText(pdf.ContentLength)})"
         : "فایل PDF درخواست پیوست نشده است؛ پیش از ارسال به مدیریت باید پیوست شود.";
 
     /// <summary>Attaching (or replacing) the PDF needs the Central permission and a request that has not been submitted yet; the Application checks both again.</summary>

@@ -16,10 +16,10 @@
             <DataGrid ItemsSource="{Binding Rows}" SelectedItem="{Binding SelectedRow, Mode=TwoWay}" SelectionChanged="OnRowSelected" AutoGenerateColumns="False" IsReadOnly="True"
                       SelectionMode="Single" HeadersVisibility="Column" CanUserAddRows="False" CanUserDeleteRows="False" MaxHeight="200" Background="{StaticResource CardBrush}">
                 <DataGrid.Columns>
-                    <DataGridTextColumn Header="شمارهٔ درخواست" Binding="{Binding RequestNo}" Width="140" />
+                    <DataGridTextColumn Header="شمارهٔ درخواست" Binding="{Binding RequestNo}" ElementStyle="{StaticResource LtrCell}" Width="140" />
                     <DataGridTextColumn Header="مشتری" Binding="{Binding CustomerName}" Width="*" />
                     <DataGridTextColumn Header="وضعیت قرارداد" Binding="{Binding StatusText}" Width="*" />
-                    <DataGridTextColumn Header="شمارهٔ قرارداد" Binding="{Binding ContractNoText}" Width="120" />
+                    <DataGridTextColumn Header="شمارهٔ قرارداد" Binding="{Binding ContractNoText}" ElementStyle="{StaticResource LtrCell}" Width="120" />
                     <DataGridTextColumn Header="تاریخ" Binding="{Binding DateText}" Width="100" />
                 </DataGrid.Columns>
             </DataGrid>
@@ -33,7 +33,7 @@
                 <DataGrid ItemsSource="{Binding Versions}" AutoGenerateColumns="False" IsReadOnly="True" HeadersVisibility="Column" CanUserAddRows="False" CanUserDeleteRows="False" MaxHeight="170" Background="{StaticResource CardBrush}">
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="نسخه" Binding="{Binding VersionNo}" Width="60" />
-                        <DataGridTextColumn Header="شمارهٔ قرارداد" Binding="{Binding ContractNo}" Width="120" />
+                        <DataGridTextColumn Header="شمارهٔ قرارداد" Binding="{Binding ContractNo}" ElementStyle="{StaticResource LtrCell}" Width="120" />
                         <DataGridTextColumn Header="تاریخ" Binding="{Binding DateText}" Width="100" />
                         <DataGridTextColumn Header="وضعیت" Binding="{Binding StateText}" Width="100" />
                         <DataGridTextColumn Header="PDF" Binding="{Binding PdfText}" Width="*" />
@@ -47,7 +47,7 @@
                 <TextBlock TextWrapping="Wrap" Foreground="{StaticResource MutedTextBrush}" Text="آیتمی که «قرارداد لازم نیست» ثبت شود، منتظر تأیید قرارداد نمی‌ماند؛ سایر آیتم‌ها تا تأیید قرارداد آزاد یا شروع نمی‌شوند. دلیل الزامی است و هر تصمیم در تاریخچه می‌ماند." />
                 <DataGrid ItemsSource="{Binding ItemRows}" SelectedItem="{Binding SelectedItemRow, Mode=TwoWay}" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single" HeadersVisibility="Column" CanUserAddRows="False" CanUserDeleteRows="False" MaxHeight="170" Background="{StaticResource CardBrush}">
                     <DataGrid.Columns>
-                        <DataGridTextColumn Header="آیتم" Binding="{Binding ItemNo}" Width="90" />
+                        <DataGridTextColumn Header="آیتم" Binding="{Binding ItemNo}" ElementStyle="{StaticResource LtrCell}" Width="90" />
                         <DataGridTextColumn Header="نام قطعه" Binding="{Binding PartName}" Width="*" />
                         <DataGridTextColumn Header="تصمیم" Binding="{Binding EffectiveText}" Width="150" />
                         <DataGridTextColumn Header="دلیل" Binding="{Binding ReasonText}" Width="*" />

@@ -37,7 +37,7 @@ public class ClarificationsViewModelTests
 
         await drawing.LoadAsync(Token);
         Assert.True(drawing.CanAsk);
-        Assert.Equal("K-1 — Fictional Customer", drawing.RequestChoices.Single().Text);
+        Assert.Equal(Messages.Ltr("K-1") + " — Fictional Customer", drawing.RequestChoices.Single().Text);
         Assert.False(await drawing.AskAsync(id, " ", Token));
         Assert.Equal(Messages.ForIssue(ValidationIssue.ClarificationTextInvalid, ERP.MES.Domain.Calendar.JalaliDateError.None), drawing.Message);
         Assert.True(await drawing.AskAsync(id, "قطر چند است؟", Token));

@@ -11,6 +11,36 @@ namespace ERP.MES.Desktop.ViewModels;
 /// </summary>
 public static class Messages
 {
+    /// <summary>
+    /// Keeps free-form Latin text (request, item and contract numbers, machine codes, file names) readable inside a right-to-left Persian sentence: DEMO-1405-014 must not read 014-1405-DEMO. WPF does not honour the newer
+    /// bidi isolates and, as screenshots showed, not even explicit embeddings (U+202A...U+202C) inside DataGrid cells, so every neutral character (hyphen, slash, dot, space) is put between two left-to-right marks
+    /// (U+200E), which are strong characters that every implementation orders the same way. The text itself is unchanged.
+    /// </summary>
+    public static string Ltr(string? text)
+    {
+        if (string.IsNullOrEmpty(text))
+        {
+            return string.Empty;
+        }
+
+        const char Lrm = '\u200E';
+        var builder = new System.Text.StringBuilder(text.Length * 3 + 2);
+        builder.Append(Lrm);
+        foreach (var c in text)
+        {
+            if (char.IsLetterOrDigit(c))
+            {
+                builder.Append(c);
+            }
+            else
+            {
+                builder.Append(Lrm).Append(c).Append(Lrm);
+            }
+        }
+
+        return builder.Append(Lrm).ToString();
+    }
+
     public const string NotAuthorized = "شما اجازهٔ انجام این کار را ندارید.";
     public const string NotFound = "رکورد پیدا نشد؛ ممکن است تغییر کرده باشد. فهرست دوباره بارگذاری شد.";
     public const string Conflict = "این رکورد را کاربر دیگری تغییر داده است. فهرست دوباره بارگذاری شد؛ کار خود را دوباره انجام دهید.";

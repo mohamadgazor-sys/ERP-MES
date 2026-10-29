@@ -47,7 +47,7 @@
                           AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single" HeadersVisibility="Column"
                           CanUserAddRows="False" CanUserDeleteRows="False" Background="{StaticResource CardBrush}">
                     <DataGrid.Columns>
-                        <DataGridTextColumn Header="شمارهٔ درخواست" Binding="{Binding RequestNo}" Width="130" />
+                        <DataGridTextColumn Header="شمارهٔ درخواست" Binding="{Binding RequestNo}" ElementStyle="{StaticResource LtrCell}" Width="130" />
                         <DataGridTextColumn Header="مشتری" Binding="{Binding CustomerName}" Width="*" />
                         <DataGridTextColumn Header="نوع کار" Binding="{Binding WorkTypeText}" Width="80" />
                         <DataGridTextColumn Header="تاریخ" Binding="{Binding DateText}" Width="100" />
@@ -120,7 +120,7 @@
                     <DataGrid ItemsSource="{Binding Items}" AutoGenerateColumns="False" IsReadOnly="True" HeadersVisibility="Column"
                               CanUserAddRows="False" CanUserDeleteRows="False" MaxHeight="220" Background="{StaticResource CardBrush}">
                         <DataGrid.Columns>
-                            <DataGridTextColumn Header="شمارهٔ آیتم" Binding="{Binding ItemNo}" Width="110" />
+                            <DataGridTextColumn Header="شمارهٔ آیتم" Binding="{Binding ItemNo}" ElementStyle="{StaticResource LtrCell}" Width="110" />
                             <DataGridTextColumn Header="نام قطعه" Binding="{Binding PartName}" Width="*" />
                             <DataGridTextColumn Header="نوع کار" Binding="{Binding WorkTypeText}" Width="80" />
                             <DataGridTextColumn Header="تعداد" Binding="{Binding QuantityText}" Width="90" />

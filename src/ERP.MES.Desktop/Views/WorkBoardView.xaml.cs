@@ -68,6 +68,7 @@ public partial class WorkBoardView : UserControl
         if (Selected() is { } row)
         {
             await _viewModel.StartAsync(row, OutsideBox.Text);
+            await AskOutsideShiftReasonAsync(row, (r, reason) => _viewModel.StartAsync(r, reason));
         }
     }
 
@@ -92,6 +93,18 @@ public partial class WorkBoardView : UserControl
         if (Selected() is { } row)
         {
             await _viewModel.ResumeAsync(row, OutsideBox.Text);
+            await AskOutsideShiftReasonAsync(row, (r, reason) => _viewModel.ResumeAsync(r, reason));
+        }
+    }
+
+    // Work outside the operator's scheduled shift needs a recorded reason. The supervisor's dispatch panel has a box for it, but an operator resuming their own session has none, so the refusal is answered with a prompt
+    // (found by the UI interaction test: the operator could not resume a paused session outside shift hours).
+    private async Task AskOutsideShiftReasonAsync(SessionDisplayRow row, Func<SessionDisplayRow, string, Task> retry)
+    {
+        if (_viewModel.LastIssue == ERP.MES.Application.Requests.ValidationIssue.SessionOutsideShiftReasonRequired
+            && PromptWindow.Ask(Window.GetWindow(this), "کار خارج از شیفت", "دلیل کار خارج از شیفت (الزامی):") is { Length: > 0 } reason)
+        {
+            await retry(row, reason);
         }
     }
 

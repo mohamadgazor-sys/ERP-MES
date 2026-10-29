@@ -287,7 +287,7 @@ public sealed class JobReportsViewModel(
         var loaded = await queue.LoadAsync(currentUser(), _unit.UnitId, cancellationToken);
         foreach (var entry in loaded.Succeeded ? loaded.Value!.Queue : [])
         {
-            _stages.Add(new StageChoice(entry, $"{entry.RequestNo} / {entry.ItemNo} — مرحلهٔ {Digits(entry.StageNo.ToString(CultureInfo.InvariantCulture))}: {entry.StageTitle}"));
+            _stages.Add(new StageChoice(entry, $"{Messages.Ltr(entry.RequestNo)} / {Messages.Ltr(entry.ItemNo)} — مرحلهٔ {Digits(entry.StageNo.ToString(CultureInfo.InvariantCulture))}: {entry.StageTitle}"));
         }
     }
 

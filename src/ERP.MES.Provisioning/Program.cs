@@ -21,6 +21,9 @@ using ERP.MES.Infrastructure.Sqlite.Demo;
 //   demo-status <file>
 //   demo-init   <file> [--credentials <new file outside the repository>]
 //   demo-reset  <file> --yes [--credentials <new file outside the repository>]
+//   (both demo commands accept --presentation: after creating the accounts, every demonstration account replaces its one-time password, through the real
+//    sign-in and change-password use cases, with the demo passphrase read from the environment variable ERPMES_DEMO_PASSPHRASE; the one-time file is then deleted.
+//    Used only by the offline presentation package, docs/OFFLINE_DEMO_GUIDE.md.)
 //
 // Passwords are never printed. The demonstration accounts' one-time passwords go only to the protected credential file.
 const string Usage =
@@ -30,8 +33,8 @@ const string Usage =
     + "  issue-recovery-token --database <file> --username <administrator> --reason <text>\n"
     + "  benchmark-hash       [--iterations N]\n"
     + "  demo-status          <file>\n"
-    + "  demo-init            <file> [--credentials <new file outside the repository>]\n"
-    + "  demo-reset           <file> --yes [--credentials <new file outside the repository>]   (replaces ALL data in a marked demonstration database)";
+    + "  demo-init            <file> [--credentials <new file outside the repository>] [--presentation]\n"
+    + "  demo-reset           <file> --yes [--credentials <new file outside the repository>] [--presentation]   (replaces ALL data in a marked demonstration database)";
 
 if (args.Length < 1)
 {
@@ -177,7 +180,7 @@ try
         case "demo-init":
         case "demo-reset":
         {
-            if (positional.Count != 1 || options.Keys.Any(k => k is not ("--yes" or "--credentials")) || (options.ContainsKey("--yes") && command != "demo-reset"))
+            if (positional.Count != 1 || options.Keys.Any(k => k is not ("--yes" or "--credentials" or "--presentation")) || (options.ContainsKey("--yes") && command != "demo-reset"))
             {
                 return Usage2();
             }
@@ -185,6 +188,14 @@ try
             if (command == "demo-reset" && !options.ContainsKey("--yes"))
             {
                 Console.Error.WriteLine("Reset replaces all data in the demonstration database. Repeat the command with --yes to confirm.");
+                return 2;
+            }
+
+            var presentation = options.ContainsKey("--presentation");
+            var passphrase = Environment.GetEnvironmentVariable("ERPMES_DEMO_PASSPHRASE");
+            if (presentation && string.IsNullOrWhiteSpace(passphrase))
+            {
+                Console.Error.WriteLine("--presentation needs the demo passphrase in the environment variable ERPMES_DEMO_PASSPHRASE. Nothing was changed.");
                 return 2;
             }
 
@@ -198,6 +209,18 @@ try
             Console.WriteLine(
                 $"{(command == "demo-init" ? "Initialised" : "Reset done")}. Customers added {result.Seed.CustomersAdded}, already present {result.Seed.CustomersExisting}; "
                 + $"requests added {result.Seed.RequestsAdded}, already present {result.Seed.RequestsExisting}; demonstration accounts created {result.AccountsCreated}.");
+            if (presentation && result.CredentialFile is not null)
+            {
+                var replaced = await ReplaceOneTimePasswordsAsync(positional[0], result.CredentialFile, passphrase!);
+                if (replaced < 0)
+                {
+                    return 1;
+                }
+
+                Console.WriteLine($"Presentation mode: {replaced} demonstration accounts now use the demo passphrase (set through the real change-password use case); the one-time file was deleted.");
+                return 0;
+            }
+
             if (result.CredentialFile is not null)
             {
                 Console.WriteLine("The one-time passwords were written (not printed) to the protected file: " + result.CredentialFile);
@@ -219,6 +242,35 @@ catch (CredentialFileException exception)
 {
     Console.Error.WriteLine("Refused: " + exception.Message + " Nothing was changed.");
     return 1;
+}
+
+// Offline presentation package only: each new demonstration account signs in with its one-time password and replaces it, exactly as a person would at the first sign-in.
+async Task<int> ReplaceOneTimePasswordsAsync(string database, string credentialFile, string passphrase)
+{
+    var services = SecurityServices.Create(SqliteDatabase.CreateContextFactory(database));
+    var count = 0;
+    foreach (var line in File.ReadAllLines(credentialFile).Where(l => l.Contains('\t')))
+    {
+        var parts = line.Split('\t');
+        var first = await services.Authentication.SignInAsync(parts[0], parts[1]);
+        if (first.Status != SignInStatus.Succeeded || first.Principal is null)
+        {
+            Console.Error.WriteLine("Presentation mode: the sign-in of '" + parts[0] + "' failed (" + first.Status + "). The accounts keep their one-time passwords in " + credentialFile + ".");
+            return -1;
+        }
+
+        var changed = await services.Accounts.ChangeOwnPasswordAsync(first.Principal, parts[1], passphrase);
+        if (changed.Status != AccountStatus.Succeeded)
+        {
+            Console.Error.WriteLine("Presentation mode: the password of '" + parts[0] + "' was refused (" + changed.Status + "); the demo passphrase may not meet the password policy. The accounts keep their one-time passwords in " + credentialFile + ".");
+            return -1;
+        }
+
+        count++;
+    }
+
+    File.Delete(credentialFile);
+    return count;
 }
 
 string? RequireDatabase()

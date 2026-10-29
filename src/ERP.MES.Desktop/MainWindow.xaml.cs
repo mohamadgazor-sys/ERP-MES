@@ -29,6 +29,11 @@ public partial class MainWindow : Window
         InitializeComponent();
         DataContext = _shell;
 
+        // A screen smaller than the designed window (for example 1024x768) must not cut the window off at its edge: fit it into the work area (found by the UI test on a 1024x768 runner).
+        var area = SystemParameters.WorkArea;
+        Width = Math.Min(Width, area.Width);
+        Height = Math.Min(Height, area.Height);
+
         _shell.PropertyChanged += OnShellPropertyChanged;
         ShowCurrentPage();
 

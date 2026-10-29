@@ -406,6 +406,9 @@ public sealed class WorkBoardViewModel(
     private static Outcome<int> Map<T>(Outcome<T> outcome, string? warning = null) =>
         outcome.Succeeded ? Outcome<int>.Ok(1, warning is null ? null : [warning]) : new Outcome<int>(outcome.Status, 0, outcome.Issue, outcome.DateError);
 
+    /// <summary>The validation issue of the last refused command (None after a success). The window uses it to ask the operator for the reason that is required for work outside the scheduled shift.</summary>
+    public ValidationIssue LastIssue { get; private set; }
+
     private async Task CommandAsync(string success, Func<CancellationToken, Task<Outcome<int>>> command)
     {
         if (IsBusy)
@@ -416,6 +419,7 @@ public sealed class WorkBoardViewModel(
         await RunAsync(async () =>
         {
             var outcome = await command(CancellationToken.None);
+            LastIssue = outcome.Succeeded ? ValidationIssue.None : outcome.Issue;
             if (outcome.Succeeded)
             {
                 Succeed(success + (outcome.WarningList.Count > 0 ? " " + string.Join(" ", outcome.WarningList) : string.Empty));
@@ -481,7 +485,7 @@ public sealed class WorkBoardViewModel(
             ? "—"
             : $"فعال {Digits(active)}، متوقف {Digits(paused)}، تخصیص‌یافته {Digits(assigned)}، پایان‌یافته {Digits(finished)}";
         return new WorkStageRow(
-            e, $"{e.RequestNo} / {e.ItemNo} — {e.PartName}", $"مرحلهٔ {Digits(e.StageNo)} از {Digits(e.StageCount)}: {e.StageTitle}", ProductionQueueViewModel.StageStatusText(e.Status),
+            e, $"{Messages.Ltr(e.RequestNo)} / {Messages.Ltr(e.ItemNo)} — {e.PartName}", $"مرحلهٔ {Digits(e.StageNo)} از {Digits(e.StageCount)}: {e.StageTitle}", ProductionQueueViewModel.StageStatusText(e.Status),
             BlockText(e), sessionsText, e.Status is ItemStageStatus.Waiting or ItemStageStatus.InProgress, active + paused + assigned);
     }
 
@@ -526,7 +530,7 @@ public sealed class WorkBoardViewModel(
         var history = string.Join("؛ ", s.Pauses.Select((p, i) =>
             $"{Digits(i + 1)}) {_reasonNames(p.ReasonId)} از {dates.FormatDateTime(p.PausedAtUtc)}" + (p.ResumedAtUtc is { } resumed ? " تا " + dates.FormatDateTime(resumed) : " (باز)") + (p.Note is null ? string.Empty : " — " + p.Note)));
         return new SessionDisplayRow(
-            row, Digits((int)s.Id), $"{row.RequestNo}/{row.ItemNo} مرحلهٔ {Digits(s.StageNo)}", StatusText(s.Status), row.MachineCode, $"{row.OperatorCode} — {row.OperatorName}",
+            row, Digits((int)s.Id), $"{Messages.Ltr(row.RequestNo)}/{Messages.Ltr(row.ItemNo)} مرحلهٔ {Digits(s.StageNo)}", StatusText(s.Status), Messages.Ltr(row.MachineCode), $"{Messages.Ltr(row.OperatorCode)} — {row.OperatorName}",
             s.StartedAtUtc is { } start ? dates.FormatDateTime(start) : "—", Duration(SessionTime.Active(s, now)), Duration(SessionTime.Paused(s, now)), string.Join("؛ ", flags),
             s.IsTimeApproved ? "تأیید‌شده" : s.Status == WorkSessionStatus.Finished ? "منتظر تأیید برنامه‌ریزی" : string.Empty, history);
     }

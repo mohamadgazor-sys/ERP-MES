@@ -102,7 +102,7 @@ public class WorkBoardViewModelTests
         Assert.False(board.IsErrorMessage, board.Message);
         var session = Assert.Single(board.Sessions);
         Assert.Equal("در حال اجرا", session.StatusText);
-        Assert.Equal("FCC-06", session.MachineText);
+        Assert.Equal(Messages.Ltr("FCC-06"), session.MachineText);
         Assert.Contains("فعال ۱", board.Stages[0].SessionsText, StringComparison.Ordinal);
 
         h.Clock.Advance(TimeSpan.FromMinutes(60));

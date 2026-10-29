@@ -101,7 +101,7 @@ public sealed class ItemDefinitionViewModel(
 
     public bool HasRequest => _detail is not null;
 
-    public string RequestHeading => _detail is null ? string.Empty : $"درخواست {_detail.Request.Value.RequestNo.Value} — {_detail.CustomerName} — {Messages.WorkTypeText(_detail.Request.Value.WorkType)}";
+    public string RequestHeading => _detail is null ? string.Empty : $"درخواست {Messages.Ltr(_detail.Request.Value.RequestNo.Value)} — {_detail.CustomerName} — {Messages.WorkTypeText(_detail.Request.Value.WorkType)}";
 
     public string GateText => _gate is null
         ? string.Empty
