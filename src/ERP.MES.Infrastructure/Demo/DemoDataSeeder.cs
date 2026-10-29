@@ -7,8 +7,7 @@ using ERP.MES.Domain.Requests;
 namespace ERP.MES.Infrastructure.Demo;
 
 /// <summary>
-/// The real demonstration accounts that the sample records are attributed to: the Central user who "created" the customers, requests and items, and the QC user who "approved" the
-/// stages. They are provisioned (through the production bootstrap and account use cases) before the seed runs, so every created-by / approved-by value in the sample data refers to an
+/// The real demonstration accounts that the sample records are attributed to: the Central user who "created" the customers, requests and items (the QC user is resolved too, for the walkthrough's QC step). They are provisioned (through the production bootstrap and account use cases) before the seed runs, so every created-by / approved-by value in the sample data refers to an
 /// existing user row.
 /// </summary>
 public sealed record DemoSeedActors(long CreatedByUserId, long QcApproverUserId);
@@ -37,19 +36,7 @@ public sealed class DemoDataSeeder(ICustomerRepository customers, IRequestReposi
 
     public const string TitlePrefix = "[نمونه] ";
 
-    private enum StageState
-    {
-        /// <summary>Not released by Planning yet (valid only when no stage has been approved).</summary>
-        Planned,
-        Waiting,
-        InProgress,
-        WaitingQc,
-    }
-
-    private sealed record StageDef(string Title, decimal MinutesPerPiece);
-
-    // Approved: number of leading stages that QC has approved. Next: state of the stage after them (ignored when every stage is approved).
-    private sealed record ItemDef(string ItemNo, string PartName, decimal Quantity, Priority Priority, StageDef[] Stages, int Approved, StageState Next);
+    private sealed record ItemDef(string ItemNo, string PartName, decimal Quantity, Priority Priority);
 
     private sealed record RequestDef(int CustomerIndex, string RequestNo, WorkType Type, int Year, int Month, int Day, string Title, string Description, RequestStatus Status, ItemDef[] Items)
     {
@@ -64,40 +51,20 @@ public sealed class DemoDataSeeder(ICustomerRepository customers, IRequestReposi
         "گروه صنعتی نمونه فرضی ج " + DemoNameSuffix,
     ];
 
-    // Fictional requests: each has ONE work type (MAKE or REPAIR; Decision Log #84) that its items inherit, two or three stages per item, a spread of the approved statuses and priorities, and
-    // stages at different points of the QC gate (not released, waiting, in progress, waiting for QC, approved). Numbers, names and
-    // quantities are invented.
+    // Fictional requests. Only requests that are valid under the current workflow are seeded: one waiting for Management's decision and one just created (no PDF yet). They have items but NO stages:
+    // stages belong to the production-unit workflow (Planning defines and releases them per unit after approval, contract and Drawing gates), which the walkthrough performs through the real services.
+    // The earlier sample requests with unit-less stage progress (retired workflow, Decision Log #98/#116) are no longer seeded. Numbers, names and quantities are invented.
     private static readonly RequestDef[] Requests =
     [
-        new(0, RequestNoPrefix + "1405-001", WorkType.Make, 1405, 7, 5, TitlePrefix + "ساخت قطعات پمپ", "داده فرضی برای نمایش؛ مشتری و قطعات واقعی نیستند.", RequestStatus.MgmtApprovedAtPlanning,
-        [
-            new("1.10", "شفت پمپ", 20m, Priority.VeryUrgent, [new("تراشکاری", 5m), new("سنگ‌زنی", 3m), new("پولیش", 1.5m)], 1, StageState.WaitingQc),
-            new("1.20", "بوش برنزی", 6m, Priority.Urgent, [new("جوشکاری ترمیمی", 12m), new("ماشین‌کاری نهایی", 4m)], 0, StageState.InProgress),
-        ]),
-        new(0, RequestNoPrefix + "1405-002", WorkType.Repair, 1405, 7, 12, TitlePrefix + "تعمیر فلنج و گیربکس", "داده فرضی برای نمایش.", RequestStatus.MgmtApprovedAtPlanning,
-        [
-            new("2.10", "فلنج ورودی", 50m, Priority.Normal, [new("برش", 2m), new("سوراخکاری", 1.5m)], 0, StageState.WaitingQc),
-            new("2.20", "پوسته گیربکس", 2m, Priority.Normal, [new("بازرسی و ترمیم", 30m), new("مونتاژ و تست", 20m)], 0, StageState.Waiting),
-        ]),
         new(1, RequestNoPrefix + "1405-014", WorkType.Make, 1405, 7, 15, TitlePrefix + "ساخت چرخ‌دنده و غلتک (در انتظار مدیریت)", "داده فرضی برای نمایش؛ هنوز تأیید مدیریت ندارد.", RequestStatus.SentToManagement,
         [
-            new("3.10", "چرخ‌دنده مارپیچ", 100m, Priority.VeryUrgent, [new("تراشکاری", 4m), new("دنده‌زنی", 8m), new("سنگ‌زنی", 5m)], 0, StageState.Planned),
-            new("3.20", "غلتک چاپ", 3m, Priority.Normal, [new("ماشین‌کاری", 15m), new("پرداخت", 10m)], 0, StageState.Planned),
+            new("3.10", "چرخ‌دنده مارپیچ", 100m, Priority.VeryUrgent),
+            new("3.20", "غلتک چاپ", 3m, Priority.Normal),
         ]),
         new(1, RequestNoPrefix + "1405-015", WorkType.Repair, 1405, 7, 18, TitlePrefix + "تعمیر گلند و میل‌لنگ (تازه ثبت‌شده)", "داده فرضی برای نمایش؛ تازه ثبت شده است.", RequestStatus.Created,
         [
-            new("4.10", "گلند آب‌بندی", 200m, Priority.Urgent, [new("تراشکاری", 2m), new("پرداخت", 1m)], 0, StageState.Planned),
-            new("4.20", "میل‌لنگ", 1m, Priority.Normal, [new("سنگ‌زنی", 40m), new("پولیش", 15m)], 0, StageState.Planned),
-        ]),
-        new(2, RequestNoPrefix + "1405-003", WorkType.Make, 1405, 6, 28, TitlePrefix + "ساخت پین و یاتاقان", "داده فرضی برای نمایش؛ یک قلم مسیر کامل دارد.", RequestStatus.MgmtApprovedAtPlanning,
-        [
-            new("5.10", "پین اتصال", 500m, Priority.Normal, [new("تراشکاری", 1m), new("سنگ‌زنی", 0.8m), new("پولیش", 0.5m)], 3, StageState.Waiting),
-            new("5.20", "یاتاقان ثابت", 8m, Priority.Urgent, [new("ماشین‌کاری", 6m), new("پرداخت", 3m)], 1, StageState.Waiting),
-        ]),
-        new(2, RequestNoPrefix + "1404-087", WorkType.Repair, 1404, 12, 20, TitlePrefix + "تعمیر درپوش و شفت (سال قبل، بسته‌شده)", "داده فرضی برای نمایش؛ سال شمسی ۱۴۰۴.", RequestStatus.Closed,
-        [
-            new("6.10", "درپوش انتهایی", 40m, Priority.Normal, [new("تراشکاری", 3m), new("پرداخت", 1m)], 2, StageState.Planned),
-            new("6.20", "شفت خمیده", 4m, Priority.Normal, [new("صاف‌کاری", 20m), new("ماشین‌کاری", 8m)], 2, StageState.Planned),
+            new("4.10", "گلند آب‌بندی", 200m, Priority.Urgent),
+            new("4.20", "میل‌لنگ", 1m, Priority.Normal),
         ]),
     ];
 
@@ -164,13 +131,7 @@ public sealed class DemoDataSeeder(ICustomerRepository customers, IRequestReposi
 
         foreach (var itemDefinition in definition.Items)
         {
-            var item = request.AddItem(0, itemDefinition.ItemNo, itemDefinition.PartName, itemDefinition.Quantity, actors.CreatedByUserId, createdAt, itemDefinition.Priority);
-            foreach (var stage in itemDefinition.Stages)
-            {
-                item.DefineInitialStage(stage.Title, stage.MinutesPerPiece);
-            }
-
-            Advance(item, itemDefinition, createdAt.AddDays(1));
+            request.AddItem(0, itemDefinition.ItemNo, itemDefinition.PartName, itemDefinition.Quantity, actors.CreatedByUserId, createdAt, itemDefinition.Priority);
         }
 
         request.PlaceInStatusForDemonstration(definition.Status, createdAt.AddDays(1));
@@ -208,51 +169,6 @@ public sealed class DemoDataSeeder(ICustomerRepository customers, IRequestReposi
 
         builder.Append("trailer\n<< /Size ").Append(objects.Length + 1).Append(" /Root 1 0 R >>\nstartxref\n").Append(xref).Append("\n%%EOF\n");
         return System.Text.Encoding.ASCII.GetBytes(builder.ToString());
-    }
-
-    // Moves an item through the Domain's own demonstration transitions, so the QC gate is enforced while the sample data is built.
-    private void Advance(RequestItem item, ItemDef definition, DateTime activityStartUtc)
-    {
-        var stageCount = definition.Stages.Length;
-        if (definition.Approved < 0 || definition.Approved > stageCount)
-        {
-            throw new InvalidOperationException("Demo item " + definition.ItemNo + " approves a number of stages the route does not have.");
-        }
-
-        var allApproved = definition.Approved == stageCount;
-        if (definition.Approved > 0 && !allApproved && definition.Next == StageState.Planned)
-        {
-            throw new InvalidOperationException("Demo item " + definition.ItemNo + ": a stage after an approved stage is released by the QC approval, so it cannot stay Planned.");
-        }
-
-        if (definition.Approved > 0 || (!allApproved && definition.Next != StageState.Planned))
-        {
-            item.ReleaseFirstStage();
-        }
-
-        for (var stageNo = 1; stageNo <= definition.Approved; stageNo++)
-        {
-            item.StartStage(stageNo);
-            item.SubmitStageForQc(stageNo);
-            item.ApproveStageWholeQuantity(stageNo, actors.QcApproverUserId, activityStartUtc.AddHours(stageNo * 4));
-        }
-
-        if (allApproved)
-        {
-            return;
-        }
-
-        var next = definition.Approved + 1;
-        switch (definition.Next)
-        {
-            case StageState.InProgress:
-                item.StartStage(next);
-                break;
-            case StageState.WaitingQc:
-                item.StartStage(next);
-                item.SubmitStageForQc(next);
-                break;
-        }
     }
 
     private DateOnly GregorianDate(int year, int month, int day) =>

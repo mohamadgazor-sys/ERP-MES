@@ -64,7 +64,7 @@ public class DemoDatabaseTests
 
         var summary = await Init(db);
 
-        Assert.Equal(new DemoSeedSummary(3, 0, 6, 0), summary.Seed);
+        Assert.Equal(new DemoSeedSummary(3, 0, 2, 0), summary.Seed);
         Assert.Equal(DemoDatabaseState.Demo, DemoDatabase.Inspect(db.Path));
         Assert.Equal(new[] { DemoDatabase.ApplicationId.ToString(System.Globalization.CultureInfo.InvariantCulture) }, db.Query("PRAGMA application_id"));
         Assert.NotEmpty(db.Query("SELECT MigrationId FROM __EFMigrationsHistory"));
@@ -109,7 +109,7 @@ public class DemoDatabaseTests
 
         var second = await Init(db);
 
-        Assert.Equal(new DemoSeedSummary(0, 3, 0, 6), second.Seed);
+        Assert.Equal(new DemoSeedSummary(0, 3, 0, 2), second.Seed);
         Assert.Equal(0, second.AccountsCreated);
         Assert.Null(second.CredentialFile);
         Assert.Equal(before, Snapshot(db));
@@ -128,10 +128,10 @@ public class DemoDatabaseTests
         var first = await new DemoDataSeeder(db.Customers(), db.Requests(), Dates, actors).SeedAsync(Token);
         var second = await new DemoDataSeeder(db.Customers(), db.Requests(), Dates, actors).SeedAsync(Token);
 
-        Assert.Equal(new DemoSeedSummary(3, 0, 6, 0), first);
-        Assert.Equal(new DemoSeedSummary(0, 3, 0, 6), second);
+        Assert.Equal(new DemoSeedSummary(3, 0, 2, 0), first);
+        Assert.Equal(new DemoSeedSummary(0, 3, 0, 2), second);
         Assert.Equal(3, Count(db, "Customers"));
-        Assert.Equal(6, Count(db, "Requests"));
+        Assert.Equal(2, Count(db, "Requests"));
     }
 
     // ---- the safe-reset guard ----
@@ -242,7 +242,7 @@ public class DemoDatabaseTests
 
         var summary = await Reset(db);
 
-        Assert.Equal(new DemoSeedSummary(3, 0, 6, 0), summary.Seed);
+        Assert.Equal(new DemoSeedSummary(3, 0, 2, 0), summary.Seed);
         Assert.Equal(original, Snapshot(db));
         Assert.Equal(DemoDatabaseState.Demo, DemoDatabase.Inspect(db.Path));
         Assert.Empty(TemporaryFilesNextTo(db));
@@ -260,10 +260,10 @@ public class DemoDatabaseTests
 
         Assert.Equal(afterFirst, Snapshot(db));
         Assert.Equal(3, Count(db, "Customers"));
-        Assert.Equal(6, Count(db, "Requests"));
-        Assert.Equal(12, Count(db, "RequestItems"));
-        Assert.Equal(27, Count(db, "ItemStages"));
-        Assert.Equal(9, Count(db, "QcApprovals"));
+        Assert.Equal(2, Count(db, "Requests"));
+        Assert.Equal(4, Count(db, "RequestItems"));
+        Assert.Equal(0, Count(db, "ItemStages"));
+        Assert.Equal(0, Count(db, "QcApprovals"));
     }
 
     // ---- the sample data ----
@@ -280,75 +280,36 @@ public class DemoDatabaseTests
 
         Assert.Equal(3, customers.Count);
         Assert.Equal(3, customers.Select(c => c.Value.Name).Distinct(StringComparer.Ordinal).Count());
-        Assert.Equal(6, requests.Count);
-        Assert.Equal(6, requests.Select(r => r.Key).Distinct().Count());
+        Assert.Equal(2, requests.Count);
+        Assert.Equal(2, requests.Select(r => r.Key).Distinct().Count());
         Assert.All(requests, r => Assert.Equal(2, r.Items.Count));
-        // Every request has exactly one work type that its items inherit (Decision Log #84); the sample has three MAKE and three REPAIR requests.
-        Assert.Equal(3, requests.Count(r => r.WorkType == WorkType.Make));
-        Assert.Equal(3, requests.Count(r => r.WorkType == WorkType.Repair));
-        Assert.Equal(12, items.Count);
+        // Every request has exactly one work type that its items inherit (Decision Log #84); the sample has one MAKE and one REPAIR request.
+        Assert.Equal(1, requests.Count(r => r.WorkType == WorkType.Make));
+        Assert.Equal(1, requests.Count(r => r.WorkType == WorkType.Repair));
+        Assert.Equal(4, items.Count);
 
-        // Every sample request carries a fictional PDF except the freshly created one, which shows the rule "attach the PDF before submitting" (Decision Log #87).
-        Assert.Equal(5, requests.Count(r => r.HasRequestPdf));
+        // The request waiting for Management carries a fictional PDF; the freshly created one has none, which shows the rule "attach the PDF before submitting" (Decision Log #87).
+        Assert.Equal(1, requests.Count(r => r.HasRequestPdf));
         Assert.Equal(new[] { RequestStatus.Created }, requests.Where(r => !r.HasRequestPdf).Select(r => r.Status).ToArray());
         Assert.All(requests.Where(r => r.HasRequestPdf), r => Assert.EndsWith(".pdf", r.CurrentRequestPdf!.FileName, StringComparison.Ordinal));
-        Assert.All(items, i => Assert.InRange(i.Stages.Count, 2, 3));
-        Assert.Equal(27, items.Sum(i => i.Stages.Count));
-        Assert.Equal(9, items.Sum(i => i.QcApprovals.Count));
-        Assert.Equal(12, items.Select(i => i.Id).Distinct().Count());
+        Assert.Equal(4, items.Select(i => i.Id).Distinct().Count());
     }
 
     [Fact]
-    public async Task The_sample_data_shows_the_approved_statuses_priorities_and_stage_states()
+    public async Task The_sample_requests_are_valid_under_the_current_workflow_with_no_unit_less_stage_progress()
     {
         using var db = new TempDatabase();
         await Init(db);
         var requests = await LoadAllAsync(db);
         var items = requests.SelectMany(r => r.Items).ToList();
-        var stages = items.SelectMany(i => i.Stages).ToList();
 
-        Assert.Equal(
-            new[] { RequestStatus.Created, RequestStatus.SentToManagement, RequestStatus.MgmtApprovedAtPlanning, RequestStatus.Closed },
-            requests.Select(r => r.Status).Distinct().OrderBy(s => (int)s).ToArray());
-        Assert.Equal(
-            new[] { Priority.VeryUrgent, Priority.Urgent, Priority.Normal },
-            items.Select(i => i.Priority).Distinct().OrderBy(p => p.SortOrder()).ToArray());
-
-        Assert.Equal(9, stages.Count(s => s.Status == ItemStageStatus.QcApproved));
-        Assert.Equal(2, stages.Count(s => s.Status == ItemStageStatus.WaitingQc));
-        Assert.Equal(1, stages.Count(s => s.Status == ItemStageStatus.InProgress));
-        Assert.Equal(2, stages.Count(s => s.Status == ItemStageStatus.Waiting));
-        Assert.Equal(4, stages.Count(s => s.Status == ItemStageStatus.Planned));
-        Assert.Equal(9, stages.Count(s => s.Status == ItemStageStatus.WaitingPreviousQc));
-        Assert.Equal(3, items.Count(i => i.IsRouteCompleted));
-    }
-
-    [Fact]
-    public async Task The_stored_sample_data_respects_the_qc_gate()
-    {
-        using var db = new TempDatabase();
-        await Init(db);
-
-        foreach (var item in (await LoadAllAsync(db)).SelectMany(r => r.Items))
-        {
-            var stages = item.Stages.OrderBy(s => s.StageNo).ToList();
-            Assert.Equal(Enumerable.Range(1, stages.Count), stages.Select(s => s.StageNo));
-
-            for (var i = 1; i < stages.Count; i++)
-            {
-                // A stage after the first is only released, running, waiting for QC or approved when the stage before it is QC approved.
-                var proceeded = stages[i].Status is ItemStageStatus.Waiting or ItemStageStatus.InProgress or ItemStageStatus.WaitingQc or ItemStageStatus.QcApproved;
-                if (proceeded)
-                {
-                    Assert.Equal(ItemStageStatus.QcApproved, stages[i - 1].Status);
-                }
-            }
-
-            // Every approved stage has exactly one approval, and no approval exists for a stage that is not approved.
-            var approvedStageNos = stages.Where(s => s.Status == ItemStageStatus.QcApproved).Select(s => s.StageNo).OrderBy(n => n).ToList();
-            Assert.Equal(approvedStageNos, item.QcApprovals.Select(a => a.StageNo).OrderBy(n => n).ToList());
-            Assert.All(item.QcApprovals, a => Assert.Equal(stages[a.StageNo - 1].PlannedQuantity, a.ApprovedQuantity));
-        }
+        // Only the two states that precede Management's decision are seeded; stages, queue positions and QC approvals are created through the production-unit workflow (docs/DEMO_WALKTHROUGH.md).
+        Assert.Equal(new[] { RequestStatus.Created, RequestStatus.SentToManagement }, requests.Select(r => r.Status).Distinct().OrderBy(s => (int)s).ToArray());
+        Assert.Equal(new[] { Priority.VeryUrgent, Priority.Urgent, Priority.Normal }, items.Select(i => i.Priority).Distinct().OrderBy(p => p.SortOrder()).ToArray());
+        Assert.All(items, i => Assert.Empty(i.Stages));
+        Assert.All(items, i => Assert.Empty(i.QcApprovals));
+        Assert.Empty(db.Query("SELECT Id FROM WorkSessions"));
+        Assert.Empty(db.Query("SELECT Id FROM QueueOverrides"));
     }
 
     [Fact]
@@ -373,13 +334,9 @@ public class DemoDatabaseTests
         Assert.All(requests, r => Assert.Equal(DateTimeKind.Utc, r.CreatedAtUtc.Kind));
 
         // Persian text is stored exactly, and the Jalali year is derived from the stored request date.
-        Assert.Contains(requests, r => r.Items.Any(i => i.PartName == "شفت پمپ"));
+        Assert.Contains(requests, r => r.Items.Any(i => i.PartName == "چرخ‌دنده مارپیچ"));
         Assert.All(requests, r => Assert.Equal(Dates.GetJalaliYear(r.RequestDate), r.JalaliRequestYear));
-        Assert.Equal(new[] { 1404, 1405 }, requests.Select(r => r.JalaliRequestYear).Distinct().OrderBy(y => y).ToArray());
-
-        var closed = Assert.Single(requests, r => r.Status == RequestStatus.Closed);
-        Assert.Equal("1404/12/20", Dates.FormatDate(closed.RequestDate));
-        Assert.Equal(1404, closed.JalaliRequestYear);
-        Assert.Equal(DemoDataSeeder.RequestNoPrefix + "1404-087", closed.RequestNo.Value);
+        Assert.Equal(new[] { 1405 }, requests.Select(r => r.JalaliRequestYear).Distinct().OrderBy(y => y).ToArray());
+        Assert.Equal(new[] { "1405/07/15", "1405/07/18" }, requests.OrderBy(r => r.RequestDate).Select(r => Dates.FormatDate(r.RequestDate)).ToArray());
     }
 }
