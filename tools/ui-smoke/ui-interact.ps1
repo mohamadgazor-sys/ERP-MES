@@ -250,13 +250,15 @@ function Click-Btn([string] $name) { $b = Wait-Enabled $name 12; if (-not $b) { 
 function Grid-Has($rootId, [string] $contains) { $g = Find-ById $script:Main $rootId 5; if (-not $g) { return $false }; return [bool](Get-GridRows $g | Where-Object { $_.Joined -like "*$contains*" } | Select-Object -First 1) }
 function Wait-Grid-Has($rootId, [string] $contains, [int] $seconds = 12) { $d = (Get-Date).AddSeconds($seconds); do { if (Grid-Has $rootId $contains) { return $true }; Start-Sleep -Milliseconds 600 } while ((Get-Date) -lt $d); return $false }
 function Dialog-Ok([string] $title) {
-    $deadline = (Get-Date).AddSeconds(10)
+    # An owned (modal) window is exposed by UI Automation as a child of its owner, so look for it under the main window as well as at the top level.
+    $windowCond = New-Object System.Windows.Automation.AndCondition((New-Object System.Windows.Automation.PropertyCondition($AE::NameProperty, $title)), (New-Object System.Windows.Automation.PropertyCondition($AE::ControlTypeProperty, [System.Windows.Automation.ControlType]::Window)))
+    $deadline = (Get-Date).AddSeconds(12)
     while ((Get-Date) -lt $deadline) {
-        foreach ($w in $AE::RootElement.FindAll($Scope::Children, (New-Object System.Windows.Automation.PropertyCondition($AE::ProcessIdProperty, $script:Process.Id)))) {
-            if ($w.Current.Name -eq $title) {
-                $b = Find-ByName $w 'تأیید' ([System.Windows.Automation.ControlType]::Button) 3
-                if ($b) { Click $b; Start-Sleep -Milliseconds 800; return $true }
-            }
+        $w = $script:Main.FindFirst($Scope::Descendants, $windowCond)
+        if (-not $w) { $w = $AE::RootElement.FindFirst($Scope::Descendants, $windowCond) }
+        if ($w) {
+            $b = Find-ByName $w 'تأیید' ([System.Windows.Automation.ControlType]::Button) 3
+            if ($b) { Click $b; Start-Sleep -Milliseconds 800; return $true }
         }
         Start-Sleep -Milliseconds 400
     }
@@ -496,7 +498,7 @@ try {
         Start-Sleep -Seconds 2
         $stageAfter = Get-RowText (Find-ById $script:Main 'StageGrid' 5) 'UI.1'
         Note ('  stage after the QC attempt: ' + $stageAfter)
-        Check ($stageAfter -notlike '*در انتظار کنترل کیفیت*') 'PREMATURE ACTION: submitting the stage to QC is refused while the work session is open (the stage did not move to "waiting for QC")' "stage moved to QC: $stageAfter"
+        Check ($stageAfter -notlike '*در انتظار کنترل کیفیت*' -and (Screen-Texts 120) -like '*مرحله به کنترل کیفیت ارسال نمی‌شود*') 'PREMATURE ACTION: submitting the stage to QC is refused while the work session is open - the screen shows the refusal and the stage did not move to "waiting for QC"' "QC attempt not refused as expected; stage: $stageAfter; screen: $(Screen-Texts 60)"
         Note ('  messages: ' + (Screen-Texts 12))
         Save-Shot 'interact-11-qc-blocked'
     }
