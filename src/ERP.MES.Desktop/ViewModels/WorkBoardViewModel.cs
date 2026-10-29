@@ -481,7 +481,7 @@ public sealed class WorkBoardViewModel(
             ? "—"
             : $"فعال {Digits(active)}، متوقف {Digits(paused)}، تخصیص‌یافته {Digits(assigned)}، پایان‌یافته {Digits(finished)}";
         return new WorkStageRow(
-            e, $"{e.RequestNo} / {e.ItemNo} — {e.PartName}", $"مرحلهٔ {Digits(e.StageNo)} از {Digits(e.StageCount)}: {e.StageTitle}", ProductionQueueViewModel.StageStatusText(e.Status),
+            e, $"{Messages.Ltr(e.RequestNo)} / {Messages.Ltr(e.ItemNo)} — {e.PartName}", $"مرحلهٔ {Digits(e.StageNo)} از {Digits(e.StageCount)}: {e.StageTitle}", ProductionQueueViewModel.StageStatusText(e.Status),
             BlockText(e), sessionsText, e.Status is ItemStageStatus.Waiting or ItemStageStatus.InProgress, active + paused + assigned);
     }
 
@@ -526,7 +526,7 @@ public sealed class WorkBoardViewModel(
         var history = string.Join("؛ ", s.Pauses.Select((p, i) =>
             $"{Digits(i + 1)}) {_reasonNames(p.ReasonId)} از {dates.FormatDateTime(p.PausedAtUtc)}" + (p.ResumedAtUtc is { } resumed ? " تا " + dates.FormatDateTime(resumed) : " (باز)") + (p.Note is null ? string.Empty : " — " + p.Note)));
         return new SessionDisplayRow(
-            row, Digits((int)s.Id), $"{row.RequestNo}/{row.ItemNo} مرحلهٔ {Digits(s.StageNo)}", StatusText(s.Status), row.MachineCode, $"{row.OperatorCode} — {row.OperatorName}",
+            row, Digits((int)s.Id), $"{Messages.Ltr(row.RequestNo)}/{Messages.Ltr(row.ItemNo)} مرحلهٔ {Digits(s.StageNo)}", StatusText(s.Status), row.MachineCode, $"{row.OperatorCode} — {row.OperatorName}",
             s.StartedAtUtc is { } start ? dates.FormatDateTime(start) : "—", Duration(SessionTime.Active(s, now)), Duration(SessionTime.Paused(s, now)), string.Join("؛ ", flags),
             s.IsTimeApproved ? "تأیید‌شده" : s.Status == WorkSessionStatus.Finished ? "منتظر تأیید برنامه‌ریزی" : string.Empty, history);
     }

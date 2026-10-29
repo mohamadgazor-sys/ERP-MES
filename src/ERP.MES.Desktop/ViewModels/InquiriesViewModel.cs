@@ -91,7 +91,7 @@ public sealed class InquiriesViewModel(InquiryService service, QcMasterService q
 
     public string InquiryHeading => _detail is null
         ? string.Empty
-        : $"درخواست {_detail.RequestNo} — {_detail.CustomerName} — دور {_detail.Inquiry.Value.RoundNo} — {Messages.InquiryStatusText(_detail.Inquiry.Value.Status)}";
+        : $"درخواست {Messages.Ltr(_detail.RequestNo)} — {_detail.CustomerName} — دور {_detail.Inquiry.Value.RoundNo} — {Messages.InquiryStatusText(_detail.Inquiry.Value.Status)}";
 
     private InquiryStatus? Status => _detail?.Inquiry.Value.Status;
 

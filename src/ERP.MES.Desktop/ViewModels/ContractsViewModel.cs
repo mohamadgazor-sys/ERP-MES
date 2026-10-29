@@ -86,7 +86,7 @@ public sealed class ContractsViewModel(ContractService service, RequestGateServi
 
     public bool HasDetail => _detail is not null;
 
-    public string DetailHeading => _detail is null ? string.Empty : $"درخواست {_detail.RequestNo} — {_detail.CustomerName}";
+    public string DetailHeading => _detail is null ? string.Empty : $"درخواست {Messages.Ltr(_detail.RequestNo)} — {_detail.CustomerName}";
 
     public string StatusLine => _detail is null ? string.Empty : "وضعیت قرارداد: " + (_detail.Contract is { } c ? Messages.ContractStatusText(c.Value.Status) : "تصمیم‌گیری نشده");
 
@@ -332,7 +332,7 @@ public sealed class ContractsViewModel(ContractService service, RequestGateServi
             {
                 _versions.Add(new ContractVersionRow(
                     v.VersionNo, v.ContractNo ?? string.Empty, v.ContractDate is { } d ? dates.FormatDate(d) : string.Empty, Messages.ContractVersionStateText(v.State),
-                    v.CurrentPdf?.FileName ?? "—", v.Decision is { } decision ? (decision == ContractDecision.Approved ? "تأیید" : "رد") + (v.DecidedAtUtc is { } at ? " (" + dates.FormatDateTime(at) + ")" : string.Empty) : string.Empty,
+                    Messages.Ltr(v.CurrentPdf?.FileName) is { Length: > 0 } pdfName ? pdfName : "—", v.Decision is { } decision ? (decision == ContractDecision.Approved ? "تأیید" : "رد") + (v.DecidedAtUtc is { } at ? " (" + dates.FormatDateTime(at) + ")" : string.Empty) : string.Empty,
                     v.DecisionNote ?? string.Empty));
             }
 
