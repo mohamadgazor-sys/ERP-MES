@@ -474,21 +474,23 @@ try {
     $mineRows = @(Get-GridRows $script:Main | Where-Object { $_.Joined -like '*UI.1*' -and $_.Joined -like '*فعال*' })
     Note ('  rows with UI.1 and active: ' + $mineRows.Count + ' ; MineGrid present: ' + [bool](Find-ById $script:Main 'MineGrid' 2))
     $mine = Find-ById $script:Main 'MineGrid' 5
-    if ($mine) { try { $mine.SetFocus() } catch { }; Start-Sleep -Milliseconds 800; $si = $null; if ($mine.TryGetCurrentPattern([System.Windows.Automation.ScrollItemPattern]::Pattern, [ref] $si)) { try { $si.ScrollIntoView() } catch { } }; Start-Sleep -Milliseconds 600; Save-Shot 'interact-10b-mine-scrolled'; Note ('  MineGrid offscreen=' + $mine.Current.IsOffscreen + ' bounds=' + $mine.Current.BoundingRectangle + ' children=' + $mine.FindAll($Scope::Children, [System.Windows.Automation.Condition]::TrueCondition).Count) }
-    $mineOnly = if ($mine) { @(Get-GridRows $mine) } else { @() }
-    Check ($mineOnly.Count -ge 1) 'the operator sees the session in "my sessions"' ("operator sees no session in MineGrid; screen: $(Screen-Texts 70)")
+    if ($mine) { try { $mine.SetFocus() } catch { }; Start-Sleep -Milliseconds 800 }
+    # The operator's own session is the only row that names the machine (the stage grid has no machine column).
+    $mineOnly = @(Get-GridRows $script:Main | Where-Object { $_.Joined -like '*FCC-06*' })
+    Note ('  rows naming FCC-06: ' + $mineOnly.Count + ' ; ' + (($mineOnly | ForEach-Object { $_.Joined }) -join ' || '))
+    Check ($mineOnly.Count -ge 1) 'the operator sees the session in "my sessions"' ("operator sees no session; screen: $(Screen-Texts 70)")
     if ($mineOnly.Count -ge 1) {
         Select-Item $mineOnly[0].Element; Start-Sleep -Milliseconds 600
         Pick-Combo 'ReasonBox' $null | Out-Null
         Click-Btn 'توقف…'
         $okPause = Dialog-Ok 'توقف نوبت'
         Start-Sleep -Seconds 2
-        $afterPause = Get-RowText (Find-ById $script:Main 'MineGrid' 5) ''
+        $afterPause = Get-RowText $script:Main 'FCC-06'
         Note ('  after pause: ' + $afterPause)
         Check ($afterPause -like '*متوقف*') 'PAUSE: the session shows as paused with the chosen reason' ("pause not shown; dialog handled: $okPause; row: $afterPause")
         Click-Btn 'ازسرگیری'
         Start-Sleep -Seconds 2
-        $afterResume = Get-RowText (Find-ById $script:Main 'MineGrid' 5) ''
+        $afterResume = Get-RowText $script:Main 'FCC-06'
         Check ($afterResume -notlike '*متوقف*') 'RESUME: the session is active again' "still paused: $afterResume"
         Click-Btn 'ارسال مرحله به کنترل کیفیت'
         Start-Sleep -Seconds 2

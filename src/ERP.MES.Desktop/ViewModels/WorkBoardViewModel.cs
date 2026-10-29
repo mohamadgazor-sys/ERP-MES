@@ -526,7 +526,7 @@ public sealed class WorkBoardViewModel(
         var history = string.Join("؛ ", s.Pauses.Select((p, i) =>
             $"{Digits(i + 1)}) {_reasonNames(p.ReasonId)} از {dates.FormatDateTime(p.PausedAtUtc)}" + (p.ResumedAtUtc is { } resumed ? " تا " + dates.FormatDateTime(resumed) : " (باز)") + (p.Note is null ? string.Empty : " — " + p.Note)));
         return new SessionDisplayRow(
-            row, Digits((int)s.Id), $"{Messages.Ltr(row.RequestNo)}/{Messages.Ltr(row.ItemNo)} مرحلهٔ {Digits(s.StageNo)}", StatusText(s.Status), row.MachineCode, $"{row.OperatorCode} — {row.OperatorName}",
+            row, Digits((int)s.Id), $"{Messages.Ltr(row.RequestNo)}/{Messages.Ltr(row.ItemNo)} مرحلهٔ {Digits(s.StageNo)}", StatusText(s.Status), Messages.Ltr(row.MachineCode), $"{Messages.Ltr(row.OperatorCode)} — {row.OperatorName}",
             s.StartedAtUtc is { } start ? dates.FormatDateTime(start) : "—", Duration(SessionTime.Active(s, now)), Duration(SessionTime.Paused(s, now)), string.Join("؛ ", flags),
             s.IsTimeApproved ? "تأیید‌شده" : s.Status == WorkSessionStatus.Finished ? "منتظر تأیید برنامه‌ریزی" : string.Empty, history);
     }

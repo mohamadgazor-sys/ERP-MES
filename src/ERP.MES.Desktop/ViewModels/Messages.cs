@@ -11,8 +11,8 @@ namespace ERP.MES.Desktop.ViewModels;
 /// </summary>
 public static class Messages
 {
-    /// <summary>Wraps free-form Latin text (request, item and contract numbers, file names) in a left-to-right isolate, so that it is not reordered inside a right-to-left Persian sentence (for example DEMO-1405-014 must not read 014-1405-DEMO).</summary>
-    public static string Ltr(string? text) => string.IsNullOrEmpty(text) ? string.Empty : "\u2066" + text + "\u2069";
+    /// <summary>Wraps free-form Latin text (request, item and contract numbers, file names) in a left-to-right embedding (U+202A ... U+202C; WPF does not honour the newer isolates, a screenshot showed them ineffective), so that it is not reordered inside a right-to-left Persian sentence (for example DEMO-1405-014 must not read 014-1405-DEMO).</summary>
+    public static string Ltr(string? text) => string.IsNullOrEmpty(text) ? string.Empty : "\u202A" + text + "\u202C";
 
     public const string NotAuthorized = "شما اجازهٔ انجام این کار را ندارید.";
     public const string NotFound = "رکورد پیدا نشد؛ ممکن است تغییر کرده باشد. فهرست دوباره بارگذاری شد.";
