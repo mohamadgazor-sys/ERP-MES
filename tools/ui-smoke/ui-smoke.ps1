@@ -5,7 +5,10 @@
 param(
     [Parameter(Mandatory = $true)][string] $ExePath,
     [Parameter(Mandatory = $true)][string] $DatabasePath,
-    [Parameter(Mandatory = $true)][string] $CredentialsPath
+    [string] $CredentialsPath,
+    [string] $AccountsFile,              # offline package: DEMO-ACCOUNTS.txt with a "PASSPHRASE:" line; the accounts then have NO one-time password to replace
+    [string[]] $SignInOnly = @(),        # accounts that are only signed in (main window and navigation must appear), without walking every page
+    [switch] $SkipWalk                   # do not walk the three standard accounts (used after a reset, with -SignInOnly)
 )
 
 $ErrorActionPreference = 'Stop'
@@ -22,6 +25,7 @@ $visited = New-Object System.Collections.Generic.List[string]
 function Note([string] $text) { Write-Host $text }
 function Fail([string] $text) { $script:failures.Add($text); Write-Host "FAIL: $text" }
 
+$script:Fixed = $false
 function Get-Passwords([string] $file) {
     $map = @{}
     foreach ($line in (Get-Content -LiteralPath $file -Encoding UTF8)) {
@@ -110,14 +114,29 @@ function Save-Screenshot([string] $name) {
         $bitmap = New-Object System.Drawing.Bitmap($bounds.Width, $bounds.Height)
         $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
         $graphics.CopyFromScreen($bounds.Location, [System.Drawing.Point]::Empty, $bounds.Size)
+        $factor = [Math]::Min(1.0, 1100.0 / $bounds.Width)
+        $scaled = New-Object System.Drawing.Bitmap($bitmap, [int]($bounds.Width * $factor), [int]($bounds.Height * $factor))
         $dir = Join-Path $env:RUNNER_TEMP 'ui-smoke-screens'
         New-Item -ItemType Directory -Force -Path $dir | Out-Null
-        $bitmap.Save((Join-Path $dir "$name.png"), [System.Drawing.Imaging.ImageFormat]::Png)
-        $graphics.Dispose(); $bitmap.Dispose()
+        $codec = [System.Drawing.Imaging.ImageCodecInfo]::GetImageEncoders() | Where-Object { $_.MimeType -eq 'image/jpeg' } | Select-Object -First 1
+        $parameters = New-Object System.Drawing.Imaging.EncoderParameters(1)
+        $parameters.Param[0] = New-Object System.Drawing.Imaging.EncoderParameter([System.Drawing.Imaging.Encoder]::Quality, [long]55)
+        $scaled.Save((Join-Path $dir "$name.jpg"), $codec, $parameters)
+        $graphics.Dispose(); $bitmap.Dispose(); $scaled.Dispose()
     } catch { Note "(screenshot $name not taken: $($_.Exception.Message))" }
 }
 
-function Invoke-Session([string] $username, [string] $oneTimePassword, [string[]] $mustSee) {
+# Evidence for the offline claim: the application process must hold no network connection (loopback excluded).
+function Report-Connections($process) {
+    try {
+        $tcp = @(Get-NetTCPConnection -OwningProcess $process.Id -ErrorAction SilentlyContinue | Where-Object { $_.RemoteAddress -notin @('127.0.0.1', '::1', '0.0.0.0', '::') })
+        $udp = @(Get-NetUDPEndpoint -OwningProcess $process.Id -ErrorAction SilentlyContinue)
+        Note ("NETWORK: process {0}: {1} non-loopback TCP connection(s), {2} UDP endpoint(s)" -f $process.Id, $tcp.Count, $udp.Count)
+        if ($tcp.Count -gt 0) { Fail ("the application holds " + $tcp.Count + " non-loopback TCP connection(s): " + (($tcp | ForEach-Object { $_.RemoteAddress + ':' + $_.RemotePort }) -join ', ')) }
+    } catch { Note "(connection check not available: $($_.Exception.Message))" }
+}
+
+function Invoke-Session([string] $username, [string] $oneTimePassword, [string[]] $mustSee, [switch] $QuickOnly) {
     Note "=== Session: $username ==="
     $env:ERPMES_DATABASE = $DatabasePath
     $process = Start-Process -FilePath $ExePath -PassThru
@@ -135,9 +154,12 @@ function Invoke-Session([string] $username, [string] $oneTimePassword, [string[]
         if (-not $signInButton) { Fail "$username`: the sign-in button was not found"; return }
         Click $signInButton
 
-        # The demonstration accounts must replace their one-time password first.
-        $current = Find-ById $window 'CurrentPassword' 15
-        if ($current -and -not $current.Current.IsOffscreen) {
+        # The demonstration accounts must replace their one-time password first (not in the offline package, where the launcher already did it).
+        $current = Find-ById $window 'CurrentPassword' $(if ($script:Fixed) { 4 } else { 15 })
+        if ($script:Fixed) {
+            if ($current -and -not $current.Current.IsOffscreen) { Fail "$username`: the change-password panel appeared although the offline package should have replaced the one-time password" }
+            else { Note 'No change-password panel (the launcher already replaced the one-time password), as expected.' }
+        } elseif ($current -and -not $current.Current.IsOffscreen) {
             Note 'The change-password panel is shown (one-time password), as required.'
             Type-Secret $current $oneTimePassword
             Type-Secret (Find-ById $window 'NewPassword') $NewPassword
@@ -155,6 +177,14 @@ function Invoke-Session([string] $username, [string] $oneTimePassword, [string[]
         if (-not $main) { Fail "$username`: the main window with the navigation list did not appear"; Save-Screenshot "$username-3-nomain"; return }
         Note "Main window: '$($main.Current.Name)'"
         $nav = Find-ById $main 'NavigationList'
+        if ($QuickOnly) {
+            $count = $nav.FindAll($Scope::Children, (New-Object System.Windows.Automation.PropertyCondition($AE::ControlTypeProperty, [System.Windows.Automation.ControlType]::ListItem))).Count
+            Note "Signed in; navigation shows $count entries."
+            if ($count -lt 1) { Fail "$username`: no navigation entries after sign-in" }
+            Save-Screenshot "$username-main"
+            Report-Connections $process
+            return $main
+        }
         $listItemCondition = New-Object System.Windows.Automation.PropertyCondition($AE::ControlTypeProperty, [System.Windows.Automation.ControlType]::ListItem)
         # The list is virtualised: only the realised rows exist in the UI Automation tree, so the walk scrolls with PageDown until no new row appears.
         # A row's own Name is the view-model's ToString(); the visible title is its Text child.
@@ -192,19 +222,33 @@ function Invoke-Session([string] $username, [string] $oneTimePassword, [string[]
         }
         Note "Navigation ($($seen.Count)): $($seen -join ' | ')"
         foreach ($required in $mustSee) { if ($seen -notcontains $required) { Fail "$username`: the navigation lacks '$required'" } }
+        Report-Connections $process
         return $main
     } finally {
         if (-not $process.HasExited) { $process.CloseMainWindow() | Out-Null; Start-Sleep -Seconds 2; if (-not $process.HasExited) { $process.Kill() } }
     }
 }
 
-$passwords = Get-Passwords $CredentialsPath
-Note "Accounts in the credential file: $($passwords.Keys.Count)"
+if ($AccountsFile) {
+    $script:Fixed = $true
+    $line = Get-Content -LiteralPath $AccountsFile -Encoding UTF8 | Where-Object { $_ -match '^PASSPHRASE:\s*(\S.*)$' } | Select-Object -First 1
+    if (-not $line) { throw 'No PASSPHRASE line in the accounts file.' }
+    $pass = ($line -replace '^PASSPHRASE:\s*', '').Trim()
+    Write-Host "::add-mask::$pass"
+    $passwords = @{}
+    foreach ($u in @('demo.admin', 'demo.central', 'demo.management', 'demo.planning', 'demo.drawing', 'demo.qc', 'demo.warehouse', 'demo.production', 'demo.supervisor')) { $passwords[$u] = $pass }
+} else {
+    $passwords = Get-Passwords $CredentialsPath
+}
+Note "Accounts available: $($passwords.Keys.Count)"
 if ($passwords.Keys.Count -ne 9) { Fail "expected nine accounts, found $($passwords.Keys.Count)" }
 
-Invoke-Session 'demo.supervisor' $passwords['demo.supervisor'] @('نوبت‌های کاری') | Out-Null
-Invoke-Session 'demo.planning' $passwords['demo.planning'] @('صف واحدهای تولید', 'قراردادها', 'تعریف آیتم‌ها و مرحله‌ها') | Out-Null
-Invoke-Session 'demo.central' $passwords['demo.central'] @('درخواست‌ها') | Out-Null
+if (-not $SkipWalk) {
+    Invoke-Session 'demo.supervisor' $passwords['demo.supervisor'] @('نوبت‌های کاری') | Out-Null
+    Invoke-Session 'demo.planning' $passwords['demo.planning'] @('صف واحدهای تولید', 'قراردادها', 'تعریف آیتم‌ها و مرحله‌ها') | Out-Null
+    Invoke-Session 'demo.central' $passwords['demo.central'] @('درخواست‌ها') | Out-Null
+}
+foreach ($u in $SignInOnly) { Invoke-Session $u $passwords[$u] @() -QuickOnly | Out-Null }
 
 Note "Visited pages: $($visited.Count)"
 if ($failures.Count -gt 0) { Note "FAILURES: $($failures.Count)"; $failures | ForEach-Object { Note " - $_" }; exit 1 }

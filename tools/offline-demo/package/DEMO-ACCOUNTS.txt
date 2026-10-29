@@ -1,0 +1,21 @@
+﻿ERP/MES OFFLINE DEMO - FICTIONAL ACCOUNTS
+========================================
+These accounts exist ONLY in the local demonstration database of this package. All data is fictional.
+The passphrase below is a demo-only value shared by all nine accounts; it protects nothing real. Do not reuse it anywhere, and do not leave this package on a shared or production computer.
+(The application normally forces a new password at the first sign-in; the launcher performs that step for you through the real password-change function, so you can sign in directly.)
+
+PASSPHRASE: DemoMes-2026-Show
+
+Username          Department / role                          Use it to show
+----------------  -----------------------------------------  -----------------------------------------------------------
+demo.central      Central (staff)                            create a customer request, attach its PDF, submit to Management
+demo.management   Management (manager)                       approve or reject the request, approve the contract, approve the price
+demo.planning     Planning (staff)                           send to Drawing, contract decisions (per item), define items and stages, release a stage
+demo.drawing      Drawing (staff)                            record the technical-feasibility result of the request
+demo.qc           QC (staff)                                 inspect a submitted stage (accept / rework / scrap)
+demo.warehouse    Warehouse (staff)                          receive the item, costing, finished/sent, customer dispatch
+demo.production   Production (operator)                      work as the operator of a work session
+demo.supervisor   Production (milling-unit supervisor)      dispatch, start, pause, finish work sessions on the work board
+demo.admin        System administrator                       user administration only
+
+Sign-in names are case-sensitive and written exactly as above (lower case).

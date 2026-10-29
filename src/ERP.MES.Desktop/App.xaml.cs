@@ -31,6 +31,8 @@ public partial class App : System.Windows.Application
     protected override async void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+        DispatcherUnhandledException += (_, args) => LocalLog.Error("unhandled UI exception", args.Exception);
+        AppDomain.CurrentDomain.UnhandledException += (_, args) => LocalLog.Error("unhandled exception", args.ExceptionObject as Exception ?? new InvalidOperationException("unknown"));
 
         try
         {
@@ -42,6 +44,8 @@ public partial class App : System.Windows.Application
             var databasePath = Environment.GetEnvironmentVariable(DatabaseVariable) is { Length: > 0 } configured
                 ? configured
                 : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ERP-MES", "erpmes.demo.db");
+
+            LocalLog.StartupFacts(databasePath);
 
             // The application never creates or resets a database. IT creates it (Provisioning: migrate, or demo-init for the fictional demonstration database).
             if (!File.Exists(databasePath))
@@ -64,20 +68,24 @@ public partial class App : System.Windows.Application
         }
         catch (ActorReferencesInvalidException exception)
         {
+            LocalLog.Error("old database", exception);
             // A database from before sign-in existed: the message says what is wrong and how to replace a demonstration database.
             Fail("پایگاه داده قدیمی است و ارتقا نیافت؛ هیچ تغییری داده نشد:\n" + exception.Message);
         }
         catch (RequestWorkTypeInvalidException exception)
         {
+            LocalLog.Error("old database", exception);
             // A database whose requests mix MAKE and REPAIR items (or have no items): one type per request cannot be derived, so nothing was upgraded.
             Fail("پایگاه داده قدیمی است و ارتقا نیافت؛ نوع کار (ساخت یا تعمیر) برخی درخواست‌ها مشخص نیست و هیچ تغییری داده نشد:\n" + exception.Message);
         }
         catch (InvalidAuthenticationPolicyException exception)
         {
+            LocalLog.Error("invalid authentication settings", exception);
             Fail("تنظیمات احراز هویت معتبر نیست؛ برنامه اجرا نمی‌شود:\n" + string.Join("\n", exception.Problems));
         }
-        catch (Exception)
+        catch (Exception exception)
         {
+            LocalLog.Error("start-up failed", exception);
             Fail("اجرای برنامه ممکن نبود. پایگاه داده یا تنظیمات را بررسی کنید.");
         }
     }
@@ -104,8 +112,9 @@ public partial class App : System.Windows.Application
         {
             await ShowSignInAsync(notice);
         }
-        catch (Exception)
+        catch (Exception exception)
         {
+            LocalLog.Error("sign-in window failed", exception);
             Fail("اجرای برنامه ممکن نبود. پایگاه داده یا تنظیمات را بررسی کنید.");
         }
     }
