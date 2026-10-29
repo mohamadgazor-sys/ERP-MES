@@ -3897,6 +3897,8 @@ This section is authoritative and supersedes any conflicting older draft/backlog
 ## Excel, contract, documents, and permissions
 - Excel import is core v1 for requests up to approximately 1,000 items. Use one mixed worksheet with Persian headers and explicit Work Type. Changed existing rows are conflicts requiring manual choice; never silently overwrite or reset active stages/history.
 - Contract requirement applies to the whole request. Planning creates/submits contract and PDF after Drawing confirms doability. Management approves/rejects with optional explanation; rejected contract is corrected/resubmitted. Approval is visible in Planning and Warehouse dashboards. Search by contract number/date/customer for Planning, Management, and Warehouse. Contract customer is derived through Request.Customer; do not duplicate CustomerID on Contract.
+
+> **Superseded/clarified (2026-10-27, Decision Log #111; recorded 2026-10-29):** the contract DOCUMENT and its approval stay request-level, but the contract DECISION and the production gate are evaluated per item (append-only `ItemContractDecisions`; an item with no decision follows the request).
 - One PDF/document may be linked to multiple logical records, while the binary content is stored once.
 - Initial sensitive-action permissions are defined in the Domain/Database Specification.
 - All user-facing dates are Shamsi/Jalali; all monetary values are Iranian Rial (IRR). Windows 10/11 only; WPF/modern .NET architecture.

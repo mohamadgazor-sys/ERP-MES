@@ -41,6 +41,31 @@ jobs:
       - name: List packages (direct and transitive)
         run: dotnet list "$PROJECT" package --include-transitive --no-restore
 
+      # Evidence for docs/DEPENDENCY_LICENCE_INVENTORY.md: what each restored package declares in its own .nuspec (nothing is executed; the packages are only read).
+      - name: Licence metadata of the restored packages (read from the .nuspec files)
+        run: |
+          dotnet list "$PROJECT" package --include-transitive --no-restore --format json > packages.json
+          python3 - <<'PY'
+          import json, os, re, glob
+          root = os.path.expanduser('~/.nuget/packages')
+          seen = {}
+          for proj in json.load(open('packages.json')).get('projects', []):
+              for fw in proj.get('frameworks', []):
+                  for kind in ('topLevelPackages', 'transitivePackages'):
+                      for pkg in fw.get(kind, []):
+                          seen[(pkg['id'], pkg['resolvedVersion'])] = 'direct' if kind == 'topLevelPackages' else 'transitive'
+          for (pid, ver), kind in sorted(seen.items(), key=lambda kv: kv[0][0].lower()):
+              d = os.path.join(root, pid.lower(), ver)
+              nuspec = next(iter(glob.glob(os.path.join(d, '*.nuspec'))), None)
+              text = open(nuspec, encoding='utf-8-sig').read() if nuspec else ''
+              def tag(name):
+                  m = re.search(r'<%s[^>]*>(.*?)</%s>' % (name, name), text, re.S)
+                  return m.group(1).strip() if m else ''
+              lic = re.search(r'<license[^>]*type="([^"]+)"[^>]*>(.*?)</license>', text, re.S)
+              notices = [f for f in glob.glob(os.path.join(d, '**', '*'), recursive=True) if re.search(r'(notice|license)', os.path.basename(f), re.I) and os.path.isfile(f)]
+              print('LICENCE|%s|%s|%s|%s|%s|%s|accept=%s|files=%s' % (pid, ver, kind, (lic.group(1) + ':' + lic.group(2).strip()) if lic else 'none', tag('licenseUrl') or '-', tag('copyright') or '-', tag('requireLicenseAcceptance') or 'false', ';'.join(sorted(os.path.relpath(f, d) for f in notices)) or 'none'))
+          PY
+
       - name: Check for vulnerable packages (direct and transitive)
         run: |
           set -o pipefail

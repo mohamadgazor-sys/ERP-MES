@@ -1,0 +1,56 @@
+name: UI smoke
+
+# Launches the real WPF application on a Windows runner against a throw-away demonstration database and walks the navigation with Microsoft UI Automation
+# (tools/ui-smoke/ui-smoke.ps1, docs/UI_SMOKE.md). No secrets, no deployment, nothing is uploaded. Separate from CI so the long test job is not slowed.
+# Third-party actions are pinned to full commit SHAs; the comment names the release.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ui-smoke-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ui-smoke:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up .NET SDK from global.json
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: global.json
+
+      - name: Publish the Desktop application and build Provisioning
+        shell: pwsh
+        run: |
+          dotnet publish src/ERP.MES.Desktop/ERP.MES.Desktop.csproj --configuration Release --runtime win-x64 --self-contained true --output "$env:RUNNER_TEMP/app"
+          if ($LASTEXITCODE -ne 0) { throw 'publish failed' }
+          dotnet build src/ERP.MES.Provisioning/ERP.MES.Provisioning.csproj --configuration Release
+          if ($LASTEXITCODE -ne 0) { throw 'provisioning build failed' }
+
+      - name: Create the throw-away demonstration database
+        shell: pwsh
+        run: |
+          $db = Join-Path $env:RUNNER_TEMP 'ui-smoke.demo.db'
+          $credentials = Join-Path $env:RUNNER_TEMP 'ui-smoke.credentials.txt'
+          dotnet run --project src/ERP.MES.Provisioning/ERP.MES.Provisioning.csproj --configuration Release --no-build -- demo-init $db --credentials $credentials | Out-Null
+          if ($LASTEXITCODE -ne 0) { throw 'demo-init failed' }
+          foreach ($line in (Get-Content -LiteralPath $credentials)) { if ($line -like "*`t*") { Write-Host "::add-mask::$(($line -split "`t")[1])" } }
+
+      - name: Run the UI automation
+        shell: powershell
+        run: |
+          & "${{ github.workspace }}\tools\ui-smoke\ui-smoke.ps1" -ExePath "$env:RUNNER_TEMP\app\ERP.MES.Desktop.exe" -DatabasePath "$env:RUNNER_TEMP\ui-smoke.demo.db" -CredentialsPath "$env:RUNNER_TEMP\ui-smoke.credentials.txt"
+          if ($LASTEXITCODE -ne 0) { throw "UI automation reported failures (exit code $LASTEXITCODE)" }

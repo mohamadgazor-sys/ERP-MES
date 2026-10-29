@@ -1,0 +1,195 @@
+﻿# UI smoke test of the real WPF application on a Windows runner (docs/UI_SMOKE.md). It launches the published Desktop build against a throw-away
+# demonstration database, signs in through the real sign-in window, replaces the one-time password, and walks the navigation with Microsoft UI Automation.
+# It records what it saw (window titles, page titles, grid row counts) in the log. It does NOT click through the business workflow: that is covered by
+# EndToEndDemoTests at the service level. Passwords are random one-time values read from a protected temp file, masked first, and never printed.
+param(
+    [Parameter(Mandatory = $true)][string] $ExePath,
+    [Parameter(Mandatory = $true)][string] $DatabasePath,
+    [Parameter(Mandatory = $true)][string] $CredentialsPath
+)
+
+$ErrorActionPreference = 'Stop'
+Add-Type -AssemblyName UIAutomationClient, UIAutomationTypes, System.Windows.Forms
+$AE = [System.Windows.Automation.AutomationElement]
+$Scope = [System.Windows.Automation.TreeScope]
+$Cond = [System.Windows.Automation.Condition]
+$Prop = [System.Windows.Automation.AutomationElement]
+
+$NewPassword = 'Ui-Smoke-Pass-Phrase-9'   # throw-away database on a CI runner only
+$failures = New-Object System.Collections.Generic.List[string]
+$visited = New-Object System.Collections.Generic.List[string]
+
+function Note([string] $text) { Write-Host $text }
+function Fail([string] $text) { $script:failures.Add($text); Write-Host "FAIL: $text" }
+
+function Get-Passwords([string] $file) {
+    $map = @{}
+    foreach ($line in (Get-Content -LiteralPath $file -Encoding UTF8)) {
+        if ($line -like "*`t*") { $parts = $line -split "`t"; $map[$parts[0]] = $parts[1]; Write-Host "::add-mask::$($parts[1])" }
+    }
+    return $map
+}
+
+function Find-ById($parent, [string] $id, [int] $timeoutSeconds = 20) {
+    $condition = New-Object System.Windows.Automation.PropertyCondition($AE::AutomationIdProperty, $id)
+    $deadline = (Get-Date).AddSeconds($timeoutSeconds)
+    do {
+        $found = $parent.FindFirst($Scope::Descendants, $condition)
+        if ($found) { return $found }
+        Start-Sleep -Milliseconds 300
+    } while ((Get-Date) -lt $deadline)
+    return $null
+}
+
+function Find-ByName($parent, [string] $name, $controlType = $null, [int] $timeoutSeconds = 20) {
+    $conditions = @(New-Object System.Windows.Automation.PropertyCondition($AE::NameProperty, $name))
+    if ($controlType) { $conditions += New-Object System.Windows.Automation.PropertyCondition($AE::ControlTypeProperty, $controlType) }
+    $condition = if ($conditions.Count -gt 1) { New-Object System.Windows.Automation.AndCondition($conditions) } else { $conditions[0] }
+    $deadline = (Get-Date).AddSeconds($timeoutSeconds)
+    do {
+        $found = $parent.FindFirst($Scope::Descendants, $condition)
+        if ($found) { return $found }
+        Start-Sleep -Milliseconds 300
+    } while ((Get-Date) -lt $deadline)
+    return $null
+}
+
+function Get-AppWindow([int] $processId, [int] $timeoutSeconds = 30) {
+    $condition = New-Object System.Windows.Automation.PropertyCondition($AE::ProcessIdProperty, $processId)
+    $deadline = (Get-Date).AddSeconds($timeoutSeconds)
+    do {
+        $windows = $AE::RootElement.FindAll($Scope::Children, $condition)
+        if ($windows.Count -gt 0) { return $windows[0] }
+        Start-Sleep -Milliseconds 400
+    } while ((Get-Date) -lt $deadline)
+    return $null
+}
+
+function Set-Text($element, [string] $text) {
+    $pattern = $null
+    if ($element.TryGetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern, [ref] $pattern)) { $pattern.SetValue($text); return }
+    throw 'The element does not support ValuePattern.'
+}
+
+# A WPF PasswordBox has no ValuePattern: focus it and type. SendKeys treats + ^ % ~ ( ) { } [ ] specially, so they are wrapped in braces.
+function Type-Secret($element, [string] $secret) {
+    $element.SetFocus()
+    Start-Sleep -Milliseconds 200
+    [System.Windows.Forms.SendKeys]::SendWait(([regex]::Replace($secret, '[+^%~(){}\[\]]', '{$0}')))
+}
+
+function Click($element) {
+    $pattern = $null
+    if ($element.TryGetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern, [ref] $pattern)) { $pattern.Invoke(); return }
+    throw 'The element does not support InvokePattern.'
+}
+
+function Select-Item($element) {
+    $pattern = $null
+    if ($element.TryGetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern, [ref] $pattern)) { $pattern.Select(); return }
+    throw 'The element does not support SelectionItemPattern.'
+}
+
+function Read-Texts($parent, [int] $limit = 25) {
+    $condition = New-Object System.Windows.Automation.PropertyCondition($AE::ControlTypeProperty, [System.Windows.Automation.ControlType]::Text)
+    $all = $parent.FindAll($Scope::Descendants, $condition)
+    $names = @()
+    for ($i = 0; $i -lt [Math]::Min($all.Count, $limit); $i++) { $n = $all[$i].Current.Name; if ($n) { $names += $n } }
+    return $names
+}
+
+function Count-Type($parent, $controlType) {
+    $condition = New-Object System.Windows.Automation.PropertyCondition($AE::ControlTypeProperty, $controlType)
+    return $parent.FindAll($Scope::Descendants, $condition).Count
+}
+
+function Save-Screenshot([string] $name) {
+    try {
+        Add-Type -AssemblyName System.Drawing
+        $bounds = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
+        $bitmap = New-Object System.Drawing.Bitmap($bounds.Width, $bounds.Height)
+        $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
+        $graphics.CopyFromScreen($bounds.Location, [System.Drawing.Point]::Empty, $bounds.Size)
+        $dir = Join-Path $env:RUNNER_TEMP 'ui-smoke-screens'
+        New-Item -ItemType Directory -Force -Path $dir | Out-Null
+        $bitmap.Save((Join-Path $dir "$name.png"), [System.Drawing.Imaging.ImageFormat]::Png)
+        $graphics.Dispose(); $bitmap.Dispose()
+    } catch { Note "(screenshot $name not taken: $($_.Exception.Message))" }
+}
+
+function Invoke-Session([string] $username, [string] $oneTimePassword, [string[]] $mustSee) {
+    Note "=== Session: $username ==="
+    $env:ERPMES_DATABASE = $DatabasePath
+    $process = Start-Process -FilePath $ExePath -PassThru
+    try {
+        $window = Get-AppWindow $process.Id
+        if (-not $window) { Fail "$username`: no window appeared"; return }
+        Note "First window: '$($window.Current.Name)'"
+        $user = Find-ById $window 'SignInUsername'
+        $pass = Find-ById $window 'SignInPassword'
+        if (-not $user -or -not $pass) { Fail "$username`: the sign-in controls were not found"; Save-Screenshot "$username-signin"; return }
+        Save-Screenshot "$username-1-signin"
+        Set-Text $user $username
+        Type-Secret $pass $oneTimePassword
+        $signInButton = Find-ByName $window 'ورود' ([System.Windows.Automation.ControlType]::Button)
+        if (-not $signInButton) { Fail "$username`: the sign-in button was not found"; return }
+        Click $signInButton
+
+        # The demonstration accounts must replace their one-time password first.
+        $current = Find-ById $window 'CurrentPassword' 15
+        if ($current -and -not $current.Current.IsOffscreen) {
+            Note 'The change-password panel is shown (one-time password), as required.'
+            Type-Secret $current $oneTimePassword
+            Type-Secret (Find-ById $window 'NewPassword') $NewPassword
+            Type-Secret (Find-ById $window 'NewPasswordRepeat') $NewPassword
+            Save-Screenshot "$username-2-change"
+            Click (Find-ByName $window 'تغییر گذرواژه' ([System.Windows.Automation.ControlType]::Button))
+        } else { Fail "$username`: the change-password panel did not appear for a one-time password" }
+
+        $main = $null
+        $deadline = (Get-Date).AddSeconds(30)
+        while ((Get-Date) -lt $deadline -and -not $main) {
+            $candidate = Get-AppWindow $process.Id 5
+            if ($candidate -and (Find-ById $candidate 'NavigationList' 2)) { $main = $candidate } else { Start-Sleep -Milliseconds 500 }
+        }
+        if (-not $main) { Fail "$username`: the main window with the navigation list did not appear"; Save-Screenshot "$username-3-nomain"; return }
+        Note "Main window: '$($main.Current.Name)'"
+        $nav = Find-ById $main 'NavigationList'
+        $items = $nav.FindAll($Scope::Children, (New-Object System.Windows.Automation.PropertyCondition($AE::ControlTypeProperty, [System.Windows.Automation.ControlType]::ListItem)))
+        $titles = @(); foreach ($i in $items) { $titles += $i.Current.Name }
+        Note "Navigation ($($titles.Count)): $($titles -join ' | ')"
+        foreach ($required in $mustSee) { if ($titles -notcontains $required) { Fail "$username`: the navigation lacks '$required'" } }
+
+        foreach ($item in $items) {
+            $title = $item.Current.Name
+            Select-Item $item
+            Start-Sleep -Milliseconds 700
+            $heading = Find-ByName $main $title ([System.Windows.Automation.ControlType]::Text) 5
+            $texts = Read-Texts $main 12
+            $grids = Count-Type $main ([System.Windows.Automation.ControlType]::DataGrid)
+            $buttons = Count-Type $main ([System.Windows.Automation.ControlType]::Button)
+            $rows = Count-Type $main ([System.Windows.Automation.ControlType]::DataItem)
+            $errorDialog = Get-AppWindow $process.Id 1
+            Note ("PAGE '{0}': heading={1} datagrids={2} rows={3} buttons={4}" -f $title, [bool]$heading, $grids, $rows, $buttons)
+            Note ("  texts: {0}" -f (($texts | Select-Object -First 8) -join ' / '))
+            if (-not $heading) { Fail "$username`: opening '$title' did not show its heading" }
+            $visited.Add("$username/$title")
+            if ($title -in $mustSee) { Save-Screenshot ("{0}-{1}" -f $username, ($visited.Count)) }
+        }
+        return $main
+    } finally {
+        if (-not $process.HasExited) { $process.CloseMainWindow() | Out-Null; Start-Sleep -Seconds 2; if (-not $process.HasExited) { $process.Kill() } }
+    }
+}
+
+$passwords = Get-Passwords $CredentialsPath
+Note "Accounts in the credential file: $($passwords.Keys.Count)"
+if ($passwords.Keys.Count -ne 9) { Fail "expected nine accounts, found $($passwords.Keys.Count)" }
+
+Invoke-Session 'demo.supervisor' $passwords['demo.supervisor'] @('نوبت‌های کاری') | Out-Null
+Invoke-Session 'demo.planning' $passwords['demo.planning'] @('صف واحدهای تولید', 'قراردادها', 'تعریف آیتم‌ها و مرحله‌ها') | Out-Null
+Invoke-Session 'demo.central' $passwords['demo.central'] @('درخواست‌ها') | Out-Null
+
+Note "Visited pages: $($visited.Count)"
+if ($failures.Count -gt 0) { Note "FAILURES: $($failures.Count)"; $failures | ForEach-Object { Note " - $_" }; exit 1 }
+Note 'UI smoke test passed: every listed page opened with its heading.'
