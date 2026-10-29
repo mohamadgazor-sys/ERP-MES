@@ -43,23 +43,17 @@ Fixed (no clock, no randomness, no machine setting), so a reset followed by a se
 
 Demonstration-only data is recognisable: customer names end with `(نمونه آزمایشی)`, request numbers start with `DEMO-` and request titles start with `[نمونه] `. **Created-by and approved-by values are real users since the sign-in PR**: the seed takes two user ids, the `demo.central` account (creator of customers, requests and items) and the `demo.qc` account (approver of the stages), which `DemoAccountProvisioner` creates before the seed runs. The earlier placeholder `1` is gone, and creators and approvers are real foreign keys (`docs/AUTHENTICATION.md` section 9). A demonstration database from before sign-in existed cannot be upgraded (its records name a user that never existed): `demo-init` refuses it and `demo-reset <file> --yes` replaces it.
 
-| Request (customer) | Jalali date | Status | Items (type, priority) and route state |
+| Request (customer) | Jalali date | Status | Items (type, priority) |
 |---|---|---|---|
-| DEMO-1405-001 (A) | 1405/07/05 | `MGMT_APPROVED_AT_PLANNING` | **MAKE request.** 1.10 very urgent: 3 stages, stage 1 QC-approved, stage 2 waiting for QC, stage 3 waiting for previous QC. 1.20 urgent: 2 stages, stage 1 in progress |
-| DEMO-1405-002 (A) | 1405/07/12 | `MGMT_APPROVED_AT_PLANNING` | **REPAIR request.** 2.10 normal: 2 stages, stage 1 waiting for QC. 2.20 normal: 2 stages, stage 1 released (waiting) |
-| DEMO-1405-014 (B) | 1405/07/15 | `SENT_TO_MANAGEMENT` | **MAKE request.** 3.10 very urgent (3 stages), 3.20 normal (2 stages); nothing released |
-| DEMO-1405-015 (B) | 1405/07/18 | `CREATED` | **REPAIR request.** 4.10 urgent, 4.20 normal (2 stages each); nothing released |
-| DEMO-1405-003 (C) | 1405/06/28 | `MGMT_APPROVED_AT_PLANNING` | **MAKE request.** 5.10 normal: all 3 stages approved (route completed). 5.20 urgent: stage 1 approved, stage 2 released |
-| DEMO-1404-087 (C) | 1404/12/20 | `CLOSED` | **REPAIR request.** 6.10, 6.20 (normal): both routes completed; a request of the previous Jalali year |
+| DEMO-1405-014 (B) | 1405/07/15 | `SENT_TO_MANAGEMENT` | **MAKE request**, with a fictional PDF. 3.10 very urgent (quantity 100), 3.20 normal (quantity 3). No stages. |
+| DEMO-1405-015 (B) | 1405/07/18 | `CREATED` | **REPAIR request**, no PDF (shows the rule "attach the PDF before submitting", Decision Log #87). 4.10 urgent (200), 4.20 normal (1). No stages. |
 
-Every sample request except `DEMO-1405-015` (status `CREATED`) carries a small fictional PDF (`<request number>.pdf`, text says it is a demonstration document), so the screen can show the rule "attach the PDF before submitting" (Decision Log #87) with the one request that has none. Totals: 3 customers, 6 requests (5 PDFs), 12 items (6 in the three MAKE requests, 6 in the three REPAIR requests; a request has one work type, Decision Log #84), 27 stages, 9 QC approvals. Stage states: 9 QC approved, 2 waiting for QC, 1 in progress, 2 waiting, 4 planned, 9 waiting for previous QC.
+**Changed 2026-10-29 (demo-readiness, Decision Log #118).** The earlier dataset had six requests (12 items, 27 stages, 9 QC approvals) whose stage progress was built with the unit-less demonstration transitions. That flow was retired (Decision Log #98, #116): production stages now belong to a production unit, are released per unit after the approval, contract and Drawing gates, and are executed through work sessions. Sample stages without a unit, queue position or session cannot be shown in the unit queues or the work board and cannot be continued by the current workflow, so the four requests that depended on them (`DEMO-1405-001`, `-002`, `-003`, `DEMO-1404-087`) are no longer seeded. The two requests that remain are valid examples under the current workflow: they precede Management's decision, so they carry items but no stages. Customers (3, one per fictional company, one of them unused by a request) and the master data of section 4 are unchanged. Totals: 3 customers, 2 requests (1 PDF), 4 items, 0 stages, 0 QC approvals. Everything after the approval (contract decision, Drawing, item definition with stages and units, release, sessions, QC, costing, dispatch) is performed by `docs/DEMO_WALKTHROUGH.md` through the real services, and `EndToEndDemoTests` runs that path on a fresh seeded database.
 
 Honest limits of the sample, all inherited from the Domain model (Decision Log #57, #58):
 
 - **Request status is placed directly** by `Request.PlaceInStatusForDemonstration` (Decision Log #60), which checks no transition and does not approve the transition table (T1). It is **`internal`** to the Domain assembly, visible only to `ERP.MES.Infrastructure` (where `DemoDataSeeder` lives) and the Domain tests via `InternalsVisibleTo`; there is no public status setter. `InternalsVisibleTo` is assembly-wide, so a test also proves that Infrastructure uses no other internal Domain method, constructor or property setter. Tests prove the method is not public, the Domain shares internals only with those two assemblies, and the seed is the single production call site.
-- Stage progress uses only the Domain's demonstration transitions (release, start, submit for QC, whole-quantity QC approval), so the QC gate runs while the data is built. There are no rejected, rework, scrap, partial or external-supply stages (G10); those are not modelled yet.
-- Routes are fixed seeded routes of two or three stages (T2). The estimated minutes per piece are invented.
-- No machine rates, queue positions or Management overrides exist yet.
+- No stage progress is seeded any more (see the change note above).
 
 ## 3a. Demonstration accounts and credentials
 

@@ -165,10 +165,10 @@ public class DemoAccountsTests
         Assert.Equal(new[] { "0" }, db.Query("SELECT COUNT(*) FROM RequestItems WHERE CreatedByUserId NOT IN (SELECT Id FROM Users)"));
         Assert.Equal(new[] { "0" }, db.Query("SELECT COUNT(*) FROM QcApprovals WHERE ApprovedByUserId NOT IN (SELECT Id FROM Users)"));
 
-        // The Central user "created" the records and the QC user "approved" the stages; the placeholder value 1 is not used by accident.
+        // The Central user "created" the records; the sample data has no QC approvals any more (stages are created through the production-unit workflow), and the placeholder value 1 is not used by accident.
         Assert.Equal(new[] { "demo.central" }, db.Query("SELECT DISTINCT u.Username FROM Customers c JOIN Users u ON u.Id = c.CreatedByUserId"));
         Assert.Equal(new[] { "demo.central" }, db.Query("SELECT DISTINCT u.Username FROM Requests c JOIN Users u ON u.Id = c.CreatedByUserId"));
-        Assert.Equal(new[] { "demo.qc" }, db.Query("SELECT DISTINCT u.Username FROM QcApprovals a JOIN Users u ON u.Id = a.ApprovedByUserId"));
+        Assert.Empty(db.Query("SELECT Id FROM QcApprovals"));
         Assert.Equal(new[] { "demo.admin" }, db.Query("SELECT Username FROM Users WHERE Id = 1"));
     }
 
