@@ -54,3 +54,26 @@ jobs:
         run: |
           & "${{ github.workspace }}\tools\ui-smoke\ui-smoke.ps1" -ExePath "$env:RUNNER_TEMP\app\ERP.MES.Desktop.exe" -DatabasePath "$env:RUNNER_TEMP\ui-smoke.demo.db" -CredentialsPath "$env:RUNNER_TEMP\ui-smoke.credentials.txt"
           if ($LASTEXITCODE -ne 0) { throw "UI automation reported failures (exit code $LASTEXITCODE)" }
+
+      # Interaction test (docs/UI_SMOKE.md section 5): real clicks on a second, fresh disposable database whose accounts already use the demo passphrase (the same mechanism as the offline package).
+      - name: Create a fresh database for the interaction test
+        shell: pwsh
+        run: |
+          $db = Join-Path $env:RUNNER_TEMP 'ui-interact.demo.db'
+          $line = Get-Content tools/offline-demo/package/DEMO-ACCOUNTS.txt | Where-Object { $_ -match '^PASSPHRASE:' } | Select-Object -First 1
+          $env:ERPMES_DEMO_PASSPHRASE = ($line -replace '^PASSPHRASE:\s*', '').Trim()
+          Write-Host "::add-mask::$($env:ERPMES_DEMO_PASSPHRASE)"
+          dotnet run --project src/ERP.MES.Provisioning/ERP.MES.Provisioning.csproj --configuration Release --no-build -- demo-init $db --credentials (Join-Path $env:RUNNER_TEMP 'ui-interact.credentials.txt') --presentation
+          if ($LASTEXITCODE -ne 0) { throw 'demo-init --presentation failed' }
+
+      - name: Run the UI interaction test
+        shell: powershell
+        run: |
+          & "${{ github.workspace }}\tools\ui-smoke\ui-interact.ps1" -ExePath "$env:RUNNER_TEMP\app\ERP.MES.Desktop.exe" -DatabasePath "$env:RUNNER_TEMP\ui-interact.demo.db" -AccountsFile "${{ github.workspace }}\tools\offline-demo\package\DEMO-ACCOUNTS.txt"
+          if ($LASTEXITCODE -ne 0) { throw "UI interaction test reported failures (exit code $LASTEXITCODE)" }
+
+      - name: Print selected screenshots (fictional data) into the log
+        if: ${{ always() }}
+        shell: pwsh
+        run: ./tools/ui-smoke/Print-Screenshots.ps1 -Names 'interact-1-central-requests','interact-2-management-approved','interact-3-drawing','interact-4-contract-items','interact-5-management-contracts','interact-error'
+
