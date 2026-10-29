@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Date** | 2026-10-11 |
-| **Scope** | **Batch 1:** every direct and transitive NuGet package used by the three test projects (commit `45f54ec`, PR #6), sections 1 to 5. **Batch 2:** the EF Core / SQLite packages added for the local demonstration database (PR #11), section 6. **Batch 3:** the EF Core design-time package and the `dotnet-ef` tool for migrations (PR #15), section 7. |
+| **Scope** | **Batch 1:** every direct and transitive NuGet package used by the three test projects (commit `45f54ec`, PR #6), sections 1 to 5. **Batch 2:** the EF Core / SQLite packages added for the local demonstration database (PR #11), section 6. **Batch 3:** the EF Core design-time package and the `dotnet-ef` tool for migrations (PR #15), section 7. **Batch 4:** the SQL Server provider and its resolved graph (test projects only, PRs #57/#58), section 8. |
 | **Package set** | The resolved graph reported by `dotnet list package --include-transitive` in CI run [38175858405](https://github.com/mohamadgazor-sys/ERP-MES/actions/runs/38175858405) (identical to run 38175638879): 3 direct and 13 transitive packages. Versions are exactly those resolved; **no version was changed to produce this inventory.** |
 | **Status** | For owner review. This is an engineering record of what the packages declare. It is **not legal advice and not a legal approval of any package's terms**; whether the company needs a separate legal acceptance of these terms is its own decision. |
 
@@ -65,7 +65,7 @@ No copyleft or proprietary component was seen in any of the notice files read.
 
 ## 6. Batch 2: EF Core and SQLite (PR #11, approved by the owner on 2026-10-14)
 
-**Scope.** Two direct packages, both at the aligned stable version 10.0.13 chosen by the owner: `Microsoft.EntityFrameworkCore.Relational` (project `ERP.MES.Infrastructure`) and `Microsoft.EntityFrameworkCore.Sqlite` (project `ERP.MES.Infrastructure.Sqlite`). With their transitive packages this adds **21 packages**. The package set is the resolved graph reported by `dotnet list package --include-transitive` in CI run [38634656702](https://github.com/mohamadgazor-sys/ERP-MES/actions/runs/38634656702) (commit `da0bd73`). No version was changed to produce this inventory; the SQL Server provider is not included.
+**Scope.** Two direct packages, both at the aligned stable version 10.0.13 chosen by the owner: `Microsoft.EntityFrameworkCore.Relational` (project `ERP.MES.Infrastructure`) and `Microsoft.EntityFrameworkCore.Sqlite` (project `ERP.MES.Infrastructure.Sqlite`). With their transitive packages this adds **21 packages**. The package set is the resolved graph reported by `dotnet list package --include-transitive` in CI run [38634656702](https://github.com/mohamadgazor-sys/ERP-MES/actions/runs/38634656702) (commit `da0bd73`). No version was changed to produce this inventory; the SQL Server provider is not included (see section 8).
 
 **Where used.** Unlike batch 1, these packages are in `src` projects, so they flow to the Desktop and Provisioning projects and to a machine that runs the demo. If the application is distributed, the MIT and Apache-2.0 notices of these packages and the notice files named below go with it. The Domain and Application projects still have no package references (guarded by tests).
 
@@ -143,3 +143,48 @@ No copyleft or proprietary component was seen in any of the notice files read.
 **Flags.** F1: `requireLicenseAcceptance` is `true` on `Microsoft.EntityFrameworkCore.Design`, `Microsoft.Build.Framework`, the `Microsoft.CodeAnalysis.*` packages and `dotnet-ef`; the licence is MIT and restore and tool restore did not prompt. F2: notice files are listed (`THIRDPARTYNOTICES`/`ThirdPartyNotices`/`NOTICE`/`LICENSE`) but their content was **not read**; some are in RTF form. They are not reviewed.
 
 **Open points carried forward** (from section 6 and this batch): the `Microsoft.Extensions.*` notice files and the embedded native SQLite binary (section 6, F2 and F5) and the notice files above (F2) must be investigated **before any broader deployment or redistribution**. This is an engineering record, **not legal advice and not a legal approval**. A later version change needs a new inventory (Decision Log #53).
+
+## 8. Batch 4: SQL Server provider and its transitive graph (PRs #57/#58, owner direction of 2026-10-27; recorded 2026-10-29)
+
+**Scope.** One direct package, `Microsoft.EntityFrameworkCore.SqlServer` 10.0.13 (same aligned EF Core version as batches 2-3), used by `src/ERP.MES.Infrastructure.SqlServer` and its test project. These projects are **not** in `ERP-MES.sln`; the Desktop and Provisioning projects do not reference them, so the provider package does not flow into the application a user installs. Decision Log #117 records it as approved for testing only; production use still needs the owner's approval of the instance.
+
+**Method (different from batches 1-3, and stronger).** The sandbox that authored this cannot reach `api.nuget.org`, so the evidence was produced by CI instead of by me: the step "Licence metadata of the restored packages" of `.github/workflows/sqlserver.yml` restores the project on a GitHub runner, then prints, for every package of `dotnet list package --include-transitive`, the `license`, `licenseUrl`, `copyright` and `requireLicenseAcceptance` fields of the package's own `.nuspec` and the names of any notice or licence files it ships (run 40916725764, commit `141e84f`, 52 packages). Limits as in section 5: declarations are taken as stated, notice files were listed and **not read**, no binary was scanned, upstream repositories were not audited.
+
+**Resolved graph.** 52 packages. 29 of them were already inventoried in batches 1-3 at the same version (the EF Core 10.0.13 and `Microsoft.Extensions.*` 10.0.13 set, `Microsoft.Win32.Registry` 5.0.0, `System.Security.AccessControl` 6.0.1, the test SDK, TestPlatform, CodeCoverage and xunit packages); they are not repeated. The 24 rows below are new or at a different version. `System.Security.Cryptography.Pkcs` 10.0.13 is the explicit pin added after the CI vulnerability audit flagged the transitive 9.0.11 (`Directory.Packages.props`).
+
+| # | Package | Version | Kind | Declared licence (SPDX) | Copyright (from manifest) | Bundled notice files | Flags |
+|---|---|---|---|---|---|---|---|
+| 1 | `Azure.Core` | 1.50.0 | transitive | MIT | (c) Microsoft Corporation. All rights reserved. | none | G2 |
+| 2 | `Azure.Identity` | 1.17.1 | transitive | MIT | (c) Microsoft Corporation. All rights reserved. | none | G2 |
+| 3 | `Microsoft.Data.SqlClient` | 6.1.7 | transitive | MIT | (c) Microsoft Corporation. All rights reserved. | none | G2 |
+| 4 | `Microsoft.Data.SqlClient.SNI.runtime` | 6.0.3 | transitive | file `LICENSE.txt` | (c) Microsoft Corporation. All rights reserved. | `LICENSE.txt` | G1, G2 |
+| 5 | `Microsoft.EntityFrameworkCore.SqlServer` | 10.0.13 | direct | MIT | (c) Microsoft Corporation. All rights reserved. | none | G2 |
+| 6 | `Microsoft.Identity.Client` | 4.84.2 | transitive | MIT | (c) Microsoft Corporation. All rights reserved. | none | G2 |
+| 7 | `Microsoft.Identity.Client.Broker` | 4.84.2 | transitive | MIT | (c) Microsoft Corporation. All rights reserved. | none | G2 |
+| 8 | `Microsoft.Identity.Client.Extensions.Msal` | 4.78.0 | transitive | MIT | (c) Microsoft Corporation. All rights reserved. | none | G2 |
+| 9 | `Microsoft.Identity.Client.NativeInterop` | 0.20.6 | transitive | file `LICENSE` | (c) Microsoft Corporation. All rights reserved. | `LICENSE` | G1 |
+| 10 | `Microsoft.IdentityModel.Abstractions` | 8.14.0 | transitive | MIT | (c) Microsoft Corporation. All rights reserved. | none | — |
+| 11 | `Microsoft.IdentityModel.JsonWebTokens` | 7.7.1 | transitive | MIT | (c) Microsoft Corporation. All rights reserved. | none | — |
+| 12 | `Microsoft.IdentityModel.Logging` | 7.7.1 | transitive | MIT | (c) Microsoft Corporation. All rights reserved. | none | — |
+| 13 | `Microsoft.IdentityModel.Protocols` | 7.7.1 | transitive | MIT | (c) Microsoft Corporation. All rights reserved. | none | — |
+| 14 | `Microsoft.IdentityModel.Protocols.OpenIdConnect` | 7.7.1 | transitive | MIT | (c) Microsoft Corporation. All rights reserved. | none | — |
+| 15 | `Microsoft.IdentityModel.Tokens` | 7.7.1 | transitive | MIT | (c) Microsoft Corporation. All rights reserved. | none | — |
+| 16 | `Microsoft.SqlServer.Server` | 1.0.0 | transitive | MIT | (c) Microsoft Corporation. All rights reserved. | none | G2 |
+| 17 | `System.ClientModel` | 1.8.0 | transitive | MIT | (c) Microsoft Corporation. All rights reserved. | none | G2 |
+| 18 | `System.Configuration.ConfigurationManager` | 9.0.11 | transitive | MIT | (c) Microsoft Corporation. All rights reserved. | `LICENSE.TXT`, `THIRD-PARTY-NOTICES.TXT` | F2 |
+| 19 | `System.Diagnostics.EventLog` | 9.0.11 | transitive | MIT | (c) Microsoft Corporation. All rights reserved. | `LICENSE.TXT`, `THIRD-PARTY-NOTICES.TXT` | F2 |
+| 20 | `System.IdentityModel.Tokens.Jwt` | 7.7.1 | transitive | MIT | (c) Microsoft Corporation. All rights reserved. | none | — |
+| 21 | `System.Memory.Data` | 8.0.1 | transitive | MIT | (c) Microsoft Corporation. All rights reserved. | `LICENSE.TXT`, `THIRD-PARTY-NOTICES.TXT` | F2 |
+| 22 | `System.Security.Cryptography.Pkcs` | 10.0.13 | transitive | MIT | (c) Microsoft Corporation. All rights reserved. | `THIRD-PARTY-NOTICES.TXT` | F2 |
+| 23 | `System.Security.Cryptography.ProtectedData` | 9.0.11 | transitive | MIT | (c) Microsoft Corporation. All rights reserved. | `LICENSE.TXT`, `THIRD-PARTY-NOTICES.TXT` | F2 |
+| 24 | `Microsoft.Bcl.AsyncInterfaces` | 8.0.0 | transitive | MIT | (c) Microsoft Corporation. All rights reserved. | `LICENSE.TXT`, `THIRD-PARTY-NOTICES.TXT` | F2 (version differs from batch 1: 6.0.0) |
+
+**Totals for batch 4:** 24 rows: **22 declare the SPDX expression `MIT`**, **2 declare a licence by file** (`Microsoft.Data.SqlClient.SNI.runtime` 6.0.3 and `Microsoft.Identity.Client.NativeInterop` 0.20.6). Missing licence: **0**. Copyleft declared: **0**.
+
+**Flags for batch 4**
+- **G1 (new): licence given only by a file.** The two native-component packages above declare `file:LICENSE(.txt)` and the deprecated `aka.ms/deprecateLicenseUrl`; I **did not read those files**, so their terms are not established by this inventory. They are Windows-side native helpers (SQL network interface and the MSAL broker interop) of the SqlClient and identity stack. This is the one open licence point of the SQL Server provider and needs a person to read the two files before production use.
+- **G2 (new): `requireLicenseAcceptance` is `true`** on the SqlClient and identity packages marked G2 (declared licence MIT; the command-line restore does not prompt). As in batch 2 F1, accepting this inventory is the natural place to record acceptance.
+- **F2:** packages shipping `THIRD-PARTY-NOTICES.TXT` were listed, not read.
+- **Why a large identity stack for a username/password test:** `Microsoft.Data.SqlClient` depends on Azure identity libraries for its Azure AD authentication modes; the tests use plain SQL authentication and never call them. They are in the graph and therefore in this inventory.
+
+**Conclusion for batch 4.** No missing, unclear or copyleft declaration among the 24 new rows; two native-component licences are by file and unread (G1). Engineering record, **not legal advice and not a legal approval**. A version change needs a new inventory (Decision Log #53); the CI step can regenerate the evidence on demand.
