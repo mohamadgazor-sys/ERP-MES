@@ -47,6 +47,8 @@ internal sealed class WorkflowHarness : IDisposable
 
     public Principal Planning { get; private set; } = null!;
 
+    public Principal ProductionManager { get; private set; } = null!;
+
     public Principal Drawing { get; private set; } = null!;
 
     public Principal Qc { get; private set; } = null!;
@@ -76,6 +78,7 @@ internal sealed class WorkflowHarness : IDisposable
         h.Admin = (await h.Security.Authentication.SignInAsync("admin.one", "Admin-Pass-Phrase-1", cancellationToken)).Principal!;
         h.Central = await h.UserAsync("central.one", DepartmentCodes.Central, cancellationToken);
         h.Planning = await h.UserAsync("planning.one", DepartmentCodes.Planning, cancellationToken);
+        h.ProductionManager = await h.UserAsync("prodmanager.one", DepartmentCodes.ProductionManager, cancellationToken, RoleCodes.Manager);
         h.Drawing = await h.UserAsync("drawing.one", DepartmentCodes.Drawing, cancellationToken);
         h.Qc = await h.UserAsync("qc.one", DepartmentCodes.Qc, cancellationToken);
         h.Management = await h.UserAsync("management.one", DepartmentCodes.Management, cancellationToken);

@@ -7,9 +7,9 @@ using ERP.MES.Domain.Scheduling;
 namespace ERP.MES.Application.Scheduling;
 
 /// <summary>An assignment with the names the screen shows and what the signed-in user may do with it.</summary>
-public sealed record OvertimeItem(Stored<OvertimeAssignment> Assignment, string OperatorName, string MachineCode, bool CanPlanningDecide, bool CanManagementDecide, bool CanCancel);
+public sealed record OvertimeItem(Stored<OvertimeAssignment> Assignment, string OperatorName, string MachineCode, bool CanDecide, bool CanManagementDecide, bool CanCancel);
 
-public sealed record OvertimeCapabilities(bool CanView, bool CanPropose, bool CanPlanningDecide, bool CanManagementDecide, bool CanConfigureLimits);
+public sealed record OvertimeCapabilities(bool CanView, bool CanPropose, bool CanDecide, bool CanManagementDecide, bool CanConfigureLimits);
 
 public sealed record OvertimeView(IReadOnlyList<OvertimeItem> Items, Stored<OvertimeLimits>? Limits, OvertimeCapabilities Capabilities, IReadOnlyList<long> SupervisedUnitIds);
 
@@ -27,7 +27,7 @@ public sealed class OvertimeService(
     IClock clock,
     IAuditContext auditContext)
 {
-    private static readonly Permission[] All = [Permission.ViewOvertime, Permission.ProposeOvertime, Permission.DecideOvertime, Permission.DecideOvertimeBeyondLimits];
+    private static readonly Permission[] All = [Permission.ViewOvertime, Permission.ProposeOvertime, Permission.DecideOvertime, Permission.DecideOvertimeBeyondLimits, Permission.ConfigureOvertimeLimits];
 
     public async Task<Outcome<OvertimeView>> LoadAsync(Principal? principal, DateOnly from, DateOnly toInclusive, CancellationToken cancellationToken = default)
     {
@@ -50,7 +50,7 @@ public sealed class OvertimeService(
             var supervised = await SupervisedUnitsAsync(user.UserId, cancellationToken);
             var machines = (await planning.ListMachinesAsync(cancellationToken)).ToDictionary(m => m.Value.Id, m => m.Value.Code);
             var names = people.ToDictionary(o => o.Value.Id, o => o.Value.FullName);
-            var broad = user.DepartmentCode is DepartmentCodes.Planning or DepartmentCodes.Management;
+            var broad = user.DepartmentCode is DepartmentCodes.Planning or DepartmentCodes.Management or DepartmentCodes.ProductionManager;
             var canPropose = set.Has(Permission.ProposeOvertime) && supervised.Count > 0;
             var items = (await store.ListAsync(from, toInclusive, cancellationToken))
                 .Where(a => broad || a.Value.OperatorId == own || supervised.Contains(a.Value.ProductionUnitId))
@@ -58,7 +58,7 @@ public sealed class OvertimeService(
                     a,
                     names.GetValueOrDefault(a.Value.OperatorId, string.Empty),
                     machines.GetValueOrDefault(a.Value.MachineId, string.Empty),
-                    set.Has(Permission.DecideOvertime) && a.Value.Status == OvertimeStatus.Proposed,
+                    set.Has(Permission.DecideOvertime) && a.Value.Status == OvertimeStatus.Proposed && a.Value.ProposedByUserId != user.UserId,
                     set.Has(Permission.DecideOvertimeBeyondLimits) && a.Value.Status == OvertimeStatus.AwaitingManagement,
                     a.Value.IsLive && (set.Has(Permission.DecideOvertime) || (canPropose && a.Value.ProposedByUserId == user.UserId && supervised.Contains(a.Value.ProductionUnitId)))))
                 .OrderByDescending(i => i.Assignment.Value.WorkDate).ThenBy(i => i.OperatorName, StringComparer.Ordinal).ToList();
@@ -66,7 +66,7 @@ public sealed class OvertimeService(
             return Outcome<OvertimeView>.Ok(new OvertimeView(
                 items,
                 limits,
-                new OvertimeCapabilities(true, canPropose, set.Has(Permission.DecideOvertime), set.Has(Permission.DecideOvertimeBeyondLimits), set.Has(Permission.DecideOvertime)),
+                new OvertimeCapabilities(true, canPropose, set.Has(Permission.DecideOvertime), set.Has(Permission.DecideOvertimeBeyondLimits), set.Has(Permission.ConfigureOvertimeLimits)),
                 supervised.ToList()));
         });
     }
@@ -115,8 +115,11 @@ public sealed class OvertimeService(
         });
     }
 
-    /// <summary>Planning approves (within the limits it is final, outside them Management must decide) or rejects a proposal with a mandatory reason.</summary>
-    public async Task<Outcome<Stored<OvertimeAssignment>>> PlanningDecideAsync(
+    /// <summary>
+    /// Management or the Production Manager approves or rejects a proposal (Decision Log #122 Q11). Within the limits either decision is final. Outside them Management's approval is final and the
+    /// Production Manager's sends it to Management. A proposer never decides their own proposal. The reason of a rejection is mandatory.
+    /// </summary>
+    public async Task<Outcome<Stored<OvertimeAssignment>>> DecideAsync(
         Principal? principal, long id, long expectedVersion, bool approve, string? note, CancellationToken cancellationToken = default)
     {
         var decision = await authorization.CheckAsync(principal, Permission.DecideOvertime, cancellationToken);
@@ -136,7 +139,12 @@ public sealed class OvertimeService(
                 {
                     if (row.Status != OvertimeStatus.Proposed)
                     {
-                        throw new InvalidOperationException("Only a proposed assignment is decided by Planning.");
+                        throw new InvalidOperationException("Only a proposed assignment is decided here.");
+                    }
+
+                    if (row.ProposedByUserId == user.UserId)
+                    {
+                        return ValidationIssue.OvertimeSelfDecision;
                     }
 
                     if (!approve)
@@ -157,7 +165,7 @@ public sealed class OvertimeService(
 
                     try
                     {
-                        row.PlanningApprove(OvertimeRules.Usage(row, context).ExceedsLimits, note, user.UserId, now);
+                        row.FirstApprove(OvertimeRules.Usage(row, context).ExceedsLimits, note, user.UserId, now, byManagement: user.DepartmentCode == DepartmentCodes.Management);
                     }
                     catch (ArgumentException)
                     {
@@ -166,7 +174,7 @@ public sealed class OvertimeService(
 
                     return ValidationIssue.None;
                 },
-                Audit(user, now, AuditActions.OvertimePlanningDecided, id.ToString(System.Globalization.CultureInfo.InvariantCulture), $"Overtime {id} {(approve ? "approved by Planning (or sent to Management when outside the limits)" : "rejected by Planning")}"),
+                Audit(user, now, AuditActions.OvertimeDecided, id.ToString(System.Globalization.CultureInfo.InvariantCulture), $"Overtime {id} {(approve ? "approved by Planning (or sent to Management when outside the limits)" : "rejected by Planning")}"),
                 cancellationToken);
             return refusal == ValidationIssue.None ? Outcome<Stored<OvertimeAssignment>>.Ok(stored!) : Outcome<Stored<OvertimeAssignment>>.Invalid(refusal);
         });
@@ -269,7 +277,7 @@ public sealed class OvertimeService(
     public async Task<Outcome<Stored<OvertimeLimits>>> SetLimitsAsync(
         Principal? principal, long expectedVersion, int maxMinutesPerDay, int maxMinutesPerWeek, CancellationToken cancellationToken = default)
     {
-        var decision = await authorization.CheckAsync(principal, Permission.DecideOvertime, cancellationToken);
+        var decision = await authorization.CheckAsync(principal, Permission.ConfigureOvertimeLimits, cancellationToken);
         if (!decision.IsAllowed)
         {
             return Outcome<Stored<OvertimeLimits>>.Fail(OperationStatus.NotAuthorized);

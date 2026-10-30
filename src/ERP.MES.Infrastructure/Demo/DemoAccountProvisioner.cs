@@ -19,7 +19,8 @@ public sealed class DemoAccountProvisioner(
     BootstrapService bootstrap, AccountService accounts, IDbContextFactory<ErpMesDbContext> contexts)
 {
     public const string AdminUsername = "demo.admin";
-    public const string CentralUsername = "demo.central";
+    public const string SecretaryUsername = "demo.secretary";
+    public const string ProductionManagerUsername = "demo.productionmanager";
     public const string QcUsername = "demo.qc";
     public const string SupervisorUsername = "demo.supervisor";
 
@@ -28,11 +29,11 @@ public sealed class DemoAccountProvisioner(
 
     private const string Fictional = " (نمونه آزمایشی)";
 
-    /// <summary>The fictional accounts: one administrator and one user for each department the demonstration walkthrough needs.</summary>
+    /// <summary>The fictional accounts: one administrator and one user for each department (the Secretary, formerly Central, and the Production Manager included) the demonstration walkthrough needs.</summary>
     public static IReadOnlyList<DemoAccount> Accounts { get; } =
     [
         new(AdminUsername, "مدیر سیستم" + Fictional, DepartmentCodes.System, RoleCodes.Admin),
-        new(CentralUsername, "کاربر مرکزی" + Fictional, DepartmentCodes.Central, RoleCodes.Staff),
+        new(SecretaryUsername, "کاربر منشی" + Fictional, DepartmentCodes.Central, RoleCodes.Staff),
         new("demo.management", "مدیر مدیریت" + Fictional, DepartmentCodes.Management, RoleCodes.Manager),
         new("demo.planning", "کاربر برنامه‌ریزی" + Fictional, DepartmentCodes.Planning, RoleCodes.Staff),
         new("demo.drawing", "کاربر نقشه‌کشی" + Fictional, DepartmentCodes.Drawing, RoleCodes.Staff),
@@ -40,6 +41,7 @@ public sealed class DemoAccountProvisioner(
         new("demo.warehouse", "کاربر انبار" + Fictional, DepartmentCodes.Warehouse, RoleCodes.Staff),
         new("demo.production", "کاربر تولید" + Fictional, DepartmentCodes.Production, RoleCodes.Staff),
         new(SupervisorUsername, "سرپرست واحد فرزکاری" + Fictional, DepartmentCodes.Production, RoleCodes.Staff),
+        new(ProductionManagerUsername, "مدیر تولید" + Fictional, DepartmentCodes.ProductionManager, RoleCodes.Manager),
     ];
 
     /// <summary>A random password of <see cref="PasswordLength"/> characters from an alphabet without look-alike characters.</summary>
@@ -94,7 +96,7 @@ public sealed class DemoAccountProvisioner(
 
     /// <summary>The user rows the sample records are attributed to. Throws when the demonstration accounts do not exist.</summary>
     public async Task<DemoSeedActors> ResolveActorsAsync(CancellationToken cancellationToken = default) =>
-        new(await FindUserIdAsync(CentralUsername, cancellationToken), await FindUserIdAsync(QcUsername, cancellationToken));
+        new(await FindUserIdAsync(SecretaryUsername, cancellationToken), await FindUserIdAsync(QcUsername, cancellationToken));
 
     /// <summary>The demonstration accounts the master data (units, machines, material, operator) is attributed to. Throws when they do not exist.</summary>
     public async Task<DemoMasterActors> ResolveMasterActorsAsync(CancellationToken cancellationToken = default) =>

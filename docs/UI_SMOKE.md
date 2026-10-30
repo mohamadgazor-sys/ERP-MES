@@ -8,7 +8,7 @@
 
 ## 1. Exactly what it checks
 
-For each of three accounts (`demo.supervisor`, `demo.planning`, `demo.central`):
+For each of three accounts (`demo.supervisor`, `demo.planning`, `demo.secretary`):
 
 1. The sign-in window appears and its fields can be filled (`SignInUsername`, `SignInPassword`).
 2. Signing in with the one-time password shows the change-password panel (a one-time password must be replaced before use).

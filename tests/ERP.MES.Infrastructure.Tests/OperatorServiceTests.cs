@@ -21,6 +21,8 @@ public class OperatorServiceTests
         public required SecurityFixture Fixture { get; init; }
 
         public required Principal Planning { get; init; }
+        public required Principal ProductionManager { get; init; }
+        public required Principal Admin { get; init; }
 
         public required Principal Management { get; init; }
 
@@ -55,6 +57,8 @@ public class OperatorServiceTests
         {
             Fixture = fixture,
             Planning = await UserAsync(fixture, admin, "planning.one", DepartmentCodes.Planning),
+            ProductionManager = await UserAsync(fixture, admin, "prodmanager.one", DepartmentCodes.ProductionManager),
+            Admin = admin,
             Management = await UserAsync(fixture, admin, "management.one", DepartmentCodes.Management),
             Warehouse = await UserAsync(fixture, admin, "warehouse.one", DepartmentCodes.Warehouse),
             Production = await UserAsync(fixture, admin, "production.one", DepartmentCodes.Production),
@@ -65,15 +69,15 @@ public class OperatorServiceTests
 
     private static async Task<Stored<Machine>> MachineAsync(World w, string code = "FCC-06")
     {
-        var unit = (await w.Master.AddUnitAsync(w.Planning, "MILLING", "فرزکاری", Token)).Value!;
-        var machine = await w.Master.AddMachineAsync(w.Planning, code, "فرز CNC", unit.Value.Id, Token);
+        var unit = (await w.Master.AddUnitAsync(w.Admin, "MILLING", "فرزکاری", Token)).Value!;
+        var machine = await w.Master.AddMachineAsync(w.Admin, code, "فرز CNC", unit.Value.Id, Token);
         Assert.True(machine.Succeeded, machine.Status + " " + machine.Issue);
         return machine.Value!;
     }
 
     private static async Task<Stored<Operator>> OperatorAsync(World w, string code = "OP-01", string name = "علی رضایی")
     {
-        var outcome = await w.Ops.RegisterAsync(w.Planning, code, name, null, Token);
+        var outcome = await w.Ops.RegisterAsync(w.Admin, code, name, null, Token);
         Assert.True(outcome.Succeeded, outcome.Status + " " + outcome.Issue);
         return outcome.Value!;
     }
@@ -81,12 +85,12 @@ public class OperatorServiceTests
     private static long Count(World w, string tableAndWhere) => long.Parse(w.Fixture.Db.Query("SELECT COUNT(*) FROM " + tableAndWhere).Single(), System.Globalization.CultureInfo.InvariantCulture);
 
     [Fact]
-    public async Task Planning_registers_an_operator_with_audit_and_planning_management_and_production_read_it()
+    public async Task Program_admin_registers_an_operator_with_audit_and_planning_management_production_manager_and_production_read_it()
     {
         using var w = await StartAsync();
         var worker = await OperatorAsync(w);
 
-        foreach (var reader in new[] { w.Planning, w.Management, w.Production })
+        foreach (var reader in new[] { w.Planning, w.Management, w.Production, w.ProductionManager, w.Admin })
         {
             var data = (await w.Ops.LoadAsync(reader, Token)).Value!;
             Assert.Equal("OP-01", Assert.Single(data.Operators).Value.Code);
@@ -98,28 +102,33 @@ public class OperatorServiceTests
         }
 
         Assert.Equal("OperatorRegistered", Assert.Single(w.Fixture.Db.Query("SELECT ActionCode FROM AuditLog WHERE ActionCode = 'OperatorRegistered'")));
-        Assert.Equal(w.Planning.UserId, worker.Value.CreatedByUserId);
+        Assert.Equal(w.Admin.UserId, worker.Value.CreatedByUserId);
         Assert.True(worker.Value.IsActive);
     }
 
     [Fact]
-    public async Task Only_planning_changes_operators_assignments_and_qualifications()
+    public async Task Only_program_admin_changes_operators_and_assignments_and_only_planning_qualifications()
     {
         using var w = await StartAsync();
         var worker = await OperatorAsync(w);
         var machine = await MachineAsync(w);
 
-        foreach (var user in new Principal?[] { w.Management, w.Warehouse, w.Production, w.Qc, null })
+        foreach (var user in new Principal?[] { w.Planning, w.ProductionManager, w.Management, w.Warehouse, w.Production, w.Qc, null })
         {
             Assert.Equal(OperationStatus.NotAuthorized, (await w.Ops.RegisterAsync(user, "OP-02", "x", null, Token)).Status);
             Assert.Equal(OperationStatus.NotAuthorized, (await w.Ops.RenameAsync(user, worker.Value.Id, worker.Version, "x", Token)).Status);
             Assert.Equal(OperationStatus.NotAuthorized, (await w.Ops.SetActiveAsync(user, worker.Value.Id, worker.Version, false, Token)).Status);
             Assert.Equal(OperationStatus.NotAuthorized, (await w.Ops.AssignAsync(user, worker.Value.Id, machine.Value.Id, "1405/07/01", true, null, Token)).Status);
-            Assert.Equal(OperationStatus.NotAuthorized, (await w.Ops.RecordQualificationAsync(user, worker.Value.Id, machine.Value.Id, "1405/07/01", null, Token)).Status);
             Assert.False(await w.Ops.CanMaintainAsync(user, Token));
         }
 
-        Assert.True(await w.Ops.CanMaintainAsync(w.Planning, Token));
+        // Qualifications are separate from the eligibility assignment and stay with Planning (labelled default, Decision Log #122).
+        foreach (var user in new Principal?[] { w.Admin, w.ProductionManager, w.Management, w.Warehouse, w.Production, w.Qc, null })
+        {
+            Assert.Equal(OperationStatus.NotAuthorized, (await w.Ops.RecordQualificationAsync(user, worker.Value.Id, machine.Value.Id, "1405/07/01", null, Token)).Status);
+        }
+
+        Assert.True(await w.Ops.CanMaintainAsync(w.Admin, Token));
         Assert.Equal(1, Count(w, "Operators"));
         Assert.Equal(0, Count(w, "OperatorMachineAssignments"));
         Assert.Equal(0, Count(w, "OperatorMachineQualifications"));
@@ -135,7 +144,7 @@ public class OperatorServiceTests
         using var w = await StartAsync();
         await OperatorAsync(w);
 
-        var outcome = await w.Ops.RegisterAsync(w.Planning, code, name, null, Token);
+        var outcome = await w.Ops.RegisterAsync(w.Admin, code, name, null, Token);
 
         Assert.Equal(OperationStatus.ValidationFailed, outcome.Status);
         Assert.Equal(expected, outcome.Issue);
@@ -146,16 +155,16 @@ public class OperatorServiceTests
     public async Task An_operator_links_to_one_active_user_only_and_a_user_cannot_be_linked_twice()
     {
         using var w = await StartAsync();
-        var first = (await w.Ops.RegisterAsync(w.Planning, "OP-01", "علی", w.Production.UserId, Token)).Value!;
+        var first = (await w.Ops.RegisterAsync(w.Admin, "OP-01", "علی", w.Production.UserId, Token)).Value!;
         Assert.Equal(w.Production.UserId, first.Value.UserId);
 
-        Assert.Equal(ValidationIssue.UserAlreadyLinked, (await w.Ops.RegisterAsync(w.Planning, "OP-02", "رضا", w.Production.UserId, Token)).Issue);
-        Assert.Equal(ValidationIssue.UserInvalid, (await w.Ops.RegisterAsync(w.Planning, "OP-03", "حسن", 987654, Token)).Issue);
+        Assert.Equal(ValidationIssue.UserAlreadyLinked, (await w.Ops.RegisterAsync(w.Admin, "OP-02", "رضا", w.Production.UserId, Token)).Issue);
+        Assert.Equal(ValidationIssue.UserInvalid, (await w.Ops.RegisterAsync(w.Admin, "OP-03", "حسن", 987654, Token)).Issue);
         Assert.Equal(1, Count(w, "Operators"));
 
         var second = await OperatorAsync(w, "OP-04", "حسن");
-        Assert.Equal(ValidationIssue.UserAlreadyLinked, (await w.Ops.LinkUserAsync(w.Planning, second.Value.Id, second.Version, w.Production.UserId, Token)).Issue);
-        var linked = (await w.Ops.LinkUserAsync(w.Planning, second.Value.Id, second.Version, w.Qc.UserId, Token)).Value!;
+        Assert.Equal(ValidationIssue.UserAlreadyLinked, (await w.Ops.LinkUserAsync(w.Admin, second.Value.Id, second.Version, w.Production.UserId, Token)).Issue);
+        var linked = (await w.Ops.LinkUserAsync(w.Admin, second.Value.Id, second.Version, w.Qc.UserId, Token)).Value!;
         Assert.Equal(w.Qc.UserId, linked.Value.UserId);
         Assert.Equal("OperatorLinkedToUser", Assert.Single(w.Fixture.Db.Query("SELECT ActionCode FROM AuditLog WHERE ActionCode = 'OperatorLinkedToUser'")));
     }
@@ -166,11 +175,11 @@ public class OperatorServiceTests
         using var w = await StartAsync();
         var worker = await OperatorAsync(w);
 
-        var renamed = (await w.Ops.RenameAsync(w.Planning, worker.Value.Id, worker.Version, "علی رضایی‌نژاد", Token)).Value!;
+        var renamed = (await w.Ops.RenameAsync(w.Admin, worker.Value.Id, worker.Version, "علی رضایی‌نژاد", Token)).Value!;
         Assert.Equal("علی رضایی‌نژاد", renamed.Value.FullName);
-        Assert.Equal(OperationStatus.ConcurrencyConflict, (await w.Ops.SetActiveAsync(w.Planning, worker.Value.Id, worker.Version, false, Token)).Status);
+        Assert.Equal(OperationStatus.ConcurrencyConflict, (await w.Ops.SetActiveAsync(w.Admin, worker.Value.Id, worker.Version, false, Token)).Status);
 
-        var off = (await w.Ops.SetActiveAsync(w.Planning, worker.Value.Id, renamed.Version, false, Token)).Value!;
+        var off = (await w.Ops.SetActiveAsync(w.Admin, worker.Value.Id, renamed.Version, false, Token)).Value!;
         Assert.False(off.Value.IsActive);
         Assert.Equal(1, Count(w, "Operators"));
     }
@@ -182,15 +191,15 @@ public class OperatorServiceTests
         var worker = await OperatorAsync(w);
         var machine = await MachineAsync(w);
 
-        var unqualified = await w.Ops.AssignAsync(w.Planning, worker.Value.Id, machine.Value.Id, "1405/07/01", true, "نیاز تولید", Token);
+        var unqualified = await w.Ops.AssignAsync(w.Admin, worker.Value.Id, machine.Value.Id, "1405/07/01", true, "نیاز تولید", Token);
         Assert.True(unqualified.Succeeded);
         Assert.Contains(OperatorService.NoQualificationWarning, unqualified.WarningList);
         Assert.True(unqualified.Value!.Value.IsPrimary);
 
-        Assert.True((await w.Ops.CloseAssignmentAsync(w.Planning, unqualified.Value.Value.Id, unqualified.Value.Version, "1405/07/10", Token)).Succeeded);
+        Assert.True((await w.Ops.CloseAssignmentAsync(w.Admin, unqualified.Value.Value.Id, unqualified.Value.Version, "1405/07/10", Token)).Succeeded);
         Assert.True((await w.Ops.RecordQualificationAsync(w.Planning, worker.Value.Id, machine.Value.Id, "1405/06/01", "گواهی داخلی", Token)).Succeeded);
 
-        var qualified = await w.Ops.AssignAsync(w.Planning, worker.Value.Id, machine.Value.Id, "1405/07/11", false, null, Token);
+        var qualified = await w.Ops.AssignAsync(w.Admin, worker.Value.Id, machine.Value.Id, "1405/07/11", false, null, Token);
         Assert.True(qualified.Succeeded);
         Assert.DoesNotContain(OperatorService.NoQualificationWarning, qualified.WarningList);
         Assert.Equal(2, Count(w, "OperatorMachineAssignments"));
@@ -202,16 +211,16 @@ public class OperatorServiceTests
         using var w = await StartAsync();
         var worker = await OperatorAsync(w);
         var machine = await MachineAsync(w);
-        var first = (await w.Ops.AssignAsync(w.Planning, worker.Value.Id, machine.Value.Id, "1405/07/01", true, null, Token)).Value!;
+        var first = (await w.Ops.AssignAsync(w.Admin, worker.Value.Id, machine.Value.Id, "1405/07/01", true, null, Token)).Value!;
 
-        Assert.Equal(ValidationIssue.AssignmentExists, (await w.Ops.AssignAsync(w.Planning, worker.Value.Id, machine.Value.Id, "1405/07/05", true, null, Token)).Issue);
-        Assert.Equal(ValidationIssue.EndBeforeStart, (await w.Ops.CloseAssignmentAsync(w.Planning, first.Value.Id, first.Version, "1405/06/30", Token)).Issue);
-        Assert.Equal(ValidationIssue.DateInvalid, (await w.Ops.CloseAssignmentAsync(w.Planning, first.Value.Id, first.Version, "not a date", Token)).Issue);
+        Assert.Equal(ValidationIssue.AssignmentExists, (await w.Ops.AssignAsync(w.Admin, worker.Value.Id, machine.Value.Id, "1405/07/05", true, null, Token)).Issue);
+        Assert.Equal(ValidationIssue.EndBeforeStart, (await w.Ops.CloseAssignmentAsync(w.Admin, first.Value.Id, first.Version, "1405/06/30", Token)).Issue);
+        Assert.Equal(ValidationIssue.DateInvalid, (await w.Ops.CloseAssignmentAsync(w.Admin, first.Value.Id, first.Version, "not a date", Token)).Issue);
 
-        var closed = (await w.Ops.CloseAssignmentAsync(w.Planning, first.Value.Id, first.Version, "1405/07/20", Token)).Value!;
+        var closed = (await w.Ops.CloseAssignmentAsync(w.Admin, first.Value.Id, first.Version, "1405/07/20", Token)).Value!;
         Assert.False(closed.Value.IsOpen);
-        Assert.Equal(ValidationIssue.AssignmentClosed, (await w.Ops.CloseAssignmentAsync(w.Planning, first.Value.Id, closed.Version, "1405/07/21", Token)).Issue);
-        Assert.True((await w.Ops.AssignAsync(w.Planning, worker.Value.Id, machine.Value.Id, "1405/07/21", true, null, Token)).Succeeded);
+        Assert.Equal(ValidationIssue.AssignmentClosed, (await w.Ops.CloseAssignmentAsync(w.Admin, first.Value.Id, closed.Version, "1405/07/21", Token)).Issue);
+        Assert.True((await w.Ops.AssignAsync(w.Admin, worker.Value.Id, machine.Value.Id, "1405/07/21", true, null, Token)).Succeeded);
 
         var actions = w.Fixture.Db.Query("SELECT ActionCode FROM AuditLog WHERE ActionCode LIKE 'OperatorMachineAssignment%' OR ActionCode = 'OperatorMachineAssigned' ORDER BY Id").ToArray();
         Assert.Equal(new[] { "OperatorMachineAssigned", "OperatorMachineAssignmentClosed", "OperatorMachineAssigned" }, actions);
@@ -225,15 +234,15 @@ public class OperatorServiceTests
         var worker = await OperatorAsync(w);
         var machine = await MachineAsync(w);
 
-        Assert.Equal(ValidationIssue.OperatorInvalid, (await w.Ops.AssignAsync(w.Planning, 4242, machine.Value.Id, "1405/07/01", true, null, Token)).Issue);
-        Assert.Equal(ValidationIssue.MachineInvalid, (await w.Ops.AssignAsync(w.Planning, worker.Value.Id, 4242, "1405/07/01", true, null, Token)).Issue);
-        Assert.Equal(ValidationIssue.DateRequired, (await w.Ops.AssignAsync(w.Planning, worker.Value.Id, machine.Value.Id, " ", true, null, Token)).Issue);
-        Assert.Equal(ValidationIssue.DateInvalid, (await w.Ops.AssignAsync(w.Planning, worker.Value.Id, machine.Value.Id, "1405/13/40", true, null, Token)).Issue);
+        Assert.Equal(ValidationIssue.OperatorInvalid, (await w.Ops.AssignAsync(w.Admin, 4242, machine.Value.Id, "1405/07/01", true, null, Token)).Issue);
+        Assert.Equal(ValidationIssue.MachineInvalid, (await w.Ops.AssignAsync(w.Admin, worker.Value.Id, 4242, "1405/07/01", true, null, Token)).Issue);
+        Assert.Equal(ValidationIssue.DateRequired, (await w.Ops.AssignAsync(w.Admin, worker.Value.Id, machine.Value.Id, " ", true, null, Token)).Issue);
+        Assert.Equal(ValidationIssue.DateInvalid, (await w.Ops.AssignAsync(w.Admin, worker.Value.Id, machine.Value.Id, "1405/13/40", true, null, Token)).Issue);
         Assert.Equal(0, Count(w, "OperatorMachineAssignments"));
 
-        var off = (await w.Ops.SetActiveAsync(w.Planning, worker.Value.Id, worker.Version, false, Token)).Value!;
-        Assert.Equal(ValidationIssue.OperatorInvalid, (await w.Ops.AssignAsync(w.Planning, off.Value.Id, machine.Value.Id, "1405/07/01", true, null, Token)).Issue);
-        Assert.Equal(OperationStatus.NotFound, (await w.Ops.CloseAssignmentAsync(w.Planning, 4242, 1, "1405/07/01", Token)).Status);
+        var off = (await w.Ops.SetActiveAsync(w.Admin, worker.Value.Id, worker.Version, false, Token)).Value!;
+        Assert.Equal(ValidationIssue.OperatorInvalid, (await w.Ops.AssignAsync(w.Admin, off.Value.Id, machine.Value.Id, "1405/07/01", true, null, Token)).Issue);
+        Assert.Equal(OperationStatus.NotFound, (await w.Ops.CloseAssignmentAsync(w.Admin, 4242, 1, "1405/07/01", Token)).Status);
     }
 
     [Fact]
@@ -253,7 +262,7 @@ public class OperatorServiceTests
         Assert.True((await w.Ops.RecordQualificationAsync(w.Planning, worker.Value.Id, machine.Value.Id, "1405/08/01", null, Token)).Succeeded);
 
         // After the first qualification ended, an assignment on a later day carries the warning; one inside the period does not.
-        var inside = await w.Ops.AssignAsync(w.Planning, worker.Value.Id, machine.Value.Id, "1405/03/01", true, null, Token);
+        var inside = await w.Ops.AssignAsync(w.Admin, worker.Value.Id, machine.Value.Id, "1405/03/01", true, null, Token);
         Assert.DoesNotContain(OperatorService.NoQualificationWarning, inside.WarningList);
         Assert.Equal(2, Count(w, "OperatorMachineQualifications"));
         Assert.Equal(new[] { "OperatorQualificationRecorded", "OperatorQualificationEnded", "OperatorQualificationRecorded" }, w.Fixture.Db.Query("SELECT ActionCode FROM AuditLog WHERE ActionCode LIKE 'OperatorQualification%' ORDER BY Id").ToArray());
@@ -265,7 +274,7 @@ public class OperatorServiceTests
         using var w = await StartAsync();
         var worker = await OperatorAsync(w);
         var machine = await MachineAsync(w);
-        await w.Ops.AssignAsync(w.Planning, worker.Value.Id, machine.Value.Id, "1405/07/01", true, null, Token);
+        await w.Ops.AssignAsync(w.Admin, worker.Value.Id, machine.Value.Id, "1405/07/01", true, null, Token);
         await w.Ops.RecordQualificationAsync(w.Planning, worker.Value.Id, machine.Value.Id, "1405/07/01", null, Token);
 
         var restarted = WorkflowServices.Create(w.Fixture.Db.ContextFactory, w.Fixture.Services.Authorization, PersistenceTestData.Dates, w.Fixture.Clock);

@@ -66,7 +66,7 @@ public sealed class JobReportService(
             var designations = (await unitQueue.ListDesignationsAsync(cancellationToken)).Where(d => d.Value.IsActive).ToList();
             var supervised = designations.Where(d => d.Value.UserId == user.UserId && d.Value.IsSupervisor).Select(d => d.Value.ProductionUnitId).ToHashSet();
             var unitsWithSupervisor = designations.Where(d => d.Value.IsSupervisor).Select(d => d.Value.ProductionUnitId).ToHashSet();
-            var broad = user.DepartmentCode is DepartmentCodes.Planning or DepartmentCodes.Management;
+            var broad = user.DepartmentCode is DepartmentCodes.Planning or DepartmentCodes.Management or DepartmentCodes.ProductionManager;
             var names = people.ToDictionary(o => o.Value.Id, o => o.Value.FullName);
             var items = (await store.ListAsync(from, toInclusive, cancellationToken))
                 .Where(r => broad || r.Value.OperatorId == own || supervised.Contains(r.Value.ProductionUnitId))
@@ -74,8 +74,8 @@ public sealed class JobReportService(
                 {
                     var isOwn = r.Value.OperatorId == own;
                     var mayReview = set.Has(Permission.ReviewJobReports) && !isOwn && r.Value.Status == JobReportStatus.Submitted
-                        && (supervised.Contains(r.Value.ProductionUnitId) || (user.DepartmentCode == DepartmentCodes.Planning && !unitsWithSupervisor.Contains(r.Value.ProductionUnitId)));
-                    return new JobReportItem(r, names.GetValueOrDefault(r.Value.OperatorId, string.Empty), set.Has(Permission.SubmitJobReport) && isOwn && r.Value.IsEditable, mayReview, !supervised.Contains(r.Value.ProductionUnitId));
+                        && (supervised.Contains(r.Value.ProductionUnitId) || user.DepartmentCode == DepartmentCodes.ProductionManager || (user.DepartmentCode == DepartmentCodes.Planning && !unitsWithSupervisor.Contains(r.Value.ProductionUnitId)));
+                    return new JobReportItem(r, names.GetValueOrDefault(r.Value.OperatorId, string.Empty), set.Has(Permission.SubmitJobReport) && isOwn && r.Value.IsEditable, mayReview, user.DepartmentCode != DepartmentCodes.ProductionManager && !supervised.Contains(r.Value.ProductionUnitId));
                 })
                 .OrderByDescending(i => i.Report.Value.WorkDate).ThenBy(i => i.OperatorName, StringComparer.Ordinal).ToList();
             return Outcome<JobReportList>.Ok(new JobReportList(items, new JobReportCapabilities(true, set.Has(Permission.SubmitJobReport) && own is not null, set.Has(Permission.ReviewJobReports)), own));
@@ -238,7 +238,7 @@ public sealed class JobReportService(
 
                 var person = (await operators.ListOperatorsAsync(cancellationToken)).FirstOrDefault(o => o.Value.Id == report.Value.OperatorId);
                 var designations = (await unitQueue.ListDesignationsAsync(cancellationToken)).Where(d => d.Value.IsActive && d.Value.ProductionUnitId == report.Value.ProductionUnitId).ToList();
-                var isSupervisor = designations.Any(d => d.Value.UserId == user.UserId && d.Value.IsSupervisor);
+                var isSupervisor = user.DepartmentCode == DepartmentCodes.ProductionManager || designations.Any(d => d.Value.UserId == user.UserId && d.Value.IsSupervisor);
                 var unitHasSupervisor = designations.Any(d => d.Value.IsSupervisor);
                 var fallback = !isSupervisor && user.DepartmentCode == DepartmentCodes.Planning && !unitHasSupervisor;
                 if ((!isSupervisor && !fallback) || person?.Value.UserId == user.UserId)

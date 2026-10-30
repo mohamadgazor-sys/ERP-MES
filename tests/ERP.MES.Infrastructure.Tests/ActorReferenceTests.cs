@@ -130,7 +130,7 @@ public class ActorReferenceTests
         await DemoDatabase.InitializeAsync(db.Path, PersistenceTestData.Dates, db.NextCredentialPath(), SecurityFixture.FastPolicy, Token);
 
         Assert.Empty(db.Query("PRAGMA foreign_key_check"));
-        Assert.Equal(new[] { "demo.central" }, db.Query("SELECT DISTINCT u.Username FROM Customers c JOIN Users u ON u.Id = c.CreatedByUserId"));
+        Assert.Equal(new[] { "demo.secretary" }, db.Query("SELECT DISTINCT u.Username FROM Customers c JOIN Users u ON u.Id = c.CreatedByUserId"));
     }
 
     // ---- upgrading an older database ----
@@ -143,7 +143,7 @@ public class ActorReferenceTests
 
         await SqliteDatabase.MigrateAsync(db.Path, Token);
 
-        Assert.Equal(24, db.Query("SELECT MigrationId FROM __EFMigrationsHistory").Count);
+        Assert.Equal(25, db.Query("SELECT MigrationId FROM __EFMigrationsHistory").Count);
         Assert.Equal("Customers:CreatedByUserId->Users", db.Query("SELECT 'Customers:' || \"from\" || '->' || \"table\" FROM pragma_foreign_key_list('Customers')").Single());
         Assert.Empty(db.Query("PRAGMA foreign_key_check"));
     }
@@ -212,8 +212,8 @@ public class ActorReferenceTests
         // The supported path: the explicit reset builds a new, consistent database and replaces the old one.
         var reset = await DemoDatabase.ResetAsync(db.Path, PersistenceTestData.Dates, db.NextCredentialPath(), SecurityFixture.FastPolicy, Token);
 
-        Assert.Equal(9, reset.AccountsCreated);
-        Assert.Equal(24, db.Query("SELECT MigrationId FROM __EFMigrationsHistory").Count);
+        Assert.Equal(10, reset.AccountsCreated);
+        Assert.Equal(25, db.Query("SELECT MigrationId FROM __EFMigrationsHistory").Count);
         Assert.DoesNotContain("Old sample customer", db.Query("SELECT Name FROM Customers"));
         Assert.Equal(3, db.Query("SELECT Id FROM Customers").Count);
         Assert.Empty(db.Query("PRAGMA foreign_key_check"));

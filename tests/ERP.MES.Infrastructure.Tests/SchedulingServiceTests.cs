@@ -190,7 +190,7 @@ public class SchedulingServiceTests
 
     private static async Task<long> AddUnitAsync(World w, string code)
     {
-        var unit = await w.Services.PlanningMaster.AddUnitAsync(w.Planning, code, "واحد " + code, Token);
+        var unit = await w.Services.PlanningMaster.AddUnitAsync(w.Admin, code, "واحد " + code, Token);
         Assert.True(unit.Succeeded, unit.Status + " " + unit.Issue);
         return unit.Value!.Value.Id;
     }
@@ -250,7 +250,7 @@ public class SchedulingServiceTests
 
     private static async Task<long> OperatorAsync(World w, string code)
     {
-        var added = await w.Services.Operators.RegisterAsync(w.Planning, code, "اپراتور " + code, null, Token);
+        var added = await w.Services.Operators.RegisterAsync(w.Admin, code, "اپراتور " + code, null, Token);
         Assert.True(added.Succeeded, added.Status + " " + added.Issue);
         return added.Value!.Value.Id;
     }
@@ -398,7 +398,7 @@ public class SchedulingServiceTests
         await RunUnitShiftAsync(w, turning, a, 3, 1);
         await RunUnitShiftAsync(w, turning, night, 3, 1);
         await RunUnitShiftAsync(w, turning, early, 3, 1, overlap: true);
-        var machine = (await w.Services.PlanningMaster.AddMachineAsync(w.Planning, "FCC-06", "فرز", milling, Token)).Value!.Value.Id;
+        var machine = (await w.Services.PlanningMaster.AddMachineAsync(w.Admin, "FCC-06", "فرز", milling, Token)).Value!.Value.Id;
         var o1 = await OperatorAsync(w, "O1");
         var o2 = await OperatorAsync(w, "O2");
         var o3 = await OperatorAsync(w, "O3");
@@ -431,7 +431,7 @@ public class SchedulingServiceTests
         Assert.True((await w.Schedule.ScheduleAsync(w.Planning, o2, Saturday.AddDays(4), turning, a, null, null, null, Token)).Succeeded);
 
         // Machines: unit membership, one operator at a time, explicit handover overlap with a stated length.
-        var other = (await w.Services.PlanningMaster.AddMachineAsync(w.Planning, "TCC-12", "تراش", turning, Token)).Value!.Value.Id;
+        var other = (await w.Services.PlanningMaster.AddMachineAsync(w.Admin, "TCC-12", "تراش", turning, Token)).Value!.Value.Id;
         Assert.Equal(ValidationIssue.MachineInvalid, (await w.Schedule.ScheduleAsync(w.Planning, o1, Saturday.AddDays(8), milling, a, other, null, null, Token)).Issue);
         var monday = Saturday.AddDays(2);
         Assert.True((await w.Schedule.ScheduleAsync(w.Planning, o2, monday, milling, a, machine, null, null, Token)).Succeeded);

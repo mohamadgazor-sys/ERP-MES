@@ -73,7 +73,7 @@ public class WorkSessionServiceTests
 
         Assert.Equal(ValidationIssue.SessionMachineNotInUnit, (await s.W.Services.WorkSessions.DispatchAsync(s.Supervisor, s.Dispatch(s.ItemA, s.T1, s.Op1), Token)).Issue);
         var machine = (await s.W.Services.PlanningMaster.LoadAsync(s.W.Planning, Token)).Value!.Machines.Single(m => m.Value.Id == s.M2);
-        Assert.True((await s.W.Services.PlanningMaster.SetMachineActiveAsync(s.W.Planning, s.M2, machine.Version, false, Token)).Succeeded);
+        Assert.True((await s.W.Services.PlanningMaster.SetMachineActiveAsync(s.W.Admin, s.M2, machine.Version, false, Token)).Succeeded);
 
         Assert.Equal(ValidationIssue.SessionMachineUnusable, (await s.W.Services.WorkSessions.DispatchAsync(s.Supervisor, s.Dispatch(s.ItemA, s.M2, s.Op1), Token)).Issue);
         Assert.Equal(0, Count(s, "WorkSessions"));
@@ -101,7 +101,7 @@ public class WorkSessionServiceTests
         Assert.Equal(ValidationIssue.SessionOperatorUnavailable, (await s.W.Services.WorkSessions.DispatchAsync(s.Supervisor, s.Dispatch(s.ItemA, s.M1, s.Op2), Token)).Issue);
         Assert.Equal(ValidationIssue.SessionOperatorUnavailable, (await s.W.Services.WorkSessions.DispatchAsync(s.Supervisor, s.Dispatch(s.ItemA, s.M1, s.Op3), Token)).Issue);
         var op1 = (await s.W.Services.Operators.LoadAsync(s.W.Planning, Token)).Value!.Operators.Single(o => o.Value.Id == s.Op1);
-        Assert.True((await s.W.Services.Operators.SetActiveAsync(s.W.Planning, s.Op1, op1.Version, false, Token)).Succeeded);
+        Assert.True((await s.W.Services.Operators.SetActiveAsync(s.W.Admin, s.Op1, op1.Version, false, Token)).Succeeded);
         Assert.Equal(ValidationIssue.SessionOperatorUnavailable, (await s.W.Services.WorkSessions.DispatchAsync(s.Supervisor, s.Dispatch(s.ItemA, s.M1, s.Op1), Token)).Issue);
         Assert.Equal(0, Count(s, "WorkSessions"));
     }
@@ -125,10 +125,10 @@ public class WorkSessionServiceTests
     {
         using var s = await SessionScene.CreateAsync();
         s.SetNow(19);
-        Assert.True((await s.W.Services.Overtime.SetLimitsAsync(s.W.Planning, 0, 600, 3000, Token)).Succeeded);
+        Assert.True((await s.W.Services.Overtime.SetLimitsAsync(s.W.Manager, 0, 600, 3000, Token)).Succeeded);
         var overtime = await s.W.Services.Overtime.ProposeAsync(s.Supervisor, s.Op1, s.Milling, s.M1, SessionScene.At(18), SessionScene.At(21), "کار فوری", Token);
         Assert.True(overtime.Succeeded, overtime.Status + " " + overtime.Issue);
-        Assert.True((await s.W.Services.Overtime.PlanningDecideAsync(s.W.Planning, overtime.Value!.Value.Id, overtime.Value.Version, true, null, Token)).Succeeded);
+        Assert.True((await s.W.Services.Overtime.DecideAsync(s.W.ProductionManager, overtime.Value!.Value.Id, overtime.Value.Version, true, null, Token)).Succeeded);
 
         var dispatched = await s.W.Services.WorkSessions.DispatchAsync(s.Supervisor, s.Dispatch(s.ItemA, s.M1, s.Op1), Token);
 
@@ -143,7 +143,7 @@ public class WorkSessionServiceTests
         var night = (await s.W.Services.Calendar.AddTemplateAsync(s.W.Planning, "N", "شیفت N", new TimeOnly(22, 0), new TimeOnly(6, 0), null, null, Token)).Value!.Value.Id;
         Assert.True((await s.W.Services.Calendar.AddUnitShiftAsync(s.W.Planning, s.Milling, night, 3, 1, false, Token)).Succeeded);
         Assert.True((await s.W.Services.WorkerSchedule.ScheduleAsync(s.W.Planning, s.Op3, DateOnly.FromDateTime(SessionScene.Day), s.Milling, night, null, null, null, Token)).Succeeded);
-        var assigned = await s.W.Services.Operators.AssignAsync(s.W.Planning, s.Op3, s.M1, "1405/01/01", false, null, Token);
+        var assigned = await s.W.Services.Operators.AssignAsync(s.W.Admin, s.Op3, s.M1, "1405/01/01", false, null, Token);
         Assert.True(assigned.Succeeded);
 
         s.W.Fixture.Clock.UtcNow = SessionScene.At(23, 30);

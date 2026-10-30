@@ -5,6 +5,7 @@ using ERP.MES.Application.Production;
 using ERP.MES.Application.Requests;
 using ERP.MES.Application.Security;
 using ERP.MES.Domain.Calendar;
+using ERP.MES.Domain.Identity;
 using ERP.MES.Domain.Requests;
 
 namespace ERP.MES.Desktop.ViewModels;
@@ -239,7 +240,10 @@ public sealed class UnitQueueViewModel(UnitQueueService queue, StageWorkService 
     // ---- Planning -------------------------------------------------------------------------------------------------------------------------------------------------
 
     /// <summary>Planning moves a queue row up (-1) or down (+1); the whole released order is sent with the row versions it was read with.</summary>
-    public Task MoveAsync(UnitQueueRow row, int delta) => CommandAsync(
+    /// <summary>True when the signed-in user is the Production Manager, whose reordering needs a reason (Decision Log #122).</summary>
+    public bool OrderNeedsReason => currentUser()?.DepartmentCode == DepartmentCodes.ProductionManager;
+
+    public Task MoveAsync(UnitQueueRow row, int delta, string? reason = null) => CommandAsync(
         "ترتیب برنامه‌ریزی ذخیره شد.",
         async token =>
         {
@@ -253,7 +257,7 @@ public sealed class UnitQueueViewModel(UnitQueueService queue, StageWorkService 
             }
 
             (list[index], list[target]) = (list[target], list[index]);
-            return await queue.SetPlanningOrderAsync(currentUser(), unit.UnitId, list.Select(e => e.ToRowRef()).ToList(), token);
+            return await queue.SetPlanningOrderAsync(currentUser(), unit.UnitId, list.Select(e => e.ToRowRef()).ToList(), token, reason);
         });
 
     public Task ChangePriorityAsync(UnitQueueRow row, Priority priority) => CommandAsync(

@@ -37,8 +37,8 @@ public enum Permission
     ViewCustomersAndRequests,
 
     /// <summary>
-    /// Register and maintain production units and machines (stable machine codes). Planning owns the resource master data (Decision Log #82 R2, #89); units are a labelled default,
-    /// not separately approved. Rates have their own permission, <see cref="ChangeMachineHourlyRates"/>.
+    /// Register and maintain production units and machines (stable machine codes). Program Admin owns the resource master data (Decision Log #122, supersedes #82 R2/#89 for ownership);
+    /// units are a labelled default. Rates have their own permission, <see cref="ChangeMachineHourlyRates"/>.
     /// </summary>
     MaintainProductionResources,
 
@@ -135,7 +135,7 @@ public enum Permission
     /// <summary>Propose overtime for operators of a unit one supervises (Production; the use case checks the unit supervisor designation; Decision Log #95 D5, #103).</summary>
     ProposeOvertime,
 
-    /// <summary>Approve or reject proposed overtime and configure the overtime limits (Planning; Decision Log #95 D5, #103).</summary>
+    /// <summary>Approve or reject proposed overtime within the limits: Management or the Production Manager, either alone (Decision Log #122 Q11, supersedes the Planning rule of #103); a proposer never decides their own proposal.</summary>
     DecideOvertime,
 
     /// <summary>Approve or reject overtime that is outside the configured limits (Management; Decision Log #95 D5, #103).</summary>
@@ -186,7 +186,7 @@ public enum Permission
     /// <summary>Plan operators on unit shifts and record their off-days (Planning; Decision Log #100).</summary>
     ScheduleWorkers,
 
-    /// <summary>Designate Production users to production units (labelled default: Planning; Decision Log #99).</summary>
+    /// <summary>Mark a designated Production user as the supervisor of a unit: the Production Manager (Decision Log #122; was Planning, #99). Assigning the working unit itself is <see cref="AssignWorkingUnits"/>.</summary>
     ManageUnitDesignations,
 
     /// <summary>
@@ -209,6 +209,18 @@ public enum Permission
 
     /// <summary>Add or deactivate pause reasons (Planning).</summary>
     ManagePauseReasons,
+
+    /// <summary>Assign a user's operational working unit (the unit designation rows). Program Admin only; the working unit is operational data, separate from the Department + Role permission (Decision Log #122).</summary>
+    AssignWorkingUnits,
+
+    /// <summary>Set the daily and weekly overtime limits. Management only (Decision Log #122); Planning no longer configures them.</summary>
+    ConfigureOvertimeLimits,
+
+    /// <summary>
+    /// Record and end operator-machine qualifications. A qualification is separate from the operator-machine eligibility assignment, which moved to Program Admin (Decision Log #122 Q12); the owner
+    /// did not move qualifications, so they stay with Planning (a labelled default: confirm or reassign).
+    /// </summary>
+    MaintainOperatorQualifications,
 }
 
 /// <summary>
@@ -233,7 +245,8 @@ public static class AuthorizationRules
         [Permission.ChangeMaterialPricePerKg] = new([DepartmentCodes.Warehouse, DepartmentCodes.Management], null),
         [Permission.RecordFinalWarehouseReceipt] = new([DepartmentCodes.Warehouse], null),
         [Permission.MaintainUnitsOfMeasure] = new([DepartmentCodes.Qc], null),
-        [Permission.MaintainHolidayCalendar] = new([DepartmentCodes.Planning], null),
+        [Permission.MaintainOperatorQualifications] = new([DepartmentCodes.Planning], null),
+        [Permission.MaintainHolidayCalendar] = new([DepartmentCodes.Planning, DepartmentCodes.ProductionManager], null),
         [Permission.RegisterDowntime] = new([DepartmentCodes.MaintenancePm], null),
         [Permission.CreateAndSubmitRequest] = new([DepartmentCodes.Central], null),
         [Permission.ReceiveAndEditRequestDetails] = new([DepartmentCodes.Planning], null),
@@ -247,7 +260,7 @@ public static class AuthorizationRules
         [Permission.ViewCustomersAndRequests] = new([], null),
 
         // Planning resource master data (Decision Log #82 R2, #89): Planning registers units and machines; every active user reads them; rates are read by their owners and by Warehouse.
-        [Permission.MaintainProductionResources] = new([DepartmentCodes.Planning], null),
+        [Permission.MaintainProductionResources] = new([], RoleCodes.Admin),
         [Permission.ViewPlanningMasterData] = new([], null),
         [Permission.ManageRawMaterialInquiries] = new([DepartmentCodes.Drawing], null),
         [Permission.AnswerRawMaterialInquiry] = new([DepartmentCodes.Warehouse], null),
@@ -261,28 +274,29 @@ public static class AuthorizationRules
         [Permission.MaintainMaterials] = new([DepartmentCodes.Warehouse], null),
         [Permission.ViewMaterials] = new([], null),
         [Permission.ViewMaterialPrices] = new([DepartmentCodes.Warehouse, DepartmentCodes.Management, DepartmentCodes.Planning], null),
-        [Permission.ViewOperators] = new([DepartmentCodes.Planning, DepartmentCodes.Management, DepartmentCodes.Production], null),
+        [Permission.ViewOperators] = new([DepartmentCodes.Planning, DepartmentCodes.Management, DepartmentCodes.Production, DepartmentCodes.ProductionManager, DepartmentCodes.System], null),
         [Permission.ViewMachineRates] = new([DepartmentCodes.Planning, DepartmentCodes.Management, DepartmentCodes.Warehouse], null),
 
         // QC master data is read by every active user (Planning selects from it); only QC changes it (MaintainUnitsOfMeasure, Decision Log #90).
         [Permission.ViewQcMasterData] = new([], null),
 
         // Read-only production overview: Management and Planning (Decision Log #78).
-        [Permission.ViewProductionQueue] = new([DepartmentCodes.Management, DepartmentCodes.Planning], null),
+        [Permission.ViewProductionQueue] = new([DepartmentCodes.Management, DepartmentCodes.Planning, DepartmentCodes.ProductionManager], null),
 
         // Demonstration stage flow (Decision Log #79): DEMO-ONLY mapping approved by the owner (Decision Log #80); not a finalized production matrix. QC approval uses InspectOrCorrectQc.
         [Permission.ReleaseStage] = new([DepartmentCodes.Planning], null),
 
         // Operational unit queues (Decision Log #78, #99). Management overrides use OverrideQueueOrder; priority changes use ChangePlanningPriority. Production sees only designated units (checked in the use case).
-        [Permission.ViewUnitQueue] = new([DepartmentCodes.Management, DepartmentCodes.Planning, DepartmentCodes.Production], null),
-        [Permission.OrderUnitQueue] = new([DepartmentCodes.Planning], null),
-        [Permission.ManageStageHold] = new([DepartmentCodes.Planning, DepartmentCodes.Production], null),
-        [Permission.ManageUnitDesignations] = new([DepartmentCodes.Planning], null),
+        [Permission.ViewUnitQueue] = new([DepartmentCodes.Management, DepartmentCodes.Planning, DepartmentCodes.Production, DepartmentCodes.ProductionManager], null),
+        [Permission.OrderUnitQueue] = new([DepartmentCodes.Planning, DepartmentCodes.ProductionManager], null),
+        [Permission.ManageStageHold] = new([DepartmentCodes.Planning, DepartmentCodes.Production, DepartmentCodes.ProductionManager], null),
+        [Permission.ManageUnitDesignations] = new([DepartmentCodes.ProductionManager], null),
+        [Permission.AssignWorkingUnits] = new([], RoleCodes.Admin),
         [Permission.SubmitJobReport] = new([DepartmentCodes.Production], null),
-        [Permission.ReviewJobReports] = new([DepartmentCodes.Production, DepartmentCodes.Planning], null),
-        [Permission.ViewJobReports] = new([DepartmentCodes.Production, DepartmentCodes.Planning, DepartmentCodes.Management], null),
-        [Permission.CorrectStageAction] = new([DepartmentCodes.Planning], null),
-        [Permission.ViewKpi] = new([DepartmentCodes.Planning, DepartmentCodes.Management, DepartmentCodes.Production], null),
+        [Permission.ReviewJobReports] = new([DepartmentCodes.Production, DepartmentCodes.Planning, DepartmentCodes.ProductionManager], null),
+        [Permission.ViewJobReports] = new([DepartmentCodes.Production, DepartmentCodes.Planning, DepartmentCodes.Management, DepartmentCodes.ProductionManager], null),
+        [Permission.CorrectStageAction] = new([DepartmentCodes.Planning, DepartmentCodes.ProductionManager], null),
+        [Permission.ViewKpi] = new([DepartmentCodes.Planning, DepartmentCodes.Management, DepartmentCodes.Production, DepartmentCodes.ProductionManager], null),
         [Permission.RecordWarehouseReceipt] = new([DepartmentCodes.Warehouse], null),
         [Permission.MarkItemFinishedSent] = new([DepartmentCodes.Warehouse], null),
         [Permission.RecordCustomerDispatch] = new([DepartmentCodes.Warehouse], null),
@@ -291,19 +305,20 @@ public static class AuthorizationRules
         [Permission.ApproveItemPrice] = new([DepartmentCodes.Management], null),
         [Permission.ViewItemCosts] = new([DepartmentCodes.Warehouse, DepartmentCodes.Planning, DepartmentCodes.Management], null),
         [Permission.ProposeOvertime] = new([DepartmentCodes.Production], null),
-        [Permission.DecideOvertime] = new([DepartmentCodes.Planning], null),
+        [Permission.DecideOvertime] = new([DepartmentCodes.Management, DepartmentCodes.ProductionManager], null),
+        [Permission.ConfigureOvertimeLimits] = new([DepartmentCodes.Management], null),
         [Permission.DecideOvertimeBeyondLimits] = new([DepartmentCodes.Management], null),
-        [Permission.ViewOvertime] = new([DepartmentCodes.Production, DepartmentCodes.Planning, DepartmentCodes.Management], null),
+        [Permission.ViewOvertime] = new([DepartmentCodes.Production, DepartmentCodes.Planning, DepartmentCodes.Management, DepartmentCodes.ProductionManager], null),
         [Permission.ViewQcInspections] = new([DepartmentCodes.Qc, DepartmentCodes.Planning, DepartmentCodes.Management], null),
         [Permission.AcceptShortfall] = new([DepartmentCodes.Management], null),
         [Permission.OrderShortfallReplacement] = new([DepartmentCodes.Planning], null),
-        [Permission.ViewCalendar] = new([DepartmentCodes.Planning, DepartmentCodes.Management, DepartmentCodes.Production], null),
-        [Permission.ScheduleWorkers] = new([DepartmentCodes.Planning], null),
+        [Permission.ViewCalendar] = new([DepartmentCodes.Planning, DepartmentCodes.Management, DepartmentCodes.Production, DepartmentCodes.ProductionManager], null),
+        [Permission.ScheduleWorkers] = new([DepartmentCodes.Planning, DepartmentCodes.ProductionManager], null),
         [Permission.RunStage] = new([DepartmentCodes.Production], null),
-        [Permission.ViewWorkSessions] = new([DepartmentCodes.Production, DepartmentCodes.Planning, DepartmentCodes.Management], null),
-        [Permission.OperateWorkSessions] = new([DepartmentCodes.Production], null),
+        [Permission.ViewWorkSessions] = new([DepartmentCodes.Production, DepartmentCodes.Planning, DepartmentCodes.Management, DepartmentCodes.ProductionManager], null),
+        [Permission.OperateWorkSessions] = new([DepartmentCodes.Production, DepartmentCodes.ProductionManager], null),
         [Permission.CorrectWorkSessions] = new([DepartmentCodes.Planning], null),
-        [Permission.ApproveSessionTime] = new([DepartmentCodes.Planning], null),
+        [Permission.ApproveSessionTime] = new([DepartmentCodes.Planning, DepartmentCodes.ProductionManager], null),
         [Permission.ManagePauseReasons] = new([DepartmentCodes.Planning], null),
     };
 

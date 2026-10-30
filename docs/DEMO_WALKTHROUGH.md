@@ -22,7 +22,7 @@
 
 | Step | Who signs in | Screen | What happens |
 |---|---|---|---|
-| 1 | demo.central | درخواست‌ها | Create a customer and a MAKE request with the customer's request number, attach the request PDF, submit to Management |
+| 1 | demo.secretary | درخواست‌ها | Create a customer and a MAKE request with the customer's request number, attach the request PDF, submit to Management |
 | 2 | demo.management | درخواست‌ها | Approve the request |
 | 3 | demo.planning, demo.drawing | درخواست‌ها | Planning forwards to Drawing; Drawing records the technical result (fully accepted) |
 | 4 | demo.planning, demo.management | قراردادها | Planning decides the contract is required, saves its number and date, attaches the PDF and submits; Management approves |

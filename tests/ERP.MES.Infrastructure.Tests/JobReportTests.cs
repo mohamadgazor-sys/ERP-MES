@@ -35,6 +35,7 @@ public class JobReportTests
         public required Principal ManagementStaff { get; init; }
 
         public required Principal Planning { get; init; }
+        public required Principal ProductionManager { get; init; }
 
         public required Principal Drawing { get; init; }
 
@@ -95,6 +96,7 @@ public class JobReportTests
             Manager = await UserAsync(fixture, admin, "manager.one", DepartmentCodes.Management, RoleCodes.Manager),
             ManagementStaff = await UserAsync(fixture, admin, "management.staff", DepartmentCodes.Management, RoleCodes.Staff),
             Planning = await UserAsync(fixture, admin, "planning.one", DepartmentCodes.Planning, RoleCodes.Staff),
+            ProductionManager = await UserAsync(fixture, admin, "prodmanager.one", DepartmentCodes.ProductionManager, RoleCodes.Manager),
             Drawing = await UserAsync(fixture, admin, "drawing.one", DepartmentCodes.Drawing, RoleCodes.Staff),
             Warehouse = await UserAsync(fixture, admin, "warehouse.one", DepartmentCodes.Warehouse, RoleCodes.Staff),
             Qc = await UserAsync(fixture, admin, "qc.one", DepartmentCodes.Qc, RoleCodes.Staff),
@@ -200,7 +202,7 @@ public class JobReportTests
 
     private static async Task<long> AddUnitAsync(World w, string code)
     {
-        var unit = await w.Services.PlanningMaster.AddUnitAsync(w.Planning, code, "واحد " + code, Token);
+        var unit = await w.Services.PlanningMaster.AddUnitAsync(w.Admin, code, "واحد " + code, Token);
         Assert.True(unit.Succeeded, unit.Status + " " + unit.Issue);
         return unit.Value!.Value.Id;
     }
@@ -260,7 +262,7 @@ public class JobReportTests
 
     private static async Task<long> OperatorAsync(World w, string code)
     {
-        var added = await w.Services.Operators.RegisterAsync(w.Planning, code, "اپراتور " + code, null, Token);
+        var added = await w.Services.Operators.RegisterAsync(w.Admin, code, "اپراتور " + code, null, Token);
         Assert.True(added.Succeeded, added.Status + " " + added.Issue);
         return added.Value!.Value.Id;
     }
@@ -285,19 +287,19 @@ public class JobReportTests
         var unit = await AddUnitAsync(w, "MILLING");
         var template = await TemplateAsync(w, "D", "08:00", "17:00", "12:00", "13:00");
         await RunUnitShiftAsync(w, unit, template, 3, 1);
-        var machine = (await w.Services.PlanningMaster.AddMachineAsync(w.Planning, "FCC-06", "فرز", unit, Token)).Value!.Value.Id;
+        var machine = (await w.Services.PlanningMaster.AddMachineAsync(w.Admin, "FCC-06", "فرز", unit, Token)).Value!.Value.Id;
         await MaterialAsync(w);
         var item = await ItemAsync(w, "R-1", "A", [unit]);
-        var designation = (await w.Designations.AssignAsync(w.Planning, w.Production.UserId, unit, Token)).Value!;
-        Assert.True((await w.Designations.AssignAsync(w.Planning, w.Supervisor.UserId, unit, Token)).Succeeded);
+        var designation = (await w.Designations.AssignAsync(w.Admin, w.Production.UserId, unit, Token)).Value!;
+        Assert.True((await w.Designations.AssignAsync(w.Admin, w.Supervisor.UserId, unit, Token)).Succeeded);
         if (supervisor)
         {
-            var row = (await w.Designations.LoadAsync(w.Planning, Token)).Value!.Rows.Single(r => r.UserId == w.Supervisor.UserId);
-            Assert.True((await w.Designations.SetSupervisorAsync(w.Planning, row.DesignationId, row.Version, true, Token)).Succeeded);
+            var row = (await w.Designations.LoadAsync(w.ProductionManager, Token)).Value!.Rows.Single(r => r.UserId == w.Supervisor.UserId);
+            Assert.True((await w.Designations.SetSupervisorAsync(w.ProductionManager, row.DesignationId, row.Version, true, Token)).Succeeded);
         }
 
         Assert.True((await w.Work.PerformAsync(w.Production, StageAction.Start, await TargetAsync(w, item.RequestId, item.ItemId, 1), Token)).Succeeded);
-        var operatorId = (await w.Services.Operators.RegisterAsync(w.Planning, "OP-1", "علی رضایی", w.Production.UserId, Token)).Value!.Value.Id;
+        var operatorId = (await w.Services.Operators.RegisterAsync(w.Admin, "OP-1", "علی رضایی", w.Production.UserId, Token)).Value!.Value.Id;
         if (plan)
         {
             Assert.True((await w.Schedule.ScheduleAsync(w.Planning, operatorId, DateOnly.FromDateTime(Day), unit, template, machine, null, null, Token)).Succeeded);
@@ -371,7 +373,7 @@ public class JobReportTests
 
         // Another operator cannot touch or submit the first operator's report.
         var draft = await DraftAsync(w, s, Line(s, 8, 12));
-        await w.Services.Operators.RegisterAsync(w.Planning, "OP-2", "رضا احمدی", w.OtherOperator.UserId, Token);
+        await w.Services.Operators.RegisterAsync(w.Admin, "OP-2", "رضا احمدی", w.OtherOperator.UserId, Token);
         Assert.Equal(OperationStatus.NotAuthorized, (await w.Reports.SaveDraftAsync(w.OtherOperator, draft.Value.Id, draft.Version, DateOnly.FromDateTime(Day), s.Unit, s.Template, [Line(s, 9, 10)], Token)).Status);
         Assert.Equal(OperationStatus.NotAuthorized, (await w.Reports.SubmitAsync(w.OtherOperator, draft.Value.Id, draft.Version, Token)).Status);
         Assert.Equal(JobReportStatus.Draft, (await w.Reports.LoadAsync(w.Planning, DateOnly.FromDateTime(Day), DateOnly.FromDateTime(Day), Token)).Value!.Items.Single().Report.Value.Status);
@@ -382,10 +384,10 @@ public class JobReportTests
     {
         using var w = await StartAsync();
         var s = await SetupAsync(w, plan: false);
-        var other = (await w.Services.PlanningMaster.AddMachineAsync(w.Planning, "FCC-07", "فرز ۲", s.Unit, Token)).Value!.Value.Id;
+        var other = (await w.Services.PlanningMaster.AddMachineAsync(w.Admin, "FCC-07", "فرز ۲", s.Unit, Token)).Value!.Value.Id;
 
         // A second operator already has an approved line on FCC-06 at 09:00-10:00.
-        var person2 = (await w.Services.Operators.RegisterAsync(w.Planning, "OP-2", "رضا احمدی", w.OtherOperator.UserId, Token)).Value!.Value.Id;
+        var person2 = (await w.Services.Operators.RegisterAsync(w.Admin, "OP-2", "رضا احمدی", w.OtherOperator.UserId, Token)).Value!.Value.Id;
         Assert.True((await w.Schedule.ScheduleAsync(w.Planning, person2, DateOnly.FromDateTime(Day), s.Unit, s.Template, null, null, null, Token)).Succeeded);
         var theirs = (await w.Reports.SaveDraftAsync(w.OtherOperator, null, null, DateOnly.FromDateTime(Day), s.Unit, s.Template, [Line(s, 9, 10)], Token)).Value!;
         var theirsSubmitted = (await w.Reports.SubmitAsync(w.OtherOperator, theirs.Value.Id, theirs.Version, Token)).Value!;
@@ -421,8 +423,8 @@ public class JobReportTests
     {
         using var w = await StartAsync();
         var s = await SetupAsync(w);
-        var other = (await w.Services.PlanningMaster.AddMachineAsync(w.Planning, "FCC-07", "فرز ۲", s.Unit, Token)).Value!.Value.Id;
-        var planned = (await w.Services.PlanningMaster.AddMachineAsync(w.Planning, "FCC-08", "فرز ۳", s.Unit, Token)).Value!.Value.Id;
+        var other = (await w.Services.PlanningMaster.AddMachineAsync(w.Admin, "FCC-07", "فرز ۲", s.Unit, Token)).Value!.Value.Id;
+        var planned = (await w.Services.PlanningMaster.AddMachineAsync(w.Admin, "FCC-08", "فرز ۳", s.Unit, Token)).Value!.Value.Id;
         var item = await ItemAsync(w, "R-2", "B", [s.Unit]);
 
         // Stage 1 of item B is planned on no machine; a stage planned on FCC-08 would flag FCC-06 or FCC-07 — define such a stage on a new item.
@@ -520,7 +522,7 @@ public class JobReportTests
         using var w = await StartAsync();
         var s = await SetupAsync(w);
         var otherUnit = await AddUnitAsync(w, "TURNING");
-        var foreignMachine = (await w.Services.PlanningMaster.AddMachineAsync(w.Planning, "TCC-12", "تراش", otherUnit, Token)).Value!.Value.Id;
+        var foreignMachine = (await w.Services.PlanningMaster.AddMachineAsync(w.Admin, "TCC-12", "تراش", otherUnit, Token)).Value!.Value.Id;
         var date = DateOnly.FromDateTime(Day);
 
         Assert.Equal(ValidationIssue.JobReportLineInvalid, (await w.Reports.SaveDraftAsync(w.Production, null, null, date, s.Unit, s.Template, [Line(s, 8, 9, machine: foreignMachine)], Token)).Issue);

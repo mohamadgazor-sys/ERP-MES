@@ -14,7 +14,7 @@ public class PlanningMasterViewModelTests
 
     private static async Task<PlanningMasterViewModel> WithMachineAsync(WorkflowHarness h)
     {
-        var vm = For(h, h.Planning);
+        var vm = For(h, h.Admin);
         await vm.LoadAsync(Token);
         Assert.True(await vm.AddUnitAsync("MILLING", "فرزکاری", Token));
         Assert.True(await vm.AddMachineAsync("FCC-06", "فرز CNC", vm.Units.Single().Id, Token));
@@ -22,8 +22,18 @@ public class PlanningMasterViewModelTests
         return vm;
     }
 
+    // Program Admin registers the unit and the machine (Decision Log #122); Planning then maintains the hourly rates.
+    private static async Task<PlanningMasterViewModel> PlanningAfterAdminAsync(WorkflowHarness h)
+    {
+        await WithMachineAsync(h);
+        var vm = For(h, h.Planning);
+        await vm.LoadAsync(Token);
+        vm.SelectedMachine = vm.Machines.Single();
+        return vm;
+    }
+
     [Fact]
-    public async Task Planning_registers_a_unit_and_a_machine_and_other_departments_only_read()
+    public async Task Program_admin_registers_a_unit_and_a_machine_and_other_departments_only_read()
     {
         using var h = await WorkflowHarness.CreateAsync(Token);
         var planning = await WithMachineAsync(h);
@@ -32,12 +42,19 @@ public class PlanningMasterViewModelTests
         await production.LoadAsync(Token);
 
         Assert.True(planning.CanMaintainResources);
-        Assert.True(planning.CanChangeRates);
+        Assert.False(planning.CanChangeRates);
         Assert.Equal("FCC-06", planning.Machines.Single().Code);
         Assert.Equal("MILLING", planning.Machines.Single().UnitText);
-        Assert.Equal("ثبت نشده", planning.Machines.Single().LatestRateText);
+        Assert.Equal("—", planning.Machines.Single().LatestRateText); // Program Admin does not see rates
         Assert.False(production.CanMaintainResources);
         Assert.False(production.CanChangeRates);
+
+        var ratesOwner = For(h, h.Planning);
+        await ratesOwner.LoadAsync(Token);
+        Assert.False(ratesOwner.CanMaintainResources);
+        Assert.True(ratesOwner.CanChangeRates);
+        Assert.False(await ratesOwner.AddUnitAsync("X", "x", Token));
+        Assert.Equal("ثبت نشده", ratesOwner.Machines.Single().LatestRateText);
         Assert.False(production.CanViewRates);
         Assert.Equal("FCC-06", production.Machines.Single().Code);
         Assert.Equal("—", production.Machines.Single().LatestRateText);
@@ -49,7 +66,7 @@ public class PlanningMasterViewModelTests
     public async Task A_rate_is_added_shown_in_persian_digits_in_rial_and_history_is_kept_newest_first()
     {
         using var h = await WorkflowHarness.CreateAsync(Token);
-        var vm = await WithMachineAsync(h);
+        var vm = await PlanningAfterAdminAsync(h);
 
         Assert.True(await vm.AddRateForSelectedMachineAsync("۱۲۰۰۰۰۰", "۱۴۰۵/۰۱/۰۱", "قرارداد", Token));
         h.Clock.Advance(TimeSpan.FromMinutes(1));
@@ -77,7 +94,7 @@ public class PlanningMasterViewModelTests
     public async Task Bad_rate_input_gives_a_specific_persian_message_and_saves_nothing()
     {
         using var h = await WorkflowHarness.CreateAsync(Token);
-        var vm = await WithMachineAsync(h);
+        var vm = await PlanningAfterAdminAsync(h);
         Assert.True(await vm.AddRateForSelectedMachineAsync("100", "1405/05/01", null, Token));
 
         Assert.False(await vm.AddRateForSelectedMachineAsync("1,200,000", "1405/07/01", null, Token));
@@ -101,7 +118,7 @@ public class PlanningMasterViewModelTests
     {
         using var h = await WorkflowHarness.CreateAsync(Token);
         var first = await WithMachineAsync(h);
-        var second = For(h, h.Planning);
+        var second = For(h, h.Admin);
         await second.LoadAsync(Token);
         second.SelectedMachine = second.Machines.Single();
         h.Clock.Advance(TimeSpan.FromMinutes(1));

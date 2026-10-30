@@ -145,15 +145,25 @@ public sealed class OvertimeAssignment
 
     public bool Overlaps(DateTime otherStartLocal, DateTime otherEndLocal) => StartLocal < otherEndLocal && otherStartLocal < EndLocal;
 
-    /// <summary>Planning decides a proposal: within the limits it is approved, outside them it goes to Management.</summary>
-    public void PlanningApprove(bool exceedsLimits, string? note, long userId, DateTime atUtc)
+    /// <summary>
+    /// The first decision on a proposal (Decision Log #122 Q11): a deciding user approves it. Within the limits it is approved. Outside them it is approved at once when Management itself decides
+    /// (<paramref name="byManagement"/>; the same user is recorded as the Management decider) and otherwise (the Production Manager) it goes to Management, because beyond the limits only
+    /// Management approves. The first-decision columns keep their historical "Planning" names to avoid a schema rename; they now hold the Management or Production Manager decision.
+    /// </summary>
+    public void FirstApprove(bool exceedsLimits, string? note, long userId, DateTime atUtc, bool byManagement = false)
     {
         Require(OvertimeStatus.Proposed);
         PlanningUserId = userId;
         PlanningAtUtc = Requirements.Utc(atUtc, nameof(atUtc));
         ExceedsLimits = exceedsLimits;
         DecisionNote = Clean(note);
-        Status = exceedsLimits ? OvertimeStatus.AwaitingManagement : OvertimeStatus.Approved;
+        if (exceedsLimits && byManagement)
+        {
+            ManagementUserId = userId;
+            ManagementAtUtc = PlanningAtUtc;
+        }
+
+        Status = exceedsLimits && !byManagement ? OvertimeStatus.AwaitingManagement : OvertimeStatus.Approved;
     }
 
     public void ManagementApprove(string? note, long userId, DateTime atUtc)
@@ -165,7 +175,7 @@ public sealed class OvertimeAssignment
         Status = OvertimeStatus.Approved;
     }
 
-    /// <summary>Planning rejects a proposal; Management rejects one waiting for it. The reason is mandatory.</summary>
+    /// <summary>A deciding user (Management or Production Manager) rejects a proposal; Management rejects one waiting for it. The reason is mandatory.</summary>
     public void Reject(string? reason, long userId, DateTime atUtc, bool byManagement)
     {
         Require(byManagement ? OvertimeStatus.AwaitingManagement : OvertimeStatus.Proposed);

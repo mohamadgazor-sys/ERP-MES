@@ -16,11 +16,11 @@ public class KpiViewModelTests
     public async Task Planning_and_management_see_every_unit_labelled_without_a_score_a_supervisor_only_their_own_and_others_are_denied()
     {
         using var h = await WorkflowHarness.CreateAsync(Token);
-        var milling = (await h.Workflow.PlanningMaster.AddUnitAsync(h.Planning, "MILLING", "فرزکاری", Token)).Value!.Value.Id;
-        var turning = (await h.Workflow.PlanningMaster.AddUnitAsync(h.Planning, "TURNING", "تراشکاری", Token)).Value!.Value.Id;
-        Assert.True((await h.Workflow.UnitDesignations.AssignAsync(h.Planning, h.Production.UserId, milling, Token)).Succeeded);
-        var row = (await h.Workflow.UnitDesignations.LoadAsync(h.Planning, Token)).Value!.Rows.Single();
-        Assert.True((await h.Workflow.UnitDesignations.SetSupervisorAsync(h.Planning, row.DesignationId, row.Version, true, Token)).Succeeded);
+        var milling = (await h.Workflow.PlanningMaster.AddUnitAsync(h.Admin, "MILLING", "فرزکاری", Token)).Value!.Value.Id;
+        var turning = (await h.Workflow.PlanningMaster.AddUnitAsync(h.Admin, "TURNING", "تراشکاری", Token)).Value!.Value.Id;
+        Assert.True((await h.Workflow.UnitDesignations.AssignAsync(h.Admin, h.Production.UserId, milling, Token)).Succeeded);
+        var row = (await h.Workflow.UnitDesignations.LoadAsync(h.ProductionManager, Token)).Value!.Rows.Single();
+        Assert.True((await h.Workflow.UnitDesignations.SetSupervisorAsync(h.ProductionManager, row.DesignationId, row.Version, true, Token)).Succeeded);
 
         var planning = For(h, h.Planning);
         await planning.LoadAsync(Token);

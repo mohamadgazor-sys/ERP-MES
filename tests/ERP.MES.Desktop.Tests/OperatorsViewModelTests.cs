@@ -14,16 +14,16 @@ public class OperatorsViewModelTests
 
     private static async Task<(OperatorsViewModel Vm, long MachineId)> WithMachineAndOperatorAsync(WorkflowHarness h)
     {
-        var unit = (await h.Workflow.PlanningMaster.AddUnitAsync(h.Planning, "MILLING", "فرزکاری", Token)).Value!;
-        var machine = (await h.Workflow.PlanningMaster.AddMachineAsync(h.Planning, "FCC-06", "فرز CNC", unit.Value.Id, Token)).Value!;
-        var vm = For(h, h.Planning);
+        var unit = (await h.Workflow.PlanningMaster.AddUnitAsync(h.Admin, "MILLING", "فرزکاری", Token)).Value!;
+        var machine = (await h.Workflow.PlanningMaster.AddMachineAsync(h.Admin, "FCC-06", "فرز CNC", unit.Value.Id, Token)).Value!;
+        var vm = For(h, h.Admin);
         await vm.LoadAsync(Token);
         Assert.True(await vm.RegisterAsync("OP-01", "علی رضایی", Token));
         return (vm, machine.Value.Id);
     }
 
     [Fact]
-    public async Task Planning_registers_an_operator_and_production_only_reads()
+    public async Task Program_admin_registers_an_operator_and_production_only_reads()
     {
         using var h = await WorkflowHarness.CreateAsync(Token);
         var (planning, _) = await WithMachineAndOperatorAsync(h);
@@ -69,7 +69,14 @@ public class OperatorsViewModelTests
         Assert.Equal("باز", row.ToText);
         Assert.Equal("اصلی", row.PrimaryText);
 
-        Assert.True(await vm.RecordQualificationAsync(operatorId, machineId, "1405/06/01", "گواهی", Token));
+        // Qualifications stay with Planning; the eligibility assignment above is Program Admin's (Decision Log #122).
+        var qualifier = For(h, h.Planning);
+        await qualifier.LoadAsync(Token);
+        Assert.False(qualifier.CanMaintain);
+        Assert.True(qualifier.CanMaintainQualifications);
+        Assert.True(await qualifier.RecordQualificationAsync(operatorId, machineId, "1405/06/01", "گواهی", Token));
+        await vm.LoadAsync(Token);
+        Assert.False(vm.CanMaintainQualifications);
         Assert.Equal("گواهی", vm.Qualifications.Single().NoteText);
         Assert.Equal("دارد", vm.Assignments.Single().QualifiedText);
     }
@@ -81,7 +88,10 @@ public class OperatorsViewModelTests
         var (vm, machineId) = await WithMachineAndOperatorAsync(h);
         var operatorId = vm.Operators.Single().Id;
         Assert.True(await vm.AssignAsync(operatorId, machineId, "1405/07/01", false, null, Token));
-        Assert.True(await vm.RecordQualificationAsync(operatorId, machineId, "1405/07/01", null, Token));
+        var qualifier = For(h, h.Planning);
+        await qualifier.LoadAsync(Token);
+        Assert.True(await qualifier.RecordQualificationAsync(operatorId, machineId, "1405/07/01", null, Token));
+        await vm.LoadAsync(Token);
 
         Assert.False(await vm.CloseSelectedAssignmentAsync("1405/07/10", Token));
         Assert.Equal(Messages.NothingSelected, vm.Message);
@@ -90,10 +100,11 @@ public class OperatorsViewModelTests
         Assert.True(await vm.CloseSelectedAssignmentAsync("1405/07/10", Token));
         Assert.Equal("۱۴۰۵/۰۷/۱۰", vm.Assignments.Single().ToText);
 
-        vm.SelectedQualification = vm.Qualifications.Single();
-        Assert.True(await vm.EndSelectedQualificationAsync("1405/07/10", Token));
-        Assert.Single(vm.Qualifications);
-        Assert.False(vm.Qualifications.Single().IsOpen);
+        await qualifier.LoadAsync(Token);
+        qualifier.SelectedQualification = qualifier.Qualifications.Single();
+        Assert.True(await qualifier.EndSelectedQualificationAsync("1405/07/10", Token));
+        Assert.Single(qualifier.Qualifications);
+        Assert.False(qualifier.Qualifications.Single().IsOpen);
     }
 
     [Fact]
@@ -108,7 +119,7 @@ public class OperatorsViewModelTests
         Assert.False(await vm.RegisterAsync("op-bad", "x", Token));
 
         // Another session renames the operator; this screen still holds the old version.
-        var other = For(h, h.Planning);
+        var other = For(h, h.Admin);
         await other.LoadAsync(Token);
         other.SelectedOperator = other.Operators.Single();
         Assert.True(await other.RenameSelectedAsync("نام جدید", Token));

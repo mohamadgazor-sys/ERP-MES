@@ -25,6 +25,7 @@ public class OvertimeTests
         public required Principal Manager { get; init; }
 
         public required Principal Planning { get; init; }
+        public required Principal ProductionManager { get; init; }
 
         public required Principal Qc { get; init; }
 
@@ -61,6 +62,7 @@ public class OvertimeTests
             Admin = admin,
             Manager = await UserAsync(fixture, admin, "manager.one", DepartmentCodes.Management, RoleCodes.Manager),
             Planning = await UserAsync(fixture, admin, "planning.one", DepartmentCodes.Planning, RoleCodes.Staff),
+            ProductionManager = await UserAsync(fixture, admin, "prodmanager.one", DepartmentCodes.ProductionManager, RoleCodes.Manager),
             Qc = await UserAsync(fixture, admin, "qc.one", DepartmentCodes.Qc, RoleCodes.Staff),
             Supervisor = await UserAsync(fixture, admin, "supervisor.one", DepartmentCodes.Production, RoleCodes.Staff),
             OtherSupervisor = await UserAsync(fixture, admin, "supervisor.two", DepartmentCodes.Production, RoleCodes.Staff),
@@ -80,17 +82,17 @@ public class OvertimeTests
     private static async Task<Setup> SetupAsync(World w, bool plan = true)
     {
         var units = w.Services.PlanningMaster;
-        var unit = (await units.AddUnitAsync(w.Planning, "MILLING", "فرز", Token)).Value!.Value.Id;
-        var other = (await units.AddUnitAsync(w.Planning, "TURNING", "تراش", Token)).Value!.Value.Id;
-        var machine = (await units.AddMachineAsync(w.Planning, "FCC-06", "فرز", unit, Token)).Value!.Value.Id;
-        var second = (await units.AddMachineAsync(w.Planning, "FCC-07", "فرز ۲", unit, Token)).Value!.Value.Id;
-        var otherMachine = (await units.AddMachineAsync(w.Planning, "TRN-01", "تراش", other, Token)).Value!.Value.Id;
+        var unit = (await units.AddUnitAsync(w.Admin, "MILLING", "فرز", Token)).Value!.Value.Id;
+        var other = (await units.AddUnitAsync(w.Admin, "TURNING", "تراش", Token)).Value!.Value.Id;
+        var machine = (await units.AddMachineAsync(w.Admin, "FCC-06", "فرز", unit, Token)).Value!.Value.Id;
+        var second = (await units.AddMachineAsync(w.Admin, "FCC-07", "فرز ۲", unit, Token)).Value!.Value.Id;
+        var otherMachine = (await units.AddMachineAsync(w.Admin, "TRN-01", "تراش", other, Token)).Value!.Value.Id;
         var template = (await w.Services.Calendar.AddTemplateAsync(w.Planning, "D", "شیفت D", new TimeOnly(8, 0), new TimeOnly(17, 0), new TimeOnly(12, 0), new TimeOnly(13, 0), Token)).Value!.Value.Id;
         Assert.True((await w.Services.Calendar.AddUnitShiftAsync(w.Planning, unit, template, 3, 1, false, Token)).Succeeded);
         await DesignateSupervisorAsync(w, w.Supervisor, unit);
         await DesignateSupervisorAsync(w, w.OtherSupervisor, other);
-        var person = (await w.Services.Operators.RegisterAsync(w.Planning, "OP-1", "علی رضایی", w.Operator.UserId, Token)).Value!.Value.Id;
-        var person2 = (await w.Services.Operators.RegisterAsync(w.Planning, "OP-2", "رضا احمدی", null, Token)).Value!.Value.Id;
+        var person = (await w.Services.Operators.RegisterAsync(w.Admin, "OP-1", "علی رضایی", w.Operator.UserId, Token)).Value!.Value.Id;
+        var person2 = (await w.Services.Operators.RegisterAsync(w.Admin, "OP-2", "رضا احمدی", null, Token)).Value!.Value.Id;
         if (plan)
         {
             Assert.True((await w.Services.WorkerSchedule.ScheduleAsync(w.Planning, person, DateOnly.FromDateTime(Saturday), unit, template, machine, null, null, Token)).Succeeded);
@@ -101,14 +103,14 @@ public class OvertimeTests
 
     private static async Task DesignateSupervisorAsync(World w, Principal user, long unit)
     {
-        Assert.True((await w.Services.UnitDesignations.AssignAsync(w.Planning, user.UserId, unit, Token)).Succeeded);
-        var row = (await w.Services.UnitDesignations.LoadAsync(w.Planning, Token)).Value!.Rows.Single(r => r.UserId == user.UserId && r.UnitId == unit);
-        Assert.True((await w.Services.UnitDesignations.SetSupervisorAsync(w.Planning, row.DesignationId, row.Version, true, Token)).Succeeded);
+        Assert.True((await w.Services.UnitDesignations.AssignAsync(w.Admin, user.UserId, unit, Token)).Succeeded);
+        var row = (await w.Services.UnitDesignations.LoadAsync(w.ProductionManager, Token)).Value!.Rows.Single(r => r.UserId == user.UserId && r.UnitId == unit);
+        Assert.True((await w.Services.UnitDesignations.SetSupervisorAsync(w.ProductionManager, row.DesignationId, row.Version, true, Token)).Succeeded);
     }
 
     private static async Task<Stored<OvertimeLimits>> LimitsAsync(World w, int day, int week, long version = 0)
     {
-        var set = await w.Overtime.SetLimitsAsync(w.Planning, version, day, week, Token);
+        var set = await w.Overtime.SetLimitsAsync(w.Manager, version, day, week, Token);
         Assert.True(set.Succeeded, set.Status + " " + set.Issue);
         return set.Value!;
     }
@@ -123,7 +125,7 @@ public class OvertimeTests
     private static long Count(World w, string tableAndWhere) => long.Parse(w.Fixture.Db.Query("SELECT COUNT(*) FROM " + tableAndWhere).Single(), System.Globalization.CultureInfo.InvariantCulture);
 
     [Fact]
-    public async Task A_supervisor_proposes_planning_approves_within_the_limits_and_everything_is_audited()
+    public async Task A_supervisor_proposes_the_production_manager_approves_within_the_limits_and_everything_is_audited()
     {
         using var w = await StartAsync();
         var s = await SetupAsync(w);
@@ -134,18 +136,18 @@ public class OvertimeTests
         Assert.Equal(90, proposed.Value.Minutes);
         Assert.Equal(w.Supervisor.UserId, proposed.Value.ProposedByUserId);
 
-        var approved = await w.Overtime.PlanningDecideAsync(w.Planning, proposed.Value.Id, proposed.Version, true, null, Token);
+        var approved = await w.Overtime.DecideAsync(w.ProductionManager, proposed.Value.Id, proposed.Version, true, null, Token);
         Assert.True(approved.Succeeded, approved.Status + " " + approved.Issue);
         Assert.Equal(OvertimeStatus.Approved, approved.Value!.Value.Status);
         Assert.False(approved.Value.Value.ExceedsLimits);
-        Assert.Equal(w.Planning.UserId, approved.Value.Value.PlanningUserId);
+        Assert.Equal(w.ProductionManager.UserId, approved.Value.Value.PlanningUserId);
         Assert.Null(approved.Value.Value.ManagementUserId);
         Assert.Equal(1, Count(w, "AuditLog WHERE ActionCode = 'OvertimeProposed'"));
-        Assert.Equal(1, Count(w, "AuditLog WHERE ActionCode = 'OvertimePlanningDecided'"));
+        Assert.Equal(1, Count(w, "AuditLog WHERE ActionCode = 'OvertimeDecided'"));
 
         // An approved assignment is final for the decisions: Management has nothing to decide, Planning cannot decide twice.
         Assert.Equal(OperationStatus.InvalidState, (await w.Overtime.ManagementDecideAsync(w.Manager, approved.Value.Value.Id, approved.Value.Version, true, null, Token)).Status);
-        Assert.Equal(OperationStatus.InvalidState, (await w.Overtime.PlanningDecideAsync(w.Planning, approved.Value.Value.Id, approved.Value.Version, true, null, Token)).Status);
+        Assert.Equal(OperationStatus.InvalidState, (await w.Overtime.DecideAsync(w.ProductionManager, approved.Value.Value.Id, approved.Value.Version, true, null, Token)).Status);
     }
 
     [Fact]
@@ -155,14 +157,14 @@ public class OvertimeTests
         var s = await SetupAsync(w);
         var proposed = await ProposedAsync(w, s, At(0, 17, 30), At(0, 19));
 
-        var blocked = await w.Overtime.PlanningDecideAsync(w.Planning, proposed.Value.Id, proposed.Version, true, null, Token);
+        var blocked = await w.Overtime.DecideAsync(w.ProductionManager, proposed.Value.Id, proposed.Version, true, null, Token);
         Assert.Equal(ValidationIssue.OvertimeLimitsNotConfigured, blocked.Issue);
         var view = (await w.Overtime.LoadAsync(w.Planning, DateOnly.FromDateTime(Saturday), DateOnly.FromDateTime(Saturday), Token)).Value!;
         Assert.Equal(OvertimeStatus.Proposed, view.Items.Single().Assignment.Value.Status);
         Assert.Null(view.Limits);
 
-        Assert.Equal(ValidationIssue.OvertimeInvalid, (await w.Overtime.PlanningDecideAsync(w.Planning, proposed.Value.Id, proposed.Version, false, "  ", Token)).Issue);
-        var rejected = await w.Overtime.PlanningDecideAsync(w.Planning, proposed.Value.Id, proposed.Version, false, "کمبود بودجه", Token);
+        Assert.Equal(ValidationIssue.OvertimeInvalid, (await w.Overtime.DecideAsync(w.ProductionManager, proposed.Value.Id, proposed.Version, false, "  ", Token)).Issue);
+        var rejected = await w.Overtime.DecideAsync(w.ProductionManager, proposed.Value.Id, proposed.Version, false, "کمبود بودجه", Token);
         Assert.Equal(OvertimeStatus.Rejected, rejected.Value!.Value.Status);
         Assert.Equal("کمبود بودجه", rejected.Value.Value.DecisionNote);
     }
@@ -175,24 +177,24 @@ public class OvertimeTests
         await LimitsAsync(w, 60, 480);
 
         var proposed = await ProposedAsync(w, s, At(0, 17, 30), At(0, 19));
-        var waiting = await w.Overtime.PlanningDecideAsync(w.Planning, proposed.Value.Id, proposed.Version, true, "نیاز تولید", Token);
+        var waiting = await w.Overtime.DecideAsync(w.ProductionManager, proposed.Value.Id, proposed.Version, true, "نیاز تولید", Token);
         Assert.Equal(OvertimeStatus.AwaitingManagement, waiting.Value!.Value.Status);
         Assert.True(waiting.Value.Value.ExceedsLimits);
 
         // Only Management decides it now, and Planning cannot also push it through.
         Assert.Equal(OperationStatus.NotAuthorized, (await w.Overtime.ManagementDecideAsync(w.Planning, waiting.Value.Value.Id, waiting.Value.Version, true, null, Token)).Status);
-        Assert.Equal(OperationStatus.InvalidState, (await w.Overtime.PlanningDecideAsync(w.Planning, waiting.Value.Value.Id, waiting.Value.Version, true, null, Token)).Status);
+        Assert.Equal(OperationStatus.InvalidState, (await w.Overtime.DecideAsync(w.ProductionManager, waiting.Value.Value.Id, waiting.Value.Version, true, null, Token)).Status);
         Assert.Equal(ValidationIssue.OvertimeInvalid, (await w.Overtime.ManagementDecideAsync(w.Manager, waiting.Value.Value.Id, waiting.Value.Version, false, null, Token)).Issue);
 
         var approved = await w.Overtime.ManagementDecideAsync(w.Manager, waiting.Value.Value.Id, waiting.Value.Version, true, "تأیید", Token);
         Assert.Equal(OvertimeStatus.Approved, approved.Value!.Value.Status);
         Assert.Equal(w.Manager.UserId, approved.Value.Value.ManagementUserId);
-        Assert.Equal(w.Planning.UserId, approved.Value.Value.PlanningUserId);
+        Assert.Equal(w.ProductionManager.UserId, approved.Value.Value.PlanningUserId);
         Assert.Equal(1, Count(w, "AuditLog WHERE ActionCode = 'OvertimeManagementDecided'"));
 
         // A second proposal on another day that Management rejects.
         var second = await ProposedAsync(w, s, At(1, 17, 30), At(1, 19));
-        var waiting2 = (await w.Overtime.PlanningDecideAsync(w.Planning, second.Value.Id, second.Version, true, null, Token)).Value!;
+        var waiting2 = (await w.Overtime.DecideAsync(w.ProductionManager, second.Value.Id, second.Version, true, null, Token)).Value!;
         var rejected = await w.Overtime.ManagementDecideAsync(w.Manager, waiting2.Value.Id, waiting2.Version, false, "خارج از سقف", Token);
         Assert.Equal(OvertimeStatus.Rejected, rejected.Value!.Value.Status);
     }
@@ -205,14 +207,47 @@ public class OvertimeTests
         await LimitsAsync(w, 240, 300);
 
         var first = await ProposedAsync(w, s, At(0, 17, 30), At(0, 21, 30)); // 240 minutes, within both limits
-        Assert.Equal(OvertimeStatus.Approved, (await w.Overtime.PlanningDecideAsync(w.Planning, first.Value.Id, first.Version, true, null, Token)).Value!.Value.Status);
+        Assert.Equal(OvertimeStatus.Approved, (await w.Overtime.DecideAsync(w.ProductionManager, first.Value.Id, first.Version, true, null, Token)).Value!.Value.Status);
 
         var second = await ProposedAsync(w, s, At(1, 17, 30), At(1, 19)); // 90 more in the same week: 330 > 300
-        Assert.Equal(OvertimeStatus.AwaitingManagement, (await w.Overtime.PlanningDecideAsync(w.Planning, second.Value.Id, second.Version, true, null, Token)).Value!.Value.Status);
+        Assert.Equal(OvertimeStatus.AwaitingManagement, (await w.Overtime.DecideAsync(w.ProductionManager, second.Value.Id, second.Version, true, null, Token)).Value!.Value.Status);
 
         // The next week starts on Saturday again: 90 minutes there is within the limits.
         var nextWeek = await ProposedAsync(w, s, At(7, 17, 30), At(7, 19));
-        Assert.Equal(OvertimeStatus.Approved, (await w.Overtime.PlanningDecideAsync(w.Planning, nextWeek.Value.Id, nextWeek.Version, true, null, Token)).Value!.Value.Status);
+        Assert.Equal(OvertimeStatus.Approved, (await w.Overtime.DecideAsync(w.ProductionManager, nextWeek.Value.Id, nextWeek.Version, true, null, Token)).Value!.Value.Status);
+    }
+
+    [Fact]
+    public async Task Management_approves_a_proposal_beyond_the_limits_in_one_step_and_records_itself_as_both_deciders()
+    {
+        using var w = await StartAsync();
+        var s = await SetupAsync(w);
+        await LimitsAsync(w, 60, 480);
+
+        var proposed = await ProposedAsync(w, s, At(0, 17, 30), At(0, 19)); // 90 minutes against a 60-minute day
+        var approved = await w.Overtime.DecideAsync(w.Manager, proposed.Value.Id, proposed.Version, true, "نیاز فوری", Token);
+
+        Assert.True(approved.Succeeded, approved.Status + " " + approved.Issue);
+        Assert.Equal(OvertimeStatus.Approved, approved.Value!.Value.Status);
+        Assert.True(approved.Value.Value.ExceedsLimits);
+        Assert.Equal(w.Manager.UserId, approved.Value.Value.PlanningUserId);
+        Assert.Equal(w.Manager.UserId, approved.Value.Value.ManagementUserId);
+        Assert.Equal(1, Count(w, "AuditLog WHERE ActionCode = 'OvertimeDecided'"));
+    }
+
+    [Fact]
+    public async Task The_production_manager_cannot_finish_a_proposal_beyond_the_limits_it_goes_to_management()
+    {
+        using var w = await StartAsync();
+        var s = await SetupAsync(w);
+        await LimitsAsync(w, 60, 480);
+
+        var proposed = await ProposedAsync(w, s, At(0, 17, 30), At(0, 19));
+        var waiting = await w.Overtime.DecideAsync(w.ProductionManager, proposed.Value.Id, proposed.Version, true, null, Token);
+
+        Assert.Equal(OvertimeStatus.AwaitingManagement, waiting.Value!.Value.Status);
+        Assert.Equal(OperationStatus.NotAuthorized, (await w.Overtime.ManagementDecideAsync(w.ProductionManager, waiting.Value.Value.Id, waiting.Value.Version, true, null, Token)).Status);
+        Assert.Equal(OvertimeStatus.Approved, (await w.Overtime.ManagementDecideAsync(w.Manager, waiting.Value.Value.Id, waiting.Value.Version, true, null, Token)).Value!.Value.Status);
     }
 
     [Fact]
@@ -232,22 +267,22 @@ public class OvertimeTests
         Assert.Equal(0, Count(w, "OvertimeAssignments"));
 
         // Nobody proposes overtime for themselves.
-        var self = (await w.Services.Operators.RegisterAsync(w.Planning, "OP-S", "سرپرست", w.Supervisor.UserId, Token)).Value!.Value.Id;
+        var self = (await w.Services.Operators.RegisterAsync(w.Admin, "OP-S", "سرپرست", w.Supervisor.UserId, Token)).Value!.Value.Id;
         Assert.Equal(ValidationIssue.OvertimeNotSupervisor, (await w.Overtime.ProposeAsync(w.Supervisor, self, s.Unit, s.Machine, At(0, 17, 30), At(0, 19), "x", Token)).Issue);
 
         await LimitsAsync(w, 120, 480);
         var proposed = await ProposedAsync(w, s, At(0, 17, 30), At(0, 19));
-        foreach (var user in new Principal?[] { w.Supervisor, w.Manager, w.Qc, w.Admin, w.Operator, null })
+        foreach (var user in new Principal?[] { w.Supervisor, w.Planning, w.Qc, w.Admin, w.Operator, null })
         {
-            Assert.Equal(OperationStatus.NotAuthorized, (await w.Overtime.PlanningDecideAsync(user, proposed.Value.Id, proposed.Version, true, null, Token)).Status);
+            Assert.Equal(OperationStatus.NotAuthorized, (await w.Overtime.DecideAsync(user, proposed.Value.Id, proposed.Version, true, null, Token)).Status);
         }
 
-        foreach (var user in new Principal?[] { w.Supervisor, w.Planning, w.Qc, w.Admin, null })
+        foreach (var user in new Principal?[] { w.Supervisor, w.Planning, w.ProductionManager, w.Qc, w.Admin, null })
         {
             Assert.Equal(OperationStatus.NotAuthorized, (await w.Overtime.ManagementDecideAsync(user, proposed.Value.Id, proposed.Version, true, null, Token)).Status);
         }
 
-        foreach (var user in new Principal?[] { w.Supervisor, w.Manager, w.Qc, w.Admin, null })
+        foreach (var user in new Principal?[] { w.Supervisor, w.Planning, w.ProductionManager, w.Qc, w.Admin, null })
         {
             Assert.Equal(OperationStatus.NotAuthorized, (await w.Overtime.SetLimitsAsync(user, 0, 60, 240, Token)).Status);
         }
@@ -297,18 +332,18 @@ public class OvertimeTests
 
         Assert.Equal(OperationStatus.NotAuthorized, (await w.Overtime.CancelAsync(w.OtherSupervisor, proposed.Value.Id, proposed.Version, "x", Token)).Status);
         Assert.Equal(OperationStatus.NotAuthorized, (await w.Overtime.CancelAsync(w.Stranger, proposed.Value.Id, proposed.Version, "x", Token)).Status);
-        Assert.Equal(OperationStatus.NotAuthorized, (await w.Overtime.CancelAsync(w.Manager, proposed.Value.Id, proposed.Version, "x", Token)).Status);
+        Assert.Equal(OperationStatus.NotAuthorized, (await w.Overtime.CancelAsync(w.Planning, proposed.Value.Id, proposed.Version, "x", Token)).Status);
         Assert.Equal(ValidationIssue.OvertimeInvalid, (await w.Overtime.CancelAsync(w.Supervisor, proposed.Value.Id, proposed.Version, " ", Token)).Issue);
 
         var cancelled = await w.Overtime.CancelAsync(w.Supervisor, proposed.Value.Id, proposed.Version, "لغو سفارش", Token);
         Assert.Equal(OvertimeStatus.Cancelled, cancelled.Value!.Value.Status);
-        Assert.Equal(OperationStatus.InvalidState, (await w.Overtime.CancelAsync(w.Planning, cancelled.Value.Value.Id, cancelled.Value.Version, "دوباره", Token)).Status);
+        Assert.Equal(OperationStatus.InvalidState, (await w.Overtime.CancelAsync(w.ProductionManager, cancelled.Value.Value.Id, cancelled.Value.Version, "دوباره", Token)).Status);
         Assert.Equal(1, Count(w, "AuditLog WHERE ActionCode = 'OvertimeCancelled'"));
 
-        // The slot is free again; Planning may cancel an approved assignment.
+        // The slot is free again; the Production Manager (or Management) may cancel an approved assignment.
         var again = await ProposedAsync(w, s, At(0, 17, 30), At(0, 19));
-        var approved = (await w.Overtime.PlanningDecideAsync(w.Planning, again.Value.Id, again.Version, true, null, Token)).Value!;
-        Assert.Equal(OvertimeStatus.Cancelled, (await w.Overtime.CancelAsync(w.Planning, approved.Value.Id, approved.Version, "تغییر برنامه", Token)).Value!.Value.Status);
+        var approved = (await w.Overtime.DecideAsync(w.ProductionManager, again.Value.Id, again.Version, true, null, Token)).Value!;
+        Assert.Equal(OvertimeStatus.Cancelled, (await w.Overtime.CancelAsync(w.ProductionManager, approved.Value.Id, approved.Version, "تغییر برنامه", Token)).Value!.Value.Status);
     }
 
     [Fact]
@@ -317,24 +352,24 @@ public class OvertimeTests
         using var w = await StartAsync();
         var s = await SetupAsync(w);
 
-        Assert.Equal(ValidationIssue.OvertimeLimitsInvalid, (await w.Overtime.SetLimitsAsync(w.Planning, 0, 0, 100, Token)).Issue);
-        Assert.Equal(ValidationIssue.OvertimeLimitsInvalid, (await w.Overtime.SetLimitsAsync(w.Planning, 0, 120, 60, Token)).Issue);
-        Assert.Equal(ValidationIssue.OvertimeLimitsInvalid, (await w.Overtime.SetLimitsAsync(w.Planning, 0, 1441, 2000, Token)).Issue);
-        Assert.Equal(ValidationIssue.OvertimeLimitsInvalid, (await w.Overtime.SetLimitsAsync(w.Planning, 0, 120, 10081, Token)).Issue);
+        Assert.Equal(ValidationIssue.OvertimeLimitsInvalid, (await w.Overtime.SetLimitsAsync(w.Manager, 0, 0, 100, Token)).Issue);
+        Assert.Equal(ValidationIssue.OvertimeLimitsInvalid, (await w.Overtime.SetLimitsAsync(w.Manager, 0, 120, 60, Token)).Issue);
+        Assert.Equal(ValidationIssue.OvertimeLimitsInvalid, (await w.Overtime.SetLimitsAsync(w.Manager, 0, 1441, 2000, Token)).Issue);
+        Assert.Equal(ValidationIssue.OvertimeLimitsInvalid, (await w.Overtime.SetLimitsAsync(w.Manager, 0, 120, 10081, Token)).Issue);
         Assert.Equal(0, Count(w, "OvertimeLimits"));
 
         var first = await LimitsAsync(w, 120, 480);
-        Assert.Equal(OperationStatus.ConcurrencyConflict, (await w.Overtime.SetLimitsAsync(w.Planning, 0, 90, 300, Token)).Status); // "none exist" is stale now
+        Assert.Equal(OperationStatus.ConcurrencyConflict, (await w.Overtime.SetLimitsAsync(w.Manager, 0, 90, 300, Token)).Status); // "none exist" is stale now
         var second = await LimitsAsync(w, 90, 300, first.Version);
-        Assert.Equal(OperationStatus.ConcurrencyConflict, (await w.Overtime.SetLimitsAsync(w.Planning, first.Version, 60, 200, Token)).Status);
+        Assert.Equal(OperationStatus.ConcurrencyConflict, (await w.Overtime.SetLimitsAsync(w.Manager, first.Version, 60, 200, Token)).Status);
         Assert.Equal(90, (await w.Overtime.LoadAsync(w.Planning, DateOnly.FromDateTime(Saturday), DateOnly.FromDateTime(Saturday), Token)).Value!.Limits!.Value.MaxMinutesPerDay);
         Assert.Equal(2, Count(w, "AuditLog WHERE ActionCode = 'OvertimeLimitsChanged'"));
         Assert.True(second.Version > first.Version);
 
         var proposed = await ProposedAsync(w, s, At(0, 17, 30), At(0, 18));
-        Assert.True((await w.Overtime.PlanningDecideAsync(w.Planning, proposed.Value.Id, proposed.Version, true, null, Token)).Succeeded);
-        Assert.Equal(OperationStatus.ConcurrencyConflict, (await w.Overtime.PlanningDecideAsync(w.Planning, proposed.Value.Id, proposed.Version, true, null, Token)).Status);
-        Assert.Equal(OperationStatus.NotFound, (await w.Overtime.PlanningDecideAsync(w.Planning, 9999, 1, true, null, Token)).Status);
+        Assert.True((await w.Overtime.DecideAsync(w.ProductionManager, proposed.Value.Id, proposed.Version, true, null, Token)).Succeeded);
+        Assert.Equal(OperationStatus.ConcurrencyConflict, (await w.Overtime.DecideAsync(w.ProductionManager, proposed.Value.Id, proposed.Version, true, null, Token)).Status);
+        Assert.Equal(OperationStatus.NotFound, (await w.Overtime.DecideAsync(w.ProductionManager, 9999, 1, true, null, Token)).Status);
     }
 
     [Fact]
@@ -360,9 +395,14 @@ public class OvertimeTests
         Assert.Empty((await ViewAsync(w.OtherSupervisor)).Items); // supervises another unit
 
         var planning = await ViewAsync(w.Planning);
-        Assert.True(planning.Capabilities.CanPlanningDecide && planning.Capabilities.CanConfigureLimits && !planning.Capabilities.CanManagementDecide);
-        Assert.All(planning.Items, i => Assert.True(i.CanPlanningDecide));
-        Assert.All((await ViewAsync(w.Supervisor)).Items, i => Assert.False(i.CanPlanningDecide));
+        Assert.False(planning.Capabilities.CanDecide || planning.Capabilities.CanConfigureLimits || planning.Capabilities.CanManagementDecide);
+        Assert.All(planning.Items, i => Assert.False(i.CanDecide));
+        var productionManager = await ViewAsync(w.ProductionManager);
+        Assert.Equal(2, productionManager.Items.Count);
+        Assert.True(productionManager.Capabilities.CanDecide && !productionManager.Capabilities.CanConfigureLimits && !productionManager.Capabilities.CanManagementDecide);
+        Assert.All(productionManager.Items, i => Assert.True(i.CanDecide));
+        Assert.True((await ViewAsync(w.Manager)).Capabilities.CanDecide && (await ViewAsync(w.Manager)).Capabilities.CanConfigureLimits);
+        Assert.All((await ViewAsync(w.Supervisor)).Items, i => Assert.False(i.CanDecide));
         Assert.True((await ViewAsync(w.Manager)).Capabilities.CanManagementDecide);
 
         foreach (var user in new Principal?[] { w.Qc, w.Admin, null })

@@ -671,8 +671,19 @@ public sealed class WorkSessionService(
         }
     }
 
-    private async Task<UserUnitDesignation?> DesignationAsync(Principal user, long unitId, CancellationToken cancellationToken) =>
-        (await unitStore.ListDesignationsAsync(cancellationToken)).Select(d => d.Value).FirstOrDefault(d => d.UserId == user.UserId && d.ProductionUnitId == unitId && d.IsActive);
+    /// <summary>A unit's scope for the user: the Production Manager acts as supervisor of EVERY unit (Decision Log #122); a Production user only where designated.</summary>
+    private sealed record UnitScope(bool IsSupervisor);
+
+    private async Task<UnitScope?> DesignationAsync(Principal user, long unitId, CancellationToken cancellationToken)
+    {
+        if (user.DepartmentCode == DepartmentCodes.ProductionManager)
+        {
+            return new UnitScope(true);
+        }
+
+        var designation = (await unitStore.ListDesignationsAsync(cancellationToken)).Select(d => d.Value).FirstOrDefault(d => d.UserId == user.UserId && d.ProductionUnitId == unitId && d.IsActive);
+        return designation is null ? null : new UnitScope(designation.IsSupervisor);
+    }
 
     private async Task<Operator?> OperatorOfAsync(Principal user, CancellationToken cancellationToken) =>
         (await operators.ListOperatorsAsync(cancellationToken)).Select(o => o.Value).FirstOrDefault(o => o.UserId == user.UserId && o.IsActive);

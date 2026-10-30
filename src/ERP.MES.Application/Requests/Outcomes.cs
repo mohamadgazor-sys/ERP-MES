@@ -498,6 +498,9 @@ public enum ValidationIssue
     /// <summary>The overtime is not valid (times, up to 12 hours in whole minutes, or a reason of 1 to 300 characters is missing).</summary>
     OvertimeInvalid,
 
+    /// <summary>A proposer tried to decide their own overtime proposal (Decision Log #122 Q11).</summary>
+    OvertimeSelfDecision,
+
     /// <summary>The operator is absent on a day of the overtime.</summary>
     OvertimeOperatorAbsent,
 

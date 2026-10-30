@@ -9,6 +9,11 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      migration_name:
+        description: 'Name of the SQL Server migration to generate (a delta on top of the committed migrations)'
+        required: false
+        default: 'InitialSqlServer'
 
 permissions:
   contents: read
@@ -145,8 +150,10 @@ jobs:
         run: dotnet restore src/ERP.MES.Infrastructure.SqlServer.Design/ERP.MES.Infrastructure.SqlServer.Design.csproj
 
       - name: Generate the SQL Server migration
+        env:
+          MIGRATION_NAME: ${{ inputs.migration_name }}
         run: |
-          dotnet ef migrations add InitialSqlServer --project src/ERP.MES.Infrastructure.SqlServer --startup-project src/ERP.MES.Infrastructure.SqlServer.Design --context ErpMesDbContext --output-dir Migrations
+          dotnet ef migrations add "$MIGRATION_NAME" --project src/ERP.MES.Infrastructure.SqlServer --startup-project src/ERP.MES.Infrastructure.SqlServer.Design --context ErpMesDbContext --output-dir Migrations
           ls -la src/ERP.MES.Infrastructure.SqlServer/Migrations
 
       - name: Print the migration files (gzip + base64)

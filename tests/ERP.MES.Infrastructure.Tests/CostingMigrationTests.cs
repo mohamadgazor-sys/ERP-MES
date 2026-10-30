@@ -35,7 +35,7 @@ public class CostingMigrationTests
         Assert.Empty(db.Query("SELECT * FROM ItemCostLines"));
         Assert.Empty(db.Query("SELECT * FROM ItemPriceDecisions"));
         Assert.Empty(db.Query("PRAGMA foreign_key_check"));
-        Assert.Equal(24, db.Query("SELECT MigrationId FROM __EFMigrationsHistory").Count);
+        Assert.Equal(25, db.Query("SELECT MigrationId FROM __EFMigrationsHistory").Count);
 
         var keys = new List<string>();
         foreach (var table in new[] { "ItemCostCalculations", "ItemCostLines", "ItemPriceDecisions" })

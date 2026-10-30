@@ -252,17 +252,17 @@ if ($AccountsFile) {
     $pass = ($line -replace '^PASSPHRASE:\s*', '').Trim()
     Write-Host "::add-mask::$pass"
     $passwords = @{}
-    foreach ($u in @('demo.admin', 'demo.central', 'demo.management', 'demo.planning', 'demo.drawing', 'demo.qc', 'demo.warehouse', 'demo.production', 'demo.supervisor')) { $passwords[$u] = $pass }
+    foreach ($u in @('demo.admin', 'demo.secretary', 'demo.management', 'demo.planning', 'demo.drawing', 'demo.qc', 'demo.warehouse', 'demo.production', 'demo.supervisor', 'demo.productionmanager')) { $passwords[$u] = $pass }
 } else {
     $passwords = Get-Passwords $CredentialsPath
 }
 Note "Accounts available: $($passwords.Keys.Count)"
-if ($passwords.Keys.Count -ne 9) { Fail "expected nine accounts, found $($passwords.Keys.Count)" }
+if ($passwords.Keys.Count -ne 10) { Fail "expected ten accounts, found $($passwords.Keys.Count)" }
 
 if (-not $SkipWalk) {
     Invoke-Session 'demo.supervisor' $passwords['demo.supervisor'] @('نوبت‌های کاری') | Out-Null
     Invoke-Session 'demo.planning' $passwords['demo.planning'] @('صف واحدهای تولید', 'قراردادها', 'تعریف آیتم‌ها و مرحله‌ها') | Out-Null
-    Invoke-Session 'demo.central' $passwords['demo.central'] @('درخواست‌ها') | Out-Null
+    Invoke-Session 'demo.secretary' $passwords['demo.secretary'] @('درخواست‌ها') | Out-Null
 }
 foreach ($u in $SignInOnly) { Invoke-Session $u $passwords[$u] @() -QuickOnly | Out-Null }
 

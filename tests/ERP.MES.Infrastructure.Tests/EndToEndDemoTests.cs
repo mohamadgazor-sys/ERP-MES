@@ -49,7 +49,7 @@ public class EndToEndDemoTests
         var clock = new FakeClock { UtcNow = new DateTime(2026, 10, 24, 7, 30, 0, DateTimeKind.Utc) }; // Saturday 1405/08/02, a working day; the display zone of the test is UTC
         var w = WorkflowServices.Create(db.ContextFactory, security.Authorization, dates, clock);
 
-        var central = await SignedInAsync(security, "demo.central", credentials["demo.central"]);
+        var central = await SignedInAsync(security, "demo.secretary", credentials["demo.secretary"]);
         var manager = await SignedInAsync(security, "demo.management", credentials["demo.management"]);
         var planning = await SignedInAsync(security, "demo.planning", credentials["demo.planning"]);
         var drawing = await SignedInAsync(security, "demo.drawing", credentials["demo.drawing"]);
@@ -183,7 +183,7 @@ public class EndToEndDemoTests
         var security = SecurityServices.Create(db.ContextFactory, SecurityFixture.FastPolicy, hasher: new LowCostHasher());
         var clock = new FakeClock { UtcNow = new DateTime(2026, 10, 24, 7, 30, 0, DateTimeKind.Utc) };
         var w = WorkflowServices.Create(db.ContextFactory, security.Authorization, dates, clock);
-        var central = await SignedInAsync(security, "demo.central", credentials["demo.central"]);
+        var central = await SignedInAsync(security, "demo.secretary", credentials["demo.secretary"]);
         var manager = await SignedInAsync(security, "demo.management", credentials["demo.management"]);
         var planning = await SignedInAsync(security, "demo.planning", credentials["demo.planning"]);
         var drawing = await SignedInAsync(security, "demo.drawing", credentials["demo.drawing"]);

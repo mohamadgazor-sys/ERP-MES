@@ -326,7 +326,7 @@ public class DemoDatabaseTests
         Assert.All(customers, c => Assert.True(c.Value.IsActive));
         Assert.All(requests, r => Assert.StartsWith(DemoDataSeeder.RequestNoPrefix, r.RequestNo.Value, StringComparison.Ordinal));
         Assert.All(requests, r => Assert.StartsWith(DemoDataSeeder.TitlePrefix, r.Title, StringComparison.Ordinal));
-        var centralId = long.Parse(db.Query("SELECT Id FROM Users WHERE Username = 'demo.central'").Single(), System.Globalization.CultureInfo.InvariantCulture);
+        var centralId = long.Parse(db.Query("SELECT Id FROM Users WHERE Username = 'demo.secretary'").Single(), System.Globalization.CultureInfo.InvariantCulture);
         Assert.All(customers, c => Assert.Equal(centralId, c.Value.CreatedByUserId));
         Assert.All(requests, r => Assert.Equal(centralId, r.CreatedByUserId));
         Assert.All(requests.SelectMany(r => r.Items), i => Assert.Equal(centralId, i.CreatedByUserId));

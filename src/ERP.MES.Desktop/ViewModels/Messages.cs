@@ -225,6 +225,7 @@ public static class Messages
         ValidationIssue.OvertimeLimitsNotConfigured => "برنامه‌ریزی هنوز سقف اضافه‌کاری را تعریف نکرده است؛ تا آن زمان اضافه‌کاری تأیید نمی‌شود.",
         ValidationIssue.OvertimeLimitsInvalid => "سقف معتبر نیست (روزانه ۱ تا ۱۴۴۰ دقیقه؛ هفتگی از سقف روزانه کمتر و از ۱۰۰۸۰ دقیقه بیشتر نباشد).",
         ValidationIssue.OvertimeInvalid => "اضافه‌کاری معتبر نیست (اپراتور، واحد، ماشین، تاریخ و ساعت‌ها؛ حداکثر ۱۲ ساعت؛ دلیل الزامی و حداکثر ۳۰۰ نویسه است).",
+        ValidationIssue.OvertimeSelfDecision => "درخواست اضافه‌کاری را نمی‌توان توسط خود پیشنهاددهنده تأیید یا رد کرد.",
         ValidationIssue.OvertimeOperatorAbsent => "اپراتور در این روز غایب (مرخصی یا بیماری) ثبت شده است.",
         ValidationIssue.OvertimeOperatorOverlap => "اضافه‌کاری باید بیرون از شیفت عادی باشد و با شیفت برنامه‌ریزی‌شده یا اضافه‌کاری دیگر همین اپراتور هم‌پوشانی ندارد.",
         ValidationIssue.OvertimeMachineBusy => "ماشین در این زمان برای اپراتور دیگری (شیفت یا اضافه‌کاری) رزرو است.",
@@ -416,7 +417,7 @@ public static class Messages
 
     public static string DepartmentText(string code) => code switch
     {
-        DepartmentCodes.Central => "مرکزی",
+        DepartmentCodes.Central => "منشی",
         DepartmentCodes.Management => "مدیریت",
         DepartmentCodes.Planning => "برنامه‌ریزی",
         DepartmentCodes.Drawing => "نقشه‌کشی",
@@ -425,6 +426,7 @@ public static class Messages
         DepartmentCodes.Qc => "کنترل کیفیت",
         DepartmentCodes.MaintenancePm => "نگهداری و تعمیرات",
         DepartmentCodes.System => "سیستم",
+        DepartmentCodes.ProductionManager => "مدیر تولید",
         _ => code,
     };
 

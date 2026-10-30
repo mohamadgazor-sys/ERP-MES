@@ -21,6 +21,7 @@ public class PlanningMasterServiceTests
         public required SecurityFixture Fixture { get; init; }
 
         public required Principal Planning { get; init; }
+        public required Principal Admin { get; init; }
 
         public required Principal Management { get; init; }
 
@@ -53,6 +54,7 @@ public class PlanningMasterServiceTests
         {
             Fixture = fixture,
             Planning = await UserAsync(fixture, admin, "planning.one", DepartmentCodes.Planning),
+            Admin = admin,
             Management = await UserAsync(fixture, admin, "management.one", DepartmentCodes.Management),
             Warehouse = await UserAsync(fixture, admin, "warehouse.one", DepartmentCodes.Warehouse),
             Production = await UserAsync(fixture, admin, "production.one", DepartmentCodes.Production),
@@ -63,8 +65,8 @@ public class PlanningMasterServiceTests
 
     private static async Task<(Stored<ProductionUnit> Unit, Stored<Machine> Machine)> MachineAsync(World w, string code = "FCC-06")
     {
-        var unit = (await w.Master.AddUnitAsync(w.Planning, "MILLING", "فرزکاری", Token)).Value!;
-        var machine = await w.Master.AddMachineAsync(w.Planning, code, "فرز CNC", unit.Value.Id, Token);
+        var unit = (await w.Master.AddUnitAsync(w.Admin, "MILLING", "فرزکاری", Token)).Value!;
+        var machine = await w.Master.AddMachineAsync(w.Admin, code, "فرز CNC", unit.Value.Id, Token);
         Assert.True(machine.Succeeded, machine.Status + " " + machine.Issue);
         w.Fixture.Clock.Advance(TimeSpan.FromMinutes(1));
         return (unit, machine.Value!);
@@ -73,7 +75,7 @@ public class PlanningMasterServiceTests
     private static long Count(World w, string tableAndWhere) => long.Parse(w.Fixture.Db.Query("SELECT COUNT(*) FROM " + tableAndWhere).Single(), System.Globalization.CultureInfo.InvariantCulture);
 
     [Fact]
-    public async Task Planning_registers_units_and_machines_with_audit_and_everyone_active_reads_them()
+    public async Task Program_admin_registers_units_and_machines_with_audit_and_everyone_active_reads_them()
     {
         using var w = await StartAsync();
 
@@ -89,7 +91,7 @@ public class PlanningMasterServiceTests
         }
 
         Assert.Equal(new[] { "ProductionUnitAdded", "MachineAdded" }, w.Fixture.Db.Query("SELECT ActionCode FROM AuditLog WHERE ActionCode IN ('ProductionUnitAdded','MachineAdded') ORDER BY Id").ToArray());
-        Assert.Equal(w.Planning.UserId, machine.Value.CreatedByUserId);
+        Assert.Equal(w.Admin.UserId, machine.Value.CreatedByUserId);
     }
 
     [Fact]
@@ -122,7 +124,7 @@ public class PlanningMasterServiceTests
         using var w = await StartAsync();
         var (unit, _) = await MachineAsync(w);
 
-        var outcome = await w.Master.AddMachineAsync(w.Planning, code, name, unit.Value.Id, Token);
+        var outcome = await w.Master.AddMachineAsync(w.Admin, code, name, unit.Value.Id, Token);
 
         Assert.Equal(OperationStatus.ValidationFailed, outcome.Status);
         Assert.Equal(expected, outcome.Issue);
@@ -134,16 +136,16 @@ public class PlanningMasterServiceTests
     {
         using var w = await StartAsync();
         var (unit, machine) = await MachineAsync(w);
-        var retiredUnit = (await w.Master.AddUnitAsync(w.Planning, "OLD", "قدیمی", Token)).Value!;
-        await w.Master.SetUnitActiveAsync(w.Planning, retiredUnit.Value.Id, retiredUnit.Version, false, Token);
+        var retiredUnit = (await w.Master.AddUnitAsync(w.Admin, "OLD", "قدیمی", Token)).Value!;
+        await w.Master.SetUnitActiveAsync(w.Admin, retiredUnit.Value.Id, retiredUnit.Version, false, Token);
 
-        Assert.Equal(ValidationIssue.ProductionUnitInvalid, (await w.Master.AddMachineAsync(w.Planning, "TCC-12", "x", 4242, Token)).Issue);
-        Assert.Equal(ValidationIssue.ProductionUnitInvalid, (await w.Master.AddMachineAsync(w.Planning, "TCC-12", "x", retiredUnit.Value.Id, Token)).Issue);
+        Assert.Equal(ValidationIssue.ProductionUnitInvalid, (await w.Master.AddMachineAsync(w.Admin, "TCC-12", "x", 4242, Token)).Issue);
+        Assert.Equal(ValidationIssue.ProductionUnitInvalid, (await w.Master.AddMachineAsync(w.Admin, "TCC-12", "x", retiredUnit.Value.Id, Token)).Issue);
 
         // A retired machine keeps its code: the code is never reused.
-        Assert.True((await w.Master.SetMachineActiveAsync(w.Planning, machine.Value.Id, machine.Version, false, Token)).Succeeded);
-        Assert.Equal(ValidationIssue.CodeDuplicate, (await w.Master.AddMachineAsync(w.Planning, "FCC-06", "دیگر", unit.Value.Id, Token)).Issue);
-        Assert.Equal(ValidationIssue.CodeDuplicate, (await w.Master.AddUnitAsync(w.Planning, "OLD", "x", Token)).Issue);
+        Assert.True((await w.Master.SetMachineActiveAsync(w.Admin, machine.Value.Id, machine.Version, false, Token)).Succeeded);
+        Assert.Equal(ValidationIssue.CodeDuplicate, (await w.Master.AddMachineAsync(w.Admin, "FCC-06", "دیگر", unit.Value.Id, Token)).Issue);
+        Assert.Equal(ValidationIssue.CodeDuplicate, (await w.Master.AddUnitAsync(w.Admin, "OLD", "x", Token)).Issue);
     }
 
     [Fact]
@@ -152,12 +154,12 @@ public class PlanningMasterServiceTests
         using var w = await StartAsync();
         var (_, machine) = await MachineAsync(w);
 
-        var renamed = await w.Master.RenameMachineAsync(w.Planning, machine.Value.Id, machine.Version, "فرز عمودی", Token);
+        var renamed = await w.Master.RenameMachineAsync(w.Admin, machine.Value.Id, machine.Version, "فرز عمودی", Token);
         Assert.True(renamed.Succeeded);
         Assert.Equal("FCC-06", renamed.Value!.Value.Code);
-        Assert.Equal(OperationStatus.ConcurrencyConflict, (await w.Master.SetMachineActiveAsync(w.Planning, machine.Value.Id, machine.Version, false, Token)).Status);
-        Assert.Equal(OperationStatus.NotFound, (await w.Master.RenameMachineAsync(w.Planning, 4242, 1, "x", Token)).Status);
-        Assert.Equal(ValidationIssue.NameRequired, (await w.Master.RenameMachineAsync(w.Planning, machine.Value.Id, renamed.Value.Version, " ", Token)).Issue);
+        Assert.Equal(OperationStatus.ConcurrencyConflict, (await w.Master.SetMachineActiveAsync(w.Admin, machine.Value.Id, machine.Version, false, Token)).Status);
+        Assert.Equal(OperationStatus.NotFound, (await w.Master.RenameMachineAsync(w.Admin, 4242, 1, "x", Token)).Status);
+        Assert.Equal(ValidationIssue.NameRequired, (await w.Master.RenameMachineAsync(w.Admin, machine.Value.Id, renamed.Value.Version, " ", Token)).Issue);
     }
 
     [Fact]
@@ -213,7 +215,8 @@ public class PlanningMasterServiceTests
         }
 
         Assert.Equal(new PlanningMasterCapabilities(false, false, true), await w.Master.GetCapabilitiesAsync(w.Warehouse, Token));
-        Assert.Equal(new PlanningMasterCapabilities(true, true, true), await w.Master.GetCapabilitiesAsync(w.Planning, Token));
+        Assert.Equal(new PlanningMasterCapabilities(false, true, true), await w.Master.GetCapabilitiesAsync(w.Planning, Token));
+        Assert.Equal(new PlanningMasterCapabilities(true, false, false), await w.Master.GetCapabilitiesAsync(w.Admin, Token));
         Assert.Equal(new PlanningMasterCapabilities(false, true, true), await w.Master.GetCapabilitiesAsync(w.Management, Token));
         Assert.Equal(PlanningMasterCapabilities.None, await w.Master.GetCapabilitiesAsync(w.Qc, Token));
         Assert.Equal(PlanningMasterCapabilities.None, await w.Master.GetCapabilitiesAsync(null, Token));
@@ -238,7 +241,7 @@ public class PlanningMasterServiceTests
         Assert.Equal(ValidationIssue.RateNotLater, (await w.Master.AddRateAsync(w.Planning, id, 5m, "1405/04/01", null, Token)).Issue);
         Assert.Equal(ValidationIssue.MachineInvalid, (await w.Master.AddRateAsync(w.Planning, 4242, 5m, "1405/07/01", null, Token)).Issue);
 
-        Assert.True((await w.Master.SetMachineActiveAsync(w.Planning, id, machine.Version, false, Token)).Succeeded);
+        Assert.True((await w.Master.SetMachineActiveAsync(w.Admin, id, machine.Version, false, Token)).Succeeded);
         Assert.Equal(ValidationIssue.MachineInvalid, (await w.Master.AddRateAsync(w.Planning, id, 5m, "1405/07/01", null, Token)).Issue);
         Assert.Equal(1, Count(w, "MachineHourlyRates"));
         Assert.Equal(1, Count(w, "AuditLog WHERE ActionCode = 'MachineRateChanged'"));

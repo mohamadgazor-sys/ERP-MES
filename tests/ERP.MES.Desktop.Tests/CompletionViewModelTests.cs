@@ -29,7 +29,7 @@ public class CompletionViewModelTests
         Assert.True((await h.Workflow.Lifecycle.RecordDrawingResultAsync(h.Drawing, forwarded.Value.Id, forwarded.Version, DrawingOutcome.FullyAccepted, null, Token)).Succeeded);
         Assert.True((await h.Workflow.Contracts.DecideRequirementAsync(h.Planning, created.Value.Id, ContractRequirement.NotRequired, null, Token)).Succeeded);
         Assert.True((await h.Workflow.Materials.AddMaterialAsync(h.Warehouse, "ST37-R30", "میلگرد ST37", "ST37", "میلگرد", Token)).Succeeded);
-        var unit = (await h.Workflow.PlanningMaster.AddUnitAsync(h.Planning, "MILLING", "فرزکاری", Token)).Value!.Value.Id;
+        var unit = (await h.Workflow.PlanningMaster.AddUnitAsync(h.Admin, "MILLING", "فرزکاری", Token)).Value!.Value.Id;
         var pair = (await h.Workflow.QcMaster.LoadAsync(h.Qc, Token)).Value!.QuantityTypes.First(t => t.Value.Code == "PIECE").Value.Id;
         var material = (await h.Workflow.Materials.LoadAsync(h.Warehouse, Token)).Value!.Materials.First().Value.Id;
         var version = (await h.Workflow.Requests.GetAsync(h.Qc, created.Value.Id, Token)).Value!.Request.Version;
@@ -37,7 +37,7 @@ public class CompletionViewModelTests
         var itemId = defined.Value!.Value.Items.Single().Id;
         var current = (await h.Workflow.Requests.GetAsync(h.Planning, created.Value.Id, Token)).Value!;
         Assert.True((await h.Workflow.ItemDefinition.DefineStageAsync(h.Planning, created.Value.Id, current.Request.Version, itemId, current.Versions.ItemVersion(itemId), new DefineStageCommand("فرز", 2m, unit, null), Token)).Succeeded);
-        Assert.True((await h.Workflow.UnitDesignations.AssignAsync(h.Planning, h.Production.UserId, unit, Token)).Succeeded);
+        Assert.True((await h.Workflow.UnitDesignations.AssignAsync(h.Admin, h.Production.UserId, unit, Token)).Succeeded);
         foreach (var (user, action) in new[] { (h.Planning, StageAction.Release), (h.Production, StageAction.Start) })
         {
             var latest = (await h.Workflow.Requests.GetAsync(h.Planning, created.Value.Id, Token)).Value!;
@@ -56,8 +56,8 @@ public class CompletionViewModelTests
         var (requestId, itemId, unit) = await RunningItemAsync(h);
         var template = (await h.Workflow.Calendar.AddTemplateAsync(h.Planning, "D", "روزکار", new TimeOnly(8, 0), new TimeOnly(17, 0), null, null, Token)).Value!.Value.Id;
         Assert.True((await h.Workflow.Calendar.AddUnitShiftAsync(h.Planning, unit, template, 3, 1, false, Token)).Succeeded);
-        var machine = (await h.Workflow.PlanningMaster.AddMachineAsync(h.Planning, "FCC-06", "فرز", unit, Token)).Value!.Value.Id;
-        Assert.True((await h.Workflow.Operators.RegisterAsync(h.Planning, "OP-1", "علی رضایی", h.Production.UserId, Token)).Succeeded);
+        var machine = (await h.Workflow.PlanningMaster.AddMachineAsync(h.Admin, "FCC-06", "فرز", unit, Token)).Value!.Value.Id;
+        Assert.True((await h.Workflow.Operators.RegisterAsync(h.Admin, "OP-1", "علی رضایی", h.Production.UserId, Token)).Succeeded);
 
         // One approved report line of 240 minutes; then the stage is submitted and QC accepts all 10 base units.
         var start = new DateTime(2026, 10, 24, 8, 0, 0, DateTimeKind.Utc);
