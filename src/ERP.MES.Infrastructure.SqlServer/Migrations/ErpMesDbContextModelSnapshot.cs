@@ -660,7 +660,7 @@ namespace ERP.MES.Infrastructure.SqlServer.Migrations
                         {
                             Id = 1L,
                             Code = "CENTRAL",
-                            Name = "مرکزی"
+                            Name = "منشی"
                         },
                         new
                         {
@@ -709,6 +709,12 @@ namespace ERP.MES.Infrastructure.SqlServer.Migrations
                             Id = 9L,
                             Code = "SYSTEM",
                             Name = "سیستم"
+                        },
+                        new
+                        {
+                            Id = 10L,
+                            Code = "PRODUCTION_MANAGER",
+                            Name = "مدیر تولید"
                         });
                 });
 
