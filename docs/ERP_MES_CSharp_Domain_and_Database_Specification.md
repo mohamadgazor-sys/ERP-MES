@@ -313,6 +313,8 @@ The canonical RequestItem should include at minimum:
 
 ## 5.2 Item number uniqueness
 
+> **[Note added by #121]** The displayed item number is now system-derived (`RequestNo-NNN`, child numbers `...-NNN.NNN`) from a stored integer sequence, unique within the request; the customer's own number is the optional customer item reference. Parent/assembly structure is added. The earlier text is kept as history.
+
 The existing design treats `ItemNo` as Short Text and evaluates duplicates in the scope of the current RequestID during Excel import.
 
 The canonical C# database should therefore enforce, or at minimum validate, uniqueness of:
@@ -848,6 +850,8 @@ External return-to-QC is not `WarehouseTransaction.RECEIVE`.
 
 ## 14.1 ProductionUnit
 
+> **[Note added by #122/#123]** Units, machines, operators and operator-machine eligibility are maintained by Program Admin; working-calendar rules apply at unit level (recurring schedules and dated exceptions with hours).
+
 Minimum fields:
 
 | Field | Meaning |
@@ -980,6 +984,8 @@ Every user has exactly one Department and one Role. Authorization for sensitive 
 Other screens and actions require least-privilege access and must use this table as the minimum explicit authorization contract. If an unlisted sensitive action lacks a defined permission, block it pending an explicit rule rather than assuming all users or all Managers may do it.
 
 ## 15.3 Role and Department reference values
+
+> **[Note added by #122]** `PRODUCTION_MANAGER` ("مدیر تولید") is added; the display name of `CENTRAL` is «منشی» (the code is unchanged). Program Admin owns production master data; Planning no longer approves overtime; see Decision Log #122.
 
 Canonical departments include Central, Management, Planning/Project Control, Drawing, Warehouse, Production Units, QC, and the maintenance/PM function for downtime reporting. The Internal Request workflow and Emergency subsystem are not part of C# v1.
 

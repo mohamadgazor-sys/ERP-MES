@@ -3911,3 +3911,5 @@ This section is authoritative and supersedes any conflicting older draft/backlog
 - Exact scheduling allocation over several machines and the machine-assignment timing remain open; confirmed calendar hours/holidays/downtime rules above are not open.
 - Route revision must preserve history; downstream stage-state treatment after insertion remains open.
 - Excel re-import changed-row conflicts require manual choice. Exact options are pending, especially for already released/started items.
+
+> **[Annotation added by Decision Log #121-#126, 2026-10-30]** Item numbering and assemblies (#121), the Production Manager department and Program Admin master data (#122), recurring unit schedules (#123), item drawings, stage-title catalog and REPAIR fields (#124), item import by Planning and Drawing (#125) and terminology (#126) amend the passages on items, departments, calendars and import above; the earlier text is kept as history. The department formerly called "Central" is shown as «منشی» (Secretary).
