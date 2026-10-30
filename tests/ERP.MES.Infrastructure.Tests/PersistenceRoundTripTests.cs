@@ -81,7 +81,8 @@ public class PersistenceRoundTripTests
         Assert.Equal(DateTimeKind.Utc, request.CreatedAtUtc.Kind);
 
         var items = request.Items.OrderBy(i => i.ItemNo, StringComparer.Ordinal).ToArray();
-        Assert.Equal(new[] { "1.10", "2.10" }, items.Select(i => i.ItemNo).ToArray());
+        Assert.Equal(new[] { "1.10", "2.10" }, items.Select(i => i.CustomerItemRef).ToArray());
+        Assert.Equal(new[] { "P-565-001", "P-565-002" }, items.Select(i => i.ItemNo).ToArray());
         Assert.Equal(WorkType.Make, request.WorkType);
         Assert.Equal(new[] { "Ring A", "Shaft B" }, items.Select(i => i.PartName).ToArray());
         Assert.Equal(new[] { Priority.Urgent, Priority.Normal }, items.Select(i => i.Priority).ToArray());
@@ -125,7 +126,7 @@ public class PersistenceRoundTripTests
         await using (var context = db.NewContext())
         {
             var request = await LoadAsync(context, requestId);
-            var make = request.Items.Single(i => i.ItemNo == "1.10");
+            var make = request.Items.Single(i => i.CustomerItemRef == "1.10");
             make.StartStage(2);
             make.SubmitStageForQc(2);
             make.ApproveStageWholeQuantity(2, 9, Now.AddHours(3));
@@ -137,7 +138,7 @@ public class PersistenceRoundTripTests
         await using (var context = db.NewContext())
         {
             var request = await LoadAsync(context, requestId);
-            var make = request.Items.Single(i => i.ItemNo == "1.10");
+            var make = request.Items.Single(i => i.CustomerItemRef == "1.10");
 
             Assert.Equal(Priority.VeryUrgent, make.Priority);
             Assert.Equal(Now.AddHours(3), make.UpdatedAtUtc);
@@ -148,13 +149,13 @@ public class PersistenceRoundTripTests
 
             // Stage 3 is now executable; the repair item's stage was never released, so it cannot start.
             make.StartStage(3);
-            Assert.Throws<InvalidOperationException>(() => request.Items.Single(i => i.ItemNo == "2.10").StartStage(1));
+            Assert.Throws<InvalidOperationException>(() => request.Items.Single(i => i.CustomerItemRef == "2.10").StartStage(1));
             await context.SaveChangesAsync(TestContext.Current.CancellationToken);
         }
 
         await using (var context = db.NewContext())
         {
-            var make = (await LoadAsync(context, requestId)).Items.Single(i => i.ItemNo == "1.10");
+            var make = (await LoadAsync(context, requestId)).Items.Single(i => i.CustomerItemRef == "1.10");
             Assert.Equal(ItemStageStatus.InProgress, make.Stages.Single(s => s.StageNo == 3).Status);
         }
     }
@@ -187,7 +188,7 @@ public class PersistenceRoundTripTests
         Assert.Equal(
             numbers.OrderBy(n => n, StringComparer.Ordinal).ToArray(),
             loaded.Select(r => r.RequestNo.Value).OrderBy(n => n, StringComparer.Ordinal).ToArray());
-        Assert.All(loaded, r => Assert.Equal(r.RequestNo.Value, Assert.Single(r.Items).ItemNo));
+        Assert.All(loaded, r => Assert.Equal(r.RequestNo.Value + "-001", Assert.Single(r.Items).ItemNo));
     }
 
     [Fact]

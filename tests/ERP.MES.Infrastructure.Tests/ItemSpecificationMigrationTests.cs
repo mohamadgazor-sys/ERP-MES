@@ -32,13 +32,13 @@ public class ItemSpecificationMigrationTests
 
         await SqliteDatabase.MigrateAsync(db.Path, Token);
 
-        Assert.Equal("1|1.10|Ring|2.5|3", Assert.Single(db.Query("SELECT Id, ItemNo, PartName, RequestedQuantity, Version FROM RequestItems")));
+        Assert.Equal("1|M-1-001|Ring|2.5|3", Assert.Single(db.Query("SELECT Id, ItemNo, PartName, RequestedQuantity, Version FROM RequestItems")));
         Assert.Equal("||||", Assert.Single(db.Query("SELECT IFNULL(QuantityTypeId,''), IFNULL(MaterialId,''), IFNULL(WeightKgPerBaseUnit,''), IFNULL(LengthMm,''), IFNULL(DiameterMm,'') FROM RequestItems")).Replace("|", "|"));
         Assert.Equal("1|1|Turning|4.5|2.5|6|2", Assert.Single(db.Query("SELECT Id, StageNo, StageTitle, PlannedMinutesPerPiece, PlannedQuantity, Status, Version FROM ItemStages")));
         Assert.Equal("1|1|2.5", Assert.Single(db.Query("SELECT RequestItemId, StageNo, ApprovedQuantity FROM QcApprovals")));
         Assert.Equal("1|M-1|6|7", Assert.Single(db.Query("SELECT Id, RequestNo, Status, Version FROM Requests")));
         Assert.Empty(db.Query("PRAGMA foreign_key_check"));
-        Assert.Equal(25, db.Query("SELECT MigrationId FROM __EFMigrationsHistory").Count);
+        Assert.Equal(26, db.Query("SELECT MigrationId FROM __EFMigrationsHistory").Count);
 
         // The composite key from a QC approval to its stage and the item number key still hold.
         Assert.Contains("RequestId,ItemNo", db.Query("SELECT group_concat(c.name, ',') FROM pragma_index_list('RequestItems') l, pragma_index_info(l.name) c WHERE l.\"unique\" = 1 GROUP BY l.name"));

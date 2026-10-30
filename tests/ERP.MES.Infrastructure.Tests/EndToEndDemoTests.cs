@@ -102,7 +102,7 @@ public class EndToEndDemoTests
 
         // 4. Planning schedules the operator for the day; the milling supervisor sees the stage in the unit queue, dispatches it to the unit's machine and the operator, and starts the work session.
         var queue = (await w.UnitQueue.LoadAsync(supervisor, milling, Token)).Value!;
-        var entry = Assert.Single(queue.Queue, e => e.RequestNo == "E2E-1" && e.ItemNo == "E2E.10");
+        var entry = Assert.Single(queue.Queue, e => e.RequestNo == "E2E-1" && e.CustomerItemRef == "E2E.10");
         Assert.True(entry.IsActionable);
         var template = (await w.Calendar.LoadAsync(planning, Token)).Value!.Configuration.Templates.Single(t => t.Value.Code == "D").Value.Id;
         var machine = (await w.PlanningMaster.LoadAsync(planning, Token)).Value!.Machines.Single(m => m.Value.Code == "FCC-06").Value.Id;
@@ -215,7 +215,7 @@ public class EndToEndDemoTests
             var version = (await w.Requests.GetAsync(planning, requestId, Token)).Value!.Request.Version;
             var defined = await w.ItemDefinition.DefineItemAsync(planning, requestId, version, new DefineItemCommand(itemNo, "قطعه " + itemNo, 5m, Priority.Normal, piece, material, 1m, null, null), Token);
             Assert.True(defined.Succeeded, defined.Status + " " + defined.Issue);
-            var itemId = defined.Value!.Value.Items.Single(i => i.ItemNo == itemNo).Id;
+            var itemId = defined.Value!.Value.Items.Single(i => i.CustomerItemRef == itemNo).Id;
             var current = (await w.Requests.GetAsync(planning, requestId, Token)).Value!;
             var staged = await w.ItemDefinition.DefineStageAsync(planning, requestId, current.Request.Version, itemId, current.Versions.ItemVersion(itemId), new DefineStageCommand("فرزکاری", 2m, milling, null), Token);
             Assert.True(staged.Succeeded, staged.Status + " " + staged.Issue);
@@ -239,9 +239,9 @@ public class EndToEndDemoTests
         Assert.False(refused.Succeeded);
         Assert.Equal(ValidationIssue.StageGateNotSatisfied, refused.Issue);
         var queue = (await w.UnitQueue.LoadAsync(supervisor, milling, Token)).Value!;
-        var freeEntry = Assert.Single(queue.Queue, e => e.RequestNo == "E2E-2" && e.ItemNo == "E2E2.10");
+        var freeEntry = Assert.Single(queue.Queue, e => e.RequestNo == "E2E-2" && e.CustomerItemRef == "E2E2.10");
         Assert.True(freeEntry.IsActionable);
-        Assert.DoesNotContain(queue.Queue, e => e.ItemNo == "E2E2.20"); // not released, so it is not in any unit queue yet
+        Assert.DoesNotContain(queue.Queue, e => e.CustomerItemRef == "E2E2.20"); // not released, so it is not in any unit queue yet
 
         // Decisions after release are refused for the released item; the history keeps one append-only row, and the held item still cannot be marked "not required" by anyone but Planning.
         Assert.Equal(ValidationIssue.ItemContractInProduction, (await w.Contracts.DecideItemAsync(planning, requestId, free, ContractRequirement.Required, "تغییر نظر", Token)).Issue);

@@ -244,7 +244,7 @@ public class StageActionTests
         var material = long.Parse(w.Fixture.Db.Query("SELECT Id FROM Materials LIMIT 1").Single(), System.Globalization.CultureInfo.InvariantCulture);
         var defined = await w.Items.DefineItemAsync(w.Planning, id, version, new DefineItemCommand(itemNo, "Part " + itemNo, 10m, priority, piece, material, 1m, null, null), Token);
         Assert.True(defined.Succeeded, defined.Status + " " + defined.Issue);
-        var itemId = defined.Value!.Value.Items.Single(i => i.ItemNo == itemNo).Id;
+        var itemId = defined.Value!.Value.Items.Single(i => i.CustomerItemRef == itemNo).Id;
         for (var i = 0; i < stageUnits.Length; i++)
         {
             var current = (await w.Services.Requests.GetAsync(w.Planning, id, Token)).Value!;
@@ -356,7 +356,7 @@ public class StageActionTests
         + "UNION ALL SELECT 'A', Id, 0, ActionCode FROM AuditLog WHERE ActionCode LIKE 'Stage%' ORDER BY 1, 2, 3, 4").ToArray();
 
     private static async Task<ItemStage> StageAsync(World w, long requestId, int stageNo) =>
-        (await w.Services.Requests.GetAsync(w.Qc, requestId, Token)).Value!.Request.Value.Items.Single(i => i.ItemNo == "A").Stages.Single(s => s.StageNo == stageNo);
+        (await w.Services.Requests.GetAsync(w.Qc, requestId, Token)).Value!.Request.Value.Items.Single(i => i.CustomerItemRef == "A").Stages.Single(s => s.StageNo == stageNo);
 
     /// <summary>A gate-ready request with item "A" of ten pieces whose route has the given stages (units MILLING, TURNING, ...), the Production user designated to all of them; the first stage is still PLANNED.</summary>
     private static async Task<(long RequestId, long ItemId)> PlannedAsync(World w, int stages = 2)
@@ -416,7 +416,7 @@ public class StageActionTests
         await MustAsync(w, w.Production, StageAction.Start, item, 2);
         await MustAsync(w, w.Production, StageAction.SubmitForQc, item, 2);
         await AcceptAllAsync(w, item, 2);
-        Assert.True((await w.Services.Requests.GetAsync(w.Qc, item.RequestId, Token)).Value!.Request.Value.Items.Single(i => i.ItemNo == "A").IsRouteCompleted);
+        Assert.True((await w.Services.Requests.GetAsync(w.Qc, item.RequestId, Token)).Value!.Request.Value.Items.Single(i => i.CustomerItemRef == "A").IsRouteCompleted);
     }
 
     [Fact]
@@ -595,7 +595,7 @@ public class StageActionTests
         Assert.Contains("PLANNED -> WAITING", rows[0]);
         Assert.Contains("WAITING -> IN_PROGRESS", rows[1]);
         Assert.Contains("IN_PROGRESS -> WAITING_QC", rows[2]);
-        Assert.Contains("Request R-1, item A, stage 1", rows[0]);
+        Assert.Contains("Request R-1, item R-1-001, stage 1", rows[0]);
         var text = string.Join("\n", rows);
         Assert.DoesNotContain("password", text, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("token", text, StringComparison.OrdinalIgnoreCase);

@@ -2730,6 +2730,11 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
                     b.Property<int>("JalaliRequestYear")
                         .HasColumnType("INTEGER");
 
+                    b.Property<int>("NextRootSequence")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(1);
+
                     b.Property<DateOnly>("RequestDate")
                         .HasColumnType("TEXT");
 
@@ -2827,18 +2832,39 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
                     b.Property<long>("CreatedByUserId")
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("CustomerItemRef")
+                        .HasMaxLength(40)
+                        .HasColumnType("TEXT")
+                        .UseCollation("BINARY");
+
                     b.Property<decimal?>("DiameterMm")
                         .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsAssembly")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(false);
 
                     b.Property<string>("ItemNo")
                         .IsRequired()
                         .HasColumnType("TEXT")
                         .UseCollation("BINARY");
 
+                    b.Property<int>("ItemSequence")
+                        .HasColumnType("INTEGER");
+
                     b.Property<decimal?>("LengthMm")
                         .HasColumnType("TEXT");
 
                     b.Property<long?>("MaterialId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("NextChildSequence")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(1);
+
+                    b.Property<long?>("ParentItemId")
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("PartName")
@@ -2873,7 +2899,13 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
 
                     b.HasIndex("MaterialId");
 
+                    b.HasIndex("ParentItemId");
+
                     b.HasIndex("QuantityTypeId");
+
+                    b.HasIndex("RequestId", "CustomerItemRef")
+                        .IsUnique()
+                        .HasFilter("[CustomerItemRef] IS NOT NULL");
 
                     b.HasIndex("RequestId", "ItemNo")
                         .IsUnique();
@@ -4501,6 +4533,11 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
                         .HasForeignKey("MaterialId")
                         .OnDelete(DeleteBehavior.Restrict);
 
+                    b.HasOne("ERP.MES.Domain.Requests.RequestItem", "Parent")
+                        .WithMany()
+                        .HasForeignKey("ParentItemId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("ERP.MES.Domain.Quality.QuantityType", null)
                         .WithMany()
                         .HasForeignKey("QuantityTypeId")
@@ -4511,6 +4548,8 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
                         .HasForeignKey("RequestId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.Navigation("Parent");
                 });
 
             modelBuilder.Entity("ERP.MES.Domain.Requests.RequestWorkflowEntry", b =>

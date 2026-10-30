@@ -49,7 +49,7 @@ What it checks (each line is a `CHECK OK` in the log; the run is one process per
 | 2 | Management approves `DEMO-1405-014` | the status cell changes from "ارسال‌شده به مدیریت" to "تأییدشده توسط مدیریت" |
 | 3 | **Persistence**: the application is closed and started again; Planning sees the approved status; Planning forwards the request to Drawing | status cell |
 | 4 | Drawing has no approve button and records the result (fully accepted) | status cell |
-| 5 | **Item-scoped contract decision**: Planning decides "contract required" for the request, then "this item does not need the contract" for item 3.20 only: 3.20 shows its own decision and reason, 3.10 is unchanged ("follows the request"); Management cannot make the per-item decision | item grid text, button state |
+| 5 | **Item-scoped contract decision**: Planning decides "contract required" for the request, then "this item does not need the contract" for item DEMO-1405-014-002 (customer reference 3.20) only: 3.20 shows its own decision and reason, 3.10 is unchanged ("follows the request"); Management cannot make the per-item decision | item grid text, button state |
 | 6 | Planning defines a new item `UI.1` (type, material, weight, priority) and a stage in the MILLING unit through the real forms | item and stage grids |
 | 7 | **Visible release gating**: the unit-queue page lists the stage with the reason "شرط‌های آزادسازی تولید برقرار نیست"; pressing release does **not** release it (not in the queue); after the item-level decision "no contract needed" the same stage is released and appears in the MILLING queue | grid rows, queue grid |
 | 8 | **Unauthorized action**: the operator (`demo.production`) cannot dispatch (button disabled) | button state |

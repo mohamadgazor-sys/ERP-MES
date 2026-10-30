@@ -159,7 +159,7 @@ internal sealed class KitWorld : IDisposable
         var material = long.Parse(Fixture.Db.Query("SELECT Id FROM Materials LIMIT 1").Single(), System.Globalization.CultureInfo.InvariantCulture);
         var defined = await Services.ItemDefinition.DefineItemAsync(Planning, requestId, version, new DefineItemCommand(itemNo, "Part " + itemNo, 10m, Priority.Normal, await PieceTypeAsync(), material, 1m, null, null), Token);
         Assert.True(defined.Succeeded, defined.Status + " " + defined.Issue);
-        var itemId = defined.Value!.Value.Items.Single(i => i.ItemNo == itemNo).Id;
+        var itemId = defined.Value!.Value.Items.Single(i => i.CustomerItemRef == itemNo).Id;
         for (var i = 0; i < stageUnits.Length; i++)
         {
             var current = (await Services.Requests.GetAsync(Planning, requestId, Token)).Value!;

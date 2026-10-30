@@ -153,7 +153,7 @@ public class RequestRepositoryTests
             var extra = request.AddItem(0, "3.10", "Bushing C", 2m, 1, Now.AddHours(4));
             extra.DefineInitialStage("Turning", 2m);
 
-            var repair = request.Items.Single(i => i.ItemNo == "2.10");
+            var repair = request.Items.Single(i => i.CustomerItemRef == "2.10");
             repair.ReleaseFirstStage();
             repair.StartStage(1);
             repair.SubmitStageForQc(1);
@@ -166,8 +166,8 @@ public class RequestRepositoryTests
         // Session 3: everything is there, and the QC gate still works on reloaded data.
         var third = await db.Requests().UpdateAsync(requestId, null, request =>
         {
-            Assert.Equal(new[] { "1.10", "2.10", "3.10" }, request.Items.Select(i => i.ItemNo).OrderBy(n => n, StringComparer.Ordinal).ToArray());
-            var make = request.Items.Single(i => i.ItemNo == "1.10");
+            Assert.Equal(new[] { "1.10", "2.10", "3.10" }, request.Items.Select(i => i.CustomerItemRef).OrderBy(n => n, StringComparer.Ordinal).ToArray());
+            var make = request.Items.Single(i => i.CustomerItemRef == "1.10");
             make.StartStage(2);
             make.SubmitStageForQc(2);
             make.ApproveStageWholeQuantity(2, 9, Now.AddHours(5));
@@ -175,14 +175,14 @@ public class RequestRepositoryTests
         }, Token);
 
         var final = (await db.Requests().FindAsync(requestId, Token))!.Value;
-        var makeItem = final.Items.Single(i => i.ItemNo == "1.10");
+        var makeItem = final.Items.Single(i => i.CustomerItemRef == "1.10");
         Assert.Equal(Priority.VeryUrgent, makeItem.Priority);
         Assert.Equal(new[] { ItemStageStatus.QcApproved, ItemStageStatus.QcApproved, ItemStageStatus.Waiting }, makeItem.Stages.Select(s => s.Status).ToArray());
         Assert.Equal(new[] { 1, 2 }, makeItem.QcApprovals.Select(a => a.StageNo).ToArray());
-        var repairItem = final.Items.Single(i => i.ItemNo == "2.10");
+        var repairItem = final.Items.Single(i => i.CustomerItemRef == "2.10");
         Assert.True(repairItem.IsRouteCompleted);
         Assert.Equal(1, Assert.Single(repairItem.QcApprovals).StageNo);
-        Assert.Equal(ItemStageStatus.Planned, final.Items.Single(i => i.ItemNo == "3.10").Stages.Single().Status);
+        Assert.Equal(ItemStageStatus.Planned, final.Items.Single(i => i.CustomerItemRef == "3.10").Stages.Single().Status);
         // Item and stage changes alone do not touch the request row.
         Assert.Equal(second.Version, third.Version);
         Assert.Equal("3", db.Query("SELECT COUNT(*) FROM RequestItems").Single());
@@ -199,8 +199,8 @@ public class RequestRepositoryTests
 
         // Duplicate item number, a stage started out of order, a stage approved before it was submitted, an invalid quantity.
         await Assert.ThrowsAsync<InvalidOperationException>(() => db.Requests().UpdateAsync(requestId, null, r => r.AddItem(0, "1.10", "Dup", 1m, 1, Now), Token));
-        await Assert.ThrowsAsync<InvalidOperationException>(() => db.Requests().UpdateAsync(requestId, null, r => r.Items.Single(i => i.ItemNo == "1.10").StartStage(3), Token));
-        await Assert.ThrowsAsync<InvalidOperationException>(() => db.Requests().UpdateAsync(requestId, null, r => r.Items.Single(i => i.ItemNo == "1.10").ApproveStageWholeQuantity(2, 9, Now), Token));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => db.Requests().UpdateAsync(requestId, null, r => r.Items.Single(i => i.CustomerItemRef == "1.10").StartStage(3), Token));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => db.Requests().UpdateAsync(requestId, null, r => r.Items.Single(i => i.CustomerItemRef == "1.10").ApproveStageWholeQuantity(2, 9, Now), Token));
         await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => db.Requests().UpdateAsync(requestId, null, r => r.AddItem(0, "9.9", "Zero", 0m, 1, Now), Token));
 
         // A change that fails after some Domain changes succeeded saves none of them.
@@ -212,7 +212,7 @@ public class RequestRepositoryTests
 
         var stored = (await db.Requests().FindAsync(requestId, Token))!.Value;
         Assert.Equal(2, stored.Items.Count);
-        Assert.Equal(new[] { ItemStageStatus.QcApproved, ItemStageStatus.Waiting, ItemStageStatus.WaitingPreviousQc }, stored.Items.Single(i => i.ItemNo == "1.10").Stages.Select(s => s.Status).ToArray());
+        Assert.Equal(new[] { ItemStageStatus.QcApproved, ItemStageStatus.Waiting, ItemStageStatus.WaitingPreviousQc }, stored.Items.Single(i => i.CustomerItemRef == "1.10").Stages.Select(s => s.Status).ToArray());
     }
 
     [Fact]
@@ -240,11 +240,11 @@ public class RequestRepositoryTests
         await Assert.ThrowsAsync<ConcurrencyConflictException>(() => db.Requests().UpdateAsync(added.Value.Id, null, request =>
         {
             // Another user saves the same stage between this operation's load and its save.
-            db.Execute("UPDATE ItemStages SET StageTitle = 'Changed by another user', Version = Version + 1 WHERE StageNo = 2 AND RequestItemId = (SELECT Id FROM RequestItems WHERE ItemNo = '1.10')");
-            request.Items.Single(i => i.ItemNo == "1.10").StartStage(2);
+            db.Execute("UPDATE ItemStages SET StageTitle = 'Changed by another user', Version = Version + 1 WHERE StageNo = 2 AND RequestItemId = (SELECT Id FROM RequestItems WHERE CustomerItemRef = '1.10')");
+            request.Items.Single(i => i.CustomerItemRef == "1.10").StartStage(2);
         }, Token));
 
-        var stage = (await db.Requests().FindAsync(added.Value.Id, Token))!.Value.Items.Single(i => i.ItemNo == "1.10").Stages.Single(s => s.StageNo == 2);
+        var stage = (await db.Requests().FindAsync(added.Value.Id, Token))!.Value.Items.Single(i => i.CustomerItemRef == "1.10").Stages.Single(s => s.StageNo == 2);
         Assert.Equal("Changed by another user", stage.StageTitle);
         Assert.Equal(ItemStageStatus.Waiting, stage.Status);
     }
@@ -285,7 +285,7 @@ public class RequestRepositoryTests
         foreach (var summary in list)
         {
             var request = (await db.Requests().FindAsync(summary.RequestId, Token))!.Value;
-            Assert.Equal(request.RequestNo.Value, Assert.Single(request.Items).ItemNo);
+            Assert.Equal(request.RequestNo.Value + "-001", Assert.Single(request.Items).ItemNo);
         }
     }
 }

@@ -44,7 +44,7 @@ public class UnitQueueViewModelTests
         var version = (await h.Workflow.Requests.GetAsync(h.Qc, id, Token)).Value!.Request.Version;
         var defined = await h.Workflow.ItemDefinition.DefineItemAsync(h.Planning, id, version, new DefineItemCommand(itemNo, "قطعه " + itemNo, 10m, priority, piece, material, 1m, null, null), Token);
         Assert.True(defined.Succeeded, defined.Status + " " + defined.Issue);
-        var itemId = defined.Value!.Value.Items.Single(i => i.ItemNo == itemNo).Id;
+        var itemId = defined.Value!.Value.Items.Single(i => i.CustomerItemRef == itemNo).Id;
         var current = (await h.Workflow.Requests.GetAsync(h.Planning, id, Token)).Value!;
         Assert.True((await h.Workflow.ItemDefinition.DefineStageAsync(h.Planning, id, current.Request.Version, itemId, current.Versions.ItemVersion(itemId), new DefineStageCommand("فرز", 2m, unitId, null), Token)).Succeeded);
         var latest = (await h.Workflow.Requests.GetAsync(h.Planning, id, Token)).Value!;
@@ -68,14 +68,14 @@ public class UnitQueueViewModelTests
         await planning.LoadAsync(Token);
         Assert.True(planning.CanOrder);
         Assert.False(planning.CanOverride);
-        Assert.Equal(["A", "B"], planning.Rows.Select(r => r.ItemNo).ToArray());
+        Assert.Equal(["A", "B"], planning.Rows.Select(r => r.CustomerItemRef).ToArray());
         Assert.Equal("۱", planning.Rows[0].OrderText);
         Assert.Contains("مرحلهٔ ۱ از ۱", planning.Rows[0].StageText, StringComparison.Ordinal);
         Assert.Equal("قابل اجرا", planning.Rows[0].ReasonText);
         Assert.Equal("—", planning.Rows[0].PlannedEndText);
         await planning.MoveAsync(planning.Rows[0], +1);
         Assert.False(planning.IsErrorMessage, planning.Message);
-        Assert.Equal(["B", "A"], planning.Rows.Select(r => r.ItemNo).ToArray());
+        Assert.Equal(["B", "A"], planning.Rows.Select(r => r.CustomerItemRef).ToArray());
         Assert.Equal("۱", planning.Rows[0].PositionText);
 
         // Management overrides A to the head with a reason; the screen shows it and Planning's position is untouched.
@@ -83,12 +83,12 @@ public class UnitQueueViewModelTests
         await manager.LoadAsync(Token);
         Assert.True(manager.CanOverride);
         Assert.False(manager.CanOrder);
-        await manager.OverrideAsync([manager.Rows.Single(r => r.ItemNo == "A")], "  ");
+        await manager.OverrideAsync([manager.Rows.Single(r => r.CustomerItemRef == "A")], "  ");
         Assert.True(manager.IsErrorMessage);
         Assert.Equal(Messages.ForIssue(ValidationIssue.QueueReasonRequired, JalaliDateError.None), manager.Message);
-        await manager.OverrideAsync([manager.Rows.Single(r => r.ItemNo == "A")], "مشتری کلیدی");
+        await manager.OverrideAsync([manager.Rows.Single(r => r.CustomerItemRef == "A")], "مشتری کلیدی");
         Assert.False(manager.IsErrorMessage, manager.Message);
-        Assert.Equal(["A", "B"], manager.Rows.Select(r => r.ItemNo).ToArray());
+        Assert.Equal(["A", "B"], manager.Rows.Select(r => r.CustomerItemRef).ToArray());
         Assert.Contains("رتبهٔ ۱", manager.Rows[0].OverrideText, StringComparison.Ordinal);
         Assert.Contains("مشتری کلیدی", manager.Rows[0].OverrideText, StringComparison.Ordinal);
 
@@ -102,12 +102,12 @@ public class UnitQueueViewModelTests
         Assert.False(production.IsErrorMessage, production.Message);
         Assert.Equal("در حال اجرا", production.Rows[0].CategoryText);
         await production.StopAsync(production.Rows[1], "خرابی دستگاه");
-        Assert.Equal("متوقف / مشکل‌دار", production.Rows.Single(r => r.ItemNo == "B").CategoryText);
-        Assert.Contains("خرابی دستگاه", production.Rows.Single(r => r.ItemNo == "B").ReasonText, StringComparison.Ordinal);
-        await production.StartAsync(production.Rows.Single(r => r.ItemNo == "B"));
+        Assert.Equal("متوقف / مشکل‌دار", production.Rows.Single(r => r.CustomerItemRef == "B").CategoryText);
+        Assert.Contains("خرابی دستگاه", production.Rows.Single(r => r.CustomerItemRef == "B").ReasonText, StringComparison.Ordinal);
+        await production.StartAsync(production.Rows.Single(r => r.CustomerItemRef == "B"));
         Assert.True(production.IsErrorMessage);
         Assert.Equal(Messages.ForIssue(ValidationIssue.StageStopped, JalaliDateError.None), production.Message);
-        await production.ResumeAsync(production.Rows.Single(r => r.ItemNo == "B"));
+        await production.ResumeAsync(production.Rows.Single(r => r.CustomerItemRef == "B"));
         Assert.False(production.IsErrorMessage, production.Message);
 
         // The same screen for a user of another department is denied; nothing is shown.
@@ -139,6 +139,6 @@ public class UnitQueueViewModelTests
 
         Assert.True(first.IsErrorMessage);
         Assert.Equal(UnitQueueViewModel.ConflictText, first.Message);
-        Assert.Equal(["B", "A"], first.Rows.Select(r => r.ItemNo).ToArray());
+        Assert.Equal(["B", "A"], first.Rows.Select(r => r.CustomerItemRef).ToArray());
     }
 }

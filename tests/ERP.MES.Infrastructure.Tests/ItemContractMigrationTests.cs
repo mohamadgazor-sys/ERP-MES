@@ -32,7 +32,7 @@ public class ItemContractMigrationTests
         await SqliteDatabase.MigrateAsync(db.Path, Token);
 
         Assert.Equal("1|2|4|5", Assert.Single(db.Query("SELECT Id, Requirement, Status, Version FROM Contracts")));
-        Assert.Equal("1|1.10", Assert.Single(db.Query("SELECT Id, ItemNo FROM RequestItems")));
+        Assert.Equal("1|M-1-001", Assert.Single(db.Query("SELECT Id, ItemNo FROM RequestItems")));
         Assert.Empty(db.Query("SELECT * FROM ItemContractDecisions"));
         Assert.Empty(db.Query("PRAGMA foreign_key_check"));
         var keys = db.Query("SELECT \"from\" || '->' || \"table\" || ':' || on_delete FROM pragma_foreign_key_list('ItemContractDecisions')");

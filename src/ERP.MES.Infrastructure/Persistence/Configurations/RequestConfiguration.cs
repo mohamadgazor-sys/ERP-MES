@@ -37,6 +37,7 @@ public sealed class RequestConfiguration : IEntityTypeConfiguration<Request>
         builder.HasOne<User>().WithMany().HasForeignKey(r => r.CreatedByUserId).IsRequired().OnDelete(DeleteBehavior.Restrict);
         builder.Property(r => r.CreatedAtUtc).IsRequired();
         builder.Property(r => r.UpdatedAtUtc).IsRequired();
+        builder.Property(r => r.NextRootSequence).IsRequired().HasDefaultValue(1);
         builder.Ignore(r => r.Key);
 
         // Application-managed row version and concurrency token (Decision Log #23); see ErpMesDbContext.ApplyRowVersions.

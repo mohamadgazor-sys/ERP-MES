@@ -72,6 +72,9 @@ public sealed class Request
 
     public DateTime UpdatedAtUtc { get; private set; }
 
+    /// <summary>The sequence the next item without a parent receives (1 for a new request); only ever grows (Decision Log #121 Q3).</summary>
+    public int NextRootSequence { get; private set; } = 1;
+
     /// <summary>Customer + RequestNo + Jalali Request Year, compared exactly (case-sensitive).</summary>
     public RequestKey Key => new(CustomerId, RequestNo.Value, JalaliRequestYear);
 
@@ -279,17 +282,74 @@ public sealed class Request
         UpdatedAtUtc = utc;
     }
 
-    /// <summary>True when an item with exactly this number already exists in the request. The comparison is exact (ordinal, no trimming); the spec does not say whether item numbers are case-sensitive, so the exact comparison is used until it is decided.</summary>
+    /// <summary>The longest item sequence under one parent (Decision Log #121 Q1).</summary>
+    public const int MaxItemSequence = 999;
+
+    /// <summary>The deepest nesting of assemblies in this phase: an item without a parent is level 1 (Decision Log #121 Q4).</summary>
+    public const int MaxHierarchyDepth = 4;
+
+    /// <summary>True when an item with exactly this SYSTEM number (for example <c>R-1-001</c>) already exists in the request. Exact, ordinal comparison.</summary>
     public bool HasItemNo(string itemNo) =>
         _items.Any(i => string.Equals(i.ItemNo, itemNo, StringComparison.Ordinal));
 
+    /// <summary>True when an item with exactly this customer reference exists (exact comparison; an empty reference matches nothing).</summary>
+    public bool HasCustomerItemRef(string? customerItemRef) => FindByCustomerItemRef(customerItemRef) is not null;
+
+    /// <summary>The item that carries this customer reference, matched exactly. Items without a reference are never matched (Decision Log #121 Q2).</summary>
+    public RequestItem? FindByCustomerItemRef(string? customerItemRef) =>
+        string.IsNullOrEmpty(customerItemRef) ? null : _items.FirstOrDefault(i => string.Equals(i.CustomerItemRef, customerItemRef, StringComparison.Ordinal));
+
+    /// <summary>The direct children of an assembly, in sequence order.</summary>
+    public IReadOnlyList<RequestItem> ChildrenOf(RequestItem item) =>
+        _items.Where(i => ReferenceEquals(i.Parent, item)).OrderBy(i => i.ItemSequence).ToList();
+
+    /// <summary>Every child, grandchild and so on of an item.</summary>
+    public IReadOnlyList<RequestItem> DescendantsOf(RequestItem item)
+    {
+        var result = new List<RequestItem>();
+        var queue = new Queue<RequestItem>([item]);
+        while (queue.Count > 0)
+        {
+            foreach (var child in ChildrenOf(queue.Dequeue()))
+            {
+                result.Add(child);
+                queue.Enqueue(child);
+            }
+        }
+
+        return result;
+    }
+
+    /// <summary>1 for an item without a parent, 2 for its child, and so on.</summary>
+    public static int DepthOf(RequestItem item)
+    {
+        var depth = 1;
+        for (var parent = item.Parent; parent is not null; parent = parent.Parent)
+        {
+            depth++;
+        }
+
+        return depth;
+    }
+
+    /// <summary>The number of levels below an item (0 for an item without children).</summary>
+    public int HeightOf(RequestItem item) => ChildrenOf(item).Count == 0 ? 0 : 1 + ChildrenOf(item).Max(HeightOf);
+
     /// <summary>
-    /// Planning defines an item with its specification (Decision Log #86, #95). A MAKE item needs a quantity type, a material and a weight; a REPAIR item may omit them. Values that are
-    /// given must be valid (positive, within the scale, not rounded). The gates before definition (Management, Drawing, contract, inquiries) are checked by the Application, which can see
-    /// the other aggregates; this method enforces what the request and the specification alone decide.
+    /// True when every descendant of the item has finished its route with every stage approved by QC: the condition for releasing the first stage of an assembly (Decision Log #121 Q5). An item
+    /// without children is always ready; a child that has no stages is not.
+    /// </summary>
+    public bool AllDescendantsRouteCompleted(RequestItem item) => DescendantsOf(item).All(d => d.IsRouteCompleted);
+
+    /// <summary>
+    /// Planning (or Drawing, for its technical scope) defines an item with its specification (Decision Log #86, #95, #121). A MAKE item needs a quantity type, a material and a weight; a REPAIR item
+    /// may omit them. Values that are given must be valid (positive, within the scale, not rounded). The system item number comes from the request number and the next free sequence under the
+    /// parent; the customer's own number is the optional <paramref name="customerItemRef"/>. The gates before definition (Management, Drawing, contract, inquiries) are checked by the
+    /// Application, which can see the other aggregates; this method enforces what the request, the specification and the hierarchy alone decide.
     /// </summary>
     public RequestItem DefineItem(
-        long itemId, string itemNo, string partName, decimal requestedQuantity, ItemSpecification specification, long createdByUserId, DateTime createdAtUtc, Priority priority = Priority.Normal)
+        long itemId, string? customerItemRef, string partName, decimal requestedQuantity, ItemSpecification specification, long createdByUserId, DateTime createdAtUtc, Priority priority = Priority.Normal,
+        RequestItem? parent = null, bool isAssembly = false)
     {
         ArgumentNullException.ThrowIfNull(specification);
         var problem = specification.Check(WorkType);
@@ -298,27 +358,14 @@ public sealed class Request
             throw new ItemSpecificationException(problem);
         }
 
-        if (Status is RequestStatus.Cancelled or RequestStatus.Closed)
-        {
-            throw new InvalidOperationException("A " + Status.Code() + " request accepts no new items.");
-        }
-
-        if (itemNo is not null && HasItemNo(itemNo))
-        {
-            throw new InvalidOperationException("The request already contains an item with number '" + itemNo + "'.");
-        }
-
-        var item = new RequestItem(itemId, itemNo!, partName, requestedQuantity, priority, createdByUserId, createdAtUtc, specification);
-        _items.Add(item);
-        UpdatedAtUtc = createdAtUtc;
-        return item;
+        return Create(itemId, customerItemRef, partName, requestedQuantity, specification, createdByUserId, createdAtUtc, priority, parent, isAssembly);
     }
 
     /// <summary>
-    /// Revises an existing item's definition (Excel import "update", Decision Log #97) under the same specification rules as <see cref="DefineItem"/>. Returns false when nothing changed.
-    /// An item that already has stages or a QC approval cannot be revised this way (<see cref="InvalidOperationException"/>).
+    /// Revises an existing item's definition (Excel import "update", Decision Log #97) under the same specification rules as <see cref="DefineItem"/>. The item is the one with this customer
+    /// reference. Returns false when nothing changed. An item that already has stages or a QC approval cannot be revised this way (<see cref="InvalidOperationException"/>).
     /// </summary>
-    public bool ReviseItem(string itemNo, string partName, decimal requestedQuantity, Priority priority, ItemSpecification specification, DateTime changedAtUtc)
+    public bool ReviseItem(string customerItemRef, string partName, decimal requestedQuantity, Priority priority, ItemSpecification specification, DateTime changedAtUtc)
     {
         ArgumentNullException.ThrowIfNull(specification);
         var problem = specification.Check(WorkType);
@@ -332,7 +379,7 @@ public sealed class Request
             throw new InvalidOperationException("A " + Status.Code() + " request accepts no item changes.");
         }
 
-        var item = _items.FirstOrDefault(i => string.Equals(i.ItemNo, itemNo, StringComparison.Ordinal)) ?? throw new InvalidOperationException("The request has no item with number '" + itemNo + "'.");
+        var item = FindByCustomerItemRef(customerItemRef) ?? throw new InvalidOperationException("The request has no item with customer reference '" + customerItemRef + "'.");
         var changed = item.ReviseDefinition(partName, requestedQuantity, priority, specification, changedAtUtc);
         if (changed)
         {
@@ -343,39 +390,209 @@ public sealed class Request
     }
 
     /// <summary>
-    /// Adds an item. (RequestID, ItemNo) must be unique (section 5.2). The item inherits the request's work type (Decision Log #84). New
-    /// items default to <see cref="Priority.Normal"/> (Decision Log #58).
+    /// Adds an item without a specification (the simplified demonstration path). The first argument after the id is the customer's reference (may be null). The item inherits the request's work
+    /// type (Decision Log #84). New items default to <see cref="Priority.Normal"/> (Decision Log #58).
     ///
-    /// Cancelled and closed requests accept no new items. Ordinary item definition belongs before production release,
-    /// and later changes follow the controlled Planning process (Decision Log #34); that limit is NOT enforced here
-    /// because no production-release state exists yet, and the status transitions and permissions that would govern
-    /// it are deferred to the workflow and authorization work. Callers must not treat this method as a rule that items
-    /// may be added in every other state.
+    /// Cancelled and closed requests accept no new items. Ordinary item definition belongs before production release, and later changes follow the controlled Planning process (Decision Log
+    /// #34); that limit is NOT enforced here because no production-release state exists yet.
     /// </summary>
     public RequestItem AddItem(
         long itemId,
-        string itemNo,
+        string? customerItemRef,
         string partName,
         decimal requestedQuantity,
         long createdByUserId,
         DateTime createdAtUtc,
-        Priority priority = Priority.Normal)
+        Priority priority = Priority.Normal,
+        RequestItem? parent = null,
+        bool isAssembly = false) =>
+        Create(itemId, customerItemRef, partName, requestedQuantity, null, createdByUserId, createdAtUtc, priority, parent, isAssembly);
+
+    /// <summary>Marks an item as an assembly so that children can be attached. Allowed while the request accepts changes.</summary>
+    public void MarkAssembly(RequestItem item)
     {
-        if (Status is RequestStatus.Cancelled or RequestStatus.Closed)
+        ArgumentNullException.ThrowIfNull(item);
+        RequireOwned(item);
+        RequireOpen();
+        item.MarkAssembly();
+    }
+
+    /// <summary>
+    /// Moves an item (with its whole subtree) under another assembly, or out to the top level (Decision Log #121 Q6). Allowed only while NO stage is defined for the moved item, any of its
+    /// descendants, its old parent or its new parent. The item takes the next free sequence under the new parent and the whole subtree is renumbered consistently; customer references and
+    /// everything else are kept. Cycles, a parent that is not an assembly, another request's item and a nesting deeper than <see cref="MaxHierarchyDepth"/> are refused.
+    /// </summary>
+    public void MoveItem(RequestItem item, RequestItem? newParent, DateTime changedAtUtc)
+    {
+        ArgumentNullException.ThrowIfNull(item);
+        RequireOwned(item);
+        RequireOpen();
+        if (ReferenceEquals(item.Parent, newParent))
         {
-            throw new InvalidOperationException("A " + Status.Code() + " request accepts no new items.");
+            return;
         }
 
-        if (itemNo is not null && HasItemNo(itemNo))
+        var subtree = new List<RequestItem> { item };
+        subtree.AddRange(DescendantsOf(item));
+        if (newParent is not null)
         {
-            throw new InvalidOperationException("The request already contains an item with number '" + itemNo + "'.");
+            RequireOwned(newParent);
+            if (subtree.Contains(newParent))
+            {
+                throw new ItemHierarchyException(ItemHierarchyProblem.Cycle);
+            }
+
+            if (!newParent.IsAssembly)
+            {
+                throw new ItemHierarchyException(ItemHierarchyProblem.ParentNotAssembly);
+            }
+
+            if (DepthOf(newParent) + 1 + HeightOf(item) > MaxHierarchyDepth)
+            {
+                throw new ItemHierarchyException(ItemHierarchyProblem.TooDeep);
+            }
         }
 
-        var item = new RequestItem(itemId, itemNo!, partName, requestedQuantity, priority, createdByUserId, createdAtUtc);
+        if (subtree.Any(i => i.HasStages) || (item.Parent?.HasStages ?? false) || (newParent?.HasStages ?? false))
+        {
+            throw new ItemHierarchyException(ItemHierarchyProblem.Locked);
+        }
+
+        var sequence = NextSequence(newParent, except: item);
+        item.Attach(newParent, sequence);
+        Renumber(item);
+        UpdatedAtUtc = Customer.RequireUtc(changedAtUtc, nameof(changedAtUtc));
+    }
+
+    /// <summary>
+    /// Turns an assembly back into a normal item. Refused while children remain attached (Decision Log #121 Q6). Kept so that the rule has one home; an item that never had children can be turned back.
+    /// </summary>
+    public void UnmarkAssembly(RequestItem item)
+    {
+        ArgumentNullException.ThrowIfNull(item);
+        RequireOwned(item);
+        RequireOpen();
+        if (ChildrenOf(item).Count > 0)
+        {
+            throw new ItemHierarchyException(ItemHierarchyProblem.HasChildren);
+        }
+
+        item.UnmarkAssembly();
+    }
+
+    private RequestItem Create(
+        long itemId, string? customerItemRef, string partName, decimal requestedQuantity, ItemSpecification? specification, long createdByUserId, DateTime createdAtUtc, Priority priority,
+        RequestItem? parent, bool isAssembly)
+    {
+        RequireOpen();
+        if (!string.IsNullOrEmpty(customerItemRef) && HasCustomerItemRef(customerItemRef))
+        {
+            throw new InvalidOperationException("The request already contains an item with customer reference '" + customerItemRef + "'.");
+        }
+
+        if (parent is not null)
+        {
+            RequireOwned(parent);
+            if (!parent.IsAssembly)
+            {
+                throw new ItemHierarchyException(ItemHierarchyProblem.ParentNotAssembly);
+            }
+
+            if (DepthOf(parent) + 1 > MaxHierarchyDepth)
+            {
+                throw new ItemHierarchyException(ItemHierarchyProblem.TooDeep);
+            }
+
+            if (parent.HasStages)
+            {
+                throw new ItemHierarchyException(ItemHierarchyProblem.Locked);
+            }
+        }
+
+        var sequence = NextSequence(parent, except: null);
+        var itemNo = ComposeItemNo(parent, sequence);
+        var item = new RequestItem(itemId, itemNo, sequence, parent, string.IsNullOrEmpty(customerItemRef) ? null : customerItemRef, isAssembly, partName, requestedQuantity, priority, createdByUserId, createdAtUtc, specification);
         _items.Add(item);
         UpdatedAtUtc = createdAtUtc;
         return item;
     }
+
+    /// <summary>
+    /// Takes the next sequence under the parent (or at the top level) from a counter that only ever grows, so a number that was given to an item is never given again, not even when that item has
+    /// since moved to another assembly (Decision Log #121 Q3). At 999 the next definition is refused.
+    /// </summary>
+    private int NextSequence(RequestItem? parent, RequestItem? except)
+    {
+        var next = parent?.NextChildSequence ?? NextRootSequence;
+
+        // A database from before the counters existed has no counter value; fall back to the highest sibling so far.
+        var highest = _items.Where(i => ReferenceEquals(i.Parent, parent) && !ReferenceEquals(i, except)).Select(i => i.ItemSequence).DefaultIfEmpty(0).Max();
+        next = Math.Max(next, highest + 1);
+        if (next > MaxItemSequence)
+        {
+            throw new ItemHierarchyException(ItemHierarchyProblem.SequenceExhausted);
+        }
+
+        if (parent is null)
+        {
+            NextRootSequence = next + 1;
+        }
+        else
+        {
+            parent.NextChildSequence = next + 1;
+        }
+
+        return next;
+    }
+
+    private string ComposeItemNo(RequestItem? parent, int sequence) =>
+        parent is null
+            ? RequestNo.Value + "-" + sequence.ToString("D3", System.Globalization.CultureInfo.InvariantCulture)
+            : parent.ItemNo + "." + sequence.ToString("D3", System.Globalization.CultureInfo.InvariantCulture);
+
+    private void Renumber(RequestItem item)
+    {
+        item.ApplyNumber(ComposeItemNo(item.Parent, item.ItemSequence));
+        foreach (var child in ChildrenOf(item))
+        {
+            Renumber(child);
+        }
+    }
+
+    private void RequireOwned(RequestItem item)
+    {
+        if (!_items.Contains(item))
+        {
+            throw new ItemHierarchyException(ItemHierarchyProblem.OtherRequest);
+        }
+    }
+
+    private void RequireOpen()
+    {
+        if (Status is RequestStatus.Cancelled or RequestStatus.Closed)
+        {
+            throw new InvalidOperationException("A " + Status.Code() + " request accepts no new items or item changes.");
+        }
+    }
+}
+
+/// <summary>Why an item hierarchy change was refused (Decision Log #121).</summary>
+public enum ItemHierarchyProblem
+{
+    None = 0,
+    ParentNotAssembly,
+    OtherRequest,
+    Cycle,
+    TooDeep,
+    Locked,
+    HasChildren,
+    SequenceExhausted,
+}
+
+/// <summary>Thrown when an item cannot be numbered or moved because of its place in the hierarchy.</summary>
+public sealed class ItemHierarchyException(ItemHierarchyProblem problem) : InvalidOperationException("The item hierarchy change is not allowed: " + problem)
+{
+    public ItemHierarchyProblem Problem { get; } = problem;
 }
 
 /// <summary>Thrown when an item specification is incomplete or invalid for the request's work type.</summary>

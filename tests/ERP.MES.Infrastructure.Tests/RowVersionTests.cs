@@ -17,9 +17,9 @@ public class RowVersionTests
         return (db, await PersistenceTestData.SeedSampleRequestAsync(db));
     }
 
-    private static RequestItem Make(Request request) => request.Items.Single(i => i.ItemNo == "1.10");
+    private static RequestItem Make(Request request) => request.Items.Single(i => i.CustomerItemRef == "1.10");
 
-    private static RequestItem Repair(Request request) => request.Items.Single(i => i.ItemNo == "2.10");
+    private static RequestItem Repair(Request request) => request.Items.Single(i => i.CustomerItemRef == "2.10");
 
     private static ItemStage Stage(RequestItem item, int stageNo) => item.Stages.Single(s => s.StageNo == stageNo);
 

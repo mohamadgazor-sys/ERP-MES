@@ -18,7 +18,17 @@ public static class ItemImportTemplate
     public const int TemplateStages = 6;
 
     public const string WorkType = "نوع کار";
+    /// <summary>The customer's own item number (Decision Log #121 Q2): optional, and the only key a re-import matches existing items by.</summary>
+    public const string CustomerItemRef = "شماره آیتم مشتری";
+
+    /// <summary>The header files used before the system generated the item number; accepted as an alias of <see cref="CustomerItemRef"/>.</summary>
     public const string ItemNo = "شماره آیتم";
+
+    /// <summary>The customer reference of the assembly this item belongs to (the parent must come earlier in the file or already exist in the request).</summary>
+    public const string ParentRef = "مرجع آیتم والد";
+
+    /// <summary>"بله" when the item is an assembly that may have children.</summary>
+    public const string Assembly = "مونتاژ";
     public const string PartName = "نام قطعه";
     public const string Quantity = "تعداد";
     public const string QuantityType = "کد نوع تعداد";
@@ -40,16 +50,16 @@ public static class ItemImportTemplate
     public static IReadOnlyList<string> Headers { get; } = BuildHeaders(TemplateStages);
 
     /// <summary>Every header a file may contain (the template headers plus stage groups up to <see cref="MaxStages"/>).</summary>
-    public static IReadOnlyList<string> AcceptedHeaders { get; } = BuildHeaders(MaxStages);
+    public static IReadOnlyList<string> AcceptedHeaders { get; } = BuildHeaders(MaxStages).Append(ItemNo).ToList();
 
     /// <summary>Headers a file must contain (the other columns are optional, though a MAKE item needs the specification columns).</summary>
-    public static IReadOnlyList<string> RequiredHeaders { get; } = [ItemNo, PartName, Quantity];
+    public static IReadOnlyList<string> RequiredHeaders { get; } = [PartName, Quantity];
 
     /// <summary>Two FICTIONAL example rows (one MAKE with a two-stage route, one without stages). The codes must exist in the target database for the example to import.</summary>
     public static IReadOnlyList<IReadOnlyList<string>> ExampleRows { get; } =
     [
-        Row("ساخت", "1.10", "حلقه فولادی", "10", "PIECE", "ST37-R30", "1.2345", "6000", "30", "فوری", ("برش", "5", "SAW", ""), ("فرزکاری", "12.5", "MILLING", "FCC-06")),
-        Row("ساخت", "1.20", "شفت", "4", "PIECE", "ST37-R30", "3.5", "800", "40", "عادی"),
+        Row("ساخت", "1.10", "حلقه فولادی", "10", "PIECE", "ST37-R30", "1.2345", "6000", "30", "فوری", "", "", ("برش", "5", "SAW", ""), ("فرزکاری", "12.5", "MILLING", "FCC-06")),
+        Row("ساخت", "1.20", "شفت", "4", "PIECE", "ST37-R30", "3.5", "800", "40", "عادی", "", ""),
     ];
 
     /// <summary>Normalizes a header or label for comparison: trims, unifies Arabic and Persian letters and digits, removes the zero-width non-joiner and collapses white space.</summary>
@@ -106,7 +116,7 @@ public static class ItemImportTemplate
 
     private static IReadOnlyList<string> BuildHeaders(int stages)
     {
-        var headers = new List<string> { WorkType, ItemNo, PartName, Quantity, QuantityType, Material, Weight, Length, Diameter, Priority };
+        var headers = new List<string> { WorkType, CustomerItemRef, PartName, Quantity, QuantityType, Material, Weight, Length, Diameter, Priority, ParentRef, Assembly };
         for (var stage = 1; stage <= stages; stage++)
         {
             headers.AddRange([StageTitle(stage), StageMinutes(stage), StageUnit(stage), StageMachine(stage)]);
@@ -116,10 +126,10 @@ public static class ItemImportTemplate
     }
 
     private static IReadOnlyList<string> Row(
-        string workType, string itemNo, string partName, string quantity, string typeCode, string materialCode, string weight, string length, string diameter, string priority,
+        string workType, string customerRef, string partName, string quantity, string typeCode, string materialCode, string weight, string length, string diameter, string priority, string parentRef, string assembly,
         params (string Title, string Minutes, string Unit, string Machine)[] stages)
     {
-        var cells = new List<string> { workType, itemNo, partName, quantity, typeCode, materialCode, weight, length, diameter, priority };
+        var cells = new List<string> { workType, customerRef, partName, quantity, typeCode, materialCode, weight, length, diameter, priority, parentRef, assembly };
         for (var i = 0; i < TemplateStages; i++)
         {
             if (i < stages.Length)

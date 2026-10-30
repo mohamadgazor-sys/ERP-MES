@@ -34,13 +34,13 @@ public class UnitQueueMigrationTests
 
         Assert.Equal("1|1|Turning|4.5|2.5|3|2", Assert.Single(db.Query("SELECT Id, StageNo, StageTitle, PlannedMinutesPerPiece, PlannedQuantity, Status, Version FROM ItemStages")));
         Assert.Equal("||||", Assert.Single(db.Query("SELECT IFNULL(PlanningPosition,''), IFNULL(AvailableSinceUtc,''), IFNULL(StoppedAtUtc,''), IFNULL(StopReason,''), IFNULL(StoppedByUserId,'') FROM ItemStages")));
-        Assert.Equal("1|1.10|Ring|2.5|3", Assert.Single(db.Query("SELECT Id, ItemNo, PartName, RequestedQuantity, Version FROM RequestItems")));
+        Assert.Equal("1|M-1-001|Ring|2.5|3", Assert.Single(db.Query("SELECT Id, ItemNo, PartName, RequestedQuantity, Version FROM RequestItems")));
         Assert.Equal("1|1|2.5", Assert.Single(db.Query("SELECT RequestItemId, StageNo, ApprovedQuantity FROM QcApprovals")));
         Assert.Empty(db.Query("SELECT * FROM QueueOverrides"));
         Assert.Empty(db.Query("SELECT * FROM QueueOverrideHistory"));
         Assert.Empty(db.Query("SELECT * FROM UserUnitDesignations"));
         Assert.Empty(db.Query("PRAGMA foreign_key_check"));
-        Assert.Equal(25, db.Query("SELECT MigrationId FROM __EFMigrationsHistory").Count);
+        Assert.Equal(26, db.Query("SELECT MigrationId FROM __EFMigrationsHistory").Count);
 
         var keys = new List<string>();
         foreach (var table in new[] { "QueueOverrides", "QueueOverrideHistory", "UserUnitDesignations" })

@@ -26,7 +26,7 @@ public class ProductionQueueViewModelTests
     }
 
     private static Task ChangeItemAsync(WorkflowHarness h, long requestId, string itemNo, Action<RequestItem> change) =>
-        h.RequestRepository.UpdateRowsAsync(requestId, RowVersionExpectations.None, r => change(r.Items.Single(i => i.ItemNo == itemNo)), Token);
+        h.RequestRepository.UpdateRowsAsync(requestId, RowVersionExpectations.None, r => change(r.Items.Single(i => i.CustomerItemRef == itemNo)), Token);
 
     [Fact]
     public async Task Management_sees_the_queue_in_persian_with_persian_digits_and_labelled_estimates()
@@ -59,7 +59,7 @@ public class ProductionQueueViewModelTests
         Assert.Equal("wsj-898", make.RequestNo);
         Assert.Equal("مشتری فرضی", make.CustomerName);
         Assert.Equal("ایجادشده", make.RequestStatusText);
-        Assert.Equal("1.10", make.ItemNo);
+        Assert.Equal("wsj-898-001", make.ItemNo);
         Assert.Equal("ساخت", make.WorkTypeText);
         Assert.Equal("فوری", make.PriorityText);
         Assert.Equal("۱۰", make.QuantityText);
@@ -123,7 +123,7 @@ public class ProductionQueueViewModelTests
 
         await vm.LoadAsync(Token);
 
-        Assert.Equal(new[] { "b", "a", "c" }, vm.Rows.Select(r => r.ItemNo).ToArray());
+        Assert.Equal(new[] { "R-1-002", "R-1-001", "R-1-003" }, vm.Rows.Select(r => r.ItemNo).ToArray());
         Assert.Equal(new[] { "۱", "۲", "۳" }, vm.Rows.Select(r => r.Position).ToArray());
         Assert.Equal("خیلی فوری", vm.Rows[0].PriorityText);
     }

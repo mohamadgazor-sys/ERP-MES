@@ -29,6 +29,10 @@ public sealed class RequestItem
     internal RequestItem(
         long id,
         string itemNo,
+        int itemSequence,
+        RequestItem? parent,
+        string? customerItemRef,
+        bool isAssembly,
         string partName,
         decimal requestedQuantity,
         Priority priority,
@@ -39,6 +43,16 @@ public sealed class RequestItem
         if (string.IsNullOrWhiteSpace(itemNo))
         {
             throw new ArgumentException("An item number is required.", nameof(itemNo));
+        }
+
+        if (itemSequence is < 1 or > Request.MaxItemSequence)
+        {
+            throw new ArgumentOutOfRangeException(nameof(itemSequence), itemSequence, "The item sequence must be 1 to " + Request.MaxItemSequence + ".");
+        }
+
+        if (customerItemRef is not null && (customerItemRef.Length == 0 || customerItemRef.Length > MaxCustomerItemRefLength || customerItemRef.Trim() != customerItemRef))
+        {
+            throw new ArgumentException("A customer item reference is 1 to " + MaxCustomerItemRefLength + " characters without leading or trailing white space.", nameof(customerItemRef));
         }
 
         if (string.IsNullOrWhiteSpace(partName))
@@ -65,6 +79,10 @@ public sealed class RequestItem
         DiameterMm = spec.DiameterMm;
         Id = id;
         ItemNo = itemNo;
+        ItemSequence = itemSequence;
+        Parent = parent;
+        CustomerItemRef = customerItemRef;
+        IsAssembly = isAssembly;
         PartName = partName;
         RequestedQuantity = requestedQuantity;
         Priority = priority;
@@ -73,10 +91,53 @@ public sealed class RequestItem
         UpdatedAtUtc = createdAtUtc;
     }
 
+    /// <summary>The longest customer item reference.</summary>
+    public const int MaxCustomerItemRefLength = 40;
+
     public long Id { get; }
 
-    /// <summary>Customer/request item identifier, short text such as "1.10" or "A-01". Stored and compared exactly as given.</summary>
-    public string ItemNo { get; }
+    /// <summary>
+    /// The system item number shown everywhere (Decision Log #121): <c>RequestNo-001</c> for an item without a parent and <c>ParentNo.001</c> for a child. It is DERIVED from the request number, the
+    /// parent's number and <see cref="ItemSequence"/>, and kept in step by the request when the item is defined or moved; it is never parsed to recover the sequence. Unique within the request.
+    /// </summary>
+    public string ItemNo { get; private set; }
+
+    /// <summary>The 1 to 999 position of the item among its siblings (the items without a parent, or the children of one parent). Never reused (Decision Log #121 Q3).</summary>
+    public int ItemSequence { get; private set; }
+
+    /// <summary>The assembly this item belongs to, or null. Resolved by the persistence layer to the same request's item.</summary>
+    public RequestItem? Parent { get; private set; }
+
+    /// <summary>The database id of <see cref="Parent"/> (for queries); null for an item without a parent.</summary>
+    public long? ParentItemId { get; private set; }
+
+    /// <summary>True for an assembly: an item that may have children. It must be marked before a child is attached, and cannot be turned back while children remain (Decision Log #121 Q4, Q6).</summary>
+    public bool IsAssembly { get; private set; }
+
+    /// <summary>The customer's own item number (optional, exact text): the only key used to match an existing item on a re-import (Decision Log #121 Q2).</summary>
+    public string? CustomerItemRef { get; private set; }
+
+    /// <summary>The sequence the next child of this assembly receives; only ever grows, so numbers are never reused (Decision Log #121 Q3).</summary>
+    public int NextChildSequence { get; internal set; } = 1;
+
+    /// <summary>True once a stage has been defined: the hierarchy around the item is then locked (Decision Log #121 Q6).</summary>
+    public bool HasStages => _stages.Count > 0;
+
+    internal void ApplyNumber(string itemNo)
+    {
+        ItemNo = itemNo;
+    }
+
+    internal void MarkAssembly() => IsAssembly = true;
+
+    internal void UnmarkAssembly() => IsAssembly = false;
+
+    internal void Attach(RequestItem? parent, int sequence)
+    {
+        Parent = parent;
+        ParentItemId = parent?.Id is > 0 ? parent.Id : null;
+        ItemSequence = sequence;
+    }
 
     public string PartName { get; private set; }
 

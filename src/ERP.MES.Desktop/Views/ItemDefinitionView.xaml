@@ -32,7 +32,9 @@
                 <DataGrid ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedItem, Mode=TwoWay}" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single"
                           HeadersVisibility="Column" CanUserAddRows="False" CanUserDeleteRows="False" MaxHeight="200" Background="{StaticResource CardBrush}">
                     <DataGrid.Columns>
-                        <DataGridTextColumn Header="شمارهٔ آیتم" Binding="{Binding ItemNo}" ElementStyle="{StaticResource LtrCell}" Width="110" />
+                        <DataGridTextColumn Header="شمارهٔ آیتم" Binding="{Binding ItemNo}" ElementStyle="{StaticResource LtrCell}" Width="150" />
+                        <DataGridTextColumn Header="مرجع مشتری" Binding="{Binding CustomerRefText}" ElementStyle="{StaticResource LtrCell}" Width="100" />
+                        <DataGridTextColumn Header="مونتاژ" Binding="{Binding AssemblyText}" Width="60" />
                         <DataGridTextColumn Header="نام قطعه" Binding="{Binding PartName}" Width="*" />
                         <DataGridTextColumn Header="تعداد" Binding="{Binding QuantityText}" Width="80" />
                         <DataGridTextColumn Header="مشخصات" Binding="{Binding SpecificationText}" Width="2*" />
@@ -45,7 +47,9 @@
                     <StackPanel>
                         <TextBlock Text="تعریف آیتم" FontWeight="SemiBold" />
                         <WrapPanel Margin="0,6,0,0">
-                            <StackPanel Margin="0,0,10,0"><TextBlock Text="شمارهٔ آیتم" /><TextBox x:Name="ItemNoBox" Width="100" FlowDirection="LeftToRight" /></StackPanel>
+                            <StackPanel Margin="0,0,10,0"><TextBlock Text="شمارهٔ آیتم مشتری (اختیاری)" /><TextBox x:Name="ItemNoBox" Width="120" FlowDirection="LeftToRight" ToolTip="شمارهٔ خود مشتری برای این آیتم؛ شمارهٔ سامانه (شمارهٔ درخواست و ردیف) خودکار ساخته می‌شود." /></StackPanel>
+                            <StackPanel Margin="0,0,10,0"><TextBlock Text="والد (مونتاژ)" /><ComboBox x:Name="ParentBox" ItemsSource="{Binding ParentChoices}" DisplayMemberPath="Text" Width="220" ToolTip="برای ساخت زیرمجموعه، مونتاژ والد را انتخاب کنید؛ بدون انتخاب، آیتم مستقل است." /></StackPanel>
+                            <StackPanel Margin="0,0,10,0" VerticalAlignment="Bottom"><CheckBox x:Name="AssemblyBox" Content="این آیتم مونتاژ است" ToolTip="فقط آیتم مونتاژ می‌تواند زیرمجموعه داشته باشد." /></StackPanel>
                             <StackPanel Margin="0,0,10,0"><TextBlock Text="نام قطعه" /><TextBox x:Name="PartNameBox" Width="170" /></StackPanel>
                             <StackPanel Margin="0,0,10,0"><TextBlock Text="تعداد" /><TextBox x:Name="QuantityBox" Width="70" FlowDirection="LeftToRight" /></StackPanel>
                             <StackPanel Margin="0,0,10,0"><TextBlock Text="نوع تعداد" /><ComboBox x:Name="TypeBox" ItemsSource="{Binding QuantityTypeChoices}" DisplayMemberPath="Text" Width="200" /></StackPanel>
@@ -55,7 +59,11 @@
                             <StackPanel Margin="0,0,10,0"><TextBlock Text="قطر (mm)" /><TextBox x:Name="DiameterBox" Width="80" FlowDirection="LeftToRight" /></StackPanel>
                             <StackPanel Margin="0,0,10,0"><TextBlock Text="اولویت" /><ComboBox x:Name="PriorityBox" ItemsSource="{Binding Priorities}" DisplayMemberPath="Text" Width="110" /></StackPanel>
                         </WrapPanel>
-                        <Button Content="ثبت آیتم" Padding="12,5" HorizontalAlignment="Left" Margin="0,8,0,0" Click="OnDefineItemClick" />
+                        <WrapPanel Margin="0,8,0,0">
+                            <Button Content="ثبت آیتم" Padding="12,5" MinWidth="100" Margin="0,0,8,4" Click="OnDefineItemClick" ToolTip="آیتم جدید را با شمارهٔ خودکار ثبت می‌کند." />
+                            <Button Content="مونتاژ شود" Padding="12,5" MinWidth="100" Margin="0,0,8,4" Click="OnMakeAssemblyClick" ToolTip="آیتم انتخاب‌شده را مونتاژ می‌کند تا بتواند زیرمجموعه داشته باشد." />
+                            <Button Content="انتقال زیر والد انتخابی" Padding="12,5" MinWidth="150" Margin="0,0,8,4" Click="OnMoveClick" ToolTip="آیتم انتخاب‌شده را با زیرمجموعه‌اش زیر والد انتخاب‌شده می‌برد و شماره‌ها را به‌روز می‌کند؛ فقط تا پیش از تعریف مرحله ممکن است. بدون انتخاب والد، آیتم مستقل می‌شود." />
+                        </WrapPanel>
                     </StackPanel>
                 </Border>
 

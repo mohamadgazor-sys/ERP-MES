@@ -137,7 +137,7 @@ public class XlsxWorkbookTests
         Assert.Equal(WorkbookError.None, result.Error);
         Assert.Equal(3, result.Rows.Count);
         Assert.Equal(ItemImportTemplate.Headers.Count, result.Rows[0].Cells.Count);
-        Assert.Equal(ItemImportTemplate.ItemNo, result.Rows[0].Cells[2].Text);
+        Assert.Equal(ItemImportTemplate.CustomerItemRef, result.Rows[0].Cells[2].Text);
         Assert.Equal("1.10", result.Rows[1].Cells[2].Text);
     }
 }

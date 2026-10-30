@@ -37,6 +37,9 @@ public enum QueueBlock
 
     /// <summary>Scrap left a shortfall that Management must accept or Planning must answer before the stage can be QC approved.</summary>
     WaitingShortfallDecision,
+
+    /// <summary>The first stage of an assembly waits until every child and descendant has finished its route with every QC approval (Decision Log #121 Q5).</summary>
+    WaitingChildren,
 }
 
 /// <summary>
@@ -73,6 +76,9 @@ public sealed record UnitQueueEntry(
 {
     /// <summary>Position in the unit queue (1 = first); 0 for entries of the pending list, which have no queue position.</summary>
     public int Order { get; init; }
+
+    /// <summary>The customer's own item number, when the item has one (the system number is <see cref="ItemNo"/>).</summary>
+    public string? CustomerItemRef { get; init; }
 
     public DateTime? PlannedEndUtc { get; init; }
 

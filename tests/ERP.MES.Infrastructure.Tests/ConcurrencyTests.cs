@@ -54,8 +54,8 @@ public class ConcurrencyTests
 
         await using var first = db.NewContext();
         await using var second = db.NewContext();
-        var firstItem = await first.RequestItems.SingleAsync(i => i.ItemNo == "1.10", Token);
-        var secondItem = await second.RequestItems.SingleAsync(i => i.ItemNo == "1.10", Token);
+        var firstItem = await first.RequestItems.SingleAsync(i => i.CustomerItemRef == "1.10", Token);
+        var secondItem = await second.RequestItems.SingleAsync(i => i.CustomerItemRef == "1.10", Token);
         Assert.Equal(first.GetRowVersion(firstItem), second.GetRowVersion(secondItem));
         Assert.Equal(Priority.Urgent, firstItem.Priority);
 
@@ -66,7 +66,7 @@ public class ConcurrencyTests
         await Assert.ThrowsAsync<DbUpdateConcurrencyException>(() => second.SaveChangesAsync(Token));
 
         await using var check = db.NewContext();
-        var stored = await check.RequestItems.SingleAsync(i => i.ItemNo == "1.10", Token);
+        var stored = await check.RequestItems.SingleAsync(i => i.CustomerItemRef == "1.10", Token);
         Assert.Equal(Priority.VeryUrgent, stored.Priority);
         Assert.Equal(Now.AddMinutes(1), stored.UpdatedAtUtc);
         Assert.True(requestId > 0);
@@ -81,8 +81,8 @@ public class ConcurrencyTests
 
         await using var first = db.NewContext();
         await using var second = db.NewContext();
-        var firstItem = await first.RequestItems.Include(i => i.Stages).SingleAsync(i => i.ItemNo == "1.10", Token);
-        var secondItem = await second.RequestItems.Include(i => i.Stages).SingleAsync(i => i.ItemNo == "1.10", Token);
+        var firstItem = await first.RequestItems.Include(i => i.Stages).SingleAsync(i => i.CustomerItemRef == "1.10", Token);
+        var secondItem = await second.RequestItems.Include(i => i.Stages).SingleAsync(i => i.CustomerItemRef == "1.10", Token);
 
         // Stage 2 is executable after QC approved stage 1. Both contexts start it from the same stored state.
         firstItem.StartStage(2);
@@ -92,7 +92,7 @@ public class ConcurrencyTests
         await Assert.ThrowsAsync<DbUpdateConcurrencyException>(() => second.SaveChangesAsync(Token));
 
         await using var check = db.NewContext();
-        var stage = (await check.RequestItems.Include(i => i.Stages).SingleAsync(i => i.ItemNo == "1.10", Token)).Stages.Single(s => s.StageNo == 2);
+        var stage = (await check.RequestItems.Include(i => i.Stages).SingleAsync(i => i.CustomerItemRef == "1.10", Token)).Stages.Single(s => s.StageNo == 2);
         Assert.Equal(ItemStageStatus.InProgress, stage.Status);
         Assert.Equal(2L, check.GetRowVersion(stage));
         Assert.True(requestId > 0);

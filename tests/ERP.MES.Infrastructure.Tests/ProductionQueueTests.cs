@@ -85,7 +85,7 @@ public class ProductionQueueTests
     }
 
     private static Task ChangeItemAsync(World w, long requestId, string itemNo, Action<RequestItem> change) =>
-        w.Fixture.Db.Requests().UpdateRowsAsync(requestId, RowVersionExpectations.None, r => change(r.Items.Single(i => i.ItemNo == itemNo)), Token);
+        w.Fixture.Db.Requests().UpdateRowsAsync(requestId, RowVersionExpectations.None, r => change(r.Items.Single(i => i.CustomerItemRef == itemNo)), Token);
 
     private static async Task DefineRouteAsync(World w, long requestId, string itemNo, params decimal[] minutesPerPiece)
     {
@@ -128,7 +128,7 @@ public class ProductionQueueTests
         var entries = await LoadAsync(w);
 
         Assert.Equal(2, entries.Count);
-        var make = entries.Single(e => e.ItemNo == "1.10");
+        var make = entries.Single(e => e.CustomerItemRef == "1.10");
         Assert.Equal(request, make.RequestId);
         Assert.Equal("wsj-898", make.RequestNo);
         Assert.Equal(customer, make.CustomerId);
@@ -138,8 +138,8 @@ public class ProductionQueueTests
         Assert.Equal(Priority.Urgent, make.Priority);
         Assert.Equal(10m, make.RequestedQuantity);
         // The type of an entry is the one authoritative type of its request (Decision Log #84).
-        Assert.Equal(WorkType.Repair, entries.Single(e => e.ItemNo == "2.10").WorkType);
-        Assert.Equal(Priority.Normal, entries.Single(e => e.ItemNo == "2.10").Priority);
+        Assert.Equal(WorkType.Repair, entries.Single(e => e.CustomerItemRef == "2.10").WorkType);
+        Assert.Equal(Priority.Normal, entries.Single(e => e.CustomerItemRef == "2.10").Priority);
     }
 
     [Fact]
@@ -161,7 +161,7 @@ public class ProductionQueueTests
 
         var entries = await LoadAsync(w);
 
-        var open = entries.Single(e => e.ItemNo == "open");
+        var open = entries.Single(e => e.CustomerItemRef == "open");
         Assert.Equal(QueueRouteState.Open, open.RouteState);
         Assert.Equal(3, open.StageCount);
         Assert.Equal(1, open.ApprovedStageCount);
@@ -171,18 +171,18 @@ public class ProductionQueueTests
         Assert.Equal(30m, open.CurrentStage.EstimatedMinutes);   // 3 minutes per piece x 10 pieces
         Assert.Equal(95m, open.TotalEstimatedMinutes);            // (5 + 3 + 1.5) x 10
 
-        var waitingQc = entries.Single(e => e.ItemNo == "waiting-qc");
+        var waitingQc = entries.Single(e => e.CustomerItemRef == "waiting-qc");
         Assert.Equal(ItemStageStatus.WaitingQc, waitingQc.CurrentStage!.Status);
         Assert.Equal(0, waitingQc.ApprovedStageCount);
         Assert.Equal(8m, waitingQc.CurrentStage.EstimatedMinutes);
 
-        var done = entries.Single(e => e.ItemNo == "done");
+        var done = entries.Single(e => e.CustomerItemRef == "done");
         Assert.Equal(QueueRouteState.Completed, done.RouteState);
         Assert.Null(done.CurrentStage);
         Assert.Equal(1, done.ApprovedStageCount);
         Assert.Equal(2m, done.TotalEstimatedMinutes);
 
-        var none = entries.Single(e => e.ItemNo == "no-route");
+        var none = entries.Single(e => e.CustomerItemRef == "no-route");
         Assert.Equal(QueueRouteState.NoRoute, none.RouteState);
         Assert.Null(none.CurrentStage);
         Assert.Null(none.TotalEstimatedMinutes);
@@ -208,7 +208,7 @@ public class ProductionQueueTests
         var second = await LoadAsync(w);
 
         // Very urgent first; among equal priorities the older request date first, then the request created first, then the item added first.
-        Assert.Equal(new[] { "f", "d", "g", "e", "b", "c", "a" }, first.Select(e => e.ItemNo).ToArray());
+        Assert.Equal(new[] { "f", "d", "g", "e", "b", "c", "a" }, first.Select(e => e.CustomerItemRef).ToArray());
         Assert.Equal(first.Select(e => e.ItemId), second.Select(e => e.ItemId));
     }
 

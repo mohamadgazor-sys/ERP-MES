@@ -103,26 +103,32 @@ public class RequestTests
     }
 
     [Fact]
-    public void Item_numbers_are_unique_within_the_request_and_compared_exactly()
+    public void Customer_item_references_are_unique_within_the_request_and_compared_exactly()
     {
         var request = RequestFixtures.NewRequest();
         request.AddRing("1.10");
 
-        Assert.True(request.HasItemNo("1.10"));
+        Assert.True(request.HasCustomerItemRef("1.10"));
         Assert.Throws<InvalidOperationException>(() => request.AddShaft("1.10"));
         Assert.Single(request.Items);
 
-        // Different text is a different item number: no truncation, no trimming, no case folding.
-        Assert.False(request.HasItemNo("1.1"));
-        Assert.False(request.HasItemNo("1.10 "));
+        // Different text is a different reference: no truncation, no trimming, no case folding.
+        Assert.False(request.HasCustomerItemRef("1.1"));
+        Assert.False(request.HasCustomerItemRef("1.10 "));
         request.AddRing("1.1");
         request.AddRing("A-01");
         request.AddRing("a-01");
         Assert.Equal(4, request.Items.Count);
+
+        // Matching is by the reference only; the system number is not a reference.
+        Assert.Same(request.Items[0], request.FindByCustomerItemRef("1.10"));
+        Assert.Null(request.FindByCustomerItemRef("P-565-001"));
+        Assert.Null(request.FindByCustomerItemRef(null));
+        Assert.Null(request.FindByCustomerItemRef(string.Empty));
     }
 
     [Fact]
-    public void Item_numbers_are_never_parsed_numerically()
+    public void Customer_references_are_never_parsed_numerically_and_the_system_numbers_follow_the_sequence()
     {
         var request = RequestFixtures.NewRequest();
         request.AddRing("1");
@@ -130,7 +136,9 @@ public class RequestTests
         request.AddRing("1.0");
         request.AddRing("1.00");
 
-        Assert.Equal(new[] { "1", "01", "1.0", "1.00" }, request.Items.Select(i => i.ItemNo).ToArray());
+        Assert.Equal(new[] { "1", "01", "1.0", "1.00" }, request.Items.Select(i => i.CustomerItemRef).ToArray());
+        Assert.Equal(new[] { "P-565-001", "P-565-002", "P-565-003", "P-565-004" }, request.Items.Select(i => i.ItemNo).ToArray());
+        Assert.Equal(new[] { 1, 2, 3, 4 }, request.Items.Select(i => i.ItemSequence).ToArray());
     }
 
     [Fact]
@@ -285,12 +293,28 @@ public class RequestTests
     [Theory]
     [InlineData(null)]
     [InlineData("")]
-    [InlineData("  ")]
-    public void An_item_number_is_required(string? itemNo)
+    public void The_customer_reference_is_optional_and_the_item_still_gets_its_system_number(string? customerRef)
     {
         var request = RequestFixtures.NewRequest();
 
-        Assert.Throws<ArgumentException>(() => request.AddRing(itemNo!));
+        var item = request.AddRing(customerRef!);
+        var second = request.AddRing(customerRef!);
+
+        Assert.Null(item.CustomerItemRef);
+        Assert.Equal("P-565-001", item.ItemNo);
+        Assert.Equal("P-565-002", second.ItemNo);
+        Assert.Null(request.FindByCustomerItemRef(customerRef));
+    }
+
+    [Theory]
+    [InlineData("  ")]
+    [InlineData(" 1.10")]
+    [InlineData("1.10 ")]
+    public void A_customer_reference_with_leading_or_trailing_white_space_is_refused(string customerRef)
+    {
+        var request = RequestFixtures.NewRequest();
+
+        Assert.Throws<ArgumentException>(() => request.AddRing(customerRef));
         Assert.Empty(request.Items);
     }
 

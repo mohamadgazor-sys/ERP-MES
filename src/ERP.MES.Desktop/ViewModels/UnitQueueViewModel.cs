@@ -25,7 +25,11 @@ public sealed record UnitQueueRow(
     string ReasonText,
     string PositionText,
     string OverrideText,
-    string PlannedEndText);
+    string PlannedEndText)
+{
+    /// <summary>The customer's own item number (optional); <see cref="ItemNo"/> is the system number.</summary>
+    public string? CustomerItemRef => Entry.CustomerItemRef;
+}
 
 public sealed record DesignationDisplayRow(DesignationRow Row, string StatusText)
 {
