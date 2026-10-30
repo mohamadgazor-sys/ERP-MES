@@ -29,7 +29,7 @@ public sealed class KpiService(IKpiRepository store, IUnitQueueRepository unitQu
         return await CustomerService.GuardAsync(async () =>
         {
             IReadOnlySet<long>? visible = null;
-            if (user.DepartmentCode is not (DepartmentCodes.Planning or DepartmentCodes.Management))
+            if (user.DepartmentCode is not (DepartmentCodes.Planning or DepartmentCodes.Management or DepartmentCodes.ProductionManager))
             {
                 visible = (await unitQueue.ListDesignationsAsync(cancellationToken)).Where(d => d.Value.IsActive && d.Value.IsSupervisor && d.Value.UserId == user.UserId).Select(d => d.Value.ProductionUnitId).ToHashSet();
                 if (visible.Count == 0)

@@ -31,6 +31,7 @@ public class UnitQueueTests
         public required Principal ManagementStaff { get; init; }
 
         public required Principal Planning { get; init; }
+        public required Principal ProductionManager { get; init; }
 
         public required Principal Drawing { get; init; }
 
@@ -81,6 +82,7 @@ public class UnitQueueTests
             Manager = await UserAsync(fixture, admin, "manager.one", DepartmentCodes.Management, RoleCodes.Manager),
             ManagementStaff = await UserAsync(fixture, admin, "management.staff", DepartmentCodes.Management, RoleCodes.Staff),
             Planning = await UserAsync(fixture, admin, "planning.one", DepartmentCodes.Planning, RoleCodes.Staff),
+            ProductionManager = await UserAsync(fixture, admin, "prodmanager.one", DepartmentCodes.ProductionManager, RoleCodes.Manager),
             Drawing = await UserAsync(fixture, admin, "drawing.one", DepartmentCodes.Drawing, RoleCodes.Staff),
             Warehouse = await UserAsync(fixture, admin, "warehouse.one", DepartmentCodes.Warehouse, RoleCodes.Staff),
             Qc = await UserAsync(fixture, admin, "qc.one", DepartmentCodes.Qc, RoleCodes.Staff),
@@ -184,7 +186,7 @@ public class UnitQueueTests
 
     private static async Task<long> AddUnitAsync(World w, string code)
     {
-        var unit = await w.Services.PlanningMaster.AddUnitAsync(w.Planning, code, "واحد " + code, Token);
+        var unit = await w.Services.PlanningMaster.AddUnitAsync(w.Admin, code, "واحد " + code, Token);
         Assert.True(unit.Succeeded, unit.Status + " " + unit.Issue);
         return unit.Value!.Value.Id;
     }
@@ -247,7 +249,7 @@ public class UnitQueueTests
 
         // D is started, so it leads regardless of priority (IN_PROGRESS first).
         Assert.Equal(ValidationIssue.StageUnitNotDesignated, (await w.Work.PerformAsync(w.Production, StageAction.Start, await TargetAsync(w, d.RequestId, d.ItemId, 1), Token)).Issue);
-        Assert.True((await w.Designations.AssignAsync(w.Planning, w.Production.UserId, milling, Token)).Succeeded);
+        Assert.True((await w.Designations.AssignAsync(w.Admin, w.Production.UserId, milling, Token)).Succeeded);
         var started = await w.Work.PerformAsync(w.Production, StageAction.Start, await TargetAsync(w, d.RequestId, d.ItemId, 1), Token);
         Assert.True(started.Succeeded, started.Status + " " + started.Issue);
 
@@ -350,12 +352,12 @@ public class UnitQueueTests
         Assert.Equal(2, waiting.StageNo);
 
         // The later stage cannot start, even by a designated Production user, before QC released the previous one.
-        await w.Designations.AssignAsync(w.Planning, w.Production.UserId, turning);
+        await w.Designations.AssignAsync(w.Admin, w.Production.UserId, turning);
         var early = await w.Work.PerformAsync(w.Production, StageAction.Start, await TargetAsync(w, a.RequestId, a.ItemId, 2), Token);
         Assert.False(early.Succeeded);
 
         // Run stage 1 to QC approval; stage 2 then enters the turning queue as actionable work, and the completed stage is counted, not listed.
-        await w.Designations.AssignAsync(w.Planning, w.Production.UserId, milling);
+        await w.Designations.AssignAsync(w.Admin, w.Production.UserId, milling);
         Assert.True((await w.Work.PerformAsync(w.Production, StageAction.Start, await TargetAsync(w, a.RequestId, a.ItemId, 1), Token)).Succeeded);
         Assert.True((await w.Work.PerformAsync(w.Production, StageAction.SubmitForQc, await TargetAsync(w, a.RequestId, a.ItemId, 1), Token)).Succeeded);
         Assert.Equal(QueueBlock.WaitingQc, Assert.Single((await LoadAsync(w, w.Planning, milling)).Pending, e => e.ItemNo == "A").Block);
@@ -390,7 +392,7 @@ public class UnitQueueTests
         // Production without a designation sees no unit at all; with one, only that unit.
         Assert.Empty((await w.Queue.GetOverviewAsync(w.Production, Token)).Value!.Units);
         Assert.Equal(OperationStatus.NotAuthorized, (await w.Queue.LoadAsync(w.Production, milling, Token)).Status);
-        Assert.True((await w.Designations.AssignAsync(w.Planning, w.Production.UserId, milling, Token)).Succeeded);
+        Assert.True((await w.Designations.AssignAsync(w.Admin, w.Production.UserId, milling, Token)).Succeeded);
         Assert.Equal(["MILLING"], (await w.Queue.GetOverviewAsync(w.Production, Token)).Value!.Units.Select(u => u.Code).ToArray());
         Assert.True((await w.Queue.LoadAsync(w.Production, milling, Token)).Succeeded);
         Assert.Equal(OperationStatus.NotAuthorized, (await w.Queue.LoadAsync(w.Production, turning, Token)).Status);
@@ -400,8 +402,8 @@ public class UnitQueueTests
         Assert.Equal(2, (await w.Queue.GetOverviewAsync(w.Planning, Token)).Value!.Units.Count);
 
         // Withdrawing the designation takes the access away at the next call.
-        var row = (await w.Designations.LoadAsync(w.Planning, Token)).Value!.Rows.Single();
-        Assert.True((await w.Designations.RevokeAsync(w.Planning, row.DesignationId, row.Version, Token)).Succeeded);
+        var row = (await w.Designations.LoadAsync(w.ProductionManager, Token)).Value!.Rows.Single();
+        Assert.True((await w.Designations.RevokeAsync(w.Admin, row.DesignationId, row.Version, Token)).Succeeded);
         Assert.Equal(OperationStatus.NotAuthorized, (await w.Queue.LoadAsync(w.Production, milling, Token)).Status);
     }
 
@@ -429,6 +431,11 @@ public class UnitQueueTests
         foreach (var user in new Principal?[] { w.Manager, w.Drawing, w.Central, w.Qc, w.Warehouse, w.Admin, null })
         {
             Assert.Equal(OperationStatus.NotAuthorized, (await w.Queue.StopStageAsync(user, row, "problem", Token)).Status);
+        }
+
+        // The working unit is assigned by Program Admin only (Decision Log #122); the supervisor mark belongs to the Production Manager.
+        foreach (var user in new Principal?[] { w.Manager, w.Planning, w.ProductionManager, w.Drawing, w.Central, w.Qc, w.Warehouse, null })
+        {
             Assert.Equal(OperationStatus.NotAuthorized, (await w.Designations.AssignAsync(user, w.Production.UserId, milling, Token)).Status);
         }
 
@@ -577,7 +584,7 @@ public class UnitQueueTests
         await MaterialAsync(w);
         var a = await ItemAsync(w, "R-1", "A", [milling], Priority.Normal);
         await ItemAsync(w, "R-2", "B", [milling], Priority.VeryUrgent);
-        await w.Designations.AssignAsync(w.Planning, w.Production.UserId, milling);
+        await w.Designations.AssignAsync(w.Admin, w.Production.UserId, milling);
         var row = (await LoadAsync(w, w.Planning, milling)).Queue.Single(e => e.ItemNo == "A").ToRowRef();
 
         Assert.Equal(ValidationIssue.QueueReasonRequired, (await w.Queue.StopStageAsync(w.Production, row, " ", Token)).Issue);
@@ -617,7 +624,7 @@ public class UnitQueueTests
         await MaterialAsync(w);
         var a = await ItemAsync(w, "R-1", "A", [milling]);
         var unreleased = await ItemAsync(w, "R-2", "B", [milling], release: false);
-        await w.Designations.AssignAsync(w.Planning, w.Production.UserId, turning);
+        await w.Designations.AssignAsync(w.Admin, w.Production.UserId, turning);
 
         // Production designated only to another unit cannot start work of this unit.
         var wrongUnit = await w.Work.PerformAsync(w.Production, StageAction.Start, await TargetAsync(w, a.RequestId, a.ItemId, 1), Token);
@@ -627,7 +634,7 @@ public class UnitQueueTests
         var current = (await w.Services.Requests.GetAsync(w.Planning, a.RequestId, Token)).Value!;
         var back = await w.Services.Lifecycle.SendBackToDrawingAsync(w.Planning, a.RequestId, current.Request.Version, "نیاز به بازبینی", Token);
         Assert.True(back.Succeeded, back.Status + " " + back.Issue);
-        await w.Designations.AssignAsync(w.Planning, w.Production.UserId, milling);
+        await w.Designations.AssignAsync(w.Admin, w.Production.UserId, milling);
         Assert.Equal(ValidationIssue.StageGateNotSatisfied, (await w.Work.PerformAsync(w.Production, StageAction.Start, await TargetAsync(w, a.RequestId, a.ItemId, 1), Token)).Issue);
 
         var queue = await LoadAsync(w, w.Planning, milling);

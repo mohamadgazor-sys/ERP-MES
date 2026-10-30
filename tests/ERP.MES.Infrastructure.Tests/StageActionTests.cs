@@ -38,6 +38,7 @@ public class StageActionTests
         public required Principal ManagementStaff { get; init; }
 
         public required Principal Planning { get; init; }
+        public required Principal ProductionManager { get; init; }
 
         public required Principal Drawing { get; init; }
 
@@ -102,6 +103,7 @@ public class StageActionTests
             Manager = await UserAsync(fixture, admin, "manager.one", DepartmentCodes.Management, RoleCodes.Manager),
             ManagementStaff = await UserAsync(fixture, admin, "management.staff", DepartmentCodes.Management, RoleCodes.Staff),
             Planning = await UserAsync(fixture, admin, "planning.one", DepartmentCodes.Planning, RoleCodes.Staff),
+            ProductionManager = await UserAsync(fixture, admin, "prodmanager.one", DepartmentCodes.ProductionManager, RoleCodes.Manager),
             Drawing = await UserAsync(fixture, admin, "drawing.one", DepartmentCodes.Drawing, RoleCodes.Staff),
             Warehouse = await UserAsync(fixture, admin, "warehouse.one", DepartmentCodes.Warehouse, RoleCodes.Staff),
             Qc = await UserAsync(fixture, admin, "qc.one", DepartmentCodes.Qc, RoleCodes.Staff),
@@ -221,7 +223,7 @@ public class StageActionTests
 
     private static async Task<long> AddUnitAsync(World w, string code)
     {
-        var unit = await w.Services.PlanningMaster.AddUnitAsync(w.Planning, code, "واحد " + code, Token);
+        var unit = await w.Services.PlanningMaster.AddUnitAsync(w.Admin, code, "واحد " + code, Token);
         Assert.True(unit.Succeeded, unit.Status + " " + unit.Issue);
         return unit.Value!.Value.Id;
     }
@@ -281,7 +283,7 @@ public class StageActionTests
 
     private static async Task<long> OperatorAsync(World w, string code)
     {
-        var added = await w.Services.Operators.RegisterAsync(w.Planning, code, "اپراتور " + code, null, Token);
+        var added = await w.Services.Operators.RegisterAsync(w.Admin, code, "اپراتور " + code, null, Token);
         Assert.True(added.Succeeded, added.Status + " " + added.Issue);
         return added.Value!.Value.Id;
     }
@@ -306,19 +308,19 @@ public class StageActionTests
         var unit = await AddUnitAsync(w, "MILLING");
         var template = await TemplateAsync(w, "D", "08:00", "17:00", "12:00", "13:00");
         await RunUnitShiftAsync(w, unit, template, 3, 1);
-        var machine = (await w.Services.PlanningMaster.AddMachineAsync(w.Planning, "FCC-06", "فرز", unit, Token)).Value!.Value.Id;
+        var machine = (await w.Services.PlanningMaster.AddMachineAsync(w.Admin, "FCC-06", "فرز", unit, Token)).Value!.Value.Id;
         await MaterialAsync(w);
         var item = await ItemAsync(w, "R-1", "A", [unit]);
-        var designation = (await w.Designations.AssignAsync(w.Planning, w.Production.UserId, unit, Token)).Value!;
-        Assert.True((await w.Designations.AssignAsync(w.Planning, w.Supervisor.UserId, unit, Token)).Succeeded);
+        var designation = (await w.Designations.AssignAsync(w.Admin, w.Production.UserId, unit, Token)).Value!;
+        Assert.True((await w.Designations.AssignAsync(w.Admin, w.Supervisor.UserId, unit, Token)).Succeeded);
         if (supervisor)
         {
-            var row = (await w.Designations.LoadAsync(w.Planning, Token)).Value!.Rows.Single(r => r.UserId == w.Supervisor.UserId);
-            Assert.True((await w.Designations.SetSupervisorAsync(w.Planning, row.DesignationId, row.Version, true, Token)).Succeeded);
+            var row = (await w.Designations.LoadAsync(w.ProductionManager, Token)).Value!.Rows.Single(r => r.UserId == w.Supervisor.UserId);
+            Assert.True((await w.Designations.SetSupervisorAsync(w.ProductionManager, row.DesignationId, row.Version, true, Token)).Succeeded);
         }
 
         Assert.True((await w.Work.PerformAsync(w.Production, StageAction.Start, await TargetAsync(w, item.RequestId, item.ItemId, 1), Token)).Succeeded);
-        var operatorId = (await w.Services.Operators.RegisterAsync(w.Planning, "OP-1", "علی رضایی", w.Production.UserId, Token)).Value!.Value.Id;
+        var operatorId = (await w.Services.Operators.RegisterAsync(w.Admin, "OP-1", "علی رضایی", w.Production.UserId, Token)).Value!.Value.Id;
         if (plan)
         {
             Assert.True((await w.Schedule.ScheduleAsync(w.Planning, operatorId, DateOnly.FromDateTime(Day), unit, template, machine, null, null, Token)).Succeeded);
@@ -368,7 +370,7 @@ public class StageActionTests
         await MaterialAsync(w);
         foreach (var unit in units)
         {
-            Assert.True((await w.Designations.AssignAsync(w.Planning, w.Production.UserId, unit, Token)).Succeeded);
+            Assert.True((await w.Designations.AssignAsync(w.Admin, w.Production.UserId, unit, Token)).Succeeded);
         }
 
         return await ItemAsync(w, "R-1", "A", units.ToArray(), release: false);
@@ -614,8 +616,8 @@ public class StageActionTests
         await MustAsync(w, w.Planning, StageAction.Release, item);
 
         // A Production user who is not designated to the stage's unit cannot start it.
-        var designation = (await w.Designations.LoadAsync(w.Planning, Token)).Value!.Rows.Single();
-        Assert.True((await w.Designations.RevokeAsync(w.Planning, designation.DesignationId, designation.Version, Token)).Succeeded);
+        var designation = (await w.Designations.LoadAsync(w.ProductionManager, Token)).Value!.Rows.Single();
+        Assert.True((await w.Designations.RevokeAsync(w.Admin, designation.DesignationId, designation.Version, Token)).Succeeded);
         var refused = await ActAsync(w, w.Production, StageAction.Start, item);
         Assert.Equal((OperationStatus.ValidationFailed, ValidationIssue.StageUnitNotDesignated), (refused.Status, refused.Issue));
         Assert.Equal(ItemStageStatus.Waiting, (await StageAsync(w, item.RequestId, 1)).Status);

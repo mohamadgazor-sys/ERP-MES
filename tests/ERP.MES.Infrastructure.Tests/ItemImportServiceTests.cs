@@ -315,7 +315,7 @@ public class ItemImportServiceTests
         var (w, id, _) = await ReadyWorldAsync();
         using var disposeWorld = w;
         Assert.True((await CommitAsync(w, id, Sheet(MakeRow("1.10", "Ring A", "10")))).Succeeded);
-        var unit = (await w.Services.PlanningMaster.AddUnitAsync(w.Planning, "MILLING", "فرزکاری", Token)).Value!;
+        var unit = (await w.Services.PlanningMaster.AddUnitAsync(w.Admin, "MILLING", "فرزکاری", Token)).Value!;
         var current = (await w.Services.Requests.GetAsync(w.Planning, id, Token)).Value!;
         var itemId = current.Request.Value.Items.Single().Id;
         Assert.True((await w.Items.DefineStageAsync(w.Planning, id, current.Request.Version, itemId, current.Versions.ItemVersion(itemId), new DefineStageCommand("فرز", 3m, unit.Value.Id, null), Token)).Succeeded);
@@ -337,9 +337,9 @@ public class ItemImportServiceTests
     {
         var (w, id, _) = await ReadyWorldAsync();
         using var disposeWorld = w;
-        var milling = (await w.Services.PlanningMaster.AddUnitAsync(w.Planning, "MILLING", "فرزکاری", Token)).Value!;
-        await w.Services.PlanningMaster.AddUnitAsync(w.Planning, "TURNING", "تراشکاری", Token);
-        var machine = (await w.Services.PlanningMaster.AddMachineAsync(w.Planning, "FCC-06", "فرز CNC", milling.Value.Id, Token)).Value!;
+        var milling = (await w.Services.PlanningMaster.AddUnitAsync(w.Admin, "MILLING", "فرزکاری", Token)).Value!;
+        await w.Services.PlanningMaster.AddUnitAsync(w.Admin, "TURNING", "تراشکاری", Token);
+        var machine = (await w.Services.PlanningMaster.AddMachineAsync(w.Admin, "FCC-06", "فرز CNC", milling.Value.Id, Token)).Value!;
         var headers = H.Concat([ItemImportTemplate.StageTitle(1), ItemImportTemplate.StageMinutes(1), ItemImportTemplate.StageUnit(1), ItemImportTemplate.StageMachine(1), ItemImportTemplate.StageTitle(2), ItemImportTemplate.StageMinutes(2), ItemImportTemplate.StageUnit(2)]).ToList();
         IReadOnlyList<string> row = [.. MakeRow("1.10"), "فرزکاری", "12.5", "MILLING", "FCC-06", "تراشکاری", "3", "TURNING"];
 
@@ -518,7 +518,7 @@ public class ItemImportServiceTests
     {
         var (w, id, _) = await ReadyWorldAsync();
         using var disposeWorld = w;
-        await w.Services.PlanningMaster.AddUnitAsync(w.Planning, "MILLING", "فرزکاری", Token);
+        await w.Services.PlanningMaster.AddUnitAsync(w.Admin, "MILLING", "فرزکاری", Token);
         List<string> headers = [.. H];
         List<string> cells = [.. MakeRow("1.10")];
         for (var k = 1; k <= 12; k++)

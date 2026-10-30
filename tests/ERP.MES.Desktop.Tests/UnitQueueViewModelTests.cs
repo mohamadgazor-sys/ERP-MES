@@ -58,10 +58,10 @@ public class UnitQueueViewModelTests
     {
         using var h = await WorkflowHarness.CreateAsync(Token);
         Assert.True((await h.Workflow.Materials.AddMaterialAsync(h.Warehouse, "ST37-R30", "میلگرد ST37", "ST37", "میلگرد", Token)).Succeeded);
-        var unit = (await h.Workflow.PlanningMaster.AddUnitAsync(h.Planning, "MILLING", "فرزکاری", Token)).Value!.Value.Id;
+        var unit = (await h.Workflow.PlanningMaster.AddUnitAsync(h.Admin, "MILLING", "فرزکاری", Token)).Value!.Value.Id;
         var a = await ItemAsync(h, "R-1", "A", unit);
         var b = await ItemAsync(h, "R-2", "B", unit);
-        Assert.True((await h.Workflow.UnitDesignations.AssignAsync(h.Planning, h.Production.UserId, unit, Token)).Succeeded);
+        Assert.True((await h.Workflow.UnitDesignations.AssignAsync(h.Admin, h.Production.UserId, unit, Token)).Succeeded);
 
         // Planning
         var planning = For(h, h.Planning);
@@ -125,7 +125,7 @@ public class UnitQueueViewModelTests
     {
         using var h = await WorkflowHarness.CreateAsync(Token);
         Assert.True((await h.Workflow.Materials.AddMaterialAsync(h.Warehouse, "ST37-R30", "میلگرد ST37", "ST37", "میلگرد", Token)).Succeeded);
-        var unit = (await h.Workflow.PlanningMaster.AddUnitAsync(h.Planning, "MILLING", "فرزکاری", Token)).Value!.Value.Id;
+        var unit = (await h.Workflow.PlanningMaster.AddUnitAsync(h.Admin, "MILLING", "فرزکاری", Token)).Value!.Value.Id;
         await ItemAsync(h, "R-1", "A", unit);
         await ItemAsync(h, "R-2", "B", unit);
         var first = For(h, h.Planning);

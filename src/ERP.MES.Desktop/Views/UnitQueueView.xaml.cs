@@ -55,7 +55,7 @@ public partial class UnitQueueView : UserControl
     {
         if (One() is { } row)
         {
-            await _viewModel.MoveAsync(row, -1);
+            await MoveAsync(row, -1);
         }
     }
 
@@ -63,8 +63,24 @@ public partial class UnitQueueView : UserControl
     {
         if (One() is { } row)
         {
-            await _viewModel.MoveAsync(row, +1);
+            await MoveAsync(row, +1);
         }
+    }
+
+    /// <summary>The Production Manager reorders only with a reason (Decision Log #122); Planning does not need one.</summary>
+    private async Task MoveAsync(UnitQueueRow row, int delta)
+    {
+        string? reason = null;
+        if (_viewModel.OrderNeedsReason)
+        {
+            reason = PromptWindow.Ask(Window.GetWindow(this), "تغییر ترتیب صف", "دلیل تغییر ترتیب (الزامی):");
+            if (reason is null)
+            {
+                return;
+            }
+        }
+
+        await _viewModel.MoveAsync(row, delta, reason);
     }
 
     private async void OnPriorityClick(object sender, RoutedEventArgs e)

@@ -34,13 +34,13 @@ public class OvertimeAssignmentTests
     public void Planning_approves_within_the_limits_or_sends_to_management_which_then_decides()
     {
         var within = Assignment();
-        within.PlanningApprove(false, null, 5, Now);
+        within.FirstApprove(false, null, 5, Now);
         Assert.Equal(OvertimeStatus.Approved, within.Status);
-        Assert.Throws<InvalidOperationException>(() => within.PlanningApprove(false, null, 5, Now));
+        Assert.Throws<InvalidOperationException>(() => within.FirstApprove(false, null, 5, Now));
         Assert.Throws<InvalidOperationException>(() => within.ManagementApprove(null, 6, Now));
 
         var beyond = Assignment();
-        beyond.PlanningApprove(true, " نیاز ", 5, Now);
+        beyond.FirstApprove(true, " نیاز ", 5, Now);
         Assert.Equal(OvertimeStatus.AwaitingManagement, beyond.Status);
         Assert.True(beyond.ExceedsLimits);
         Assert.Equal("نیاز", beyond.DecisionNote);
@@ -62,13 +62,13 @@ public class OvertimeAssignmentTests
         Assert.Throws<InvalidOperationException>(() => proposed.Cancel("x", Now));
 
         var waiting = Assignment();
-        waiting.PlanningApprove(true, null, 5, Now);
+        waiting.FirstApprove(true, null, 5, Now);
         Assert.Throws<InvalidOperationException>(() => waiting.Reject("x", 5, Now, byManagement: false));
         waiting.Reject("خارج از سقف", 6, Now, byManagement: true);
         Assert.Equal(6, waiting.ManagementUserId);
 
         var approved = Assignment();
-        approved.PlanningApprove(false, null, 5, Now);
+        approved.FirstApprove(false, null, 5, Now);
         approved.Cancel("تغییر", Now);
         Assert.Equal(OvertimeStatus.Cancelled, approved.Status);
         Assert.Throws<ArgumentException>(() => Assignment().Cancel(null, Now));

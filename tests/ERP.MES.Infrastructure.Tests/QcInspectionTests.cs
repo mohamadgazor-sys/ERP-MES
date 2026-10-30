@@ -186,7 +186,7 @@ public class QcInspectionTests
 
     private static async Task<long> AddUnitAsync(World w, string code)
     {
-        var unit = await w.Services.PlanningMaster.AddUnitAsync(w.Planning, code, "واحد " + code, Token);
+        var unit = await w.Services.PlanningMaster.AddUnitAsync(w.Admin, code, "واحد " + code, Token);
         Assert.True(unit.Succeeded, unit.Status + " " + unit.Issue);
         return unit.Value!.Value.Id;
     }
@@ -240,10 +240,10 @@ public class QcInspectionTests
         var turning = stages > 1 ? await AddUnitAsync(w, "TURNING") : milling;
         await MaterialAsync(w);
         var item = await ItemAsync(w, requestNo, "A", stages > 1 ? [milling, turning] : [milling], pairs: true);
-        Assert.True((await w.Designations.AssignAsync(w.Planning, w.Production.UserId, milling, Token)).Succeeded);
+        Assert.True((await w.Designations.AssignAsync(w.Admin, w.Production.UserId, milling, Token)).Succeeded);
         if (stages > 1)
         {
-            Assert.True((await w.Designations.AssignAsync(w.Planning, w.Production.UserId, turning, Token)).Succeeded);
+            Assert.True((await w.Designations.AssignAsync(w.Admin, w.Production.UserId, turning, Token)).Succeeded);
         }
 
         Assert.True((await w.Work.PerformAsync(w.Production, StageAction.Start, await TargetAsync(w, item.RequestId, item.ItemId, 1), Token)).Succeeded);

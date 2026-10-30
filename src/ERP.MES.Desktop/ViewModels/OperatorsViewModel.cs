@@ -35,6 +35,7 @@ public sealed class OperatorsViewModel(OperatorService service, PlanningMasterSe
     private bool _isBusy;
     private bool _isLoading;
     private bool _canMaintain;
+    private bool _canMaintainQualifications;
     private OperatorRow? _selectedOperator;
     private AssignmentRow? _selectedAssignment;
     private QualificationRow? _selectedQualification;
@@ -85,11 +86,18 @@ public sealed class OperatorsViewModel(OperatorService service, PlanningMasterSe
         private set => SetProperty(ref _isLoading, value);
     }
 
-    /// <summary>True when the signed-in user is Planning (the Application's answer from the database); the others only read.</summary>
+    /// <summary>True when the signed-in user is Program Admin (the Application's answer from the database); the others only read. Operators and eligibility assignments are Admin's (Decision Log #122).</summary>
     public bool CanMaintain
     {
         get => _canMaintain;
         private set => SetProperty(ref _canMaintain, value);
+    }
+
+    /// <summary>True when the signed-in user may record qualifications (Planning); separate from <see cref="CanMaintain"/>.</summary>
+    public bool CanMaintainQualifications
+    {
+        get => _canMaintainQualifications;
+        private set => SetProperty(ref _canMaintainQualifications, value);
     }
 
     public async Task LoadAsync(CancellationToken cancellationToken = default) => await RunAsync(() => ReloadAsync(cancellationToken, keepMessage: false), showLoading: true);
@@ -164,6 +172,7 @@ public sealed class OperatorsViewModel(OperatorService service, PlanningMasterSe
         }
 
         CanMaintain = await service.CanMaintainAsync(currentUser(), cancellationToken);
+        CanMaintainQualifications = await service.CanMaintainQualificationsAsync(currentUser(), cancellationToken);
         var outcome = await service.LoadAsync(currentUser(), cancellationToken);
         if (!outcome.Succeeded)
         {

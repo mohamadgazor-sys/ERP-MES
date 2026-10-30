@@ -83,6 +83,8 @@ public class SqlServerPassTests
         public Principal Operator => Users["operator"];
 
         public Principal Supervisor => Users["supervisor"];
+
+        public Principal ProductionManager => Users["prodmanager"];
     }
 
     private static async Task<World> StartAsync(SqlServerFixture db)
@@ -105,7 +107,7 @@ public class SqlServerPassTests
                  {
                      ("central", DepartmentCodes.Central, RoleCodes.Staff), ("manager", DepartmentCodes.Management, RoleCodes.Manager), ("planning", DepartmentCodes.Planning, RoleCodes.Staff),
                      ("drawing", DepartmentCodes.Drawing, RoleCodes.Staff), ("warehouse", DepartmentCodes.Warehouse, RoleCodes.Staff), ("qc", DepartmentCodes.Qc, RoleCodes.Staff),
-                     ("operator", DepartmentCodes.Production, RoleCodes.Staff), ("supervisor", DepartmentCodes.Production, RoleCodes.Staff),
+                     ("operator", DepartmentCodes.Production, RoleCodes.Staff), ("supervisor", DepartmentCodes.Production, RoleCodes.Staff), ("prodmanager", DepartmentCodes.ProductionManager, RoleCodes.Manager),
                  })
         {
             var name = key + ".one";
@@ -169,8 +171,8 @@ public class SqlServerPassTests
         await using var db = await SqlServerFixture.CreateAsync();
         var w = await StartAsync(db);
         var s = w.Services;
-        var milling = (await s.PlanningMaster.AddUnitAsync(w.Planning, "MILLING", "فرزکاری", Token)).Value!.Value.Id;
-        var machine = (await s.PlanningMaster.AddMachineAsync(w.Planning, "M1", "ماشین ۱", milling, Token)).Value!.Value.Id;
+        var milling = (await s.PlanningMaster.AddUnitAsync(w.Admin, "MILLING", "فرزکاری", Token)).Value!.Value.Id;
+        var machine = (await s.PlanningMaster.AddMachineAsync(w.Admin, "M1", "ماشین ۱", milling, Token)).Value!.Value.Id;
         Assert.True((await s.PlanningMaster.AddRateAsync(w.Planning, machine, 1_200_000m, "1405/01/01", "نرخ", Token)).Succeeded);
         var material = (await s.Materials.AddMaterialAsync(w.Warehouse, "ST37-R30", "میلگرد", "ST37", "میلگرد", Token)).Value!.Value.Id;
         Assert.True((await s.Materials.AddPriceAsync(w.Warehouse, material, 90_000m, "1405/01/01", "قیمت", Token)).Succeeded);
@@ -178,16 +180,16 @@ public class SqlServerPassTests
         Assert.True((await s.Calendar.AddUnitShiftAsync(w.Planning, milling, template, 3, 1, false, Token)).Succeeded);
         foreach (var user in new[] { w.Operator, w.Supervisor })
         {
-            Assert.True((await s.UnitDesignations.AssignAsync(w.Planning, user.UserId, milling, Token)).Succeeded);
+            Assert.True((await s.UnitDesignations.AssignAsync(w.Admin, user.UserId, milling, Token)).Succeeded);
         }
 
-        var row = (await s.UnitDesignations.LoadAsync(w.Planning, Token)).Value!.Rows.Single(r => r.UserId == w.Supervisor.UserId);
-        Assert.True((await s.UnitDesignations.SetSupervisorAsync(w.Planning, row.DesignationId, row.Version, true, Token)).Succeeded);
-        var op1 = (await s.Operators.RegisterAsync(w.Planning, "OP1", "علی", w.Operator.UserId, Token)).Value!.Value.Id;
-        var op2 = (await s.Operators.RegisterAsync(w.Planning, "OP2", "حسن", null, Token)).Value!.Value.Id;
+        var row = (await s.UnitDesignations.LoadAsync(w.ProductionManager, Token)).Value!.Rows.Single(r => r.UserId == w.Supervisor.UserId);
+        Assert.True((await s.UnitDesignations.SetSupervisorAsync(w.ProductionManager, row.DesignationId, row.Version, true, Token)).Succeeded);
+        var op1 = (await s.Operators.RegisterAsync(w.Admin, "OP1", "علی", w.Operator.UserId, Token)).Value!.Value.Id;
+        var op2 = (await s.Operators.RegisterAsync(w.Admin, "OP2", "حسن", null, Token)).Value!.Value.Id;
         foreach (var op in new[] { op1, op2 })
         {
-            Assert.True((await s.Operators.AssignAsync(w.Planning, op, machine, "1405/01/01", false, null, Token)).Succeeded);
+            Assert.True((await s.Operators.AssignAsync(w.Admin, op, machine, "1405/01/01", false, null, Token)).Succeeded);
             Assert.True((await s.WorkerSchedule.ScheduleAsync(w.Planning, op, new DateOnly(2026, 10, 24), milling, template, null, null, null, Token)).Succeeded);
         }
 

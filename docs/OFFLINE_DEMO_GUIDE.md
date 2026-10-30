@@ -29,11 +29,11 @@
 
 ## 4. Accounts (all fictional)
 
-Open `DEMO-ACCOUNTS.txt` in the package folder. All nine accounts use the **same demo-only passphrase** written there (`PASSPHRASE:` line); user names are lower case.
+Open `DEMO-ACCOUNTS.txt` in the package folder. All ten accounts use the **same demo-only passphrase** written there (`PASSPHRASE:` line); user names are lower case.
 
 | User name | Role | Use it to show |
 |---|---|---|
-| `demo.central` | Central | create a customer request, attach its PDF, submit to Management |
+| `demo.secretary` | Central | create a customer request, attach its PDF, submit to Management |
 | `demo.management` | Management | approve the request, the contract and the price; unit metrics |
 | `demo.planning` | Planning | send to Drawing, per-item contract decision, define items and stages, release, schedule the operator |
 | `demo.drawing` | Drawing | record the technical result |
@@ -51,7 +51,7 @@ The application locks itself after 15 minutes without activity (Ctrl+L locks it 
 
 * Close the application, then double-click **`Reset-Demo.cmd`**, type `YES`. It replaces the contents of **`data\erpmes.demo.db`** with the fictional starting data (20-60 seconds). That one file is all it touches: it refuses any file that is not a marked demonstration database, it needs the application to be closed, and it keeps the old database if anything fails. It does not delete the program, your other files or the logs.
 * A reset is **not** the same as deleting the package: to remove everything, delete the extracted folder.
-* After a reset the starting state is exactly: 3 fictional customers, 2 sample requests, the master data (milling and turning units, machines FCC-06 and TCC-12 with rates, shift D, material ST37-R30, operator OP-DEMO), nine accounts, no work sessions.
+* After a reset the starting state is exactly: 3 fictional customers, 2 sample requests, the master data (milling and turning units, machines FCC-06 and TCC-12 with rates, shift D, material ST37-R30, operator OP-DEMO), ten accounts, no work sessions.
 
 ## 6. How to check that it is running on local demo data
 
@@ -113,8 +113,8 @@ Double-click **`Collect-Diagnostics.cmd`**. It writes `erpmes-diagnostics-<date>
 | No .NET on the machine | the test renames `C:\Program Files\dotnet`, clears `DOTNET_*` and `PATH`, deletes the NuGet caches, and shows that `dotnet` cannot be resolved - then everything below runs |
 | No network for the package | Windows Firewall blocks inbound and outbound traffic of the package programs; a control proves the mechanism works (a blocked copy of `curl` placed in the package folder cannot reach `example.com` while the system `curl` gets HTTP 200); the application holds **0 non-loopback TCP connections and 0 UDP endpoints** in every one of the ~20 sessions of the run |
 | Start | `Check-Demo` (no FAIL), `Start-Demo` creates the database and starts the application in about 18-19 s; `demo-status` says `Demo` |
-| Accounts | all nine accounts sign in through the real sign-in window with the demo passphrase; no change-password panel appears |
-| Pages | `demo.supervisor`, `demo.planning`, `demo.central` open all 23 navigation pages (69 visits) with their headings; customers grid 3 rows, requests grid 2 rows |
+| Accounts | all ten accounts sign in through the real sign-in window with the demo passphrase; no change-password panel appears |
+| Pages | `demo.supervisor`, `demo.planning`, `demo.secretary` open all 23 navigation pages (69 visits) with their headings; customers grid 3 rows, requests grid 2 rows |
 | Reset | `Reset-Demo -Yes` succeeds, the file is still a marked demonstration database, the accounts sign in again |
 | Logs | the demo passphrase appears in no log file; no one-time credential file is left in `%TEMP%`; the application log records its start facts (`.NET 10.0.12`, Windows 10.0.26100, X64, database path) |
 | UI behaviour on real screens | see `docs/UI_SMOKE.md` sections 5 and 6: item-scoped contract decisions, release gating, a work session with pause/resume, QC refused while a session is open, and the three visual defects that were found and fixed |

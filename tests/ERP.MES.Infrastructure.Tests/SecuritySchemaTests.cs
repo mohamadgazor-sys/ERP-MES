@@ -18,7 +18,7 @@ public class SecuritySchemaTests
         await db.MigrateAsync();
 
         Assert.Equal(
-            new[] { "CENTRAL", "DRAWING", "MAINTENANCE_PM", "MANAGEMENT", "PLANNING", "PRODUCTION", "QC", "SYSTEM", "WAREHOUSE" },
+            new[] { "CENTRAL", "DRAWING", "MAINTENANCE_PM", "MANAGEMENT", "PLANNING", "PRODUCTION", "PRODUCTION_MANAGER", "QC", "SYSTEM", "WAREHOUSE" },
             db.Query("SELECT Code FROM Departments ORDER BY Code"));
         Assert.Equal(new[] { "ADMIN", "MANAGER", "STAFF" }, db.Query("SELECT Code FROM Roles ORDER BY Code"));
         Assert.Empty(db.Query("SELECT Id FROM Departments WHERE Name = '' OR Name IS NULL"));

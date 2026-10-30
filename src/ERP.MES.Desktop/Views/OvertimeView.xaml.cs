@@ -22,19 +22,19 @@ public partial class OvertimeView : UserControl
 
     private async void OnRange(object sender, RoutedEventArgs e) => await _viewModel.SetRangeAsync(RangeFrom.Text, RangeTo.Text);
 
-    private async void OnPlanningApprove(object sender, RoutedEventArgs e)
+    private async void OnApprove(object sender, RoutedEventArgs e)
     {
         if (OvertimeGrid.SelectedItem is OvertimeRow row)
         {
-            await _viewModel.PlanningApproveAsync(row, null);
+            await _viewModel.ApproveAsync(row, null);
         }
     }
 
-    private async void OnPlanningReject(object sender, RoutedEventArgs e)
+    private async void OnReject(object sender, RoutedEventArgs e)
     {
         if (OvertimeGrid.SelectedItem is OvertimeRow row && PromptWindow.Ask(Window.GetWindow(this), "رد اضافه‌کاری", "دلیل رد (الزامی):") is { } reason)
         {
-            await _viewModel.PlanningRejectAsync(row, reason);
+            await _viewModel.RejectAsync(row, reason);
         }
     }
 

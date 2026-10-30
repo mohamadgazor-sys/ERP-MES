@@ -58,16 +58,16 @@ public class WorkBoardViewModelTests
         // 09:00 local on the Saturday (UTC+3:30).
         h.Clock.UtcNow = new DateTime(2026, 10, 24, 5, 30, 0, DateTimeKind.Utc);
         Assert.True((await h.Workflow.Materials.AddMaterialAsync(h.Warehouse, "ST37-R30", "میلگرد ST37", "ST37", "میلگرد", Token)).Succeeded);
-        var unit = (await h.Workflow.PlanningMaster.AddUnitAsync(h.Planning, "MILLING", "فرزکاری", Token)).Value!.Value.Id;
-        var turning = (await h.Workflow.PlanningMaster.AddUnitAsync(h.Planning, "TURNING", "تراشکاری", Token)).Value!.Value.Id;
+        var unit = (await h.Workflow.PlanningMaster.AddUnitAsync(h.Admin, "MILLING", "فرزکاری", Token)).Value!.Value.Id;
+        var turning = (await h.Workflow.PlanningMaster.AddUnitAsync(h.Admin, "TURNING", "تراشکاری", Token)).Value!.Value.Id;
         var template = (await h.Workflow.Calendar.AddTemplateAsync(h.Planning, "D", "شیفت D", new TimeOnly(8, 0), new TimeOnly(17, 0), new TimeOnly(12, 0), new TimeOnly(13, 0), Token)).Value!.Value.Id;
         Assert.True((await h.Workflow.Calendar.AddUnitShiftAsync(h.Planning, unit, template, 3, 1, false, Token)).Succeeded);
-        var machine = (await h.Workflow.PlanningMaster.AddMachineAsync(h.Planning, "FCC-06", "فرز", unit, Token)).Value!.Value.Id;
-        Assert.True((await h.Workflow.UnitDesignations.AssignAsync(h.Planning, h.Production.UserId, unit, Token)).Succeeded);
-        var row = (await h.Workflow.UnitDesignations.LoadAsync(h.Planning, Token)).Value!.Rows.Single(r => r.UserId == h.Production.UserId);
-        Assert.True((await h.Workflow.UnitDesignations.SetSupervisorAsync(h.Planning, row.DesignationId, row.Version, true, Token)).Succeeded);
-        var op = (await h.Workflow.Operators.RegisterAsync(h.Planning, "OP-1", "علی رضایی", h.Production.UserId, Token)).Value!.Value.Id;
-        Assert.True((await h.Workflow.Operators.AssignAsync(h.Planning, op, machine, "1405/01/01", false, null, Token)).Succeeded);
+        var machine = (await h.Workflow.PlanningMaster.AddMachineAsync(h.Admin, "FCC-06", "فرز", unit, Token)).Value!.Value.Id;
+        Assert.True((await h.Workflow.UnitDesignations.AssignAsync(h.Admin, h.Production.UserId, unit, Token)).Succeeded);
+        var row = (await h.Workflow.UnitDesignations.LoadAsync(h.ProductionManager, Token)).Value!.Rows.Single(r => r.UserId == h.Production.UserId);
+        Assert.True((await h.Workflow.UnitDesignations.SetSupervisorAsync(h.ProductionManager, row.DesignationId, row.Version, true, Token)).Succeeded);
+        var op = (await h.Workflow.Operators.RegisterAsync(h.Admin, "OP-1", "علی رضایی", h.Production.UserId, Token)).Value!.Value.Id;
+        Assert.True((await h.Workflow.Operators.AssignAsync(h.Admin, op, machine, "1405/01/01", false, null, Token)).Succeeded);
         Assert.True((await h.Workflow.Operators.RecordQualificationAsync(h.Planning, op, machine, "1405/01/01", null, Token)).Succeeded);
         Assert.True((await h.Workflow.WorkerSchedule.ScheduleAsync(h.Planning, op, Saturday, unit, template, null, null, null, Token)).Succeeded);
         var requestId = await ReadyRequestAsync(h, "R-1", contractRequired: false);
@@ -137,9 +137,9 @@ public class WorkBoardViewModelTests
     {
         using var h = await WorkflowHarness.CreateAsync(Token);
         var f = await FloorAsync(h);
-        Assert.True((await h.Workflow.UnitDesignations.AssignAsync(h.Planning, h.Production.UserId, f.Turning, Token)).Succeeded);
-        var row = (await h.Workflow.UnitDesignations.LoadAsync(h.Planning, Token)).Value!.Rows.Single(r => r.UserId == h.Production.UserId && r.UnitId == f.Turning);
-        Assert.True((await h.Workflow.UnitDesignations.SetSupervisorAsync(h.Planning, row.DesignationId, row.Version, true, Token)).Succeeded);
+        Assert.True((await h.Workflow.UnitDesignations.AssignAsync(h.Admin, h.Production.UserId, f.Turning, Token)).Succeeded);
+        var row = (await h.Workflow.UnitDesignations.LoadAsync(h.ProductionManager, Token)).Value!.Rows.Single(r => r.UserId == h.Production.UserId && r.UnitId == f.Turning);
+        Assert.True((await h.Workflow.UnitDesignations.SetSupervisorAsync(h.ProductionManager, row.DesignationId, row.Version, true, Token)).Succeeded);
         var board = For(h, h.Production);
         await board.LoadAsync(Token);
 

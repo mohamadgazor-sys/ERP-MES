@@ -283,7 +283,7 @@ try {
 
     # ---- 1. Central: role-specific controls and a premature action ----
     Start-App | Out-Null
-    Sign-In 'demo.central' | Out-Null
+    Sign-In 'demo.secretary' | Out-Null
     Open-Page 'درخواست‌ها'
     $grid = Find-ById $script:Main 'RequestGrid'
     Check ((Get-GridRows $grid).Count -eq 2) 'Central sees the two seeded sample requests' ('expected 2 requests, saw ' + (Get-GridRows $grid).Count)

@@ -48,8 +48,8 @@ public class ItemDefinitionViewModelTests
         using var h = await WorkflowHarness.CreateAsync(Token);
         var id = await ReadyAsync(h, WorkType.Make, "M-1");
         Assert.True((await h.Workflow.Materials.AddMaterialAsync(h.Warehouse, "ST37-R30", "میلگرد ST37", "ST37", "میلگرد", Token)).Succeeded);
-        var unit = (await h.Workflow.PlanningMaster.AddUnitAsync(h.Planning, "MILLING", "فرزکاری", Token)).Value!;
-        var machine = (await h.Workflow.PlanningMaster.AddMachineAsync(h.Planning, "FCC-06", "فرز CNC", unit.Value.Id, Token)).Value!;
+        var unit = (await h.Workflow.PlanningMaster.AddUnitAsync(h.Admin, "MILLING", "فرزکاری", Token)).Value!;
+        var machine = (await h.Workflow.PlanningMaster.AddMachineAsync(h.Admin, "FCC-06", "فرز CNC", unit.Value.Id, Token)).Value!;
         var vm = For(h, h.Planning);
 
         await vm.LoadAsync(Token);

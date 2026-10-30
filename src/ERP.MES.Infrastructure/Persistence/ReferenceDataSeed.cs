@@ -10,7 +10,7 @@ public static class ReferenceDataSeed
 {
     public static IReadOnlyList<Department> Departments { get; } =
     [
-        new(1, DepartmentCodes.Central, "مرکزی"),
+        new(1, DepartmentCodes.Central, "منشی"),
         new(2, DepartmentCodes.Management, "مدیریت"),
         new(3, DepartmentCodes.Planning, "برنامه‌ریزی"),
         new(4, DepartmentCodes.Drawing, "نقشه‌کشی"),
@@ -19,6 +19,7 @@ public static class ReferenceDataSeed
         new(7, DepartmentCodes.Qc, "کنترل کیفیت"),
         new(8, DepartmentCodes.MaintenancePm, "نگهداری و تعمیرات"),
         new(9, DepartmentCodes.System, "سیستم"),
+        new(10, DepartmentCodes.ProductionManager, "مدیر تولید"),
     ];
 
     public static IReadOnlyList<Role> Roles { get; } =

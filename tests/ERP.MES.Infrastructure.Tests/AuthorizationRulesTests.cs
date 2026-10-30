@@ -22,7 +22,8 @@ public class AuthorizationRulesTests
         [Permission.ChangeMaterialPricePerKg] = (["WAREHOUSE", "MANAGEMENT"], null),
         [Permission.RecordFinalWarehouseReceipt] = (["WAREHOUSE"], null),
         [Permission.MaintainUnitsOfMeasure] = (["QC"], null),
-        [Permission.MaintainHolidayCalendar] = (["PLANNING"], null),
+        [Permission.MaintainOperatorQualifications] = (["PLANNING"], null),
+        [Permission.MaintainHolidayCalendar] = (["PLANNING", "PRODUCTION_MANAGER"], null),
         [Permission.RegisterDowntime] = (["MAINTENANCE_PM"], null),
         [Permission.CreateAndSubmitRequest] = (["CENTRAL"], null),
         [Permission.ReceiveAndEditRequestDetails] = (["PLANNING"], null),
@@ -36,7 +37,7 @@ public class AuthorizationRulesTests
         [Permission.ViewCustomersAndRequests] = ([], null),
 
         // Read-only production overview (Decision Log #78): Management and Planning, any role; every other department is denied.
-        [Permission.MaintainProductionResources] = (["PLANNING"], null),
+        [Permission.MaintainProductionResources] = ([], "ADMIN"),
         [Permission.ViewPlanningMasterData] = ([], null),
         [Permission.ManageRawMaterialInquiries] = (["DRAWING"], null),
         [Permission.AnswerRawMaterialInquiry] = (["WAREHOUSE"], null),
@@ -50,28 +51,29 @@ public class AuthorizationRulesTests
         [Permission.MaintainMaterials] = (["WAREHOUSE"], null),
         [Permission.ViewMaterials] = ([], null),
         [Permission.ViewMaterialPrices] = (["WAREHOUSE", "MANAGEMENT", "PLANNING"], null),
-        [Permission.ViewOperators] = (["PLANNING", "MANAGEMENT", "PRODUCTION"], null),
+        [Permission.ViewOperators] = (["PLANNING", "MANAGEMENT", "PRODUCTION", "PRODUCTION_MANAGER", "SYSTEM"], null),
         [Permission.ViewMachineRates] = (["PLANNING", "MANAGEMENT", "WAREHOUSE"], null),
         [Permission.ViewQcMasterData] = ([], null),
-        [Permission.ViewProductionQueue] = (["MANAGEMENT", "PLANNING"], null),
+        [Permission.ViewProductionQueue] = (["MANAGEMENT", "PLANNING", "PRODUCTION_MANAGER"], null),
 
         // Demonstration stage flow (Decision Log #79): demo-only mapping approved by the owner (Decision Log #80), not a finalized production matrix. QC approval uses InspectOrCorrectQc above.
         [Permission.ReleaseStage] = (["PLANNING"], null),
         [Permission.RunStage] = (["PRODUCTION"], null),
-        [Permission.ViewWorkSessions] = (["PRODUCTION", "PLANNING", "MANAGEMENT"], null),
-        [Permission.OperateWorkSessions] = (["PRODUCTION"], null),
+        [Permission.ViewWorkSessions] = (["PRODUCTION", "PLANNING", "MANAGEMENT", "PRODUCTION_MANAGER"], null),
+        [Permission.OperateWorkSessions] = (["PRODUCTION", "PRODUCTION_MANAGER"], null),
         [Permission.CorrectWorkSessions] = (["PLANNING"], null),
-        [Permission.ApproveSessionTime] = (["PLANNING"], null),
+        [Permission.ApproveSessionTime] = (["PLANNING", "PRODUCTION_MANAGER"], null),
         [Permission.ManagePauseReasons] = (["PLANNING"], null),
-        [Permission.ViewUnitQueue] = (["MANAGEMENT", "PLANNING", "PRODUCTION"], null),
-        [Permission.OrderUnitQueue] = (["PLANNING"], null),
-        [Permission.ManageStageHold] = (["PLANNING", "PRODUCTION"], null),
-        [Permission.ManageUnitDesignations] = (["PLANNING"], null),
+        [Permission.ViewUnitQueue] = (["MANAGEMENT", "PLANNING", "PRODUCTION", "PRODUCTION_MANAGER"], null),
+        [Permission.OrderUnitQueue] = (["PLANNING", "PRODUCTION_MANAGER"], null),
+        [Permission.ManageStageHold] = (["PLANNING", "PRODUCTION", "PRODUCTION_MANAGER"], null),
+        [Permission.ManageUnitDesignations] = (["PRODUCTION_MANAGER"], null),
+        [Permission.AssignWorkingUnits] = ([], "ADMIN"),
         [Permission.SubmitJobReport] = (["PRODUCTION"], null),
-        [Permission.ReviewJobReports] = (["PRODUCTION", "PLANNING"], null),
-        [Permission.ViewJobReports] = (["PRODUCTION", "PLANNING", "MANAGEMENT"], null),
-        [Permission.CorrectStageAction] = (["PLANNING"], null),
-        [Permission.ViewKpi] = (["PLANNING", "MANAGEMENT", "PRODUCTION"], null),
+        [Permission.ReviewJobReports] = (["PRODUCTION", "PLANNING", "PRODUCTION_MANAGER"], null),
+        [Permission.ViewJobReports] = (["PRODUCTION", "PLANNING", "MANAGEMENT", "PRODUCTION_MANAGER"], null),
+        [Permission.CorrectStageAction] = (["PLANNING", "PRODUCTION_MANAGER"], null),
+        [Permission.ViewKpi] = (["PLANNING", "MANAGEMENT", "PRODUCTION", "PRODUCTION_MANAGER"], null),
         [Permission.RecordWarehouseReceipt] = (["WAREHOUSE"], null),
         [Permission.MarkItemFinishedSent] = (["WAREHOUSE"], null),
         [Permission.RecordCustomerDispatch] = (["WAREHOUSE"], null),
@@ -80,14 +82,15 @@ public class AuthorizationRulesTests
         [Permission.ApproveItemPrice] = (["MANAGEMENT"], null),
         [Permission.ViewItemCosts] = (["WAREHOUSE", "PLANNING", "MANAGEMENT"], null),
         [Permission.ProposeOvertime] = (["PRODUCTION"], null),
-        [Permission.DecideOvertime] = (["PLANNING"], null),
+        [Permission.DecideOvertime] = (["MANAGEMENT", "PRODUCTION_MANAGER"], null),
+        [Permission.ConfigureOvertimeLimits] = (["MANAGEMENT"], null),
         [Permission.DecideOvertimeBeyondLimits] = (["MANAGEMENT"], null),
-        [Permission.ViewOvertime] = (["PRODUCTION", "PLANNING", "MANAGEMENT"], null),
+        [Permission.ViewOvertime] = (["PRODUCTION", "PLANNING", "MANAGEMENT", "PRODUCTION_MANAGER"], null),
         [Permission.ViewQcInspections] = (["QC", "PLANNING", "MANAGEMENT"], null),
         [Permission.AcceptShortfall] = (["MANAGEMENT"], null),
         [Permission.OrderShortfallReplacement] = (["PLANNING"], null),
-        [Permission.ViewCalendar] = (["MANAGEMENT", "PLANNING", "PRODUCTION"], null),
-        [Permission.ScheduleWorkers] = (["PLANNING"], null),
+        [Permission.ViewCalendar] = (["MANAGEMENT", "PLANNING", "PRODUCTION", "PRODUCTION_MANAGER"], null),
+        [Permission.ScheduleWorkers] = (["PLANNING", "PRODUCTION_MANAGER"], null),
     };
 
     [Fact]
@@ -126,12 +129,12 @@ public class AuthorizationRulesTests
     }
 
     [Fact]
-    public void The_administrator_role_administers_accounts_reads_and_has_no_business_write_permission()
+    public void The_administrator_role_administers_accounts_and_production_master_data_and_has_no_other_business_write_permission()
     {
         var allowed = Enum.GetValues<Permission>().Where(p => AuthorizationRules.IsAllowed("SYSTEM", "ADMIN", p)).ToArray();
 
-        // Read-only viewing (requests, QC master data) is open to every active user (Decision Log #75, #90); the only write permission of the Admin role is administering accounts.
-        Assert.Equal(new[] { Permission.AdministerUsers, Permission.ViewCustomersAndRequests, Permission.ViewMaterials, Permission.ViewPlanningMasterData, Permission.ViewQcMasterData }.OrderBy(p => (int)p), allowed.OrderBy(p => (int)p));
+        // Read-only viewing (requests, QC master data) is open to every active user (Decision Log #75, #90); the write permissions of the Admin role are administering accounts, the working-unit assignment and the production master data (Decision Log #122).
+        Assert.Equal(new[] { Permission.AdministerUsers, Permission.AssignWorkingUnits, Permission.MaintainProductionResources, Permission.ViewCustomersAndRequests, Permission.ViewMaterials, Permission.ViewOperators, Permission.ViewPlanningMasterData, Permission.ViewQcMasterData }.OrderBy(p => (int)p), allowed.OrderBy(p => (int)p));
         Assert.False(AuthorizationRules.IsAllowed("PLANNING", "STAFF", Permission.AdministerUsers));
         Assert.False(AuthorizationRules.IsAllowed("MANAGEMENT", "MANAGER", Permission.AdministerUsers));
     }
@@ -157,5 +160,60 @@ public class AuthorizationRulesTests
         Assert.True(AuthorizationRules.IsAllowed(qc, Permission.InspectOrCorrectQc));
         Assert.False(AuthorizationRules.IsAllowed(planning, Permission.InspectOrCorrectQc));
         Assert.True(AuthorizationRules.IsAllowed(planning, Permission.ChangePlanningPriority));
+    }
+
+    [Fact]
+    public void Overtime_is_decided_by_management_or_the_production_manager_and_never_by_planning()
+    {
+        foreach (var role in RoleCodes.All)
+        {
+            Assert.True(AuthorizationRules.IsAllowed("MANAGEMENT", role, Permission.DecideOvertime));
+            Assert.True(AuthorizationRules.IsAllowed("PRODUCTION_MANAGER", role, Permission.DecideOvertime));
+            Assert.False(AuthorizationRules.IsAllowed("PLANNING", role, Permission.DecideOvertime));
+            Assert.False(AuthorizationRules.IsAllowed("PLANNING", role, Permission.ConfigureOvertimeLimits));
+            Assert.False(AuthorizationRules.IsAllowed("PRODUCTION_MANAGER", role, Permission.ConfigureOvertimeLimits));
+            Assert.True(AuthorizationRules.IsAllowed("MANAGEMENT", role, Permission.ConfigureOvertimeLimits));
+
+            // Beyond the limits only Management decides (Decision Log #122 Q11).
+            Assert.True(AuthorizationRules.IsAllowed("MANAGEMENT", role, Permission.DecideOvertimeBeyondLimits));
+            Assert.False(AuthorizationRules.IsAllowed("PRODUCTION_MANAGER", role, Permission.DecideOvertimeBeyondLimits));
+        }
+    }
+
+    [Fact]
+    public void The_production_manager_has_operational_authority_but_no_master_data_account_or_commercial_authority()
+    {
+        var allowed = Enum.GetValues<Permission>().Where(p => AuthorizationRules.IsAllowed("PRODUCTION_MANAGER", "MANAGER", p)).ToHashSet();
+
+        Assert.Contains(Permission.ViewUnitQueue, allowed);
+        Assert.Contains(Permission.OrderUnitQueue, allowed);
+        Assert.Contains(Permission.ManageStageHold, allowed);
+        Assert.Contains(Permission.OperateWorkSessions, allowed);
+        Assert.Contains(Permission.ReviewJobReports, allowed);
+        Assert.Contains(Permission.ManageUnitDesignations, allowed);
+        Assert.Contains(Permission.CorrectStageAction, allowed);
+        Assert.Contains(Permission.ApproveSessionTime, allowed);
+        Assert.Contains(Permission.MaintainHolidayCalendar, allowed);
+
+        // Not Program Admin's authority and not Management's commercial or queue-override authority.
+        Assert.DoesNotContain(Permission.AdministerUsers, allowed);
+        Assert.DoesNotContain(Permission.AssignWorkingUnits, allowed);
+        Assert.DoesNotContain(Permission.MaintainProductionResources, allowed);
+        Assert.DoesNotContain(Permission.ApproveItemPrice, allowed);
+        Assert.DoesNotContain(Permission.ChangeMachineHourlyRates, allowed);
+        Assert.DoesNotContain(Permission.OverrideQueueOrder, allowed);
+        Assert.DoesNotContain(Permission.ChangePlanningPriority, allowed);
+        Assert.DoesNotContain(Permission.ReleaseStage, allowed);
+    }
+
+    [Fact]
+    public void Production_master_data_and_working_units_belong_to_the_program_admin_and_no_longer_to_planning()
+    {
+        Assert.True(AuthorizationRules.IsAllowed("SYSTEM", "ADMIN", Permission.MaintainProductionResources));
+        Assert.True(AuthorizationRules.IsAllowed("SYSTEM", "ADMIN", Permission.AssignWorkingUnits));
+        Assert.False(AuthorizationRules.IsAllowed("PLANNING", "MANAGER", Permission.MaintainProductionResources));
+        Assert.False(AuthorizationRules.IsAllowed("PLANNING", "MANAGER", Permission.AssignWorkingUnits));
+        Assert.False(AuthorizationRules.IsAllowed("PLANNING", "MANAGER", Permission.ManageUnitDesignations));
+        Assert.True(AuthorizationRules.IsAllowed("PLANNING", "STAFF", Permission.ChangeMachineHourlyRates));
     }
 }

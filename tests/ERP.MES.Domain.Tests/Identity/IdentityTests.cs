@@ -74,7 +74,7 @@ public class IdentityTests
     public void The_reference_codes_are_the_approved_development_set()
     {
         Assert.Equal(
-            new[] { "CENTRAL", "MANAGEMENT", "PLANNING", "DRAWING", "WAREHOUSE", "PRODUCTION", "QC", "MAINTENANCE_PM", "SYSTEM" },
+            new[] { "CENTRAL", "MANAGEMENT", "PLANNING", "DRAWING", "WAREHOUSE", "PRODUCTION", "QC", "MAINTENANCE_PM", "SYSTEM", "PRODUCTION_MANAGER" },
             DepartmentCodes.All);
         Assert.Equal(new[] { "ADMIN", "MANAGER", "STAFF" }, RoleCodes.All);
     }

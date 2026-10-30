@@ -22,6 +22,10 @@ public sealed class OperatorService(IOperatorRepository operators, IPlanningMast
     public async Task<bool> CanMaintainAsync(Principal? principal, CancellationToken cancellationToken = default) =>
         (await authorization.CheckAsync(principal, Permission.MaintainProductionResources, cancellationToken)).IsAllowed;
 
+    /// <summary>Whether the user may record and end qualifications: Planning (a qualification is not the eligibility assignment that Program Admin owns; Decision Log #122).</summary>
+    public async Task<bool> CanMaintainQualificationsAsync(Principal? principal, CancellationToken cancellationToken = default) =>
+        (await authorization.CheckAsync(principal, Permission.MaintainOperatorQualifications, cancellationToken)).IsAllowed;
+
     public async Task<Outcome<OperatorData>> LoadAsync(Principal? principal, CancellationToken cancellationToken = default)
     {
         if (!(await authorization.CheckAsync(principal, Permission.ViewOperators, cancellationToken)).IsAllowed)
@@ -256,7 +260,7 @@ public sealed class OperatorService(IOperatorRepository operators, IPlanningMast
     public async Task<Outcome<Stored<OperatorMachineQualification>>> RecordQualificationAsync(
         Principal? principal, long operatorId, long machineId, string? qualifiedFromJalali, string? note, CancellationToken cancellationToken = default)
     {
-        var decision = await authorization.CheckAsync(principal, Permission.MaintainProductionResources, cancellationToken);
+        var decision = await authorization.CheckAsync(principal, Permission.MaintainOperatorQualifications, cancellationToken);
         if (!decision.IsAllowed)
         {
             return Outcome<Stored<OperatorMachineQualification>>.Fail(OperationStatus.NotAuthorized);
@@ -302,7 +306,7 @@ public sealed class OperatorService(IOperatorRepository operators, IPlanningMast
     public async Task<Outcome<Stored<OperatorMachineQualification>>> EndQualificationAsync(
         Principal? principal, long qualificationId, long expectedVersion, string? lastDayJalali, CancellationToken cancellationToken = default)
     {
-        var decision = await authorization.CheckAsync(principal, Permission.MaintainProductionResources, cancellationToken);
+        var decision = await authorization.CheckAsync(principal, Permission.MaintainOperatorQualifications, cancellationToken);
         if (!decision.IsAllowed)
         {
             return Outcome<Stored<OperatorMachineQualification>>.Fail(OperationStatus.NotAuthorized);

@@ -41,9 +41,9 @@
                 </DataGrid.Columns>
             </DataGrid>
             <WrapPanel Margin="0,6,0,0">
-                <StackPanel Orientation="Horizontal" Visibility="{Binding CanPlanningDecide, Converter={StaticResource BoolToVisibility}}">
-                    <Button Content="تأیید (برنامه‌ریزی)" Padding="10,3" Margin="0,0,6,4" Click="OnPlanningApprove" />
-                    <Button Content="رد (برنامه‌ریزی)…" Padding="10,3" Margin="0,0,6,4" Click="OnPlanningReject" />
+                <StackPanel Orientation="Horizontal" Visibility="{Binding CanDecide, Converter={StaticResource BoolToVisibility}}">
+                    <Button Content="تأیید" Padding="10,3" Margin="0,0,6,4" Click="OnApprove" />
+                    <Button Content="رد…" Padding="10,3" Margin="0,0,6,4" Click="OnReject" />
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" Visibility="{Binding CanManagementDecide, Converter={StaticResource BoolToVisibility}}">
                     <Button Content="تأیید (مدیریت)" Padding="10,3" Margin="0,0,6,4" Click="OnManagementApprove" />

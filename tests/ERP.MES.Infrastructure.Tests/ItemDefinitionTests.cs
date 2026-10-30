@@ -463,9 +463,9 @@ public class ItemDefinitionTests
         var (id, version) = await ReadyAsync(w, WorkType.Repair);
         var item = await w.Items.DefineItemAsync(w.Planning, id, version, Repair("A"), Token);
         var itemId = item.Value!.Value.Items.Single().Id;
-        var unit = (await w.Services.PlanningMaster.AddUnitAsync(w.Planning, "MILLING", "فرزکاری", Token)).Value!;
-        var other = (await w.Services.PlanningMaster.AddUnitAsync(w.Planning, "TURNING", "تراشکاری", Token)).Value!;
-        var machine = (await w.Services.PlanningMaster.AddMachineAsync(w.Planning, "FCC-06", "فرز CNC", unit.Value.Id, Token)).Value!;
+        var unit = (await w.Services.PlanningMaster.AddUnitAsync(w.Admin, "MILLING", "فرزکاری", Token)).Value!;
+        var other = (await w.Services.PlanningMaster.AddUnitAsync(w.Admin, "TURNING", "تراشکاری", Token)).Value!;
+        var machine = (await w.Services.PlanningMaster.AddMachineAsync(w.Admin, "FCC-06", "فرز CNC", unit.Value.Id, Token)).Value!;
 
         async Task<Outcome<Stored<Request>>> Define(DefineStageCommand command)
         {
@@ -497,7 +497,7 @@ public class ItemDefinitionTests
         // A stale item version conflicts; a retired unit is refused.
         var current2 = (await w.Services.Requests.GetAsync(w.Planning, id, Token)).Value!;
         Assert.Equal(OperationStatus.ConcurrencyConflict, (await w.Items.DefineStageAsync(w.Planning, id, current2.Request.Version, itemId, current2.Versions.ItemVersion(itemId) + 3, new DefineStageCommand("x", 1m, unit.Value.Id, null), Token)).Status);
-        var retired = (await w.Services.PlanningMaster.SetUnitActiveAsync(w.Planning, other.Value.Id, other.Version, false, Token)).Value!;
+        var retired = (await w.Services.PlanningMaster.SetUnitActiveAsync(w.Admin, other.Value.Id, other.Version, false, Token)).Value!;
         Assert.Equal(ValidationIssue.ProductionUnitInvalid, (await Define(new("x", 1m, retired.Value.Id, null))).Issue);
     }
 
@@ -508,7 +508,7 @@ public class ItemDefinitionTests
         var (id, version) = await ReadyAsync(w, WorkType.Repair);
         var item = await w.Items.DefineItemAsync(w.Planning, id, version, Repair("A"), Token);
         var itemId = item.Value!.Value.Items.Single().Id;
-        var unit = (await w.Services.PlanningMaster.AddUnitAsync(w.Planning, "MILLING", "فرزکاری", Token)).Value!;
+        var unit = (await w.Services.PlanningMaster.AddUnitAsync(w.Admin, "MILLING", "فرزکاری", Token)).Value!;
 
         async Task<Outcome<Stored<Request>>> Define(string title)
         {

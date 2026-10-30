@@ -78,14 +78,23 @@ public sealed class UnitQueueService(
         });
     }
 
-    /// <summary>Planning gives the listed released stages their positions 1..n in the order listed (Decision Log #78). Other stages keep theirs.</summary>
-    public async Task<Outcome<int>> SetPlanningOrderAsync(Principal? principal, long unitId, IReadOnlyList<QueueRowRef> rows, CancellationToken cancellationToken = default)
+    /// <summary>
+    /// Planning or the Production Manager gives the listed released stages their positions 1..n in the order listed (Decision Log #78, #122). Other stages keep theirs. A Production Manager
+    /// reorders only with a reason, which is kept in the audit entry of every affected row.
+    /// </summary>
+    public async Task<Outcome<int>> SetPlanningOrderAsync(Principal? principal, long unitId, IReadOnlyList<QueueRowRef> rows, CancellationToken cancellationToken = default, string? reason = null)
     {
         ArgumentNullException.ThrowIfNull(rows);
         var decision = await authorization.CheckAsync(principal, Permission.OrderUnitQueue, cancellationToken);
         if (!decision.IsAllowed)
         {
             return Outcome<int>.Fail(OperationStatus.NotAuthorized);
+        }
+
+        var reasonText = reason?.Trim();
+        if (decision.Current!.DepartmentCode == DepartmentCodes.ProductionManager && (string.IsNullOrEmpty(reasonText) || reasonText.Length > RequestItem.MaxStopReasonLength))
+        {
+            return Outcome<int>.Invalid(ValidationIssue.QueueReasonRequired);
         }
 
         if (RowsProblem(rows) is { } problem)
@@ -120,7 +129,7 @@ public sealed class UnitQueueService(
                         if (item.SetPlanningPosition(row.StageNo, position))
                         {
                             workspace.AddAudit(Audit(user, now, AuditActions.QueuePositionsSet, "ItemStage", row.ItemId + "/" + row.StageNo,
-                                $"Request {request.RequestNo.Value}, item {item.ItemNo}, stage {row.StageNo}: Planning position {Show(before)} -> {position} in unit {built.Queue.Unit.Code}"));
+                                $"Request {request.RequestNo.Value}, item {item.ItemNo}, stage {row.StageNo}: Planning position {Show(before)} -> {position} in unit {built.Queue.Unit.Code}" + (string.IsNullOrEmpty(reasonText) ? string.Empty : "; reason: " + reasonText)));
                         }
                     }
                 });
@@ -621,10 +630,10 @@ public sealed class UnitQueueService(
         return units.Where(u => designated.Contains(u.UnitId)).ToList();
     }
 
-    /// <summary>Planning and Management may act on every unit; a Production user only on a unit they are designated to; everyone else on none.</summary>
+    /// <summary>Planning, Management and the Production Manager may act on every unit; a Production user only on a unit they are designated to; everyone else on none.</summary>
     internal async Task<bool> CanAccessUnitAsync(Principal user, long unitId, CancellationToken cancellationToken)
     {
-        if (user.DepartmentCode is DepartmentCodes.Planning or DepartmentCodes.Management)
+        if (user.DepartmentCode is DepartmentCodes.Planning or DepartmentCodes.Management or DepartmentCodes.ProductionManager)
         {
             return true;
         }

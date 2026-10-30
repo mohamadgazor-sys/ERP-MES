@@ -4,7 +4,7 @@
 #   1 checks the ZIP against its .sha256 and the file list against FILES.sha256 after extraction to a NEW folder
 #   2 removes every way the machine could supply .NET (renames the dotnet folders, clears DOTNET_* and PATH, deletes NuGet caches)
 #   3 blocks outbound traffic of the package programs with Windows Firewall and shows the isolation mechanism works (a blocked copy of curl fails, the unblocked system curl succeeds)
-#   4 Check-Demo, Start-Demo (creates the database, starts the app), UI automation signs in with all nine accounts and walks the pages (docs/UI_SMOKE.md), Reset-Demo, sign-in again
+#   4 Check-Demo, Start-Demo (creates the database, starts the app), UI automation signs in with all ten accounts and walks the pages (docs/UI_SMOKE.md), Reset-Demo, sign-in again
 #   5 scans the logs for the demo passphrase and for leftover one-time credential files
 # It cannot disconnect the runner's own network (the CI agent needs it) and cannot be a different physical computer; docs/OFFLINE_DEMO_GUIDE.md section 12 says so.
 param(
@@ -124,15 +124,15 @@ try {
     $ui = Join-Path $repo 'tools\ui-smoke\ui-smoke.ps1'
     $accounts = Join-Path $pkg 'DEMO-ACCOUNTS.txt'
     $exe = Join-Path $pkg 'app\ERP.MES.Desktop.exe'
-    & $ps -NoProfile -ExecutionPolicy Bypass -File $ui -ExePath $exe -DatabasePath $db -AccountsFile $accounts -SignInOnly 'demo.admin,demo.management,demo.drawing,demo.qc,demo.warehouse,demo.production'
-    if ($LASTEXITCODE -eq 0) { Pass 'UI automation: all nine accounts signed in; 3 accounts walked 23 pages each; no network connection held' } else { Bad "UI automation exit code $LASTEXITCODE" }
+    & $ps -NoProfile -ExecutionPolicy Bypass -File $ui -ExePath $exe -DatabasePath $db -AccountsFile $accounts -SignInOnly 'demo.admin,demo.management,demo.drawing,demo.qc,demo.warehouse,demo.production,demo.productionmanager'
+    if ($LASTEXITCODE -eq 0) { Pass 'UI automation: all ten accounts signed in; 3 accounts walked 23 pages each; no network connection held' } else { Bad "UI automation exit code $LASTEXITCODE" }
 
     Section '4b Reset and sign in again'
     & $ps -NoProfile -ExecutionPolicy Bypass -File (Join-Path $pkg 'scripts\Reset-Demo.ps1') -Yes -NoPause
     if ($LASTEXITCODE -eq 0) { Pass 'Reset-Demo succeeded' } else { Bad "Reset-Demo exit code $LASTEXITCODE" }
     $state = (& (Join-Path $pkg 'tools\provisioning\ERP.MES.Provisioning.exe') demo-status $db | Out-String).Trim()
     if ($state -eq 'Demo') { Pass 'after the reset the file is still a marked demonstration database' } else { Bad "demo-status after reset: $state" }
-    & $ps -NoProfile -ExecutionPolicy Bypass -File $ui -ExePath $exe -DatabasePath $db -AccountsFile $accounts -SkipWalk -SignInOnly 'demo.central,demo.planning,demo.management'
+    & $ps -NoProfile -ExecutionPolicy Bypass -File $ui -ExePath $exe -DatabasePath $db -AccountsFile $accounts -SkipWalk -SignInOnly 'demo.secretary,demo.planning,demo.management'
     if ($LASTEXITCODE -eq 0) { Pass 'after the reset the accounts sign in with the demo passphrase (persisted in the reset database)' } else { Bad "post-reset UI automation exit code $LASTEXITCODE" }
 
     Section '5 Logs and leftovers'

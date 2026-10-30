@@ -95,7 +95,7 @@ public class OperatorAvailabilityTests
     {
         var start = Saturday.ToDateTime(new TimeOnly(18, 0));
         var approved = new OvertimeAssignment(1, 5, 7, 3, start, start.AddHours(2), "x", 1, Created);
-        approved.PlanningApprove(false, null, 2, Created);
+        approved.FirstApprove(false, null, 2, Created);
         var proposed = new OvertimeAssignment(2, 5, 7, 3, start, start.AddHours(2), "x", 1, Created);
 
         Assert.Equal(OperatorAvailability.Available, At(start.AddMinutes(30), [], overtime: [approved]));

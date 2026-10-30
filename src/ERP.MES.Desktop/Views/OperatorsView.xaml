@@ -95,8 +95,8 @@
                         <StackPanel Margin="0,0,12,0"><TextBlock Text="آخرین روز (برای پایان انتخاب‌شده)" /><TextBox x:Name="EndQualDateBox" Width="110" FlowDirection="LeftToRight" /></StackPanel>
                     </WrapPanel>
                     <WrapPanel Margin="0,8,0,0">
-                        <Button Content="ثبت صلاحیت" Padding="12,5" Margin="0,0,8,0" Click="OnRecordQualificationClick" IsEnabled="{Binding CanMaintain}" />
-                        <Button Content="پایان صلاحیت انتخاب‌شده" Padding="12,5" Click="OnEndQualificationClick" IsEnabled="{Binding CanMaintain}" />
+                        <Button Content="ثبت صلاحیت" Padding="12,5" Margin="0,0,8,0" Click="OnRecordQualificationClick" IsEnabled="{Binding CanMaintainQualifications}" />
+                        <Button Content="پایان صلاحیت انتخاب‌شده" Padding="12,5" Click="OnEndQualificationClick" IsEnabled="{Binding CanMaintainQualifications}" />
                     </WrapPanel>
                 </StackPanel>
             </Border>

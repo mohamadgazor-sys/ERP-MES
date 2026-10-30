@@ -70,6 +70,9 @@ public static class AuditActions
     public const string ItemPriceApproved = "ItemPriceApproved";
     public const string OvertimeProposed = "OvertimeProposed";
     public const string OvertimePlanningDecided = "OvertimePlanningDecided";
+
+    /// <summary>Management or the Production Manager decided a proposal (Decision Log #122); rows written before that carry <see cref="OvertimePlanningDecided"/>.</summary>
+    public const string OvertimeDecided = "OvertimeDecided";
     public const string OvertimeManagementDecided = "OvertimeManagementDecided";
     public const string OvertimeCancelled = "OvertimeCancelled";
     public const string OvertimeLimitsChanged = "OvertimeLimitsChanged";

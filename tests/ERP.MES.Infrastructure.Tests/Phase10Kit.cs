@@ -27,6 +27,7 @@ internal sealed class KitWorld : IDisposable
     public required Principal Manager { get; init; }
 
     public required Principal Planning { get; init; }
+        public required Principal ProductionManager { get; init; }
 
     public required Principal Drawing { get; init; }
 
@@ -59,6 +60,7 @@ internal sealed class KitWorld : IDisposable
             Central = await UserAsync(fixture, admin, "central.one", DepartmentCodes.Central, RoleCodes.Staff),
             Manager = await UserAsync(fixture, admin, "manager.one", DepartmentCodes.Management, RoleCodes.Manager),
             Planning = await UserAsync(fixture, admin, "planning.one", DepartmentCodes.Planning, RoleCodes.Staff),
+            ProductionManager = await UserAsync(fixture, admin, "prodmanager.one", DepartmentCodes.ProductionManager, RoleCodes.Manager),
             Drawing = await UserAsync(fixture, admin, "drawing.one", DepartmentCodes.Drawing, RoleCodes.Staff),
             Warehouse = await UserAsync(fixture, admin, "warehouse.one", DepartmentCodes.Warehouse, RoleCodes.Staff),
             Qc = await UserAsync(fixture, admin, "qc.one", DepartmentCodes.Qc, RoleCodes.Staff),
@@ -132,14 +134,14 @@ internal sealed class KitWorld : IDisposable
 
     public async Task<long> AddUnitAsync(string code)
     {
-        var unit = await Services.PlanningMaster.AddUnitAsync(Planning, code, "واحد " + code, Token);
+        var unit = await Services.PlanningMaster.AddUnitAsync(Admin, code, "واحد " + code, Token);
         Assert.True(unit.Succeeded, unit.Status + " " + unit.Issue);
         return unit.Value!.Value.Id;
     }
 
     public async Task<long> AddMachineAsync(string code, long unit)
     {
-        var machine = await Services.PlanningMaster.AddMachineAsync(Planning, code, "ماشین " + code, unit, Token);
+        var machine = await Services.PlanningMaster.AddMachineAsync(Admin, code, "ماشین " + code, unit, Token);
         Assert.True(machine.Succeeded, machine.Status + " " + machine.Issue);
         return machine.Value!.Value.Id;
     }
@@ -244,24 +246,24 @@ internal sealed class SessionScene : IDisposable
         var supervisorTurning = await ExtraUserAsync(w, "supervisor.two");
         foreach (var user in new[] { w.Production, w.OtherOperator, w.Supervisor })
         {
-            Assert.True((await w.Services.UnitDesignations.AssignAsync(w.Planning, user.UserId, milling, KitWorld.Token)).Succeeded);
+            Assert.True((await w.Services.UnitDesignations.AssignAsync(w.Admin, user.UserId, milling, KitWorld.Token)).Succeeded);
         }
 
-        Assert.True((await w.Services.UnitDesignations.AssignAsync(w.Planning, supervisorTurning.UserId, turning, KitWorld.Token)).Succeeded);
+        Assert.True((await w.Services.UnitDesignations.AssignAsync(w.Admin, supervisorTurning.UserId, turning, KitWorld.Token)).Succeeded);
         foreach (var (user, unit) in new[] { (w.Supervisor, milling), (supervisorTurning, turning) })
         {
-            var row = (await w.Services.UnitDesignations.LoadAsync(w.Planning, KitWorld.Token)).Value!.Rows.Single(r => r.UserId == user.UserId && r.UnitId == unit);
-            Assert.True((await w.Services.UnitDesignations.SetSupervisorAsync(w.Planning, row.DesignationId, row.Version, true, KitWorld.Token)).Succeeded);
+            var row = (await w.Services.UnitDesignations.LoadAsync(w.ProductionManager, KitWorld.Token)).Value!.Rows.Single(r => r.UserId == user.UserId && r.UnitId == unit);
+            Assert.True((await w.Services.UnitDesignations.SetSupervisorAsync(w.ProductionManager, row.DesignationId, row.Version, true, KitWorld.Token)).Succeeded);
         }
 
-        var op1 = (await w.Services.Operators.RegisterAsync(w.Planning, "OP1", "علی رضایی", w.Production.UserId, KitWorld.Token)).Value!.Value.Id;
-        var op2 = (await w.Services.Operators.RegisterAsync(w.Planning, "OP2", "حسن کریمی", w.OtherOperator.UserId, KitWorld.Token)).Value!.Value.Id;
-        var op3 = (await w.Services.Operators.RegisterAsync(w.Planning, "OP3", "رضا احمدی", null, KitWorld.Token)).Value!.Value.Id;
+        var op1 = (await w.Services.Operators.RegisterAsync(w.Admin, "OP1", "علی رضایی", w.Production.UserId, KitWorld.Token)).Value!.Value.Id;
+        var op2 = (await w.Services.Operators.RegisterAsync(w.Admin, "OP2", "حسن کریمی", w.OtherOperator.UserId, KitWorld.Token)).Value!.Value.Id;
+        var op3 = (await w.Services.Operators.RegisterAsync(w.Admin, "OP3", "رضا احمدی", null, KitWorld.Token)).Value!.Value.Id;
         foreach (var op in new[] { op1, op2 })
         {
             foreach (var machine in new[] { m1, m2 })
             {
-                Assert.True((await w.Services.Operators.AssignAsync(w.Planning, op, machine, "1405/01/01", false, null, KitWorld.Token)).Succeeded);
+                Assert.True((await w.Services.Operators.AssignAsync(w.Admin, op, machine, "1405/01/01", false, null, KitWorld.Token)).Succeeded);
             }
 
             Assert.True((await w.Services.WorkerSchedule.ScheduleAsync(w.Planning, op, DateOnly.FromDateTime(Day), milling, template, null, null, null, KitWorld.Token)).Succeeded);

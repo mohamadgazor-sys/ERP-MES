@@ -17,8 +17,8 @@ public class CalendarViewModelTests
     public async Task Planning_builds_the_calendar_in_jalali_text_and_the_screen_shows_persian_digits_rules_and_flags()
     {
         using var h = await WorkflowHarness.CreateAsync(Token);
-        var unit = (await h.Workflow.PlanningMaster.AddUnitAsync(h.Planning, "MILLING", "فرزکاری", Token)).Value!;
-        var person = (await h.Workflow.Operators.RegisterAsync(h.Planning, "OP-1", "علی رضایی", null, Token)).Value!;
+        var unit = (await h.Workflow.PlanningMaster.AddUnitAsync(h.Admin, "MILLING", "فرزکاری", Token)).Value!;
+        var person = (await h.Workflow.Operators.RegisterAsync(h.Admin, "OP-1", "علی رضایی", null, Token)).Value!;
         var vm = For(h, h.Planning);
         await vm.LoadAsync(Token);
 

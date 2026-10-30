@@ -14,8 +14,8 @@ namespace ERP.MES.Desktop.ViewModels;
 public sealed record OvertimeRow(OvertimeItem Item, string DateText, string OperatorText, string MachineText, string TimeText, string StatusText, string ReasonText);
 
 /// <summary>
-/// State and actions of the overtime screen (Decision Log #89, #95 D5, #103). The unit supervisor proposes overtime, Planning approves it within the limits it configured, Management decides what is
-/// outside them. The Application checks who may do what and every rule; the screen relays typed values (Jalali date, HH:mm times, minutes) and shows what the Application reports.
+/// State and actions of the overtime screen (Decision Log #89, #95 D5, #103). The unit supervisor proposes overtime, Management or the Production Manager approves it within the limits Management configured, and only Management decides what is
+/// outside them (Decision Log #122). The Application checks who may do what and every rule; the screen relays typed values (Jalali date, HH:mm times, minutes) and shows what the Application reports.
 /// </summary>
 public sealed class OvertimeViewModel(
     OvertimeService overtime,
@@ -56,7 +56,7 @@ public sealed class OvertimeViewModel(
 
     public bool CanPropose => _view?.Capabilities.CanPropose ?? false;
 
-    public bool CanPlanningDecide => _view?.Capabilities.CanPlanningDecide ?? false;
+    public bool CanDecide => _view?.Capabilities.CanDecide ?? false;
 
     public bool CanManagementDecide => _view?.Capabilities.CanManagementDecide ?? false;
 
@@ -122,11 +122,11 @@ public sealed class OvertimeViewModel(
             return Relay(outcome);
         });
 
-    public Task PlanningApproveAsync(OvertimeRow row, string? note) => CommandAsync("تأیید شد (در صورت خروج از سقف، برای تصمیم مدیریت ارسال شد).", async token =>
-        Relay(await overtime.PlanningDecideAsync(currentUser(), row.Item.Assignment.Value.Id, row.Item.Assignment.Version, true, note, token)));
+    public Task ApproveAsync(OvertimeRow row, string? note) => CommandAsync("تأیید شد (اگر از سقف بیشتر باشد، برای تصمیم مدیریت ارسال می‌شود).", async token =>
+        Relay(await overtime.DecideAsync(currentUser(), row.Item.Assignment.Value.Id, row.Item.Assignment.Version, true, note, token)));
 
-    public Task PlanningRejectAsync(OvertimeRow row, string? reason) => CommandAsync("رد شد.", async token =>
-        Relay(await overtime.PlanningDecideAsync(currentUser(), row.Item.Assignment.Value.Id, row.Item.Assignment.Version, false, reason, token)));
+    public Task RejectAsync(OvertimeRow row, string? reason) => CommandAsync("رد شد.", async token =>
+        Relay(await overtime.DecideAsync(currentUser(), row.Item.Assignment.Value.Id, row.Item.Assignment.Version, false, reason, token)));
 
     public Task ManagementApproveAsync(OvertimeRow row, string? note) => CommandAsync("تأیید شد.", async token =>
         Relay(await overtime.ManagementDecideAsync(currentUser(), row.Item.Assignment.Value.Id, row.Item.Assignment.Version, true, note, token)));
@@ -137,7 +137,7 @@ public sealed class OvertimeViewModel(
     public Task CancelAsync(OvertimeRow row, string? reason) => CommandAsync("لغو شد.", async token =>
         Relay(await overtime.CancelAsync(currentUser(), row.Item.Assignment.Value.Id, row.Item.Assignment.Version, reason, token)));
 
-    /// <summary>Planning sets the daily and weekly limits in minutes (the version of the current limits, or none).</summary>
+    /// <summary>Management sets the daily and weekly limits in minutes (the version of the current limits, or none).</summary>
     public Task SaveLimitsAsync(string? dayMinutes, string? weekMinutes) => CommandAsync("سقف اضافه‌کاری ذخیره شد.", async token =>
     {
         if (!TryInt(dayMinutes, out var day) || !TryInt(weekMinutes, out var week))
@@ -229,7 +229,7 @@ public sealed class OvertimeViewModel(
     private void NotifyCaps()
     {
         OnPropertyChanged(nameof(CanPropose));
-        OnPropertyChanged(nameof(CanPlanningDecide));
+        OnPropertyChanged(nameof(CanDecide));
         OnPropertyChanged(nameof(CanManagementDecide));
         OnPropertyChanged(nameof(CanConfigureLimits));
     }
