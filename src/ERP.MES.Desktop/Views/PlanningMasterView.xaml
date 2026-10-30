@@ -9,7 +9,7 @@
         <StackPanel>
             <TextBlock Text="{Binding Message}" TextWrapping="Wrap" Foreground="#9B1C1C" FontWeight="SemiBold" Margin="0,0,0,8" />
             <TextBlock TextWrapping="Wrap" Foreground="{StaticResource MutedTextBrush}" Margin="0,0,0,8"
-                       Text="برنامه‌ریزی واحدهای تولیدی و ماشین‌ها را ثبت می‌کند. کد ماشین (مثل FCC-06، TCC-12، HUB-01) شناسهٔ ثابت است و هرگز تغییر نمی‌کند یا دوباره استفاده نمی‌شود. نرخ ساعتی را برنامه‌ریزی و مدیریت ثبت می‌کنند؛ انبار فقط می‌بیند. نرخ‌ها به ریال در ساعت و به‌صورت تاریخچه ذخیره می‌شوند و هرگز ویرایش یا حذف نمی‌شوند." />
+                       Text="مدیر سیستم واحدهای تولیدی و ماشین‌ها را ثبت می‌کند. کد ماشین (مثل FCC-06، TCC-12، HUB-01) شناسهٔ ثابت است و هرگز تغییر نمی‌کند یا دوباره استفاده نمی‌شود. نرخ ساعتی را برنامه‌ریزی و مدیریت ثبت می‌کنند؛ انبار فقط می‌بیند. نرخ‌ها به ریال در ساعت و به‌صورت تاریخچه ذخیره می‌شوند و هرگز ویرایش یا حذف نمی‌شوند." />
             <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
                 <Button Content="بارگذاری مجدد" Padding="10,3" Click="OnReloadClick" />
                 <TextBlock Text="در حال بارگذاری…" Margin="16,0,0,0" VerticalAlignment="Center" Foreground="{StaticResource MutedTextBrush}"

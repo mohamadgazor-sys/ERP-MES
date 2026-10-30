@@ -119,11 +119,27 @@ public partial class App : System.Windows.Application
         }
     }
 
-    private void OnSignedIn(object? sender, Principal user)
+    private async void OnSignedIn(object? sender, Principal user)
+    {
+        try
+        {
+            await OnSignedInAsync(user);
+        }
+        catch (Exception exception)
+        {
+            LocalLog.Error("opening the main window failed", exception);
+            Fail("اجرای برنامه ممکن نبود. پایگاه داده یا تنظیمات را بررسی کنید.");
+        }
+    }
+
+    private async Task OnSignedInAsync(Principal user)
     {
         var siteZone = TimeZoneInfo.FindSystemTimeZoneById(SiteTimeZoneId);
         var dates = new JalaliDateService(DigitStyle.Persian, siteZone);
         var shell = new ShellViewModel(dates, () => DateTime.UtcNow) { UserText = "کاربر: " + user.DisplayName };
+
+        // The menu shows only the pages the user's department and role make meaningful. It is a convenience: every Application command checks the user again (Decision Log #122 B2).
+        shell.ApplyAccess(await PageAccess.VisibleKeysAsync(_services!.Authorization, user));
 
         // The session lives in memory only: no token, nothing stored, nothing that survives closing the application (Decision Log #74).
         var prompts = new MessageBoxPrompts();
@@ -156,7 +172,8 @@ public partial class App : System.Windows.Application
             new CostingViewModel(workflow.Costing, workflow.PlanningMaster, dates, DigitStyle.Persian, CurrentUser),
             new CompletionViewModel(workflow.Completion, dates, DigitStyle.Persian, CurrentUser),
             new KpiViewModel(workflow.Kpi, dates, DigitStyle.Persian, () => DateTime.UtcNow, CurrentUser),
-            new WorkBoardViewModel(workflow.UnitQueue, workflow.WorkSessions, workflow.StageWork, dates, DigitStyle.Persian, () => DateTime.UtcNow, CurrentUser));
+            new WorkBoardViewModel(workflow.UnitQueue, workflow.WorkSessions, workflow.StageWork, dates, DigitStyle.Persian, () => DateTime.UtcNow, CurrentUser),
+            new UsersViewModel(_services.Accounts, workflow.Users, workflow.UnitDesignations, workflow.PlanningMaster, dates, CurrentUser));
 
         _mainWindow = new MainWindow(shell, session, pages);
         _mainWindow.Show();

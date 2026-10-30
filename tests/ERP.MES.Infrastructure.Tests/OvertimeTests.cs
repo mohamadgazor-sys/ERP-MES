@@ -251,6 +251,23 @@ public class OvertimeTests
     }
 
     [Fact]
+    public async Task A_proposer_never_decides_their_own_proposal_even_after_moving_to_a_deciding_department()
+    {
+        using var w = await StartAsync();
+        var s = await SetupAsync(w);
+        await LimitsAsync(w, 120, 480);
+        var proposed = await ProposedAsync(w, s, At(0, 17, 30), At(0, 19));
+
+        // The supervisor is moved to the Production Manager department: now allowed to decide in general, but never their own proposal.
+        Assert.Equal(AccountStatus.Succeeded, (await w.Fixture.Services.Accounts.ChangeDepartmentAsync(w.Admin, w.Supervisor.UserId, DepartmentCodes.ProductionManager, Token)).Status);
+        var own = await w.Overtime.DecideAsync(w.Supervisor, proposed.Value.Id, proposed.Version, true, null, Token);
+
+        Assert.Equal(ValidationIssue.OvertimeSelfDecision, own.Issue);
+        Assert.Equal(OvertimeStatus.Proposed, (await w.Overtime.LoadAsync(w.ProductionManager, DateOnly.FromDateTime(Saturday), DateOnly.FromDateTime(Saturday), Token)).Value!.Items.Single().Assignment.Value.Status);
+        Assert.Equal(OvertimeStatus.Approved, (await w.Overtime.DecideAsync(w.ProductionManager, proposed.Value.Id, proposed.Version, true, null, Token)).Value!.Value.Status);
+    }
+
+    [Fact]
     public async Task Only_the_right_people_can_propose_decide_and_configure()
     {
         using var w = await StartAsync();

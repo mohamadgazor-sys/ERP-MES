@@ -151,7 +151,7 @@ function Report-Connections($process) {
     } catch { Note "(connection check not available: $($_.Exception.Message))" }
 }
 
-function Invoke-Session([string] $username, [string] $oneTimePassword, [string[]] $mustSee, [switch] $QuickOnly) {
+function Invoke-Session([string] $username, [string] $oneTimePassword, [string[]] $mustSee, [switch] $QuickOnly, [string[]] $mustNotSee = @()) {
     Note "=== Session: $username ==="
     $env:ERPMES_DATABASE = $DatabasePath
     $process = Start-Process -FilePath $ExePath -PassThru
@@ -238,6 +238,8 @@ function Invoke-Session([string] $username, [string] $oneTimePassword, [string[]
         }
         Note "Navigation ($($seen.Count)): $($seen -join ' | ')"
         foreach ($required in $mustSee) { if ($seen -notcontains $required) { Fail "$username`: the navigation lacks '$required'" } }
+        # Pages the department/role has no permission for must not be offered at all (Decision Log #122 B2); the Application still checks every command.
+        foreach ($hidden in $mustNotSee) { if ($seen -contains $hidden) { Fail "$username`: the navigation shows '$hidden', which this account must not see" } }
         Report-Connections $process
         return $main
     } finally {
@@ -260,9 +262,11 @@ Note "Accounts available: $($passwords.Keys.Count)"
 if ($passwords.Keys.Count -ne 10) { Fail "expected ten accounts, found $($passwords.Keys.Count)" }
 
 if (-not $SkipWalk) {
-    Invoke-Session 'demo.supervisor' $passwords['demo.supervisor'] @('نوبت‌های کاری') | Out-Null
-    Invoke-Session 'demo.planning' $passwords['demo.planning'] @('صف واحدهای تولید', 'قراردادها', 'تعریف آیتم‌ها و مرحله‌ها') | Out-Null
-    Invoke-Session 'demo.secretary' $passwords['demo.secretary'] @('درخواست‌ها') | Out-Null
+    Invoke-Session 'demo.supervisor' $passwords['demo.supervisor'] @('نوبت‌های کاری') -mustNotSee @('کاربران و حساب‌ها', 'هزینه و قیمت', 'ورود آیتم‌ها از اکسل', 'قراردادها') | Out-Null
+    Invoke-Session 'demo.planning' $passwords['demo.planning'] @('صف واحدهای تولید', 'قراردادها', 'تعریف آیتم‌ها و مرحله‌ها') -mustNotSee @('کاربران و حساب‌ها') | Out-Null
+    Invoke-Session 'demo.secretary' $passwords['demo.secretary'] @('درخواست‌ها') -mustNotSee @('کاربران و حساب‌ها', 'هزینه و قیمت', 'صف واحدهای تولید') | Out-Null
+    Invoke-Session 'demo.admin' $passwords['demo.admin'] @('کاربران و حساب‌ها', 'اپراتورها', 'ماشین‌ها و نرخ‌ها') -mustNotSee @('هزینه و قیمت', 'ورود آیتم‌ها از اکسل', 'صف واحدهای تولید') | Out-Null
+    Invoke-Session 'demo.productionmanager' $passwords['demo.productionmanager'] @('صف واحدهای تولید', 'اضافه‌کاری', 'شاخص‌های واحدها') -mustNotSee @('کاربران و حساب‌ها', 'هزینه و قیمت') | Out-Null
 }
 foreach ($u in $SignInOnly) { Invoke-Session $u $passwords[$u] @() -QuickOnly | Out-Null }
 

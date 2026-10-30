@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using ERP.MES.Domain.Calendar;
 
 namespace ERP.MES.Desktop.ViewModels;
@@ -30,6 +31,7 @@ public sealed class ShellViewModel : ObservableObject
     public const string ClarificationsKey = "clarifications";
     public const string ItemDefinitionKey = "itemdefinition";
     public const string ItemImportKey = "itemimport";
+    public const string UsersKey = "users";
     public const string LimitationsKey = "limitations";
 
     private readonly IJalaliDateService _dates;
@@ -43,7 +45,7 @@ public sealed class ShellViewModel : ObservableObject
         _dates = dates ?? throw new ArgumentNullException(nameof(dates));
         _utcNow = utcNow ?? throw new ArgumentNullException(nameof(utcNow));
 
-        Items =
+        _all =
         [
             new NavigationItem(DashboardKey, "داشبورد", true),
             new NavigationItem(CustomersKey, "مشتریان", true),
@@ -67,8 +69,11 @@ public sealed class ShellViewModel : ObservableObject
             new NavigationItem(ClarificationsKey, "پرسش‌های نقشه‌کشی", true),
             new NavigationItem(ItemDefinitionKey, "تعریف آیتم‌ها و مرحله‌ها", true),
             new NavigationItem(ItemImportKey, "ورود آیتم‌ها از اکسل", true),
+            new NavigationItem(UsersKey, "کاربران و حساب‌ها", true),
             new NavigationItem(LimitationsKey, "محدودیت‌های نسخه نمایشی", true),
         ];
+
+        Items = new ObservableCollection<NavigationItem>(_all);
 
         DashboardTiles =
         [
@@ -78,7 +83,7 @@ public sealed class ShellViewModel : ObservableObject
             new DashboardTile("آیتم‌های فوری", "—", "هنوز داده‌ای بارگذاری نشده است"),
         ];
 
-        _selectedItem = Items[0];
+        _selectedItem = _all[0];
         _statusText = BuildStatusText();
     }
 
@@ -88,7 +93,43 @@ public sealed class ShellViewModel : ObservableObject
 
     public string NotImplementedText => "این بخش در این ساخت هنوز پیاده‌سازی نشده است.";
 
+    private readonly IReadOnlyList<NavigationItem> _all;
+
+    /// <summary>The pages shown in the navigation list. All of them until <see cref="ApplyAccess"/> narrows the list to the user's permissions.</summary>
     public IReadOnlyList<NavigationItem> Items { get; }
+
+    /// <summary>
+    /// Shows only the pages whose key is in <paramref name="visibleKeys"/> (see <see cref="PageAccess"/>). The selected page falls back to the dashboard when the user may not see it. This only
+    /// shapes the menu; it authorizes nothing.
+    /// </summary>
+    public void ApplyAccess(IReadOnlySet<string> visibleKeys)
+    {
+        ArgumentNullException.ThrowIfNull(visibleKeys);
+        var list = (ObservableCollection<NavigationItem>)Items;
+        var wanted = _all.Where(i => i.Key == DashboardKey || visibleKeys.Contains(i.Key)).ToList();
+
+        // Leave a page the user may not see BEFORE it is removed from the list, so the list box never has to report "nothing selected".
+        if (wanted.All(i => i.Key != _selectedItem.Key))
+        {
+            SelectedItem = list.First(i => i.Key == DashboardKey);
+        }
+
+        for (var index = list.Count - 1; index >= 0; index--)
+        {
+            if (wanted.All(w => w.Key != list[index].Key))
+            {
+                list.RemoveAt(index);
+            }
+        }
+
+        for (var position = 0; position < wanted.Count; position++)
+        {
+            if (position >= list.Count || list[position].Key != wanted[position].Key)
+            {
+                list.Insert(position, wanted[position]);
+            }
+        }
+    }
 
     public IReadOnlyList<DashboardTile> DashboardTiles { get; }
 

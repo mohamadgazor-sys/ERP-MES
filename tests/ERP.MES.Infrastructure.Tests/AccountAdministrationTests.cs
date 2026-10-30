@@ -1,4 +1,6 @@
+using ERP.MES.Application.Requests;
 using ERP.MES.Application.Security;
+using ERP.MES.Infrastructure.Persistence;
 using ERP.MES.Domain.Identity;
 
 namespace ERP.MES.Infrastructure.Tests;
@@ -254,5 +256,74 @@ public class AccountAdministrationTests
         {
             Assert.DoesNotContain(secret, audit, StringComparison.Ordinal);
         }
+    }
+    // A new account has no operational access until its user has chosen their own password (Decision Log #64).
+    private static async Task<Principal> SignInWithOwnPasswordAsync(SecurityFixture fixture, string username)
+    {
+        var first = await fixture.SignInAsync(username, StaffPassword, Token);
+        Assert.Equal(AccountStatus.Succeeded, (await fixture.Services.Accounts.ChangeOwnPasswordAsync(first, StaffPassword, OtherPassword, Token)).Status);
+        return await fixture.SignInAsync(username, OtherPassword, Token);
+    }
+
+    [Fact]
+    public async Task The_administrator_moves_a_user_to_another_department_and_the_permissions_follow_at_the_next_operation()
+    {
+        var (fixture, admin) = await StartAsync();
+        using var _ = fixture;
+        var id = await fixture.CreateUserAsync(admin, "mover.one", StaffPassword, DepartmentCodes.Planning, RoleCodes.Staff, Token);
+        var user = await SignInWithOwnPasswordAsync(fixture, "mover.one");
+        Assert.True((await fixture.Services.Authorization.CheckAsync(user, Permission.ReleaseStage, Token)).IsAllowed);
+
+        var moved = await fixture.Services.Accounts.ChangeDepartmentAsync(admin, id, DepartmentCodes.ProductionManager, Token);
+
+        Assert.Equal(AccountStatus.Succeeded, moved.Status);
+        Assert.Equal("PRODUCTION_MANAGER", Row(fixture, "SELECT d.Code FROM Users u JOIN Departments d ON d.Id = u.DepartmentId WHERE u.Id = " + id));
+        Assert.Contains(AuditActions.UserDepartmentChanged, fixture.AuditActionsInOrder());
+
+        // The stale principal of the user still says Planning; the authorization reloads the database and follows the move at once.
+        Assert.False((await fixture.Services.Authorization.CheckAsync(user, Permission.ReleaseStage, Token)).IsAllowed);
+        Assert.True((await fixture.Services.Authorization.CheckAsync(user, Permission.DecideOvertime, Token)).IsAllowed);
+    }
+
+    [Fact]
+    public async Task Changing_a_department_needs_the_administrator_a_known_department_and_an_existing_user()
+    {
+        var (fixture, admin) = await StartAsync();
+        using var _ = fixture;
+        var id = await fixture.CreateUserAsync(admin, "mover.two", StaffPassword, DepartmentCodes.Planning, RoleCodes.Staff, Token);
+        await fixture.CreateUserAsync(admin, "manager.two", StaffPassword, DepartmentCodes.Management, RoleCodes.Manager, Token);
+        var manager = await fixture.SignInAsync("manager.two", StaffPassword, Token);
+
+        Assert.Equal(AccountStatus.NotAuthorized, (await fixture.Services.Accounts.ChangeDepartmentAsync(manager, id, DepartmentCodes.Qc, Token)).Status);
+        Assert.Equal(AccountStatus.InvalidDepartmentOrRole, (await fixture.Services.Accounts.ChangeDepartmentAsync(admin, id, "NOWHERE", Token)).Status);
+        Assert.Equal(AccountStatus.NotFound, (await fixture.Services.Accounts.ChangeDepartmentAsync(admin, 424242, DepartmentCodes.Qc, Token)).Status);
+        Assert.Equal("PLANNING", Row(fixture, "SELECT d.Code FROM Users u JOIN Departments d ON d.Id = u.DepartmentId WHERE u.Id = " + id));
+    }
+
+    [Fact]
+    public async Task The_user_directory_lists_accounts_for_the_administrator_and_resolves_actor_names_for_everyone_active()
+    {
+        var (fixture, admin) = await StartAsync();
+        using var _ = fixture;
+        var plannerId = await fixture.CreateUserAsync(admin, "planner.dir", StaffPassword, DepartmentCodes.Planning, RoleCodes.Staff, Token);
+        await fixture.CreateUserAsync(admin, "leaver.dir", StaffPassword, DepartmentCodes.Qc, RoleCodes.Staff, Token);
+        var planner = await SignInWithOwnPasswordAsync(fixture, "planner.dir");
+        var directory = new UserDirectoryService(new EfUserDirectoryRepository(fixture.Db.ContextFactory), fixture.Services.Authorization);
+
+        var all = await directory.ListAsync(admin, Token);
+        Assert.True(all.Succeeded);
+        Assert.Equal(new[] { "admin.one", "leaver.dir", "planner.dir" }, all.Value!.Select(u => u.Username).ToArray());
+        Assert.Equal(OperationStatus.NotAuthorized, (await directory.ListAsync(planner, Token)).Status);
+        Assert.Equal(OperationStatus.NotAuthorized, (await directory.ListAsync(null, Token)).Status);
+
+        var leaverId = all.Value.Single(u => u.Username == "leaver.dir").UserId;
+        Assert.Equal(AccountStatus.Succeeded, (await fixture.Services.Accounts.SetActiveAsync(admin, leaverId, false, Token)).Status);
+        var looked = await directory.LookupAsync(planner, [plannerId, leaverId, 999999], Token);
+        Assert.True(looked.Succeeded);
+        Assert.Equal(2, looked.Value!.Count);
+        Assert.DoesNotContain("غیرفعال", UserDirectoryService.Describe(looked.Value[plannerId]), StringComparison.Ordinal);
+        Assert.EndsWith("— غیرفعال", UserDirectoryService.Describe(looked.Value[leaverId]), StringComparison.Ordinal);
+        Assert.Equal("PLANNING", looked.Value[plannerId].DepartmentCode);
+        Assert.Equal(OperationStatus.NotAuthorized, (await directory.LookupAsync(null, [plannerId], Token)).Status);
     }
 }
