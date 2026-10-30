@@ -158,19 +158,19 @@ public partial class UnitQueueView : UserControl
         }
     }
 
-    private async void OnAssignClick(object sender, RoutedEventArgs e)
-    {
-        if (UserBox.SelectedItem is ERP.MES.Application.Persistence.ProductionUserInfo user && _viewModel.SelectedUnit is { } unit)
-        {
-            await _viewModel.AssignDesignationAsync(user.UserId, unit.UnitId);
-        }
-    }
-
-    private async void OnRevokeClick(object sender, RoutedEventArgs e)
+    private async void OnMakeSupervisorClick(object sender, RoutedEventArgs e)
     {
         if (DesignationGrid.SelectedItem is DesignationDisplayRow row)
         {
-            await _viewModel.RevokeDesignationAsync(row);
+            await _viewModel.SetSupervisorAsync(row, true);
+        }
+    }
+
+    private async void OnRemoveSupervisorClick(object sender, RoutedEventArgs e)
+    {
+        if (DesignationGrid.SelectedItem is DesignationDisplayRow row)
+        {
+            await _viewModel.SetSupervisorAsync(row, false);
         }
     }
 }

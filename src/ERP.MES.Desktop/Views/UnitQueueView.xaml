@@ -81,20 +81,24 @@
             </WrapPanel>
 
             <StackPanel Visibility="{Binding CanManageDesignations, Converter={StaticResource BoolToVisibility}}" Margin="0,16,0,0">
-                <TextBlock Text="انتصاب کاربران تولید به واحدها (برنامه‌ریزی)" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource PrimaryBrush}" Margin="0,0,0,4" />
-                <WrapPanel Margin="0,0,0,6">
-                    <ComboBox x:Name="UserBox" ItemsSource="{Binding ProductionUsers}" DisplayMemberPath="DisplayName" Width="220" Margin="0,0,8,0" />
-                    <Button Content="انتصاب به واحد انتخاب‌شده" Padding="10,4" Click="OnAssignClick" />
-                </WrapPanel>
+                <TextBlock Text="سرپرستان واحدها (مدیر تولید)" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource PrimaryBrush}" Margin="0,0,0,4" />
+                <TextBlock TextWrapping="Wrap" Foreground="{StaticResource MutedTextBrush}" Margin="0,0,0,6"
+                           Text="کاربران تولید را مدیر سیستم به واحد کاری‌شان اختصاص می‌دهد (صفحهٔ «کاربران و حساب‌ها»). مدیر تولید از میان آن‌ها سرپرست هر واحد را تعیین می‌کند؛ سرپرست نوبت کاری می‌دهد، گزارش‌های روزانه را بازبینی می‌کند و اضافه‌کاری پیشنهاد می‌دهد." />
                 <DataGrid x:Name="DesignationGrid" ItemsSource="{Binding DesignationRows}" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single" HeadersVisibility="Column"
                           CanUserAddRows="False" CanUserDeleteRows="False" MaxHeight="180" Background="{StaticResource CardBrush}">
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="کاربر" Binding="{Binding Row.UserDisplayName}" Width="*" />
-                        <DataGridTextColumn Header="واحد" Binding="{Binding Row.UnitCode}" Width="*" />
+                        <DataGridTextColumn Header="واحد" Binding="{Binding Row.UnitCode}" ElementStyle="{StaticResource LtrCell}" Width="*" />
                         <DataGridTextColumn Header="وضعیت" Binding="{Binding StatusText}" Width="120" />
+                        <DataGridTextColumn Header="سرپرست" Binding="{Binding SupervisorText}" Width="90" />
                     </DataGrid.Columns>
                 </DataGrid>
-                <Button Content="پس‌گرفتن انتصاب انتخاب‌شده" Padding="10,4" Margin="0,6,0,0" HorizontalAlignment="Left" Click="OnRevokeClick" />
+                <WrapPanel Margin="0,6,0,0">
+                    <Button Content="تعیین به‌عنوان سرپرست" Padding="10,4" MinWidth="150" Margin="0,0,8,4" Click="OnMakeSupervisorClick"
+                            ToolTip="کاربر انتخاب‌شده را سرپرست واحدش می‌کند." />
+                    <Button Content="برداشتن سرپرستی" Padding="10,4" MinWidth="130" Margin="0,0,8,4" Click="OnRemoveSupervisorClick"
+                            ToolTip="سرپرستی کاربر انتخاب‌شده را برمی‌دارد؛ او همچنان در واحد کار می‌کند." />
+                </WrapPanel>
             </StackPanel>
         </StackPanel>
     </ScrollViewer>

@@ -34,6 +34,7 @@ internal static class PageFactory
             ShellViewModel.CostingKey => new CostingView(pages.Costing),
             ShellViewModel.CompletionKey => new CompletionView(pages.Completion),
             ShellViewModel.KpiKey => new KpiView(pages.Kpi),
+            ShellViewModel.UsersKey => new UsersView(pages.Users),
             ShellViewModel.LimitationsKey => new LimitationsView(),
             _ => new PlaceholderView(item.Title, shell.NotImplementedText),
         };

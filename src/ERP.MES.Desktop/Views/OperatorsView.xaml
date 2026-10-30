@@ -9,7 +9,7 @@
         <StackPanel>
             <TextBlock Text="{Binding Message}" TextWrapping="Wrap" Foreground="#9B1C1C" FontWeight="SemiBold" Margin="0,0,0,8" />
             <TextBlock TextWrapping="Wrap" Foreground="{StaticResource MutedTextBrush}" Margin="0,0,0,8"
-                       Text="برنامه‌ریزی اپراتورها، تخصیص اصلی اپراتور به ماشین و صلاحیت‌ها را ثبت می‌کند؛ سرپرست نمی‌تواند ماشین برنامه‌ریزی‌شده را تغییر دهد. تخصیص به معنای صلاحیت نیست: تخصیص بدون صلاحیت جاری با هشدار ثبت می‌شود. تخصیص‌ها و صلاحیت‌ها حذف یا ویرایش نمی‌شوند؛ فقط بسته/پایان داده می‌شوند و تاریخچه می‌ماند." />
+                       Text="مدیر سیستم اپراتورها و تخصیص اصلی اپراتور به ماشین را ثبت می‌کند و برنامه‌ریزی صلاحیت‌ها را؛ سرپرست نمی‌تواند ماشین برنامه‌ریزی‌شده را تغییر دهد. تخصیص به معنای صلاحیت نیست: تخصیص بدون صلاحیت جاری با هشدار ثبت می‌شود. تخصیص‌ها و صلاحیت‌ها حذف یا ویرایش نمی‌شوند؛ فقط بسته/پایان داده می‌شوند و تاریخچه می‌ماند." />
             <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
                 <Button Content="بارگذاری مجدد" Padding="10,3" Click="OnReloadClick" />
                 <TextBlock Text="در حال بارگذاری…" Margin="16,0,0,0" VerticalAlignment="Center" Foreground="{StaticResource MutedTextBrush}"
