@@ -595,6 +595,65 @@ namespace ERP.MES.Infrastructure.SqlServer.Migrations
                     b.ToTable("ItemPriceDecisions", (string)null);
                 });
 
+            modelBuilder.Entity("ERP.MES.Domain.Documents.ItemDrawing", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("ContentHash")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<long>("ContentLength")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("DocumentId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<long>("RequestItemId")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("Revision")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("SupersededAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<long?>("SupersededByUserId")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime>("UploadedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<long>("UploadedByUserId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DocumentId");
+
+                    b.HasIndex("RequestItemId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_ItemDrawings_CurrentPerItem")
+                        .HasFilter("[SupersededAtUtc] IS NULL");
+
+                    b.HasIndex("SupersededByUserId");
+
+                    b.HasIndex("UploadedByUserId");
+
+                    b.HasIndex("RequestItemId", "Revision")
+                        .IsUnique();
+
+                    b.ToTable("ItemDrawings", (string)null);
+                });
+
             modelBuilder.Entity("ERP.MES.Domain.Documents.StoredDocument", b =>
                 {
                     b.Property<long>("Id")
@@ -3904,6 +3963,34 @@ namespace ERP.MES.Infrastructure.SqlServer.Migrations
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Calculation");
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Documents.ItemDrawing", b =>
+                {
+                    b.HasOne("ERP.MES.Domain.Documents.StoredDocument", "Document")
+                        .WithMany()
+                        .HasForeignKey("DocumentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ERP.MES.Domain.Requests.RequestItem", null)
+                        .WithMany()
+                        .HasForeignKey("RequestItemId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ERP.MES.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("SupersededByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("ERP.MES.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("UploadedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Document");
                 });
 
             modelBuilder.Entity("ERP.MES.Domain.Documents.StoredDocument", b =>
