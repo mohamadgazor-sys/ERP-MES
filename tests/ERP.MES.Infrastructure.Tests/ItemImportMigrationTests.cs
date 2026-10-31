@@ -30,12 +30,12 @@ public class ItemImportMigrationTests
 
         await SqliteDatabase.MigrateAsync(db.Path, Token);
 
-        Assert.Equal("1|1.10|Ring|2.5|3", Assert.Single(db.Query("SELECT Id, ItemNo, PartName, RequestedQuantity, Version FROM RequestItems")));
+        Assert.Equal("1|M-1-001|Ring|2.5|3", Assert.Single(db.Query("SELECT Id, ItemNo, PartName, RequestedQuantity, Version FROM RequestItems")));
         Assert.Equal("1|M-1|6|7", Assert.Single(db.Query("SELECT Id, RequestNo, Status, Version FROM Requests")));
         Assert.Empty(db.Query("SELECT * FROM ItemImports"));
         Assert.Empty(db.Query("SELECT * FROM ItemImportRows"));
         Assert.Empty(db.Query("PRAGMA foreign_key_check"));
-        Assert.Equal(25, db.Query("SELECT MigrationId FROM __EFMigrationsHistory").Count);
+        Assert.Equal(26, db.Query("SELECT MigrationId FROM __EFMigrationsHistory").Count);
 
         var keys = db.Query("SELECT 'ItemImports:' || \"from\" || '->' || \"table\" || ':' || on_delete FROM pragma_foreign_key_list('ItemImports') UNION ALL SELECT 'ItemImportRows:' || \"from\" || '->' || \"table\" || ':' || on_delete FROM pragma_foreign_key_list('ItemImportRows')");
         Assert.Equal(

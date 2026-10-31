@@ -11,7 +11,8 @@ namespace ERP.MES.Desktop.ViewModels;
 
 public sealed record DefinitionRequestRow(long RequestId, string RequestNo, string CustomerName, string WorkTypeText, string StatusText, int ItemCount);
 
-public sealed record DefinedItemRow(long ItemId, long Version, string ItemNo, string PartName, string QuantityText, string SpecificationText, string PriorityText, int StageCount);
+public sealed record DefinedItemRow(
+    long ItemId, long Version, string ItemNo, string PartName, string QuantityText, string SpecificationText, string PriorityText, int StageCount, string CustomerRefText = "—", string AssemblyText = "—", bool IsAssembly = false);
 
 public sealed record DefinedStageRow(int StageNo, string Title, string MinutesText, string UnitText, string MachineText, string StatusText);
 
@@ -54,6 +55,9 @@ public sealed class ItemDefinitionViewModel(
     public IReadOnlyList<Choice<Priority>> Priorities { get; } = PriorityInfo.All.Select(p => new Choice<Priority>(p, p.PersianName())).ToList();
 
     public IReadOnlyList<Choice<long>> QuantityTypeChoices => _quantityTypes;
+
+    /// <summary>The assemblies of the request, the possible parents of a new item or of a move (Decision Log #121); the system number is shown.</summary>
+    public IReadOnlyList<Choice<long>> ParentChoices => _items.Where(i => i.IsAssembly).Select(i => new Choice<long>(i.ItemId, Messages.Ltr(i.ItemNo) + " — " + i.PartName)).ToList();
 
     public IReadOnlyList<Choice<long>> MaterialChoices => _materialChoices;
 
@@ -126,8 +130,8 @@ public sealed class ItemDefinitionViewModel(
         await RunAsync(async () => await ReloadAsync(requestId, cancellationToken));
 
     public async Task<bool> DefineItemAsync(
-        string? itemNo, string? partName, string? quantityText, Priority priority, long? quantityTypeId, long? materialId, string? weightText, string? lengthText, string? diameterText,
-        CancellationToken cancellationToken = default)
+        string? customerItemRef, string? partName, string? quantityText, Priority priority, long? quantityTypeId, long? materialId, string? weightText, string? lengthText, string? diameterText,
+        CancellationToken cancellationToken = default, long? parentItemId = null, bool isAssembly = false)
     {
         if (_detail is null)
         {
@@ -156,8 +160,38 @@ public sealed class ItemDefinitionViewModel(
         var requestId = _detail.Request.Value.Id;
         var version = _detail.Request.Version;
         return await ChangeAsync(
-            () => service.DefineItemAsync(currentUser(), requestId, version, new DefineItemCommand(itemNo, partName, quantity, priority, quantityTypeId, materialId, weight, length, diameter), cancellationToken),
+            () => service.DefineItemAsync(currentUser(), requestId, version, new DefineItemCommand(string.IsNullOrEmpty(customerItemRef) ? null : customerItemRef, partName, quantity, priority, quantityTypeId, materialId, weight, length, diameter, parentItemId, isAssembly), cancellationToken),
             "آیتم تعریف شد.");
+    }
+
+    /// <summary>Marks the selected item as an assembly (or turns it back while it has no children).</summary>
+    public async Task<bool> SetSelectedAssemblyAsync(bool isAssembly, CancellationToken cancellationToken = default)
+    {
+        if (_detail is null || _selectedItem is null)
+        {
+            Message = Messages.NothingSelected;
+            return false;
+        }
+
+        var requestId = _detail.Request.Value.Id;
+        var version = _detail.Request.Version;
+        var itemId = _selectedItem.ItemId;
+        return await ChangeAsync(() => service.SetAssemblyAsync(currentUser(), requestId, version, itemId, isAssembly, cancellationToken), isAssembly ? "آیتم مونتاژ شد." : "آیتم دیگر مونتاژ نیست.");
+    }
+
+    /// <summary>Moves the selected item (with its subtree) under another assembly, or to the top level when no parent is given; only before any stage is defined (Decision Log #121 Q6).</summary>
+    public async Task<bool> MoveSelectedAsync(long? newParentItemId, CancellationToken cancellationToken = default)
+    {
+        if (_detail is null || _selectedItem is null)
+        {
+            Message = Messages.NothingSelected;
+            return false;
+        }
+
+        var requestId = _detail.Request.Value.Id;
+        var version = _detail.Request.Version;
+        var itemId = _selectedItem.ItemId;
+        return await ChangeAsync(() => service.MoveItemAsync(currentUser(), requestId, version, itemId, newParentItemId, cancellationToken), "آیتم جابه‌جا شد و شماره‌های زیرمجموعه به‌روز شد.");
     }
 
     public async Task<bool> DefineStageAsync(string? title, string? minutesText, long unitId, long? machineId, CancellationToken cancellationToken = default)
@@ -277,7 +311,7 @@ public sealed class ItemDefinitionViewModel(
                 {
                     _items.Add(new DefinedItemRow(
                         i.Id, _detail.Versions.ItemVersion(i.Id), i.ItemNo, i.PartName, Digits(i.RequestedQuantity.ToString("0.############################", System.Globalization.CultureInfo.InvariantCulture)),
-                        SpecText(i), i.Priority.PersianName(), i.Stages.Count));
+                        SpecText(i), i.Priority.PersianName(), i.Stages.Count, i.CustomerItemRef is null ? "—" : Messages.Ltr(i.CustomerItemRef), i.IsAssembly ? "بله" : "—", i.IsAssembly));
                 }
             }
         }
@@ -348,7 +382,7 @@ public sealed class ItemDefinitionViewModel(
 
     private void NotifyAll()
     {
-        foreach (var name in new[] { nameof(HasRequest), nameof(RequestHeading), nameof(GateText), nameof(CanDefineItem), nameof(CanDefineStage) })
+        foreach (var name in new[] { nameof(HasRequest), nameof(RequestHeading), nameof(GateText), nameof(CanDefineItem), nameof(CanDefineStage), nameof(ParentChoices) })
         {
             OnPropertyChanged(name);
         }

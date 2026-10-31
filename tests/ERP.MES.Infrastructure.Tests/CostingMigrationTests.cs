@@ -30,12 +30,12 @@ public class CostingMigrationTests
 
         await SqliteDatabase.MigrateAsync(db.Path, Token);
 
-        Assert.Equal("1|1.10|Ring|2.5|3", Assert.Single(db.Query("SELECT Id, ItemNo, PartName, RequestedQuantity, Version FROM RequestItems")));
+        Assert.Equal("1|M-1-001|Ring|2.5|3", Assert.Single(db.Query("SELECT Id, ItemNo, PartName, RequestedQuantity, Version FROM RequestItems")));
         Assert.Empty(db.Query("SELECT * FROM ItemCostCalculations"));
         Assert.Empty(db.Query("SELECT * FROM ItemCostLines"));
         Assert.Empty(db.Query("SELECT * FROM ItemPriceDecisions"));
         Assert.Empty(db.Query("PRAGMA foreign_key_check"));
-        Assert.Equal(25, db.Query("SELECT MigrationId FROM __EFMigrationsHistory").Count);
+        Assert.Equal(26, db.Query("SELECT MigrationId FROM __EFMigrationsHistory").Count);
 
         var keys = new List<string>();
         foreach (var table in new[] { "ItemCostCalculations", "ItemCostLines", "ItemPriceDecisions" })

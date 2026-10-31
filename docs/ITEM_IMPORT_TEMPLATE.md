@@ -8,7 +8,7 @@ The application can write the template itself (page "ورود آیتم‌ها ا
 
 - Format `.xlsx` only (not `.xls`, not CSV). One worksheet is read: the first visible one; a second worksheet is reported and ignored. At most 20 MiB and about 5,000 rows (the requirement is about 1,000 items). Macros, external links and formulas are not evaluated; the cached value of a cell is read.
 - The first non-empty row is the header row. Headers are matched **by name**, not by position, in any order. Matching ignores Arabic/Persian letter variants (ي/ی, ك/ک), Persian/Arabic/Latin digits, the zero-width non-joiner and repeated spaces. An unknown column is reported as a warning and ignored; a duplicate or a missing required column is an error.
-- Cell text is trimmed. Nothing else about an item number is changed: it is case-sensitive and exact.
+- Cell text is trimmed. Nothing else about a customer reference is changed: it is case-sensitive and exact. System item numbers are assigned in file order: the highest sequence under the parent plus one, never reused; at most 999 items per parent (a larger file is refused as a whole).
 - Everything is previewed first (nothing is written), then committed in **one transaction** or not at all.
 
 ## Columns
@@ -16,7 +16,9 @@ The application can write the template itself (page "ورود آیتم‌ها ا
 | Header | Required | Meaning |
 |---|---|---|
 | `نوع کار` | no | `ساخت` (MAKE) or `تعمیر` (REPAIR). If present it must match the request's type, otherwise the row is rejected; an empty cell means "the request's type". |
-| `شماره آیتم` | **yes** | Item number, free text, unique in the file and per request. It must be a **text** cell: a numeric cell is rejected because Excel would turn `1.10` into `1.1`. Format the column as Text. |
+| `شماره آیتم مشتری` | no | The customer's own item number (Decision Log #121 Q2), free text up to 40 characters, unique in the file and per request, a **text** cell (a numeric cell is rejected because Excel would turn `1.10` into `1.1`). It is the ONLY key used to match an existing item on a re-import. A row without one is always a NEW item and is never matched by row number or description, so importing it again adds it again. The older header `شماره آیتم` is still accepted as the same column (not together with the new one). The system item number (`RequestNo-001`, children `...-001.001`) is assigned by the system and is not an import column. |
+| `مرجع آیتم والد` | no | The customer reference of the assembly this item belongs to; the parent must be an earlier row of the file or already exist in the request, must be an assembly and must not already have stages; nesting is limited to four levels. |
+| `مونتاژ` | no | `بله` marks the item as an assembly that may have children; empty means a normal item. |
 | `نام قطعه` | **yes** | Part name. |
 | `تعداد` | **yes** | Ordered quantity, a positive number (at most the Domain limit); in the unit of the quantity type. |
 | `کد نوع تعداد` | MAKE | Code of an **active** QC quantity type (for example `PIECE`). Unknown code = row error. |
@@ -33,7 +35,7 @@ For a REPAIR request the specification columns may be empty (a value that is giv
 
 1. **Who/when:** only Planning, and only when the same gates as manual definition hold (Management approval, accepted Drawing result, MAKE contract decision, inquiry and clarification gates). The page only displays this; the Application refuses otherwise.
 2. **Preview:** counts of new / unchanged / conflicting / invalid rows; every message carries its worksheet row number; all errors of a row are shown at once. A file with any error cannot be committed.
-3. **Conflicts:** an item number that already exists with different values is a *conflict*, shown field by field (old ← new). For each conflict the user must choose **Skip** or **Update**; there is no default and nothing is overwritten silently. An existing item that already has a stage or a QC approval is *locked*: it can only be skipped (updating an item that is already routed is not built). Stage columns apply to **new** items only; stage columns on a row of an existing item are reported and ignored.
+3. **Conflicts:** an item whose customer reference already exists in the request with different values is a *conflict*, shown field by field (old ← new). For each conflict the user must choose **Skip** or **Update**; there is no default and nothing is overwritten silently. An existing item that already has a stage or a QC approval is *locked*: it can only be skipped (updating an item that is already routed is not built). Stage columns apply to **new** items only; stage columns on a row of an existing item are reported and ignored.
 4. **Commit:** the file is read again and must have the same SHA-256 hash as the preview, and the request must still be at the version that was previewed (otherwise: file changed / someone else changed the request, nothing is written). Items, stages, the import log (`ItemImports`, `ItemImportRows`: file name, hash, user, time, per-row outcome) and the audit entries (`ItemImportCommitted`, `ItemDefined`, `ItemRevisedByImport`) are written together or not at all.
 5. **Idempotence:** importing the same file again writes nothing (all rows unchanged, no log entry).
 

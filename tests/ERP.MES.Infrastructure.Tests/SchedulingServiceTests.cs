@@ -211,7 +211,7 @@ public class SchedulingServiceTests
         var material = long.Parse(w.Fixture.Db.Query("SELECT Id FROM Materials LIMIT 1").Single(), System.Globalization.CultureInfo.InvariantCulture);
         var defined = await w.Items.DefineItemAsync(w.Planning, id, version, new DefineItemCommand(itemNo, "Part " + itemNo, 10m, priority, piece, material, 1m, null, null), Token);
         Assert.True(defined.Succeeded, defined.Status + " " + defined.Issue);
-        var itemId = defined.Value!.Value.Items.Single(i => i.ItemNo == itemNo).Id;
+        var itemId = defined.Value!.Value.Items.Single(i => i.CustomerItemRef == itemNo).Id;
         for (var i = 0; i < stageUnits.Length; i++)
         {
             var current = (await w.Services.Requests.GetAsync(w.Planning, id, Token)).Value!;

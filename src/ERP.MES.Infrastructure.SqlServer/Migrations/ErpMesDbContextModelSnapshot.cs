@@ -2833,6 +2833,11 @@ namespace ERP.MES.Infrastructure.SqlServer.Migrations
                     b.Property<int>("JalaliRequestYear")
                         .HasColumnType("int");
 
+                    b.Property<int>("NextRootSequence")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(1);
+
                     b.Property<DateOnly>("RequestDate")
                         .HasColumnType("date");
 
@@ -2934,18 +2939,39 @@ namespace ERP.MES.Infrastructure.SqlServer.Migrations
                     b.Property<long>("CreatedByUserId")
                         .HasColumnType("bigint");
 
+                    b.Property<string>("CustomerItemRef")
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)")
+                        .UseCollation("Latin1_General_100_BIN2");
+
                     b.Property<decimal?>("DiameterMm")
                         .HasColumnType("decimal(18,2)");
+
+                    b.Property<bool>("IsAssembly")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
 
                     b.Property<string>("ItemNo")
                         .IsRequired()
                         .HasColumnType("nvarchar(450)")
                         .UseCollation("Latin1_General_100_BIN2");
 
+                    b.Property<int>("ItemSequence")
+                        .HasColumnType("int");
+
                     b.Property<decimal?>("LengthMm")
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<long?>("MaterialId")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("NextChildSequence")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(1);
+
+                    b.Property<long?>("ParentItemId")
                         .HasColumnType("bigint");
 
                     b.Property<string>("PartName")
@@ -2980,7 +3006,13 @@ namespace ERP.MES.Infrastructure.SqlServer.Migrations
 
                     b.HasIndex("MaterialId");
 
+                    b.HasIndex("ParentItemId");
+
                     b.HasIndex("QuantityTypeId");
+
+                    b.HasIndex("RequestId", "CustomerItemRef")
+                        .IsUnique()
+                        .HasFilter("[CustomerItemRef] IS NOT NULL");
 
                     b.HasIndex("RequestId", "ItemNo")
                         .IsUnique();
@@ -4630,6 +4662,11 @@ namespace ERP.MES.Infrastructure.SqlServer.Migrations
                         .HasForeignKey("MaterialId")
                         .OnDelete(DeleteBehavior.Restrict);
 
+                    b.HasOne("ERP.MES.Domain.Requests.RequestItem", "Parent")
+                        .WithMany()
+                        .HasForeignKey("ParentItemId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("ERP.MES.Domain.Quality.QuantityType", null)
                         .WithMany()
                         .HasForeignKey("QuantityTypeId")
@@ -4640,6 +4677,8 @@ namespace ERP.MES.Infrastructure.SqlServer.Migrations
                         .HasForeignKey("RequestId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.Navigation("Parent");
                 });
 
             modelBuilder.Entity("ERP.MES.Domain.Requests.RequestWorkflowEntry", b =>

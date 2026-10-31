@@ -177,6 +177,108 @@ public class ItemDefinitionTests
     private static long Count(World w, string tableAndWhere) => long.Parse(w.Fixture.Db.Query("SELECT COUNT(*) FROM " + tableAndWhere).Single(), System.Globalization.CultureInfo.InvariantCulture);
 
     [Fact]
+    public async Task Planning_builds_an_assembly_with_children_the_numbers_follow_the_hierarchy_and_survive_a_restart()
+    {
+        using var w = await StartAsync();
+        var (id, version) = await ReadyAsync(w);
+        var (piece, _) = await TypesAsync(w);
+        var material = await MaterialAsync(w);
+
+        var parent = await w.Items.DefineItemAsync(w.Planning, id, version, Make(piece, material, "P") with { IsAssembly = true }, Token);
+        Assert.True(parent.Succeeded, parent.Status + " " + parent.Issue);
+        var parentId = parent.Value!.Value.Items.Single().Id;
+        var first = await w.Items.DefineItemAsync(w.Planning, id, parent.Value.Version, Make(piece, material, "P1") with { ParentItemId = parentId }, Token);
+        var second = await w.Items.DefineItemAsync(w.Planning, id, first.Value!.Version, Make(piece, material, null) with { ParentItemId = parentId }, Token);
+
+        Assert.True(second.Succeeded, second.Status + " " + second.Issue);
+        var items = (await LoadAsync(w, id)).Items;
+        Assert.Equal(new[] { "D-1-001", "D-1-001.001", "D-1-001.002" }, items.Select(i => i.ItemNo).ToArray());
+        Assert.Equal(new string?[] { "P", "P1", null }, items.Select(i => i.CustomerItemRef).ToArray());
+        Assert.Equal(parentId, items[1].ParentItemId);
+        Assert.True(items[0].IsAssembly);
+        Assert.Equal(1, Count(w, "AuditLog WHERE ActionCode = 'ItemDefined' AND Summary LIKE '%child of D-1-001%' AND Summary LIKE '%D-1-001.001%'"));
+    }
+
+    [Fact]
+    public async Task A_child_needs_an_assembly_parent_of_the_same_request_and_a_clear_reason_otherwise()
+    {
+        using var w = await StartAsync();
+        var (id, version) = await ReadyAsync(w);
+        var (piece, _) = await TypesAsync(w);
+        var material = await MaterialAsync(w);
+        var plain = await w.Items.DefineItemAsync(w.Planning, id, version, Make(piece, material, "A"), Token);
+        var plainId = plain.Value!.Value.Items.Single().Id;
+
+        var notAssembly = await w.Items.DefineItemAsync(w.Planning, id, plain.Value.Version, Make(piece, material, "B") with { ParentItemId = plainId }, Token);
+        var unknown = await w.Items.DefineItemAsync(w.Planning, id, plain.Value.Version, Make(piece, material, "C") with { ParentItemId = 424242 }, Token);
+        var tooLong = await w.Items.DefineItemAsync(w.Planning, id, plain.Value.Version, Make(piece, material, new string('x', 41)), Token);
+        var padded = await w.Items.DefineItemAsync(w.Planning, id, plain.Value.Version, Make(piece, material, "x "), Token);
+
+        Assert.Equal(ValidationIssue.ItemParentNotAssembly, notAssembly.Issue);
+        Assert.Equal(ValidationIssue.ItemParentInvalid, unknown.Issue);
+        Assert.Equal(ValidationIssue.CustomerItemRefInvalid, tooLong.Issue);
+        Assert.Equal(ValidationIssue.CustomerItemRefInvalid, padded.Issue);
+        Assert.Equal(1, Count(w, "RequestItems"));
+    }
+
+    [Fact]
+    public async Task Moving_an_item_renumbers_its_subtree_is_audited_and_is_locked_once_a_stage_exists()
+    {
+        using var w = await StartAsync();
+        var (id, version) = await ReadyAsync(w);
+        var (piece, _) = await TypesAsync(w);
+        var material = await MaterialAsync(w);
+        var unit = (await w.Services.PlanningMaster.AddUnitAsync(w.Admin, "MILLING", "فرزکاری", Token)).Value!.Value.Id;
+
+        var a = await w.Items.DefineItemAsync(w.Planning, id, version, Make(piece, material, "A") with { IsAssembly = true }, Token);
+        var b = await w.Items.DefineItemAsync(w.Planning, id, a.Value!.Version, Make(piece, material, "B") with { IsAssembly = true }, Token);
+        var aId = b.Value!.Value.Items.First(i => i.CustomerItemRef == "A").Id;
+        var bId = b.Value.Value.Items.First(i => i.CustomerItemRef == "B").Id;
+        var child = await w.Items.DefineItemAsync(w.Planning, id, b.Value.Version, Make(piece, material, "B1") with { ParentItemId = bId }, Token);
+        Assert.Equal("D-1-002.001", child.Value!.Value.Items.Single(i => i.CustomerItemRef == "B1").ItemNo);
+
+        var moved = await w.Items.MoveItemAsync(w.Planning, id, child.Value.Version, bId, aId, Token);
+
+        Assert.True(moved.Succeeded, moved.Status + " " + moved.Issue);
+        var items = (await LoadAsync(w, id)).Items.ToDictionary(i => i.CustomerItemRef!);
+        Assert.Equal("D-1-001.001", items["B"].ItemNo);
+        Assert.Equal("D-1-001.001.001", items["B1"].ItemNo);
+        Assert.Equal(1, Count(w, "AuditLog WHERE ActionCode = 'ItemMoved' AND Summary LIKE '%D-1-002%' AND Summary LIKE '%D-1-001.001%'"));
+
+        // A stage anywhere in the subtree locks the relationship.
+        var current = await w.Services.Requests.GetAsync(w.Qc, id, Token);
+        var b1Id = items["B1"].Id;
+        var staged = await w.Items.DefineStageAsync(w.Planning, id, current.Value!.Request.Version, b1Id, current.Value.Versions.ItemVersion(b1Id), new DefineStageCommand("Turning", 5m, unit, null), Token);
+        Assert.True(staged.Succeeded, staged.Status + " " + staged.Issue);
+        var locked = await w.Items.MoveItemAsync(w.Planning, id, staged.Value!.Version, bId, null, Token);
+        Assert.Equal(ValidationIssue.ItemHierarchyLocked, locked.Issue);
+        Assert.Equal("D-1-001.001", (await LoadAsync(w, id)).Items.Single(i => i.CustomerItemRef == "B").ItemNo);
+    }
+
+    [Fact]
+    public async Task Only_item_definers_may_move_items_or_change_the_assembly_flag()
+    {
+        using var w = await StartAsync();
+        var (id, version) = await ReadyAsync(w);
+        var (piece, _) = await TypesAsync(w);
+        var material = await MaterialAsync(w);
+        var defined = await w.Items.DefineItemAsync(w.Planning, id, version, Make(piece, material, "A"), Token);
+        var itemId = defined.Value!.Value.Items.Single().Id;
+
+        foreach (var user in new Principal?[] { w.Central, w.Manager, w.Qc, w.Warehouse, w.Admin, null })
+        {
+            Assert.Equal(OperationStatus.NotAuthorized, (await w.Items.MoveItemAsync(user, id, defined.Value.Version, itemId, null, Token)).Status);
+            Assert.Equal(OperationStatus.NotAuthorized, (await w.Items.SetAssemblyAsync(user, id, defined.Value.Version, itemId, true, Token)).Status);
+        }
+
+        var marked = await w.Items.SetAssemblyAsync(w.Planning, id, defined.Value.Version, itemId, true, Token);
+        Assert.True(marked.Succeeded, marked.Status + " " + marked.Issue);
+        Assert.True((await LoadAsync(w, id)).Items.Single().IsAssembly);
+        Assert.Equal(1, Count(w, "AuditLog WHERE ActionCode = 'ItemAssemblyChanged'"));
+        Assert.True((await w.Items.SetAssemblyAsync(w.Planning, id, marked.Value!.Version, itemId, false, Token)).Succeeded);
+    }
+
+    [Fact]
     public async Task Planning_defines_a_make_item_with_its_specification_after_the_gates_and_it_is_stored_audited_and_survives_a_restart()
     {
         using var w = await StartAsync();
@@ -188,7 +290,8 @@ public class ItemDefinitionTests
 
         Assert.True(outcome.Succeeded, outcome.Status + " " + outcome.Issue);
         var item = (await WorkflowServices.Create(w.Fixture.Db.ContextFactory, w.Fixture.Services.Authorization, PersistenceTestData.Dates, w.Fixture.Clock).Requests.GetAsync(w.Qc, id, Token)).Value!.Request.Value.Items.Single();
-        Assert.Equal("1.10", item.ItemNo);
+        Assert.Equal("1.10", item.CustomerItemRef);
+        Assert.EndsWith("-001", item.ItemNo, StringComparison.Ordinal);
         Assert.Equal(10m, item.RequestedQuantity);
         Assert.Equal(piece, item.QuantityTypeId);
         Assert.Equal(material, item.MaterialId);
@@ -355,8 +458,8 @@ public class ItemDefinitionTests
     }
 
     [Theory]
-    [InlineData(null, "Ring", 1, ValidationIssue.ItemNoRequired)]
-    [InlineData("  ", "Ring", 1, ValidationIssue.ItemNoRequired)]
+    [InlineData("  ", "Ring", 1, ValidationIssue.CustomerItemRefInvalid)]
+    [InlineData(" 1.10", "Ring", 1, ValidationIssue.CustomerItemRefInvalid)]
     [InlineData("1.10", null, 1, ValidationIssue.PartNameRequired)]
     [InlineData("1.10", " ", 1, ValidationIssue.PartNameRequired)]
     [InlineData("1.10", "Ring", 0, ValidationIssue.QuantityInvalid)]
@@ -391,7 +494,7 @@ public class ItemDefinitionTests
         Assert.True(freeText.Succeeded);
         Assert.True(otherRequest.Succeeded);
         var stored = (await LoadAsync(w, first.Id)).Items;
-        Assert.Equal(new[] { "A-1", "a-1", "شفت ۱/الف #7" }, stored.Select(i => i.ItemNo).ToArray());
+        Assert.Equal(new[] { "A-1", "a-1", "شفت ۱/الف #7" }, stored.Select(i => i.CustomerItemRef).ToArray());
         Assert.Equal(2.0001m, stored[0].RequestedQuantity);
     }
 
@@ -437,7 +540,7 @@ public class ItemDefinitionTests
 
         Assert.True(first.Succeeded);
         Assert.Equal(OperationStatus.ConcurrencyConflict, stale.Status);
-        Assert.Equal(new[] { "A" }, (await LoadAsync(w, id)).Items.Select(i => i.ItemNo).ToArray());
+        Assert.Equal(new[] { "A" }, (await LoadAsync(w, id)).Items.Select(i => i.CustomerItemRef).ToArray());
         Assert.True((await w.Items.DefineItemAsync(second, id, first.Value!.Version, Repair("B"), Token)).Succeeded);
     }
 

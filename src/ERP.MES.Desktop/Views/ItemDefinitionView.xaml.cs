@@ -45,15 +45,22 @@ public partial class ItemDefinitionView : UserControl
         var saved = false;
         await SafeAsync(async () => saved = await _viewModel.DefineItemAsync(
             ItemNoBox.Text, PartNameBox.Text, QuantityBox.Text, priority, (TypeBox.SelectedItem as Choice<long>)?.Value, (MaterialBox.SelectedItem as Choice<long>)?.Value,
-            WeightBox.Text, LengthBox.Text, DiameterBox.Text));
+            WeightBox.Text, LengthBox.Text, DiameterBox.Text, default, (ParentBox.SelectedItem as Choice<long>)?.Value, AssemblyBox.IsChecked == true));
         if (saved)
         {
             foreach (var box in new[] { ItemNoBox, PartNameBox, QuantityBox, WeightBox, LengthBox, DiameterBox })
             {
                 box.Clear();
             }
+
+            AssemblyBox.IsChecked = false;
         }
     }
+
+    private async void OnMakeAssemblyClick(object sender, RoutedEventArgs e) => await SafeAsync(() => _viewModel.SetSelectedAssemblyAsync(true));
+
+    private async void OnMoveClick(object sender, RoutedEventArgs e) =>
+        await SafeAsync(() => _viewModel.MoveSelectedAsync((ParentBox.SelectedItem as Choice<long>)?.Value));
 
     private async void OnDefineStageClick(object sender, RoutedEventArgs e)
     {

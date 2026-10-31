@@ -202,12 +202,19 @@ public sealed class ItemImportService(
                     expectedRequestVersion,
                     request =>
                     {
+                        var definedHere = new Dictionary<string, RequestItem>(StringComparer.Ordinal);
                         foreach (var (row, outcome) in outcomes)
                         {
                             var rowData = data.GetValueOrDefault(row.SheetRowNo);
                             if (outcome == ItemImportOutcome.Created)
                             {
-                                var item = request.DefineItem(0, rowData!.ItemNo, rowData.PartName, rowData.Quantity, WithBaseUnits(rowData.Specification), user.UserId, now, rowData.Priority);
+                                var parent = rowData!.ParentRef is { } parentRef ? definedHere.GetValueOrDefault(parentRef) ?? request.FindByCustomerItemRef(parentRef) : null;
+                                var item = request.DefineItem(0, rowData.ItemNo, rowData.PartName, rowData.Quantity, WithBaseUnits(rowData.Specification), user.UserId, now, rowData.Priority, parent, rowData.IsAssembly);
+                                if (rowData.ItemNo is not null)
+                                {
+                                    definedHere[rowData.ItemNo] = item;
+                                }
+
                                 foreach (var stage in rowData.Stages)
                                 {
                                     item.DefineInitialStage(stage.Title, stage.MinutesPerPiece, null, stage.ProductionUnitId, stage.MachineId);
@@ -215,7 +222,7 @@ public sealed class ItemImportService(
                             }
                             else if (outcome == ItemImportOutcome.Updated)
                             {
-                                request.ReviseItem(rowData!.ItemNo, rowData.PartName, rowData.Quantity, rowData.Priority, WithBaseUnits(rowData.Specification), now);
+                                request.ReviseItem(rowData!.ItemNo!, rowData.PartName, rowData.Quantity, rowData.Priority, WithBaseUnits(rowData.Specification), now);
                             }
                         }
                     },
@@ -240,6 +247,11 @@ public sealed class ItemImportService(
         catch (ItemSpecificationException)
         {
             return Outcome<ImportCommitResult>.Invalid(ValidationIssue.ImportHasErrors);
+        }
+        catch (ItemHierarchyException exception)
+        {
+            // For example more than 999 items under one parent (Decision Log #121 Q3): the whole import is refused and nothing is saved.
+            return Outcome<ImportCommitResult>.Invalid(ItemDefinitionService.HierarchyIssue(exception.Problem));
         }
         catch (InvalidOperationException)
         {
@@ -286,7 +298,7 @@ public sealed class ItemImportService(
 
         var lookups = await BuildLookupsAsync(cancellationToken);
         var parsed = ItemImportParser.Parse(reader.Read(content), current.Value.WorkType, lookups);
-        var rows = parsed.Rows.Select(r => Classify(r, current.Value)).ToList();
+        var rows = parsed.Rows.Select(r => Classify(r, current.Value, parsed.Rows)).ToList();
         var preview = new ImportPreview(fileName.Trim(), DocumentHash.Sha256Hex(content), current.Version, parsed.FileMessages, rows);
         return new Loaded(preview, parsed, null);
     }
@@ -300,17 +312,21 @@ public sealed class ItemImportService(
         return new ImportLookups(types, mats, units, machines);
     }
 
-    private static ImportRowPreview Classify(ParsedImportRow row, Request request)
+    private static ImportRowPreview Classify(ParsedImportRow row, Request request, IReadOnlyList<ParsedImportRow> fileRows)
     {
         if (row.Data is not { } data)
         {
             return new ImportRowPreview(row.SheetRowNo, row.ItemNo, ImportRowStatus.Invalid, [], row.Messages);
         }
 
-        var existing = request.Items.FirstOrDefault(i => string.Equals(i.ItemNo, data.ItemNo, StringComparison.Ordinal));
+        // Existing items are matched ONLY by the customer reference (Decision Log #121 Q2): never by row number, description or the system number. A row without a reference is always new.
+        var existing = request.FindByCustomerItemRef(data.ItemNo);
         if (existing is null)
         {
-            return new ImportRowPreview(row.SheetRowNo, data.ItemNo, ImportRowStatus.New, [], []);
+            var hierarchy = HierarchyProblem(data, request, fileRows);
+            return hierarchy is { } error
+                ? new ImportRowPreview(row.SheetRowNo, data.ItemNo, ImportRowStatus.Invalid, [], [.. row.Messages, error])
+                : new ImportRowPreview(row.SheetRowNo, data.ItemNo, ImportRowStatus.New, [], row.Messages);
         }
 
         var changes = new List<ImportFieldChange>();
@@ -335,13 +351,65 @@ public sealed class ItemImportService(
         Compare(ImportField.Diameter, existing.DiameterMm, data.Specification.DiameterMm);
 
         // The stage columns apply to NEW items only. For an existing item they are not compared as data; a note says its stages are kept.
-        var messages = data.Stages.Count > 0 ? new[] { new ImportMessage(row.SheetRowNo, ImportIssue.StagesIgnoredForExistingItem, data.ItemNo, false) } : [];
+        var messages = (data.Stages.Count > 0 ? new[] { new ImportMessage(row.SheetRowNo, ImportIssue.StagesIgnoredForExistingItem, data.ItemNo, false) } : []).Concat(row.Messages).ToArray();
         if (changes.Count == 0)
         {
             return new ImportRowPreview(row.SheetRowNo, data.ItemNo, ImportRowStatus.Unchanged, [], messages);
         }
 
         return new ImportRowPreview(row.SheetRowNo, data.ItemNo, existing.IsDefinitionRevisable ? ImportRowStatus.Conflict : ImportRowStatus.Locked, changes, messages);
+    }
+
+    /// <summary>
+    /// The hierarchy of a NEW row (Decision Log #121 Q4): the parent is an item already in the request or an earlier row of the file, it is an assembly, it has no stages yet and the nesting stays
+    /// within four levels. Returns the problem as a row error, or null when the row is fine.
+    /// </summary>
+    private static ImportMessage? HierarchyProblem(ImportRowData data, Request request, IReadOnlyList<ParsedImportRow> fileRows)
+    {
+        if (data.ParentRef is not { } parentRef)
+        {
+            return null;
+        }
+
+        ImportMessage Error(ImportIssue issue) => new(data.SheetRowNo, issue, parentRef, true);
+
+        var chain = 1;
+        var current = parentRef;
+        var assembly = false;
+        var locked = false;
+        var first = true;
+        var guard = 0;
+        while (current is not null && guard++ < Request.MaxHierarchyDepth + 2)
+        {
+            var earlier = fileRows.FirstOrDefault(r => r.Data is { } d && d.SheetRowNo < data.SheetRowNo && string.Equals(d.ItemNo, current, StringComparison.Ordinal))?.Data;
+            var stored = request.FindByCustomerItemRef(current);
+            if (earlier is null && stored is null)
+            {
+                return Error(first ? ImportIssue.ParentRefUnknown : ImportIssue.ParentRefUnknown);
+            }
+
+            chain++;
+            if (first)
+            {
+                assembly = earlier?.IsAssembly ?? stored!.IsAssembly;
+                locked = earlier is null && stored!.HasStages;
+                first = false;
+            }
+
+            current = earlier is not null ? earlier.ParentRef : stored!.Parent?.CustomerItemRef;
+        }
+
+        if (!assembly)
+        {
+            return Error(ImportIssue.ParentNotAssembly);
+        }
+
+        if (locked)
+        {
+            return Error(ImportIssue.ParentLocked);
+        }
+
+        return chain > Request.MaxHierarchyDepth ? Error(ImportIssue.ParentTooDeep) : null;
     }
 
     private static string? Invariant<T>(T value) => value switch

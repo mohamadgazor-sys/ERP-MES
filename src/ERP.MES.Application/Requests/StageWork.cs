@@ -250,6 +250,14 @@ public sealed class StageWorkService(IRequestRepository requests, CurrentAuthori
             return Outcome<StageActionResult>.Invalid(ValidationIssue.StageGateNotSatisfied);
         }
 
+        // The first stage of an assembly is released only when every child and descendant has finished its route with every QC approval (Decision Log #121 Q5).
+        if (action == StageAction.Release
+            && loaded.Value.Items.FirstOrDefault(i => i.Id == target.ItemId) is { IsAssembly: true } assembly
+            && !loaded.Value.AllDescendantsRouteCompleted(assembly))
+        {
+            return Outcome<StageActionResult>.Invalid(ValidationIssue.AssemblyChildrenNotComplete);
+        }
+
         if (action is StageAction.Release or StageAction.Start)
         {
             var gate = await gates.EvaluateAsync(target.RequestId, target.ItemId, cancellationToken);

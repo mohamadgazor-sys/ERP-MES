@@ -54,11 +54,11 @@ public class SingleWorkTypeMigrationTests
         await SqliteDatabase.MigrateAsync(db.Path, Token);
 
         Assert.Equal(new[] { "1|1", "2|2" }, db.Query("SELECT Id, WorkType FROM Requests ORDER BY Id").ToArray());
-        Assert.Equal(new[] { "1.10|1|2.5", "1.20|1|2.5", "2.10|2|2.5" }, db.Query("SELECT ItemNo, RequestId, RequestedQuantity FROM RequestItems ORDER BY Id").ToArray());
+        Assert.Equal(new[] { "M-1-001|1|2.5", "M-1-002|1|2.5", "R-1-001|2|2.5" }, db.Query("SELECT ItemNo, RequestId, RequestedQuantity FROM RequestItems ORDER BY Id").ToArray());
         Assert.DoesNotContain("WorkType", db.Query("SELECT name FROM pragma_table_info('RequestItems')"));
         Assert.Contains("WorkType", db.Query("SELECT name FROM pragma_table_info('Requests')"));
         Assert.Empty(db.Query("PRAGMA foreign_key_check"));
-        Assert.Equal(25, db.Query("SELECT MigrationId FROM __EFMigrationsHistory").Count);
+        Assert.Equal(26, db.Query("SELECT MigrationId FROM __EFMigrationsHistory").Count);
 
         // The business keys survive the table rebuild.
         Assert.Contains("CustomerId,RequestNo,JalaliRequestYear", db.Query("SELECT group_concat(c.name, ',') FROM pragma_index_list('Requests') l, pragma_index_info(l.name) c WHERE l.\"unique\" = 1 GROUP BY l.name"));
@@ -109,7 +109,7 @@ public class SingleWorkTypeMigrationTests
 
         await SqliteDatabase.MigrateAsync(db.Path, Token);
 
-        Assert.Equal(25, db.Query("SELECT MigrationId FROM __EFMigrationsHistory").Count);
+        Assert.Equal(26, db.Query("SELECT MigrationId FROM __EFMigrationsHistory").Count);
         Assert.Equal("Old customer", db.Query("SELECT Name FROM Customers").Single());
     }
 }

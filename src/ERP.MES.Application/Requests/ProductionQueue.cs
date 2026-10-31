@@ -47,6 +47,9 @@ public sealed record ProductionQueueEntry(
     /// <summary>The request row's version as read (Decision Log #77). A stage action names it as an expected version.</summary>
     public long RequestVersion { get; init; }
 
+    /// <summary>The customer's own item number, when the item has one (the system number is <see cref="ItemNo"/>).</summary>
+    public string? CustomerItemRef { get; init; }
+
     /// <summary>The row version of every stage of the item as read, by stage number. A stage action names the versions of the stages it changes or relies on.</summary>
     public IReadOnlyDictionary<int, long> StageVersions { get; init; } = new Dictionary<int, long>();
 }
@@ -144,6 +147,7 @@ public sealed class ProductionQueueService(IRequestRepository requests, CurrentA
             stages.Count == 0 ? null : stages.Sum(s => s.PlannedTotalMinutes),
             loaded.Versions.ItemVersion(item.Id))
         {
+            CustomerItemRef = item.CustomerItemRef,
             RequestVersion = loaded.Versions.Request,
             StageVersions = stages.ToDictionary(s => s.StageNo, s => loaded.Versions.StageVersion(item.Id, s.StageNo)),
         };

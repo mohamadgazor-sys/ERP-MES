@@ -43,7 +43,7 @@ public class WorkBoardViewModelTests
         var version = (await h.Workflow.Requests.GetAsync(h.Qc, requestId, Token)).Value!.Request.Version;
         var defined = await h.Workflow.ItemDefinition.DefineItemAsync(h.Planning, requestId, version, new DefineItemCommand(itemNo, "قطعه " + itemNo, 10m, Priority.Normal, piece, material, 1m, null, null), Token);
         Assert.True(defined.Succeeded, defined.Status + " " + defined.Issue);
-        var itemId = defined.Value!.Value.Items.Single(i => i.ItemNo == itemNo).Id;
+        var itemId = defined.Value!.Value.Items.Single(i => i.CustomerItemRef == itemNo).Id;
         foreach (var unit in units)
         {
             var current = (await h.Workflow.Requests.GetAsync(h.Planning, requestId, Token)).Value!;
@@ -163,7 +163,7 @@ public class WorkBoardViewModelTests
 
         await board.LoadAsync(Token);
 
-        var held = board.Stages.Single(s => s.Entry.ItemNo == "B");
+        var held = board.Stages.Single(s => s.Entry.CustomerItemRef == "B");
         Assert.Contains("شرط‌های آزادسازی تولید برقرار نیست", held.BlockText, StringComparison.Ordinal);
         Assert.Contains("قرارداد در حال تهیه است", held.BlockText, StringComparison.Ordinal);
         board.SelectStage(held);
@@ -171,7 +171,7 @@ public class WorkBoardViewModelTests
 
         Assert.True((await h.Workflow.Contracts.DecideItemAsync(h.Planning, requestId, held.Entry.ItemId, ContractRequirement.NotRequired, "بدون قرارداد", Token)).Succeeded);
         await board.LoadAsync(Token);
-        Assert.DoesNotContain("قرارداد در حال تهیه", board.Stages.Single(s => s.Entry.ItemNo == "B").BlockText, StringComparison.Ordinal);
+        Assert.DoesNotContain("قرارداد در حال تهیه", board.Stages.Single(s => s.Entry.CustomerItemRef == "B").BlockText, StringComparison.Ordinal);
     }
 
     [Fact]

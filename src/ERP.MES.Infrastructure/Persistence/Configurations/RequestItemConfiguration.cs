@@ -15,6 +15,15 @@ public sealed class RequestItemConfiguration : IEntityTypeConfiguration<RequestI
 
         // Exact, case-sensitive text (binary collation), never parsed or normalised (Domain and Database Specification 5.2; Decision Log #58, G5).
         builder.Property(i => i.ItemNo).UseCollation("BINARY").IsRequired();
+        builder.Property(i => i.ItemSequence).IsRequired();
+        builder.Property(i => i.NextChildSequence).IsRequired().HasDefaultValue(1);
+        builder.Property(i => i.IsAssembly).IsRequired().HasDefaultValue(false);
+
+        // The customer's own item number: optional, exact text; the key of a re-import (Decision Log #121 Q2). Several items may have none, so its unique index ignores them.
+        builder.Property(i => i.CustomerItemRef).UseCollation("BINARY").HasMaxLength(RequestItem.MaxCustomerItemRefLength);
+
+        // The assembly the item belongs to (same request; the Domain checks that). Deleting is restricted: history is never lost.
+        builder.HasOne(i => i.Parent).WithMany().HasForeignKey(i => i.ParentItemId).IsRequired(false).OnDelete(DeleteBehavior.Restrict);
         builder.Property(i => i.PartName).IsRequired();
 
         // Exact decimal values; the scale is still open for Milestone 2, so no precision is set and nothing is rounded.
@@ -52,5 +61,6 @@ public sealed class RequestItemConfiguration : IEntityTypeConfiguration<RequestI
         // The foreign key to the request is a shadow property (the domain item does not carry its request id).
         builder.Property<long>("RequestId");
         builder.HasIndex("RequestId", nameof(RequestItem.ItemNo)).IsUnique();
+        builder.HasIndex("RequestId", nameof(RequestItem.CustomerItemRef)).IsUnique().HasFilter("[CustomerItemRef] IS NOT NULL");
     }
 }

@@ -26,7 +26,7 @@ public class WorkSessionPersistenceTests
         db.Execute($"INSERT INTO Users (Id, Username, UsernameKey, DisplayName, DepartmentId, RoleId, IsActive, CreatedAtUtc, UpdatedAtUtc, Version) VALUES (1, 'test.creator', 'TEST.CREATOR', 'Test creator', 1, 3, 1, {Stamp}, {Stamp}, 1)");
         db.Execute($"INSERT INTO Customers (Id, Name, IsActive, CreatedByUserId, CreatedAtUtc, UpdatedAtUtc, Version) VALUES (1, 'C', 1, 1, {Stamp}, {Stamp}, 1)");
         db.Execute($"INSERT INTO Requests (Id, CustomerId, RequestNo, WorkType, RequestDate, JalaliRequestYear, Title, Description, Status, CreatedByUserId, CreatedAtUtc, UpdatedAtUtc, Version) VALUES (1, 1, 'M-1', 1, '2026-10-12', 1405, NULL, NULL, 6, 1, {Stamp}, {Stamp}, 1)");
-        db.Execute($"INSERT INTO RequestItems (Id, RequestId, ItemNo, PartName, RequestedQuantity, Priority, CreatedByUserId, CreatedAtUtc, UpdatedAtUtc, Version) VALUES (1, 1, 'A', 'Ring', 10, 1, 1, {Stamp}, {Stamp}, 1)");
+        db.Execute($"INSERT INTO RequestItems (Id, RequestId, ItemNo, ItemSequence, PartName, RequestedQuantity, Priority, CreatedByUserId, CreatedAtUtc, UpdatedAtUtc, Version) VALUES (1, 1, 'A', 1, 'Ring', 10, 1, 1, {Stamp}, {Stamp}, 1)");
         await using var context = db.NewContext();
         context.ProductionUnits.Add(new ERP.MES.Domain.Planning.ProductionUnit(0, "MILLING", "فرز", 1, At(0)));
         await context.SaveChangesAsync(Token);

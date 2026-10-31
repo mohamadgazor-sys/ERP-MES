@@ -105,6 +105,8 @@ public static class AuditActions
     public const string ItemImportCommitted = "ItemImportCommitted";
     public const string ItemRevisedByImport = "ItemRevisedByImport";
     public const string ItemDefined = "ItemDefined";
+    public const string ItemMoved = "ItemMoved";
+    public const string ItemAssemblyChanged = "ItemAssemblyChanged";
     public const string ItemStageDefined = "ItemStageDefined";
     public const string ClarificationAsked = "ClarificationAsked";
     public const string ClarificationAnswered = "ClarificationAnswered";

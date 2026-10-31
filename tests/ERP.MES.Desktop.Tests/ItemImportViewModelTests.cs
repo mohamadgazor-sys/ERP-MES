@@ -74,7 +74,7 @@ public class ItemImportViewModelTests
 
         row.Choice = ConflictChoice.Update;
         Assert.True(await vm.CommitAsync(Token));
-        var item = (await h.Workflow.Requests.GetAsync(h.Planning, id, Token)).Value!.Request.Value.Items.Single(i => i.ItemNo == "1.10");
+        var item = (await h.Workflow.Requests.GetAsync(h.Planning, id, Token)).Value!.Request.Value.Items.Single(i => i.CustomerItemRef == "1.10");
         Assert.Equal("حلقه جدید", item.PartName);
     }
 

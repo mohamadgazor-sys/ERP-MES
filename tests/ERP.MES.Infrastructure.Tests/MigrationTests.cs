@@ -26,7 +26,7 @@ public class MigrationTests
 
         await using var context = db.NewContext();
         var applied = (await context.Database.GetAppliedMigrationsAsync(TestContext.Current.CancellationToken)).ToArray();
-        Assert.Equal(25, applied.Length);
+        Assert.Equal(26, applied.Length);
         Assert.EndsWith("_InitialCreate", applied[0], StringComparison.Ordinal);
         Assert.EndsWith("_AddAuthentication", applied[1], StringComparison.Ordinal);
         Assert.EndsWith("_SingleWorkTypePerRequest", applied[2], StringComparison.Ordinal);
@@ -59,7 +59,7 @@ public class MigrationTests
 
         // Fails if the model changed without a new migration, or if the snapshot was edited away from the model.
         Assert.False(context.Database.HasPendingModelChanges());
-        Assert.Equal(25, context.Database.GetMigrations().Count());
+        Assert.Equal(26, context.Database.GetMigrations().Count());
     }
 
     [Fact]
@@ -95,7 +95,7 @@ public class MigrationTests
         await db.MigrateWithActorsAsync();
 
         Assert.Equal(new[] { "CustomerId,RequestNo,JalaliRequestYear" }, UniqueIndexColumns(db, "Requests"));
-        Assert.Equal(new[] { "RequestId,ItemNo" }, UniqueIndexColumns(db, "RequestItems"));
+        Assert.Equal(new[] { "RequestId,ItemNo", "RequestId,CustomerItemRef" }.OrderBy(c => c, StringComparer.Ordinal), UniqueIndexColumns(db, "RequestItems").OrderBy(c => c, StringComparer.Ordinal));
         Assert.Equal(new[] { "RequestItemId,StageNo" }, UniqueIndexColumns(db, "ItemStages"));
     }
 
@@ -125,6 +125,7 @@ public class MigrationTests
                 "QcApprovals:StageNo->ItemStages:RESTRICT",
                 "RequestItems:CreatedByUserId->Users:RESTRICT",
                 "RequestItems:MaterialId->Materials:RESTRICT",
+                "RequestItems:ParentItemId->RequestItems:RESTRICT",
                 "RequestItems:QuantityTypeId->QuantityTypes:RESTRICT",
                 "RequestItems:RequestId->Requests:RESTRICT",
                 "Requests:CreatedByUserId->Users:RESTRICT",
@@ -217,8 +218,8 @@ public class MigrationTests
 
         // The domain prevents duplicates; the database must refuse them too if anything bypasses the domain.
         Assert.Throws<SqliteException>(() => db.Execute(
-            "INSERT INTO RequestItems (RequestId, ItemNo, PartName, RequestedQuantity, Priority, CreatedByUserId, CreatedAtUtc, UpdatedAtUtc) " +
-            "SELECT RequestId, ItemNo, PartName, RequestedQuantity, Priority, CreatedByUserId, CreatedAtUtc, UpdatedAtUtc FROM RequestItems WHERE ItemNo = 'A-01'"));
+            "INSERT INTO RequestItems (RequestId, ItemNo, ItemSequence, PartName, RequestedQuantity, Priority, CreatedByUserId, CreatedAtUtc, UpdatedAtUtc) " +
+            "SELECT RequestId, ItemNo, ItemSequence, PartName, RequestedQuantity, Priority, CreatedByUserId, CreatedAtUtc, UpdatedAtUtc FROM RequestItems WHERE CustomerItemRef = 'A-01'"));
         Assert.Throws<SqliteException>(() => db.Execute(
             "INSERT INTO ItemStages (RequestItemId, StageNo, StageTitle, PlannedMinutesPerPiece, PlannedQuantity, Status) " +
             "SELECT RequestItemId, StageNo, StageTitle, PlannedMinutesPerPiece, PlannedQuantity, Status FROM ItemStages"));
@@ -231,8 +232,8 @@ public class MigrationTests
         await db.MigrateWithActorsAsync();
         await PersistenceTestData.SeedSampleRequestAsync(db);
 
-        var makeItemId = db.Query("SELECT Id FROM RequestItems WHERE ItemNo = '1.10'").Single();
-        var repairItemId = db.Query("SELECT Id FROM RequestItems WHERE ItemNo = '2.10'").Single();
+        var makeItemId = db.Query("SELECT Id FROM RequestItems WHERE CustomerItemRef = '1.10'").Single();
+        var repairItemId = db.Query("SELECT Id FROM RequestItems WHERE CustomerItemRef = '2.10'").Single();
         string Insert(string itemId, int stageNo) =>
             "INSERT INTO QcApprovals (RequestItemId, StageNo, ApprovedQuantity, ApprovedByUserId, ApprovedAtUtc) " +
             $"VALUES ({itemId}, {stageNo}, '1', 9, '2026-10-15 09:30:15')";

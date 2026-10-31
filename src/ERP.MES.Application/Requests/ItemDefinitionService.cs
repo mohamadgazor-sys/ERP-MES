@@ -4,9 +4,10 @@ using ERP.MES.Domain.Requests;
 
 namespace ERP.MES.Application.Requests;
 
-/// <summary>What Planning typed to define one item. Quantity is in the chosen quantity type; weight is kg per base unit; length and diameter are millimetres.</summary>
+/// <summary>What Planning typed to define one item. The system item number is derived (Decision Log #121); <c>CustomerItemRef</c> is the customer's own optional number. Quantity is in the chosen quantity type; weight is kg per base unit; length and diameter are millimetres.</summary>
 public sealed record DefineItemCommand(
-    string? ItemNo, string? PartName, decimal Quantity, Priority Priority, long? QuantityTypeId, long? MaterialId, decimal? WeightKgPerBaseUnit, decimal? LengthMm, decimal? DiameterMm);
+    string? CustomerItemRef, string? PartName, decimal Quantity, Priority Priority, long? QuantityTypeId, long? MaterialId, decimal? WeightKgPerBaseUnit, decimal? LengthMm, decimal? DiameterMm,
+    long? ParentItemId = null, bool IsAssembly = false);
 
 /// <summary>What Planning typed to plan one stage of an item: title, minutes per piece, the production unit and optionally the machine. Planned quantity defaults to the item's quantity.</summary>
 public sealed record DefineStageCommand(string? StageTitle, decimal PlannedMinutesPerPiece, long ProductionUnitId, long? MachineId, decimal? PlannedQuantity = null);
@@ -65,9 +66,9 @@ public sealed class ItemDefinitionService(
             return Outcome<Stored<Request>>.Fail(OperationStatus.NotAuthorized);
         }
 
-        if (string.IsNullOrWhiteSpace(command.ItemNo))
+        if (command.CustomerItemRef is { } rawRef && (rawRef.Length == 0 || rawRef.Length > RequestItem.MaxCustomerItemRefLength || rawRef.Trim() != rawRef))
         {
-            return Outcome<Stored<Request>>.Invalid(ValidationIssue.ItemNoRequired);
+            return Outcome<Stored<Request>>.Invalid(ValidationIssue.CustomerItemRefInvalid);
         }
 
         if (string.IsNullOrWhiteSpace(command.PartName))
@@ -140,7 +141,7 @@ public sealed class ItemDefinitionService(
                 }
             }
 
-            if (current.Value.HasItemNo(command.ItemNo))
+            if (current.Value.HasCustomerItemRef(command.CustomerItemRef))
             {
                 return Outcome<Stored<Request>>.Invalid(ValidationIssue.ItemNoDuplicate);
             }
@@ -150,14 +151,147 @@ public sealed class ItemDefinitionService(
                 var saved = await requests.UpdateRowsAsync(
                     requestId,
                     RowVersionExpectations.ForRequest(expectedRequestVersion),
-                    r => r.DefineItem(0, command.ItemNo, command.PartName, command.Quantity, specification, user.UserId, now, command.Priority),
-                    r => [Audit(user, now, AuditActions.ItemDefined, requestId, $"Request {r.RequestNo.Value}: item '{command.ItemNo}' defined by Planning ({r.WorkType.Code()}, quantity {command.Quantity})")],
+                    r => r.DefineItem(0, command.CustomerItemRef, command.PartName, command.Quantity, specification, user.UserId, now, command.Priority, ParentOf(r, command.ParentItemId), command.IsAssembly),
+                    r => [Audit(user, now, AuditActions.ItemDefined, requestId,
+                        $"Request {r.RequestNo.Value}: item '{r.Items[^1].ItemNo}'{(command.CustomerItemRef is null ? string.Empty : $" (customer reference '{command.CustomerItemRef}')")} defined by Planning ({r.WorkType.Code()}, quantity {command.Quantity}{(command.ParentItemId is null ? string.Empty : ", child of " + r.Items.First(p => p.Id == command.ParentItemId).ItemNo)}{(command.IsAssembly ? ", assembly" : string.Empty)})")],
                     cancellationToken);
                 return Outcome<Stored<Request>>.Ok(new Stored<Request>(saved.Value, saved.Versions.Request));
             }
             catch (ItemSpecificationException)
             {
                 return Outcome<Stored<Request>>.Invalid(ValidationIssue.ItemSpecificationIncomplete);
+            }
+            catch (ItemHierarchyException exception)
+            {
+                return Outcome<Stored<Request>>.Invalid(HierarchyIssue(exception.Problem));
+            }
+            catch (InvalidOperationException)
+            {
+                return Outcome<Stored<Request>>.Fail(OperationStatus.InvalidState);
+            }
+        });
+    }
+
+    /// <summary>Finds the chosen parent among the items of the request; an unknown id is a hierarchy problem, not a missing request.</summary>
+    private static RequestItem? ParentOf(Request request, long? parentItemId) =>
+        parentItemId is null ? null : request.Items.FirstOrDefault(i => i.Id == parentItemId) ?? throw new ItemHierarchyException(ItemHierarchyProblem.OtherRequest);
+
+    internal static ValidationIssue HierarchyIssue(ItemHierarchyProblem problem) => problem switch
+    {
+        ItemHierarchyProblem.ParentNotAssembly => ValidationIssue.ItemParentNotAssembly,
+        ItemHierarchyProblem.OtherRequest => ValidationIssue.ItemParentInvalid,
+        ItemHierarchyProblem.Cycle => ValidationIssue.ItemHierarchyCycle,
+        ItemHierarchyProblem.TooDeep => ValidationIssue.ItemHierarchyTooDeep,
+        ItemHierarchyProblem.Locked => ValidationIssue.ItemHierarchyLocked,
+        ItemHierarchyProblem.HasChildren => ValidationIssue.ItemHasChildren,
+        ItemHierarchyProblem.SequenceExhausted => ValidationIssue.ItemSequenceExhausted,
+        _ => ValidationIssue.ItemParentInvalid,
+    };
+
+    /// <summary>
+    /// Moves an item (with its subtree) under another assembly or to the top level (Decision Log #121 Q6). Allowed only before any stage is defined for the item, its descendants or either parent;
+    /// the subtree is renumbered consistently and the old and new numbers are audited. Same authority as defining items.
+    /// </summary>
+    public async Task<Outcome<Stored<Request>>> MoveItemAsync(Principal? principal, long requestId, long expectedRequestVersion, long itemId, long? newParentItemId, CancellationToken cancellationToken = default)
+    {
+        var set = await authorization.EvaluateAsync(principal, DefinePermissions, cancellationToken);
+        if (set.Current is null || !(set.Has(Permission.DefineMakeItems) || set.Has(Permission.DefineRepairItemsAndEditAnyItem)))
+        {
+            return Outcome<Stored<Request>>.Fail(OperationStatus.NotAuthorized);
+        }
+
+        var user = set.Current;
+        var now = clock.UtcNow;
+        return await CustomerService.GuardAsync(async () =>
+        {
+            var current = await requests.FindAsync(requestId, cancellationToken);
+            if (current is null)
+            {
+                return Outcome<Stored<Request>>.Fail(OperationStatus.NotFound);
+            }
+
+            var mayDefine = current.Value.WorkType == WorkType.Make ? set.Has(Permission.DefineMakeItems) : set.Has(Permission.DefineRepairItemsAndEditAnyItem);
+            if (!mayDefine)
+            {
+                return Outcome<Stored<Request>>.Fail(OperationStatus.NotAuthorized);
+            }
+
+            if (current.Value.Items.All(i => i.Id != itemId))
+            {
+                return Outcome<Stored<Request>>.Fail(OperationStatus.NotFound);
+            }
+
+            var before = current.Value.Items.First(i => i.Id == itemId).ItemNo;
+            try
+            {
+                var saved = await requests.UpdateRowsAsync(
+                    requestId,
+                    RowVersionExpectations.ForRequest(expectedRequestVersion),
+                    r => r.MoveItem(r.Items.First(i => i.Id == itemId), ParentOf(r, newParentItemId), now),
+                    r => [Audit(user, now, AuditActions.ItemMoved, requestId, $"Request {r.RequestNo.Value}: item '{before}' moved; its number is now '{r.Items.First(i => i.Id == itemId).ItemNo}'")],
+                    cancellationToken);
+                return Outcome<Stored<Request>>.Ok(new Stored<Request>(saved.Value, saved.Versions.Request));
+            }
+            catch (ItemHierarchyException exception)
+            {
+                return Outcome<Stored<Request>>.Invalid(HierarchyIssue(exception.Problem));
+            }
+            catch (InvalidOperationException)
+            {
+                return Outcome<Stored<Request>>.Fail(OperationStatus.InvalidState);
+            }
+        });
+    }
+
+    /// <summary>Marks an item as an assembly (so that children can be attached), or turns it back into a normal item while it has no children.</summary>
+    public async Task<Outcome<Stored<Request>>> SetAssemblyAsync(Principal? principal, long requestId, long expectedRequestVersion, long itemId, bool isAssembly, CancellationToken cancellationToken = default)
+    {
+        var set = await authorization.EvaluateAsync(principal, DefinePermissions, cancellationToken);
+        if (set.Current is null || !(set.Has(Permission.DefineMakeItems) || set.Has(Permission.DefineRepairItemsAndEditAnyItem)))
+        {
+            return Outcome<Stored<Request>>.Fail(OperationStatus.NotAuthorized);
+        }
+
+        var user = set.Current;
+        var now = clock.UtcNow;
+        return await CustomerService.GuardAsync(async () =>
+        {
+            var current = await requests.FindAsync(requestId, cancellationToken);
+            if (current is null || current.Value.Items.All(i => i.Id != itemId))
+            {
+                return Outcome<Stored<Request>>.Fail(OperationStatus.NotFound);
+            }
+
+            var mayDefine = current.Value.WorkType == WorkType.Make ? set.Has(Permission.DefineMakeItems) : set.Has(Permission.DefineRepairItemsAndEditAnyItem);
+            if (!mayDefine)
+            {
+                return Outcome<Stored<Request>>.Fail(OperationStatus.NotAuthorized);
+            }
+
+            try
+            {
+                var saved = await requests.UpdateRowsAsync(
+                    requestId,
+                    RowVersionExpectations.ForRequest(expectedRequestVersion),
+                    r =>
+                    {
+                        var item = r.Items.First(i => i.Id == itemId);
+                        if (isAssembly)
+                        {
+                            r.MarkAssembly(item);
+                        }
+                        else
+                        {
+                            r.UnmarkAssembly(item);
+                        }
+                    },
+                    r => [Audit(user, now, AuditActions.ItemAssemblyChanged, requestId, $"Request {r.RequestNo.Value}: item '{r.Items.First(i => i.Id == itemId).ItemNo}' is {(isAssembly ? "now an assembly" : "no longer an assembly")}")],
+                    cancellationToken);
+                return Outcome<Stored<Request>>.Ok(new Stored<Request>(saved.Value, saved.Versions.Request));
+            }
+            catch (ItemHierarchyException exception)
+            {
+                return Outcome<Stored<Request>>.Invalid(HierarchyIssue(exception.Problem));
             }
             catch (InvalidOperationException)
             {

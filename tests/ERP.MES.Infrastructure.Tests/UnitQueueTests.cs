@@ -207,7 +207,7 @@ public class UnitQueueTests
         var material = long.Parse(w.Fixture.Db.Query("SELECT Id FROM Materials LIMIT 1").Single(), System.Globalization.CultureInfo.InvariantCulture);
         var defined = await w.Items.DefineItemAsync(w.Planning, id, version, new DefineItemCommand(itemNo, "Part " + itemNo, 10m, priority, piece, material, 1m, null, null), Token);
         Assert.True(defined.Succeeded, defined.Status + " " + defined.Issue);
-        var itemId = defined.Value!.Value.Items.Single(i => i.ItemNo == itemNo).Id;
+        var itemId = defined.Value!.Value.Items.Single(i => i.CustomerItemRef == itemNo).Id;
         for (var i = 0; i < stageUnits.Length; i++)
         {
             var current = (await w.Services.Requests.GetAsync(w.Planning, id, Token)).Value!;
@@ -232,7 +232,7 @@ public class UnitQueueTests
         return outcome.Value!;
     }
 
-    private static string Key(UnitQueueEntry e) => e.ItemNo + "/" + e.StageNo;
+    private static string Key(UnitQueueEntry e) => e.CustomerItemRef + "/" + e.StageNo;
 
     [Fact]
     public async Task A_unit_queue_lists_released_stages_of_that_unit_by_category_priority_position_and_first_come_first_served()
@@ -282,7 +282,7 @@ public class UnitQueueTests
         var queue = await LoadAsync(w, w.Planning, milling);
         Assert.Equal(new[] { "A/1", "B/1", "C/1" }, queue.Queue.Select(Key).ToArray());
 
-        var byItem = queue.Queue.ToDictionary(e => e.ItemNo);
+        var byItem = queue.Queue.ToDictionary(e => e.CustomerItemRef);
         var ordered = new[] { byItem["C"], byItem["A"], byItem["B"] }.Select(e => e.ToRowRef()).ToList();
         var result = await w.Queue.SetPlanningOrderAsync(w.Planning, milling, ordered, Token);
 
@@ -360,13 +360,13 @@ public class UnitQueueTests
         await w.Designations.AssignAsync(w.Admin, w.Production.UserId, milling);
         Assert.True((await w.Work.PerformAsync(w.Production, StageAction.Start, await TargetAsync(w, a.RequestId, a.ItemId, 1), Token)).Succeeded);
         Assert.True((await w.Work.PerformAsync(w.Production, StageAction.SubmitForQc, await TargetAsync(w, a.RequestId, a.ItemId, 1), Token)).Succeeded);
-        Assert.Equal(QueueBlock.WaitingQc, Assert.Single((await LoadAsync(w, w.Planning, milling)).Pending, e => e.ItemNo == "A").Block);
+        Assert.Equal(QueueBlock.WaitingQc, Assert.Single((await LoadAsync(w, w.Planning, milling)).Pending, e => e.CustomerItemRef == "A").Block);
         // A stage planned in a unit is decided by quantity (10 pieces here).
         Assert.True((await w.Services.QcInspection.RecordInspectionAsync(w.Qc, await TargetAsync(w, a.RequestId, a.ItemId, 1), [new ERP.MES.Domain.Requests.InspectionEntry(ERP.MES.Domain.Requests.InspectionDisposition.Accepted, 10, null)], Token)).Succeeded);
 
         var millingAfter = await LoadAsync(w, w.Planning, milling);
         Assert.Equal(1, millingAfter.CompletedStageCount);
-        Assert.DoesNotContain(millingAfter.Queue.Concat(millingAfter.Pending), e => e.ItemNo == "A");
+        Assert.DoesNotContain(millingAfter.Queue.Concat(millingAfter.Pending), e => e.CustomerItemRef == "A");
         var turningAfter = await LoadAsync(w, w.Planning, turning);
         var released = Assert.Single(turningAfter.Queue);
         Assert.Equal("A/2", Key(released));
@@ -456,7 +456,7 @@ public class UnitQueueTests
         await ItemAsync(w, "R-3", "C", [milling], Priority.Normal);
         var queue = await LoadAsync(w, w.Planning, milling);
         Assert.Equal(new[] { "A/1", "B/1", "C/1" }, queue.Queue.Select(Key).ToArray());
-        var byItem = queue.Queue.ToDictionary(e => e.ItemNo);
+        var byItem = queue.Queue.ToDictionary(e => e.CustomerItemRef);
 
         Assert.Equal(ValidationIssue.QueueReasonRequired, (await w.Queue.OverrideAsync(w.Manager, milling, "  ", [byItem["C"].ToRowRef()], Token)).Issue);
         Tick(w);
@@ -466,8 +466,8 @@ public class UnitQueueTests
         var after = await LoadAsync(w, w.Manager, milling);
         Assert.Equal(new[] { "C/1", "B/1", "A/1" }, after.Queue.Select(Key).ToArray());
         Assert.Equal(new int?[] { 1, 2, null }, after.Queue.Select(e => e.OverrideRank).ToArray());
-        Assert.Equal(Priority.VeryUrgent, after.Queue.Single(e => e.ItemNo == "A").Priority);
-        Assert.Null(after.Queue.Single(e => e.ItemNo == "A").PlanningPosition);
+        Assert.Equal(Priority.VeryUrgent, after.Queue.Single(e => e.CustomerItemRef == "A").Priority);
+        Assert.Null(after.Queue.Single(e => e.CustomerItemRef == "A").PlanningPosition);
         Assert.Equal("مشتری کلیدی", after.Queue[0].OverrideReason);
 
         var history = await w.Services.UnitQueueStore.ListOverrideHistoryAsync(milling, Token);
@@ -485,7 +485,7 @@ public class UnitQueueTests
 
         // A second operation puts A first; C and B keep their relative order after it, each moved row is recorded.
         Tick(w);
-        var again = (await LoadAsync(w, w.Manager, milling)).Queue.ToDictionary(e => e.ItemNo);
+        var again = (await LoadAsync(w, w.Manager, milling)).Queue.ToDictionary(e => e.CustomerItemRef);
         Assert.True((await w.Queue.OverrideAsync(w.Manager, milling, "اولویت تولید", [again["A"].ToRowRef()], Token)).Succeeded);
         var third = await LoadAsync(w, w.Manager, milling);
         Assert.Equal(new[] { "A/1", "C/1", "B/1" }, third.Queue.Select(Key).ToArray());
@@ -512,7 +512,7 @@ public class UnitQueueTests
         await ItemAsync(w, "R-1", "A", [milling]);
         await ItemAsync(w, "R-2", "B", [milling]);
         var queue = await LoadAsync(w, w.Manager, milling);
-        var byItem = queue.Queue.ToDictionary(e => e.ItemNo);
+        var byItem = queue.Queue.ToDictionary(e => e.CustomerItemRef);
         var rowA = byItem["A"].ToRowRef();
         var rowB = byItem["B"].ToRowRef();
 
@@ -538,9 +538,9 @@ public class UnitQueueTests
         await MaterialAsync(w);
         await ItemAsync(w, "R-1", "A", [milling], Priority.VeryUrgent);
         await ItemAsync(w, "R-2", "B", [milling], Priority.Normal);
-        var byItem = (await LoadAsync(w, w.Manager, milling)).Queue.ToDictionary(e => e.ItemNo);
+        var byItem = (await LoadAsync(w, w.Manager, milling)).Queue.ToDictionary(e => e.CustomerItemRef);
         Assert.True((await w.Queue.OverrideAsync(w.Manager, milling, "ضروری", [byItem["B"].ToRowRef()], Token)).Succeeded);
-        var overridden = (await LoadAsync(w, w.Manager, milling)).Queue.ToDictionary(e => e.ItemNo);
+        var overridden = (await LoadAsync(w, w.Manager, milling)).Queue.ToDictionary(e => e.CustomerItemRef);
         Assert.False(overridden["B"].OverrideNeedsReview);
 
         // Planning raises B's priority: the override stays in force, both facts are kept, and Management is asked to review.
@@ -548,7 +548,7 @@ public class UnitQueueTests
         Assert.True(changed.Succeeded, changed.Status + " " + changed.Issue);
         Assert.Equal(1, changed.Value);
         var flagged = await LoadAsync(w, w.Manager, milling);
-        var b = flagged.Queue.Single(e => e.ItemNo == "B");
+        var b = flagged.Queue.Single(e => e.CustomerItemRef == "B");
         Assert.Equal(Priority.Urgent, b.Priority);
         Assert.Equal(1, b.OverrideRank);
         Assert.True(b.OverrideNeedsReview);
@@ -564,7 +564,7 @@ public class UnitQueueTests
         // Only Management confirms; the override stays active.
         Assert.Equal(OperationStatus.NotAuthorized, (await w.Queue.ConfirmOverrideReviewAsync(w.Planning, milling, [b.ToRowRef()], Token)).Status);
         Assert.True((await w.Queue.ConfirmOverrideReviewAsync(w.Manager, milling, [b.ToRowRef()], Token)).Succeeded);
-        var confirmed = (await LoadAsync(w, w.Manager, milling)).Queue.Single(e => e.ItemNo == "B");
+        var confirmed = (await LoadAsync(w, w.Manager, milling)).Queue.Single(e => e.CustomerItemRef == "B");
         Assert.False(confirmed.OverrideNeedsReview);
         Assert.Equal(1, confirmed.OverrideRank);
 
@@ -572,7 +572,7 @@ public class UnitQueueTests
         var again = await w.Queue.ChangePriorityAsync(w.Manager, confirmed.RequestId, confirmed.ItemId, Priority.VeryUrgent, confirmed.ItemVersion, Token);
         Assert.True(again.Succeeded);
         Assert.Equal(0, again.Value);
-        Assert.False((await LoadAsync(w, w.Manager, milling)).Queue.Single(e => e.ItemNo == "B").OverrideNeedsReview);
+        Assert.False((await LoadAsync(w, w.Manager, milling)).Queue.Single(e => e.CustomerItemRef == "B").OverrideNeedsReview);
         Assert.Equal(OperationStatus.NotAuthorized, (await w.Queue.ChangePriorityAsync(w.Production, confirmed.RequestId, confirmed.ItemId, Priority.Normal, confirmed.ItemVersion, Token)).Status);
     }
 
@@ -585,14 +585,14 @@ public class UnitQueueTests
         var a = await ItemAsync(w, "R-1", "A", [milling], Priority.Normal);
         await ItemAsync(w, "R-2", "B", [milling], Priority.VeryUrgent);
         await w.Designations.AssignAsync(w.Admin, w.Production.UserId, milling);
-        var row = (await LoadAsync(w, w.Planning, milling)).Queue.Single(e => e.ItemNo == "A").ToRowRef();
+        var row = (await LoadAsync(w, w.Planning, milling)).Queue.Single(e => e.CustomerItemRef == "A").ToRowRef();
 
         Assert.Equal(ValidationIssue.QueueReasonRequired, (await w.Queue.StopStageAsync(w.Production, row, " ", Token)).Issue);
         var stopped = await w.Queue.StopStageAsync(w.Production, row, "خرابی دستگاه", Token);
         Assert.True(stopped.Succeeded, stopped.Status + " " + stopped.Issue);
 
         var queue = await LoadAsync(w, w.Planning, milling);
-        var entry = queue.Queue.Single(e => e.ItemNo == "A");
+        var entry = queue.Queue.Single(e => e.CustomerItemRef == "A");
         Assert.Equal(QueueCategory.Stopped, entry.Category);
         Assert.Equal(QueueBlock.StageStopped, entry.Block);
         Assert.Equal("خرابی دستگاه", entry.StopReason);
@@ -607,7 +607,7 @@ public class UnitQueueTests
         // Resume: back to WAITING and actionable; an unrelated unit's Production user could not have done it.
         var resumed = await w.Queue.ResumeStageAsync(w.Planning, entry.ToRowRef(), Token);
         Assert.True(resumed.Succeeded, resumed.Status + " " + resumed.Issue);
-        var back = (await LoadAsync(w, w.Planning, milling)).Queue.Single(e => e.ItemNo == "A");
+        var back = (await LoadAsync(w, w.Planning, milling)).Queue.Single(e => e.CustomerItemRef == "A");
         Assert.Equal(QueueCategory.Waiting, back.Category);
         Assert.True(back.IsActionable);
         Assert.Null(back.StopReason);
@@ -638,11 +638,11 @@ public class UnitQueueTests
         Assert.Equal(ValidationIssue.StageGateNotSatisfied, (await w.Work.PerformAsync(w.Production, StageAction.Start, await TargetAsync(w, a.RequestId, a.ItemId, 1), Token)).Issue);
 
         var queue = await LoadAsync(w, w.Planning, milling);
-        var entry = queue.Queue.Single(e => e.ItemNo == "A");
+        var entry = queue.Queue.Single(e => e.CustomerItemRef == "A");
         Assert.Equal(QueueBlock.GateNotSatisfied, entry.Block);
         Assert.False(entry.IsActionable);
         Assert.Equal(QueueBlock.NotReleased, Assert.Single(queue.Pending).Block);
-        Assert.Equal("B", Assert.Single(queue.Pending).ItemNo);
+        Assert.Equal("B", Assert.Single(queue.Pending).CustomerItemRef);
 
         // Planning can still release B (its request passed the gates), but not A's sibling after the gate regressed: send B's request back too and the release is refused.
         var other = (await w.Services.Requests.GetAsync(w.Planning, unreleased.RequestId, Token)).Value!;

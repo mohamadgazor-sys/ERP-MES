@@ -48,7 +48,36 @@ public enum ValidationIssue
     /// <summary>The Jalali date text is not valid; <see cref="Outcome{T}.DateError"/> says why.</summary>
     RequestDateInvalid,
     ItemNoRequired,
+
+    /// <summary>The customer item reference is already used by another item of the request (Decision Log #121 Q2).</summary>
     ItemNoDuplicate,
+
+    /// <summary>The customer item reference is longer than 40 characters or has leading or trailing white space.</summary>
+    CustomerItemRefInvalid,
+
+    /// <summary>The chosen parent does not exist in this request.</summary>
+    ItemParentInvalid,
+
+    /// <summary>The chosen parent is not marked as an assembly (Decision Log #121 Q4).</summary>
+    ItemParentNotAssembly,
+
+    /// <summary>The move would make an item its own ancestor.</summary>
+    ItemHierarchyCycle,
+
+    /// <summary>The assemblies would be nested more than four levels deep.</summary>
+    ItemHierarchyTooDeep,
+
+    /// <summary>A stage is already defined for an item of the affected subtree or its parent, so the relationship is locked (Decision Log #121 Q6).</summary>
+    ItemHierarchyLocked,
+
+    /// <summary>An assembly that still has children cannot become a normal item.</summary>
+    ItemHasChildren,
+
+    /// <summary>All 999 numbers under this parent are used (Decision Log #121 Q3).</summary>
+    ItemSequenceExhausted,
+
+    /// <summary>The first stage of an assembly cannot be released until every child and descendant has finished its route with every QC approval (Decision Log #121 Q5).</summary>
+    AssemblyChildrenNotComplete,
     PartNameRequired,
     QuantityInvalid,
     WorkTypeInvalid,

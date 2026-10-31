@@ -537,7 +537,7 @@ public sealed class UnitQueueService(
                         : !gateOk ? QueueBlock.GateNotSatisfied
                         : stage.Status switch
                         {
-                            ItemStageStatus.Planned => QueueBlock.NotReleased,
+                            ItemStageStatus.Planned => stage.StageNo == 1 && item.IsAssembly && !loaded.Value.AllDescendantsRouteCompleted(item) ? QueueBlock.WaitingChildren : QueueBlock.NotReleased,
                             ItemStageStatus.WaitingPreviousQc => QueueBlock.WaitingPreviousQc,
                             ItemStageStatus.WaitingQc => QueueBlock.WaitingQc,
                             ItemStageStatus.WaitingShortfallDecision => QueueBlock.WaitingShortfallDecision,
@@ -551,6 +551,7 @@ public sealed class UnitQueueService(
                         released ? stage.PlanningPosition : null, stage.AvailableSinceUtc,
                         active?.Rank, active?.NeedsReview ?? false, active?.Reason, active?.ReviewNote)
                     {
+                        CustomerItemRef = item.CustomerItemRef,
                         RequestVersion = loaded.Versions.Request,
                         ItemVersion = loaded.Versions.ItemVersion(item.Id),
                         StageVersion = versions[stage.StageNo],

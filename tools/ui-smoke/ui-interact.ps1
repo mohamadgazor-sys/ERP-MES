@@ -358,22 +358,22 @@ try {
     $req = Wait-Enabled 'قرارداد لازم است'
     Check ($req -and $req.Current.IsEnabled) 'Planning can decide that the request needs a contract' "request-level decision button unavailable; screen: $(Screen-Texts 30)"
     if ($req) { Click $req; Start-Sleep -Seconds 2 }
-    $items = Get-GridRows $script:Main | Where-Object { $_.Joined -like '*3.10*' -or $_.Joined -like '*3.20*' }
+    $items = Get-GridRows $script:Main | Where-Object { $_.Joined -like '*DEMO-1405-014-001*' -or $_.Joined -like '*DEMO-1405-014-002*' }
     Check ($items.Count -eq 2) 'the item grid lists both items of the request' ("expected 2 item rows, saw " + $items.Count)
-    $row310 = Select-GridRow $script:Main '3.10'
-    $before310 = Get-RowText $script:Main '3.10'
-    $row320 = Select-GridRow $script:Main '3.20'
-    $before320 = Get-RowText $script:Main '3.20'
+    $row310 = Select-GridRow $script:Main 'DEMO-1405-014-001'
+    $before310 = Get-RowText $script:Main 'DEMO-1405-014-001'
+    $row320 = Select-GridRow $script:Main 'DEMO-1405-014-002'
+    $before320 = Get-RowText $script:Main 'DEMO-1405-014-002'
     if ($note) { Type-Into $note 'این آیتم قطعه بدون قرارداد است' }
     $notReq = Wait-Enabled 'این آیتم: قرارداد لازم نیست'
-    Check ($notReq -and $notReq.Current.IsEnabled) 'ITEM-SCOPED: the "this item does not need the contract" button is enabled for item 3.20' 'item decision button unavailable'
+    Check ($notReq -and $notReq.Current.IsEnabled) 'ITEM-SCOPED: the "this item does not need the contract" button is enabled for item DEMO-1405-014-002' 'item decision button unavailable'
     if ($notReq) { Click $notReq }
-    $after320 = Wait-RowChange $script:Main '3.20' $before320
-    $after310 = Get-RowText $script:Main '3.10'
-    Note "  3.10: $before310  ->  $after310"
-    Note "  3.20: $before320  ->  $after320"
-    Check ($after320 -ne $before320) 'ITEM-SCOPED: item 3.20 now shows its own decision' 'item 3.20 did not change'
-    Check ($after310 -eq $before310) 'ITEM-SCOPED: item 3.10 is unchanged (still follows the request) - one item decision does not alter the other' 'item 3.10 changed when only 3.20 was decided'
+    $after320 = Wait-RowChange $script:Main 'DEMO-1405-014-002' $before320
+    $after310 = Get-RowText $script:Main 'DEMO-1405-014-001'
+    Note "  DEMO-1405-014-001: $before310  ->  $after310"
+    Note "  DEMO-1405-014-002: $before320  ->  $after320"
+    Check ($after320 -ne $before320) 'ITEM-SCOPED: item DEMO-1405-014-002 now shows its own decision' 'item DEMO-1405-014-002 did not change'
+    Check ($after310 -eq $before310) 'ITEM-SCOPED: item DEMO-1405-014-001 is unchanged (still follows the request) - one item decision does not alter the other' 'item DEMO-1405-014-001 changed when only DEMO-1405-014-002 was decided'
     Check ($after310 -ne $after320) 'ITEM-SCOPED: the two items of one request show different decisions' 'both items show the same decision'
     Save-Shot 'interact-4-contract-items'
     Sign-Out
@@ -392,9 +392,9 @@ try {
     Click-Btn 'ثبت آیتم'
     Start-Sleep -Seconds 2
     $defined = $false
-    foreach ($r in (Get-GridRows $script:Main)) { if ($r.Joined -like '*UI.1*') { $defined = $true } }
-    Check $defined 'a new item (UI.1) was defined through the item form and appears in the item grid' ("item UI.1 did not appear; screen: $(Screen-Texts 40)")
-    Select-GridRow $script:Main 'UI.1' | Out-Null
+    foreach ($r in (Get-GridRows $script:Main)) { if ($r.Joined -like '*DEMO-1405-014-003*') { $defined = $true } }
+    Check $defined 'a new item (DEMO-1405-014-003) was defined through the item form and appears in the item grid' ("item DEMO-1405-014-003 did not appear; screen: $(Screen-Texts 40)")
+    Select-GridRow $script:Main 'DEMO-1405-014-003' | Out-Null
     Fill 'StageTitleBox' 'فرزکاری آزمون رابط'; Fill 'MinutesBox' '2'
     Pick-Combo 'UnitBox' 'فرزکاری' | Out-Null
     Click-Btn 'ثبت مرحله'
@@ -407,15 +407,15 @@ try {
     Open-Page 'صف واحدهای تولید'
     Pick-Combo 'UnitBox' 'فرزکاری' | Out-Null
     Start-Sleep -Seconds 2
-    $pendingBefore = [bool](Get-GridRows $script:Main | Where-Object { $_.Joined -like '*UI.1*' } | Select-Object -First 1)
-    Check $pendingBefore 'the new item is listed in the unit queue page as waiting for release' ("UI.1 not listed on the unit queue page; screen: $(Screen-Texts 50)")
-    $pending = Get-GridRows $script:Main | Where-Object { $_.Joined -like '*UI.1*' } | Select-Object -First 1
+    $pendingBefore = [bool](Get-GridRows $script:Main | Where-Object { $_.Joined -like '*DEMO-1405-014-003*' } | Select-Object -First 1)
+    Check $pendingBefore 'the new item is listed in the unit queue page as waiting for release' ("DEMO-1405-014-003 not listed on the unit queue page; screen: $(Screen-Texts 50)")
+    $pending = Get-GridRows $script:Main | Where-Object { $_.Joined -like '*DEMO-1405-014-003*' } | Select-Object -First 1
     if ($pending) { Select-Item $pending.Element; Start-Sleep -Milliseconds 600 }
     Note ('  pending row: ' + $pending.Joined)
     Click-Btn 'آزادسازی مرحلهٔ اول (برنامه‌ریزی)'
     Start-Sleep -Seconds 2
     $queueGrid = Find-ById $script:Main 'QueueGrid' 5
-    $releasedWrongly = $queueGrid -and (Get-GridRows $queueGrid | Where-Object { $_.Joined -like '*UI.1*' })
+    $releasedWrongly = $queueGrid -and (Get-GridRows $queueGrid | Where-Object { $_.Joined -like '*DEMO-1405-014-003*' })
     Check (-not $releasedWrongly) 'RELEASE GATE: the stage of the item that still needs the unapproved contract was NOT released (it is not in the queue)' 'the stage was released although the contract is not approved'
     Note ('  message after the refused release: ' + (Screen-Texts 30))
     Save-Shot 'interact-7-release-refused'
@@ -424,21 +424,21 @@ try {
     Open-Page 'قراردادها'
     Select-GridRow $script:Main $R14 | Out-Null
     Start-Sleep -Seconds 1
-    Select-GridRow $script:Main 'UI.1' | Out-Null
+    Select-GridRow $script:Main 'DEMO-1405-014-003' | Out-Null
     $note2 = Find-ById $script:Main 'NoteBox' 5
     if ($note2) { Type-Into $note2 'قطعه آزمون رابط بدون قرارداد' }
     Click-Btn 'این آیتم: قرارداد لازم نیست'
     Start-Sleep -Seconds 2
-    Check ((Get-RowText $script:Main 'UI.1') -like '*لازم نیست*') 'ITEM-SCOPED: the new item UI.1 now shows its own decision "contract not required"' ("UI.1 row: $(Get-RowText $script:Main 'UI.1')")
+    Check ((Get-RowText $script:Main 'DEMO-1405-014-003') -like '*لازم نیست*') 'ITEM-SCOPED: the new item DEMO-1405-014-003 now shows its own decision "contract not required"' ("DEMO-1405-014-003 row: $(Get-RowText $script:Main 'DEMO-1405-014-003')")
     Open-Page 'صف واحدهای تولید'
     Pick-Combo 'UnitBox' 'فرزکاری' | Out-Null
     Start-Sleep -Seconds 2
-    $pending = Get-GridRows $script:Main | Where-Object { $_.Joined -like '*UI.1*' } | Select-Object -First 1
+    $pending = Get-GridRows $script:Main | Where-Object { $_.Joined -like '*DEMO-1405-014-003*' } | Select-Object -First 1
     if ($pending) { Select-Item $pending.Element; Start-Sleep -Milliseconds 600 }
     Click-Btn 'آزادسازی مرحلهٔ اول (برنامه‌ریزی)'
     Start-Sleep -Seconds 2
     $queueGrid = Find-ById $script:Main 'QueueGrid' 5
-    Check ($queueGrid -and (Get-GridRows $queueGrid | Where-Object { $_.Joined -like '*UI.1*' })) 'RELEASE GATE: after the item-level decision the same stage can be released and appears in the MILLING queue' ("UI.1 not in the queue after release; screen: $(Screen-Texts 40)")
+    Check ($queueGrid -and (Get-GridRows $queueGrid | Where-Object { $_.Joined -like '*DEMO-1405-014-003*' })) 'RELEASE GATE: after the item-level decision the same stage can be released and appears in the MILLING queue' ("DEMO-1405-014-003 not in the queue after release; screen: $(Screen-Texts 40)")
     Save-Shot 'interact-8-released'
     Sign-Out
 
@@ -447,7 +447,7 @@ try {
     Open-Page 'نوبت‌های کاری'
     Pick-Combo 'UnitBox' 'فرزکاری' | Out-Null
     Start-Sleep -Seconds 2
-    Select-GridRow (Find-ById $script:Main 'StageGrid' 5) 'UI.1' | Out-Null
+    Select-GridRow (Find-ById $script:Main 'StageGrid' 5) 'DEMO-1405-014-003' | Out-Null
     $dispatchOp = Find-Btn 'تخصیص و شروع' 3
     Check (-not $dispatchOp -or -not $dispatchOp.Current.IsEnabled) 'UNAUTHORIZED: the operator cannot dispatch/start a stage (button disabled)' 'the operator can dispatch'
     Sign-Out
@@ -457,14 +457,14 @@ try {
     Pick-Combo 'UnitBox' 'فرزکاری' | Out-Null
     Start-Sleep -Seconds 2
     $stageGrid = Find-ById $script:Main 'StageGrid' 5
-    $stageRow = Select-GridRow $stageGrid 'UI.1'
+    $stageRow = Select-GridRow $stageGrid 'DEMO-1405-014-003'
     Note ('  stage row: ' + $stageRow.Joined)
     Pick-Combo 'MachineBox' 'FCC-06' | Out-Null
     Pick-Combo 'OperatorBox' $null | Out-Null
     Fill 'OutsideBox' 'کار خارج از شیفت برای آزمون رابط'
     Click-Btn 'تخصیص و شروع'
     Start-Sleep -Seconds 3
-    $stageNow = Get-RowText (Find-ById $script:Main 'StageGrid' 5) 'UI.1'
+    $stageNow = Get-RowText (Find-ById $script:Main 'StageGrid' 5) 'DEMO-1405-014-003'
     Note ('  stage row after dispatch: ' + $stageNow)
     Check ($stageNow -like '*در حال اجرا*' -and $stageNow -like '*فعال ۱*') 'PRODUCTION SESSION: the supervisor dispatched the stage to machine FCC-06 and an operator; the stage is "in progress" with one active session' ("session not started; stage row: $stageNow; screen: $(Screen-Texts 50)")
     Check ((Screen-Texts 60) -like '*نوبت کاری ثبت و شروع شد*') 'the screen confirms: work session recorded and started' 'no confirmation message'
@@ -477,8 +477,8 @@ try {
     Pick-Combo 'UnitBox' 'فرزکاری' | Out-Null
     Start-Sleep -Seconds 2
     Save-Shot 'interact-10-operator-board'
-    $mineRows = @(Get-GridRows $script:Main | Where-Object { $_.Joined -like '*UI.1*' -and $_.Joined -like '*فعال*' })
-    Note ('  rows with UI.1 and active: ' + $mineRows.Count + ' ; MineGrid present: ' + [bool](Find-ById $script:Main 'MineGrid' 2))
+    $mineRows = @(Get-GridRows $script:Main | Where-Object { $_.Joined -like '*DEMO-1405-014-003*' -and $_.Joined -like '*فعال*' })
+    Note ('  rows with DEMO-1405-014-003 and active: ' + $mineRows.Count + ' ; MineGrid present: ' + [bool](Find-ById $script:Main 'MineGrid' 2))
     $mine = Find-ById $script:Main 'MineGrid' 5
     if ($mine) { try { $mine.SetFocus() } catch { }; Start-Sleep -Milliseconds 800 }
     # The operator's own session is the only row that names the machine (the stage grid has no machine column).
@@ -506,10 +506,10 @@ try {
         Note ('  long messages after the resume attempt: ' + ((Read-Texts $script:Main 200 | Where-Object { $_.Length -gt 40 -and $_ -notlike '*نسخه نمایشی*' }) -join ' // '))
         Save-Shot 'interact-10c-after-resume'
         Check ($afterResume -notlike '*متوقف*') 'RESUME: the session is active again' "still paused: $afterResume"
-        Select-GridRow (Find-ById $script:Main 'StageGrid' 5) 'UI.1' | Out-Null
+        Select-GridRow (Find-ById $script:Main 'StageGrid' 5) 'DEMO-1405-014-003' | Out-Null
         Click-Btn 'ارسال مرحله به کنترل کیفیت'
         Start-Sleep -Seconds 2
-        $stageAfter = Get-RowText (Find-ById $script:Main 'StageGrid' 5) 'UI.1'
+        $stageAfter = Get-RowText (Find-ById $script:Main 'StageGrid' 5) 'DEMO-1405-014-003'
         Note ('  stage after the QC attempt: ' + $stageAfter)
         Check ($stageAfter -notlike '*در انتظار کنترل کیفیت*' -and (Screen-Texts 120) -like '*مرحله به کنترل کیفیت ارسال نمی‌شود*') 'PREMATURE ACTION: submitting the stage to QC is refused while the work session is open - the screen shows the refusal and the stage did not move to "waiting for QC"' "QC attempt not refused as expected; stage: $stageAfter; screen: $(Screen-Texts 60)"
         Note ('  messages: ' + (Screen-Texts 12))

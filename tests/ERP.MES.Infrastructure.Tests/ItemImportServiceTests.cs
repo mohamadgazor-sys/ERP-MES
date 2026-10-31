@@ -206,6 +206,87 @@ public class ItemImportServiceTests
         return await Svc(w).CommitAsync(w.Planning, id, preview.RequestVersion, name, file, preview.FileHash, decisions ?? [], Token);
     }
 
+    private static readonly string[] HierarchyHeaders = [ItemImportTemplate.CustomerItemRef, ItemImportTemplate.PartName, ItemImportTemplate.Quantity, ItemImportTemplate.QuantityType, ItemImportTemplate.Material, ItemImportTemplate.Weight, ItemImportTemplate.ParentRef, ItemImportTemplate.Assembly];
+
+    private static IReadOnlyList<string> Node(string? customerRef, string part, string parent = "", string assembly = "") =>
+        [customerRef ?? string.Empty, part, "10", "PIECE", "ST37-R30", "1.2", parent, assembly];
+
+    private static byte[] HierarchySheet(params IReadOnlyList<string>[] rows) => Writer.Write("آیتم‌ها", HierarchyHeaders, rows);
+
+    [Fact]
+    public async Task An_import_builds_the_assembly_hierarchy_in_order_and_numbers_it_from_the_request()
+    {
+        var (w, id, _) = await ReadyWorldAsync();
+        using var disposeWorld = w;
+        var file = HierarchySheet(Node("ASM", "Assembly", assembly: "بله"), Node("SUB", "Sub-assembly", "ASM", "بله"), Node("P1", "Part one", "SUB"), Node("P2", "Part two", "ASM"));
+
+        var result = await CommitAsync(w, id, file);
+
+        Assert.True(result.Succeeded, result.Status + " " + result.Issue);
+        // The database may store a child before a sibling subtree, so the numbers (which sort correctly as text) are compared, not the storage order.
+        var items = (await LoadAsync(w, id)).Items.OrderBy(i => i.ItemNo, StringComparer.Ordinal).ToList();
+        Assert.Equal(new[] { "D-1-001", "D-1-001.001", "D-1-001.001.001", "D-1-001.002" }, items.Select(i => i.ItemNo).ToArray());
+        Assert.Equal(new[] { true, true, false, false }, items.Select(i => i.IsAssembly).ToArray());
+        Assert.Equal(new string?[] { null, "ASM", "SUB", "ASM" }, items.Select(i => i.Parent?.CustomerItemRef).ToArray());
+        Assert.Equal(new[] { "ASM", "SUB", "P1", "P2" }, items.Select(i => i.CustomerItemRef).ToArray());
+    }
+
+    [Fact]
+    public async Task A_parent_that_is_unknown_not_an_assembly_or_too_deep_makes_only_that_row_invalid_with_a_reason()
+    {
+        var (w, id, _) = await ReadyWorldAsync();
+        using var disposeWorld = w;
+        var file = HierarchySheet(
+            Node("PLAIN", "Plain"), Node("A", "x", "PLAIN"), Node("B", "x", "NOWHERE"), Node("C", "x", "LATER"), Node("LATER", "late", assembly: "بله"),
+            Node("L1", "l1", assembly: "بله"), Node("L2", "l2", "L1", "بله"), Node("L3", "l3", "L2", "بله"), Node("L4", "l4", "L3", "بله"), Node("L5", "l5", "L4"));
+
+        var preview = await PreviewOkAsync(w, id, file);
+
+        var issues = preview.Rows.ToDictionary(r => r.ItemNo ?? "?", r => r.Messages.Where(m => m.IsError).Select(m => m.Issue).ToArray());
+        Assert.Equal(new[] { ImportIssue.ParentNotAssembly }, issues["A"]);
+        Assert.Equal(new[] { ImportIssue.ParentRefUnknown }, issues["B"]);
+        Assert.Equal(new[] { ImportIssue.ParentRefUnknown }, issues["C"]); // the parent must come before the child
+        Assert.Equal(new[] { ImportIssue.ParentTooDeep }, issues["L5"]);
+        Assert.Empty(issues["PLAIN"]);
+        Assert.False(preview.CanCommit);
+    }
+
+    [Fact]
+    public async Task Rows_without_a_customer_reference_are_always_new_and_never_matched_to_an_existing_item()
+    {
+        var (w, id, _) = await ReadyWorldAsync();
+        using var disposeWorld = w;
+        var file = HierarchySheet(Node("KEEP", "Has a reference"), Node(null, "No reference"));
+
+        var preview = await PreviewOkAsync(w, id, file);
+        Assert.Contains(preview.Rows[1].Messages, m => m.Issue == ImportIssue.NoCustomerRef && !m.IsError);
+        Assert.Equal(ImportRowStatus.New, preview.Rows[1].Status);
+        Assert.True((await CommitAsync(w, id, file)).Succeeded);
+
+        // The same file again: the referenced row is unchanged, the row without a reference is added again (an unreliable match is never used).
+        var second = await CommitAsync(w, id, file);
+        Assert.True(second.Succeeded, second.Status + " " + second.Issue);
+        Assert.Equal(1, second.Value!.Created);
+        Assert.Equal(1, second.Value.Unchanged);
+        Assert.Equal(new[] { "D-1-001", "D-1-002", "D-1-003" }, (await LoadAsync(w, id)).Items.Select(i => i.ItemNo).ToArray());
+    }
+
+    [Fact]
+    public async Task A_customer_reference_repeated_in_the_file_is_rejected_and_the_two_reference_headers_cannot_be_mixed()
+    {
+        var (w, id, _) = await ReadyWorldAsync();
+        using var disposeWorld = w;
+
+        var repeated = await PreviewOkAsync(w, id, HierarchySheet(Node("DUP", "one"), Node("DUP", "two")));
+        Assert.Contains(repeated.Rows[1].Messages, m => m.Issue == ImportIssue.ItemNoDuplicate && m.IsError);
+        Assert.False(repeated.CanCommit);
+
+        var mixed = Writer.Write("x", [ItemImportTemplate.CustomerItemRef, ItemImportTemplate.ItemNo, ItemImportTemplate.PartName, ItemImportTemplate.Quantity], [["A", "A", "p", "1"]]);
+        var preview = await Svc(w).PreviewAsync(w.Planning, id, "mixed.xlsx", mixed, Token);
+        Assert.False(preview.Value!.CanCommit);
+        Assert.Contains(preview.Value.FileMessages, m => m.Issue == ImportIssue.HeaderDuplicate);
+    }
+
     [Fact]
     public async Task Preview_writes_nothing_and_commit_creates_items_with_specification_import_log_and_audit()
     {
@@ -224,7 +305,8 @@ public class ItemImportServiceTests
         Assert.True(result.Succeeded, result.Status + " " + result.Issue);
         Assert.Equal(3, result.Value!.Created);
         var items = (await LoadAsync(w, id)).Items;
-        Assert.Equal(["1.10", "1.20", "007"], items.Select(i => i.ItemNo).ToArray());
+        Assert.Equal(["1.10", "1.20", "007"], items.Select(i => i.CustomerItemRef).ToArray());
+        Assert.Equal(["D-1-001", "D-1-002", "D-1-003"], items.Select(i => i.ItemNo).ToArray());
         Assert.Equal(Priority.Urgent, items[0].Priority);
         Assert.Equal(1.2345m, items[0].WeightKgPerBaseUnit);
         Assert.Equal(2.5m, items[2].RequestedQuantity);
@@ -282,8 +364,8 @@ public class ItemImportServiceTests
         Assert.True(skipped.Succeeded);
         Assert.Equal(new ImportCommitResult(1, 0, 1, 1, null), skipped.Value);
         var items = (await LoadAsync(w, id)).Items;
-        Assert.Equal("Ring A", items.Single(i => i.ItemNo == "1.10").PartName);
-        Assert.Equal(10m, items.Single(i => i.ItemNo == "1.10").RequestedQuantity);
+        Assert.Equal("Ring A", items.Single(i => i.CustomerItemRef == "1.10").PartName);
+        Assert.Equal(10m, items.Single(i => i.CustomerItemRef == "1.10").RequestedQuantity);
         Assert.Equal(3, items.Count);
     }
 
@@ -495,11 +577,15 @@ public class ItemImportServiceTests
     }
 
     [Fact]
-    public async Task A_thousand_rows_import_in_one_transaction_in_reasonable_time()
+    public async Task Nine_hundred_ninety_nine_rows_import_in_one_transaction_in_reasonable_time_and_the_thousandth_item_is_refused()
     {
         var (w, id, _) = await ReadyWorldAsync();
         using var disposeWorld = w;
-        var rows = Enumerable.Range(1, 1000).Select(i => MakeRow("A-" + i.ToString(System.Globalization.CultureInfo.InvariantCulture), "Part " + i)).ToArray();
+        var tooMany = await CommitAsync(w, id, Sheet(Enumerable.Range(1, 1000).Select(i => MakeRow("A-" + i.ToString(System.Globalization.CultureInfo.InvariantCulture), "Part " + i)).ToArray()));
+        Assert.Equal(ValidationIssue.ItemSequenceExhausted, tooMany.Issue);
+        Assert.Equal(0, Count(w, "RequestItems"));
+
+        var rows = Enumerable.Range(1, 999).Select(i => MakeRow("A-" + i.ToString(System.Globalization.CultureInfo.InvariantCulture), "Part " + i)).ToArray();
         var file = Sheet(rows);
 
         var watch = System.Diagnostics.Stopwatch.StartNew();
@@ -507,9 +593,9 @@ public class ItemImportServiceTests
         watch.Stop();
 
         Assert.True(result.Succeeded, result.Status + " " + result.Issue);
-        Assert.Equal(1000, result.Value!.Created);
-        Assert.Equal(1000, Count(w, "RequestItems"));
-        Assert.Equal(1000, Count(w, "ItemImportRows"));
+        Assert.Equal(999, result.Value!.Created);
+        Assert.Equal(999, Count(w, "RequestItems"));
+        Assert.Equal(999, Count(w, "ItemImportRows"));
         Assert.True(watch.Elapsed < TimeSpan.FromSeconds(60), $"took {watch.Elapsed}");
     }
 

@@ -22,7 +22,33 @@ public enum ImportIssue
     // row level
     ItemNoMissing,
     ItemNoNumeric,
+
+    /// <summary>The same customer item reference occurs twice in the file (Decision Log #121 Q2).</summary>
     ItemNoDuplicate,
+
+    /// <summary>The customer item reference is longer than 40 characters (a note, not an error: the row cannot be matched or created).</summary>
+    CustomerRefTooLong,
+
+    /// <summary>The row has no customer reference: it is always created as a new item and is never matched to an existing one (a note; a repeated import adds it again).</summary>
+    NoCustomerRef,
+
+    /// <summary>The assembly cell holds something other than "بله" or an empty cell.</summary>
+    AssemblyFlagInvalid,
+
+    /// <summary>The parent reference names no item of the request and no earlier row of the file.</summary>
+    ParentRefUnknown,
+
+    /// <summary>The parent is not an assembly (mark it "بله" in its own row, or in the request before importing).</summary>
+    ParentNotAssembly,
+
+    /// <summary>The assemblies would be nested more than four levels deep.</summary>
+    ParentTooDeep,
+
+    /// <summary>The parent already has stages defined, so children can no longer be attached (Decision Log #121 Q6).</summary>
+    ParentLocked,
+
+    /// <summary>The row names itself as its own parent.</summary>
+    ParentIsSelf,
     PartNameMissing,
     QuantityInvalid,
     WorkTypeUnknown,
@@ -51,7 +77,8 @@ public sealed record ImportMessage(int? SheetRow, ImportIssue Issue, string? Det
 public sealed record ImportStagePlan(int StageNo, string Title, decimal MinutesPerPiece, long ProductionUnitId, long? MachineId);
 
 /// <summary>A valid, fully resolved worksheet row: the item\'s definition and its planned stages.</summary>
-public sealed record ImportRowData(int SheetRowNo, string ItemNo, string PartName, decimal Quantity, Priority Priority, ItemSpecification Specification, IReadOnlyList<ImportStagePlan> Stages);
+public sealed record ImportRowData(
+    int SheetRowNo, string? ItemNo, string PartName, decimal Quantity, Priority Priority, ItemSpecification Specification, IReadOnlyList<ImportStagePlan> Stages, string? ParentRef = null, bool IsAssembly = false);
 
 /// <summary>One data row after parsing: valid when <see cref="Data"/> is set; otherwise <see cref="Messages"/> say why.</summary>
 public sealed record ParsedImportRow(int SheetRowNo, string? ItemNo, ImportRowData? Data, IReadOnlyList<ImportMessage> Messages);
@@ -126,6 +153,11 @@ public static class ItemImportParser
             }
         }
 
+        if (columns.ContainsKey(ItemImportTemplate.Normalize(ItemImportTemplate.CustomerItemRef)) && columns.ContainsKey(ItemImportTemplate.Normalize(ItemImportTemplate.ItemNo)))
+        {
+            file.Add(new ImportMessage(null, ImportIssue.HeaderDuplicate, ItemImportTemplate.ItemNo, true));
+        }
+
         foreach (var required in ItemImportTemplate.RequiredHeaders)
         {
             if (!columns.ContainsKey(ItemImportTemplate.Normalize(required)))
@@ -166,19 +198,44 @@ public static class ItemImportParser
 
         bool IsNumeric(string header) => columns.TryGetValue(ItemImportTemplate.Normalize(header), out var index) && row.Cells.TryGetValue(index, out var cell) && cell.IsNumber;
 
-        // item number: text, present, unique in the file
-        var itemNo = Text(ItemImportTemplate.ItemNo);
+        // The customer's own item number (Decision Log #121 Q2): optional; when present it is exact text (a numeric cell would turn "1.10" into 1.1), at most 40 characters and unique in the file.
+        // The older header "شماره آیتم" means the same column. A row without one is always a new item.
+        var refHeader = columns.ContainsKey(ItemImportTemplate.Normalize(ItemImportTemplate.CustomerItemRef)) ? ItemImportTemplate.CustomerItemRef : ItemImportTemplate.ItemNo;
+        var itemNo = Text(refHeader);
         if (itemNo is null)
         {
-            Error(ImportIssue.ItemNoMissing);
+            messages.Add(new ImportMessage(row.RowNumber, ImportIssue.NoCustomerRef, null, false));
         }
-        else if (IsNumeric(ItemImportTemplate.ItemNo))
+        else if (IsNumeric(refHeader))
         {
             Error(ImportIssue.ItemNoNumeric, itemNo);
+        }
+        else if (itemNo.Length > RequestItem.MaxCustomerItemRefLength)
+        {
+            Error(ImportIssue.CustomerRefTooLong, itemNo);
         }
         else if (!firstRowOfItemNo.TryAdd(itemNo, row.RowNumber))
         {
             Error(ImportIssue.ItemNoDuplicate, firstRowOfItemNo[itemNo].ToString(System.Globalization.CultureInfo.InvariantCulture));
+        }
+
+        var parentRef = Text(ItemImportTemplate.ParentRef);
+        if (parentRef is not null && itemNo is not null && string.Equals(parentRef, itemNo, StringComparison.Ordinal))
+        {
+            Error(ImportIssue.ParentIsSelf, parentRef);
+        }
+
+        var isAssembly = false;
+        if (Text(ItemImportTemplate.Assembly) is { } assemblyText)
+        {
+            if (ItemImportTemplate.Normalize(assemblyText) == ItemImportTemplate.Normalize("بله"))
+            {
+                isAssembly = true;
+            }
+            else
+            {
+                Error(ImportIssue.AssemblyFlagInvalid, assemblyText);
+            }
         }
 
         var partName = Text(ItemImportTemplate.PartName);
@@ -385,11 +442,11 @@ public static class ItemImportParser
             stages.Add(new ImportStagePlan(stages.Count + 1, title, minutes, unitId, machineId));
         }
 
-        if (messages.Count > 0)
+        if (messages.Any(m => m.IsError))
         {
             return new ParsedImportRow(row.RowNumber, itemNo, null, messages);
         }
 
-        return new ParsedImportRow(row.RowNumber, itemNo, new ImportRowData(row.RowNumber, itemNo!, partName!, quantity, priority, specification, stages), []);
+        return new ParsedImportRow(row.RowNumber, itemNo, new ImportRowData(row.RowNumber, itemNo, partName!, quantity, priority, specification, stages, parentRef, isAssembly), messages);
     }
 }
