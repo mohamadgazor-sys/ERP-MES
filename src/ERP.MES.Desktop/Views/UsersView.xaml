@@ -1,0 +1,85 @@
+<UserControl x:Class="ERP.MES.Desktop.Views.UsersView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Loaded="OnLoaded">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
+    </UserControl.Resources>
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel>
+            <TextBlock Text="{Binding Message}" TextWrapping="Wrap" Foreground="#9B1C1C" FontWeight="SemiBold" Margin="0,0,0,8" />
+            <TextBlock TextWrapping="Wrap" Foreground="{StaticResource MutedTextBrush}" Margin="0,0,0,8"
+                       Text="مدیر سیستم حساب‌ها را می‌سازد و واحد سازمانی و نقش هر کاربر را تعیین می‌کند. واحد سازمانی همراه با نقش، دسترسی کاربر را مشخص می‌کند؛ «واحد کاری» جدا از آن و فقط برای کاربران تولید است و تعیین می‌کند کاربر روی کدام واحد تولیدی کار می‌کند. گذرواژهٔ اولیه یکبارمصرف است."/>
+            <Border Padding="10" Margin="0,0,0,8" Background="#FDECEC" BorderBrush="#9B1C1C" BorderThickness="1"
+                    Visibility="{Binding IsDenied, Converter={StaticResource BoolToVisibility}}">
+                <TextBlock Text="شما اجازهٔ مدیریت حساب‌ها را ندارید." FontWeight="SemiBold" />
+            </Border>
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                <Button Content="بارگذاری مجدد" Padding="10,3" MinWidth="110" Click="OnReloadClick" ToolTip="فهرست حساب‌ها را دوباره از پایگاه داده می‌خواند." />
+                <TextBlock Text="در حال بارگذاری…" Margin="16,0,0,0" VerticalAlignment="Center" Foreground="{StaticResource MutedTextBrush}"
+                           Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibility}}" />
+            </StackPanel>
+
+            <DataGrid ItemsSource="{Binding Users}" SelectedItem="{Binding Selected, Mode=TwoWay}" AutoGenerateColumns="False" IsReadOnly="True"
+                      SelectionMode="Single" HeadersVisibility="Column" CanUserAddRows="False" CanUserDeleteRows="False" MaxHeight="260" Background="{StaticResource CardBrush}">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="نام کاربری" Binding="{Binding Username}" ElementStyle="{StaticResource LtrCell}" Width="150" />
+                    <DataGridTextColumn Header="نام نمایشی" Binding="{Binding DisplayName}" Width="*" />
+                    <DataGridTextColumn Header="واحد سازمانی" Binding="{Binding DepartmentText}" Width="130" />
+                    <DataGridTextColumn Header="نقش" Binding="{Binding RoleText}" Width="90" />
+                    <DataGridTextColumn Header="وضعیت" Binding="{Binding StatusText}" Width="80" />
+                    <DataGridTextColumn Header="واحد کاری" Binding="{Binding WorkingUnitsText}" ElementStyle="{StaticResource LtrCell}" Width="110" />
+                    <DataGridTextColumn Header="آخرین ورود" Binding="{Binding LastLoginText}" Width="130" />
+                </DataGrid.Columns>
+            </DataGrid>
+
+            <TextBlock Text="حساب جدید" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource PrimaryBrush}" Margin="0,12,0,6" />
+            <Border Padding="10" Background="{StaticResource CardBrush}" BorderBrush="{StaticResource BorderBrushSoft}" BorderThickness="1">
+                <StackPanel>
+                    <WrapPanel>
+                        <StackPanel Margin="0,0,12,6"><TextBlock Text="نام کاربری" /><TextBox x:Name="NewUsernameBox" Width="150" FlowDirection="LeftToRight" /></StackPanel>
+                        <StackPanel Margin="0,0,12,6"><TextBlock Text="نام نمایشی" /><TextBox x:Name="NewDisplayNameBox" Width="200" /></StackPanel>
+                        <StackPanel Margin="0,0,12,6"><TextBlock Text="واحد سازمانی" /><ComboBox x:Name="NewDepartmentBox" ItemsSource="{Binding DepartmentChoices}" DisplayMemberPath="Text" Width="150" /></StackPanel>
+                        <StackPanel Margin="0,0,12,6"><TextBlock Text="نقش" /><ComboBox x:Name="NewRoleBox" ItemsSource="{Binding RoleChoices}" DisplayMemberPath="Text" Width="110" /></StackPanel>
+                        <StackPanel Margin="0,0,12,6"><TextBlock Text="گذرواژهٔ اولیه (یکبارمصرف)" /><PasswordBox x:Name="NewPasswordBox" Width="170" FlowDirection="LeftToRight" /></StackPanel>
+                    </WrapPanel>
+                    <Button Content="ایجاد حساب" Padding="12,5" MinWidth="110" HorizontalAlignment="Left" Click="OnCreateClick"
+                            ToolTip="حساب جدید را با گذرواژهٔ یکبارمصرف می‌سازد؛ کاربر در نخستین ورود گذرواژهٔ خودش را انتخاب می‌کند." />
+                </StackPanel>
+            </Border>
+
+            <TextBlock Text="کاربر انتخاب‌شده" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource PrimaryBrush}" Margin="0,12,0,6" />
+            <Border Padding="10" Background="{StaticResource CardBrush}" BorderBrush="{StaticResource BorderBrushSoft}" BorderThickness="1">
+                <StackPanel>
+                    <WrapPanel>
+                        <StackPanel Margin="0,0,12,6"><TextBlock Text="واحد سازمانی جدید" /><ComboBox x:Name="ChangeDepartmentBox" ItemsSource="{Binding DepartmentChoices}" DisplayMemberPath="Text" Width="150" /></StackPanel>
+                        <Button Content="تغییر واحد سازمانی" Padding="12,5" MinWidth="130" Margin="0,18,12,6" Click="OnChangeDepartmentClick"
+                                ToolTip="کاربر را به واحد سازمانی دیگری می‌برد؛ دسترسی او از عملیات بعدی بر اساس واحد جدید تعیین می‌شود. سوابق قبلی به همین کاربر وصل می‌مانند." />
+                        <StackPanel Margin="0,0,12,6"><TextBlock Text="نقش جدید" /><ComboBox x:Name="ChangeRoleBox" ItemsSource="{Binding RoleChoices}" DisplayMemberPath="Text" Width="110" /></StackPanel>
+                        <Button Content="تغییر نقش" Padding="12,5" MinWidth="100" Margin="0,18,12,6" Click="OnChangeRoleClick"
+                                ToolTip="نقش کاربر را تغییر می‌دهد. آخرین مدیر سیستم فعال را نمی‌توان تنزل داد." />
+                    </WrapPanel>
+                    <WrapPanel>
+                        <StackPanel Margin="0,0,12,6"><TextBlock Text="گذرواژهٔ یکبارمصرف جدید" /><PasswordBox x:Name="ResetPasswordBox" Width="170" FlowDirection="LeftToRight" /></StackPanel>
+                        <Button Content="بازنشانی گذرواژه" Padding="12,5" MinWidth="120" Margin="0,18,12,6" Click="OnResetPasswordClick"
+                                ToolTip="گذرواژهٔ جدیدی تعیین می‌کند؛ کاربر در ورود بعدی باید گذرواژهٔ خودش را انتخاب کند." />
+                        <Button Content="باز کردن قفل" Padding="12,5" MinWidth="100" Margin="0,18,12,6" Click="OnUnlockClick"
+                                ToolTip="قفل ناشی از ورودهای ناموفق را برمی‌دارد." />
+                        <Button Content="غیرفعال کردن" Padding="12,5" MinWidth="110" Margin="0,18,12,6" Click="OnDeactivateClick"
+                                ToolTip="حساب را غیرفعال می‌کند: کاربر دیگر وارد نمی‌شود، اما سوابقش حفظ می‌شود. آخرین مدیر سیستم فعال را نمی‌توان غیرفعال کرد." />
+                        <Button Content="فعال کردن" Padding="12,5" MinWidth="100" Margin="0,18,12,6" Click="OnActivateClick"
+                                ToolTip="حساب غیرفعال را دوباره فعال می‌کند." />
+                    </WrapPanel>
+                    <TextBlock Text="واحد کاری (فقط کاربران تولید)" FontWeight="SemiBold" Margin="0,8,0,4" />
+                    <WrapPanel>
+                        <ComboBox x:Name="WorkingUnitBox" ItemsSource="{Binding Units}" DisplayMemberPath="Code" Width="150" Margin="0,0,12,6" FlowDirection="LeftToRight" />
+                        <Button Content="ثبت واحد کاری" Padding="12,5" MinWidth="120" Margin="0,0,12,6" Click="OnAssignUnitClick"
+                                ToolTip="کاربر تولید را به واحد تولیدی انتخاب‌شده اختصاص می‌دهد؛ او فقط صف و نوبت‌های همین واحد را می‌بیند." />
+                        <Button Content="برداشتن واحد کاری" Padding="12,5" MinWidth="130" Margin="0,0,12,6" Click="OnRevokeUnitClick"
+                                ToolTip="اختصاص کاربر به واحد انتخاب‌شده را برمی‌دارد؛ سابقهٔ آن حفظ می‌شود." />
+                    </WrapPanel>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

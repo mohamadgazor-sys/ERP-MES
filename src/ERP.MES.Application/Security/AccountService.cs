@@ -139,6 +139,30 @@ public sealed class AccountService(
             cancellationToken);
     }
 
+    /// <summary>
+    /// Program Admin moves a user to another department (organizational unit). The department with the role decides the permissions (Decision Log #19, #122), so this takes effect at the user's next operation.
+    /// Records that the user already made keep pointing at the user, never at the department they had then; the history shows the actor by id.
+    /// </summary>
+    public async Task<AccountResult> ChangeDepartmentAsync(Principal actor, long userId, string departmentCode, CancellationToken cancellationToken = default)
+    {
+        if (!DepartmentCodes.All.Contains(departmentCode, StringComparer.Ordinal))
+        {
+            return new AccountResult(AccountStatus.InvalidDepartmentOrRole);
+        }
+
+        return await ChangeAdministeredUserAsync(
+            actor,
+            userId,
+            removesAdministrator: _ => false,
+            apply: async (unit, account, now, actorId) =>
+            {
+                var before = account.User.Department.Code;
+                account.User.AssignDepartment(await unit.GetDepartmentAsync(departmentCode, cancellationToken), now);
+                unit.AddAudit(Audit(AuditActions.UserDepartmentChanged, actorId, "User", Key(account.User.Id), "Department changed from " + before + " to " + departmentCode + "."));
+            },
+            cancellationToken);
+    }
+
     /// <summary>The Administrator resets a password (there is no self-service reset); the user must choose their own at the next sign-in.</summary>
     public async Task<AccountResult> ResetPasswordAsync(Principal actor, long userId, string? newPassword, CancellationToken cancellationToken = default)
     {

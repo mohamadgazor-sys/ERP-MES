@@ -125,7 +125,7 @@ try {
     $accounts = Join-Path $pkg 'DEMO-ACCOUNTS.txt'
     $exe = Join-Path $pkg 'app\ERP.MES.Desktop.exe'
     & $ps -NoProfile -ExecutionPolicy Bypass -File $ui -ExePath $exe -DatabasePath $db -AccountsFile $accounts -SignInOnly 'demo.admin,demo.management,demo.drawing,demo.qc,demo.warehouse,demo.production,demo.productionmanager'
-    if ($LASTEXITCODE -eq 0) { Pass 'UI automation: all ten accounts signed in; 3 accounts walked 23 pages each; no network connection held' } else { Bad "UI automation exit code $LASTEXITCODE" }
+    if ($LASTEXITCODE -eq 0) { Pass 'UI automation: all ten accounts signed in; 5 accounts walked the pages their role may see (hidden pages absent); no network connection held' } else { Bad "UI automation exit code $LASTEXITCODE" }
 
     Section '4b Reset and sign in again'
     & $ps -NoProfile -ExecutionPolicy Bypass -File (Join-Path $pkg 'scripts\Reset-Demo.ps1') -Yes -NoPause

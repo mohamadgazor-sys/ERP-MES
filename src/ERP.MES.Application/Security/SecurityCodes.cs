@@ -27,6 +27,7 @@ public static class AuditActions
     public const string UserActivated = "UserActivated";
     public const string UserDeactivated = "UserDeactivated";
     public const string UserRoleChanged = "UserRoleChanged";
+    public const string UserDepartmentChanged = "UserDepartmentChanged";
     public const string LastAdminProtectionRefused = "LastAdminProtectionRefused";
     public const string AdminTokenIssued = "AdminTokenIssued";
     public const string BootstrapFailed = "BootstrapFailed";

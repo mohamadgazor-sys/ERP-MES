@@ -27,7 +27,10 @@ public sealed record UnitQueueRow(
     string OverrideText,
     string PlannedEndText);
 
-public sealed record DesignationDisplayRow(DesignationRow Row, string StatusText);
+public sealed record DesignationDisplayRow(DesignationRow Row, string StatusText)
+{
+    public string SupervisorText => Row.IsSupervisor ? "بله" : "—";
+}
 
 /// <summary>
 /// State and actions of the operational production-unit queue screen (Decision Log #78, #99). It shows the queue the Application derives from persisted stages, positions, holds and
@@ -306,19 +309,12 @@ public sealed class UnitQueueViewModel(UnitQueueService queue, StageWorkService 
 
     // ---- designations ---------------------------------------------------------------------------------------------------------------------------------------------
 
-    public Task AssignDesignationAsync(long userId, long unitId) => CommandAsync(
-        "کاربر به واحد منصوب شد.",
+    /// <summary>The Production Manager marks (or unmarks) a designated user as the supervisor of their unit (Decision Log #122).</summary>
+    public Task SetSupervisorAsync(DesignationDisplayRow row, bool isSupervisor) => CommandAsync(
+        isSupervisor ? "سرپرست واحد تعیین شد." : "سرپرستی برداشته شد.",
         async token =>
         {
-            var outcome = await designations.AssignAsync(currentUser(), userId, unitId, token);
-            return outcome.Succeeded ? Outcome<int>.Ok(1) : new Outcome<int>(outcome.Status, 0, outcome.Issue, outcome.DateError);
-        });
-
-    public Task RevokeDesignationAsync(DesignationDisplayRow row) => CommandAsync(
-        "انتصاب پس گرفته شد.",
-        async token =>
-        {
-            var outcome = await designations.RevokeAsync(currentUser(), row.Row.DesignationId, row.Row.Version, token);
+            var outcome = await designations.SetSupervisorAsync(currentUser(), row.Row.DesignationId, row.Row.Version, isSupervisor, token);
             return outcome.Succeeded ? Outcome<int>.Ok(1) : new Outcome<int>(outcome.Status, 0, outcome.Issue, outcome.DateError);
         });
 
