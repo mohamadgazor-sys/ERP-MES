@@ -9,7 +9,10 @@ namespace ERP.MES.Desktop.ViewModels;
 
 /// <summary>One stage waiting for QC (or a shortfall decision) as shown, with the entry that carries the ids and row versions.</summary>
 public sealed record InspectionRow(
-    InspectionEntry2 Entry, string RequestNo, string ItemNo, string PartName, string StageText, string StatusText, string UnitsText, string InputText, string AwaitingText, string AcceptedText, string ReworkText, string ScrapText);
+    InspectionEntry2 Entry, string RequestNo, string ItemNo, string PartName, string StageText, string StatusText, string UnitsText, string InputText, string AwaitingText, string AcceptedText, string ReworkText, string ScrapText) : IHasItemId
+{
+    public long ItemId => Entry.ItemId;
+}
 
 public sealed record InspectionHistoryRow(string TimeText, string KindText, string UnitsText, string ReasonText);
 

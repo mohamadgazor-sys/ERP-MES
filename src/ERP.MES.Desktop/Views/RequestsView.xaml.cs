@@ -139,4 +139,6 @@ public partial class RequestsView : UserControl
             MessageBox.Show(Messages.Unexpected, "سامانه ERP/MES", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
     }
+
+    private async void OnOpenDrawingClick(object sender, RoutedEventArgs e) => await DrawingLauncher.OpenAsync(sender);
 }

@@ -203,4 +203,6 @@ internal static class PromptWindow
         ok.Click += (_, _) => window.DialogResult = true;
         return window.ShowDialog() == true ? box.Text : null;
     }
+
+    private async void OnOpenDrawingClick(object sender, RoutedEventArgs e) => await DrawingLauncher.OpenAsync(sender);
 }

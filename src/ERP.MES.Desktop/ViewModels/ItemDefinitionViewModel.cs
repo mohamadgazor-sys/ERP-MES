@@ -12,7 +12,7 @@ namespace ERP.MES.Desktop.ViewModels;
 public sealed record DefinitionRequestRow(long RequestId, string RequestNo, string CustomerName, string WorkTypeText, string StatusText, int ItemCount);
 
 public sealed record DefinedItemRow(
-    long ItemId, long Version, string ItemNo, string PartName, string QuantityText, string SpecificationText, string PriorityText, int StageCount, string CustomerRefText = "—", string AssemblyText = "—", bool IsAssembly = false);
+    long ItemId, long Version, string ItemNo, string PartName, string QuantityText, string SpecificationText, string PriorityText, int StageCount, string CustomerRefText = "—", string AssemblyText = "—", bool IsAssembly = false) : IHasItemId;
 
 public sealed record DefinedStageRow(int StageNo, string Title, string MinutesText, string UnitText, string MachineText, string StatusText);
 

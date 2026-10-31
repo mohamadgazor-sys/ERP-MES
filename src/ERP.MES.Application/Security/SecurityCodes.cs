@@ -57,6 +57,8 @@ public static class AuditActions
     // Planning resource master data (Decision Log #82 R2). Rate changes are cost-relevant, so every one is audited with the reason.
     public const string ProductionUnitAdded = "ProductionUnitAdded";
     public const string StageTitleAdded = "StageTitleAdded";
+    public const string ItemDrawingUploaded = "ItemDrawingUploaded";
+    public const string ItemDrawingReplaced = "ItemDrawingReplaced";
     public const string StageTitleActivityChanged = "StageTitleActivityChanged";
     public const string MachineAdded = "MachineAdded";
     public const string MachineRateChanged = "MachineRateChanged";

@@ -40,6 +40,8 @@ public sealed class ErpMesDbContext(DbContextOptions<ErpMesDbContext> options) :
 
     public DbSet<StoredDocument> Documents => Set<StoredDocument>();
 
+    public DbSet<ItemDrawing> ItemDrawings => Set<ItemDrawing>();
+
     public DbSet<UnitOfMeasure> UnitsOfMeasure => Set<UnitOfMeasure>();
 
     public DbSet<ProductionUnit> ProductionUnits => Set<ProductionUnit>();

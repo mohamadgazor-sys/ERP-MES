@@ -25,8 +25,10 @@ public sealed record UnitQueueRow(
     string ReasonText,
     string PositionText,
     string OverrideText,
-    string PlannedEndText)
+    string PlannedEndText) : IHasItemId
 {
+    public long ItemId => Entry.ItemId;
+
     /// <summary>The customer's own item number (optional); <see cref="ItemNo"/> is the system number.</summary>
     public string? CustomerItemRef => Entry.CustomerItemRef;
 }
@@ -308,7 +310,7 @@ public sealed class UnitQueueViewModel(UnitQueueService queue, StageWorkService 
         async token =>
         {
             var outcome = await work.PerformAsync(currentUser(), action, row.Entry.ToStageTarget(), token);
-            return outcome.Succeeded ? Outcome<int>.Ok(1) : new Outcome<int>(outcome.Status, 0, outcome.Issue, outcome.DateError);
+            return outcome.Succeeded ? Outcome<int>.Ok(1, outcome.WarningList) : new Outcome<int>(outcome.Status, 0, outcome.Issue, outcome.DateError);
         });
 
     // ---- designations ---------------------------------------------------------------------------------------------------------------------------------------------
@@ -336,7 +338,8 @@ public sealed class UnitQueueViewModel(UnitQueueService queue, StageWorkService 
             var outcome = await command(CancellationToken.None);
             if (outcome.Succeeded)
             {
-                Succeed(success);
+                // A missing technical drawing only warns (Decision Log #125 Q14).
+                Succeed(outcome.WarningList.Contains(StageWorkService.NoDrawingWarning) ? success + " هشدار: برای این آیتم نقشه‌ای بارگذاری نشده است." : success);
             }
             else
             {

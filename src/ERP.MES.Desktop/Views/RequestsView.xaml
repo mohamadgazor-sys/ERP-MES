@@ -121,6 +121,13 @@
                               CanUserAddRows="False" CanUserDeleteRows="False" MaxHeight="220" Background="{StaticResource CardBrush}">
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="شمارهٔ آیتم" Binding="{Binding ItemNo}" ElementStyle="{StaticResource LtrCell}" Width="110" />
+                            <DataGridTemplateColumn Header="نقشه" Width="64">
+                                                    <DataGridTemplateColumn.CellTemplate>
+                                                        <DataTemplate>
+                                                            <Button Content="نقشه" Padding="6,1" MinWidth="48" Click="OnOpenDrawingClick" ToolTip="نقشهٔ فنی این آیتم (فایل PDF) را باز می‌کند. نقشه فقط با همین کلیک خوانده می‌شود؛ اگر نقشه‌ای بارگذاری نشده باشد پیام می‌دهد." />
+                                                        </DataTemplate>
+                                                    </DataGridTemplateColumn.CellTemplate>
+                                                </DataGridTemplateColumn>
                             <DataGridTextColumn Header="نام قطعه" Binding="{Binding PartName}" Width="*" />
                             <DataGridTextColumn Header="نوع کار" Binding="{Binding WorkTypeText}" Width="80" />
                             <DataGridTextColumn Header="تعداد" Binding="{Binding QuantityText}" Width="90" />

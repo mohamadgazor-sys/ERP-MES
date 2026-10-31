@@ -33,6 +33,7 @@ public sealed class ShellViewModel : ObservableObject
     public const string ItemImportKey = "itemimport";
     public const string UsersKey = "users";
     public const string StageTitlesKey = "stage-titles";
+    public const string ItemDrawingsKey = "item-drawings";
     public const string LimitationsKey = "limitations";
 
     private readonly IJalaliDateService _dates;
@@ -70,6 +71,7 @@ public sealed class ShellViewModel : ObservableObject
             new NavigationItem(ClarificationsKey, "پرسش‌های نقشه‌کشی", true),
             new NavigationItem(ItemDefinitionKey, "تعریف آیتم‌ها و مرحله‌ها", true),
             new NavigationItem(ItemImportKey, "ورود آیتم‌ها از اکسل", true),
+            new NavigationItem(ItemDrawingsKey, "نقشه‌های آیتم‌ها", true),
             new NavigationItem(StageTitlesKey, "فهرست عنوان مرحله‌ها", true),
             new NavigationItem(UsersKey, "کاربران و حساب‌ها", true),
             new NavigationItem(LimitationsKey, "محدودیت‌های نسخه نمایشی", true),

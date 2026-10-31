@@ -7,6 +7,7 @@ public enum DocumentType
 {
     RequestPdf = 1,
     ContractPdf = 2,
+    ItemDrawing = 3,
 }
 
 /// <summary>Why a file was refused as a request PDF.</summary>
@@ -80,6 +81,11 @@ public sealed class StoredDocument
     public static bool TryCreateContractPdf(
         string? fileName, byte[]? content, string contentHash, long maxBytes, long uploadedByUserId, DateTime uploadedAtUtc, out StoredDocument? document, out PdfError error) =>
         TryCreatePdf(DocumentType.ContractPdf, fileName, content, contentHash, maxBytes, uploadedByUserId, uploadedAtUtc, out document, out error);
+
+    /// <summary>The same checks for the technical drawing of an item (Decision Log #125 Q14): PDF only, at most <paramref name="maxBytes"/> (20 MiB by default).</summary>
+    public static bool TryCreateItemDrawing(
+        string? fileName, byte[]? content, string contentHash, long maxBytes, long uploadedByUserId, DateTime uploadedAtUtc, out StoredDocument? document, out PdfError error) =>
+        TryCreatePdf(DocumentType.ItemDrawing, fileName, content, contentHash, maxBytes, uploadedByUserId, uploadedAtUtc, out document, out error);
 
     private static bool TryCreatePdf(
         DocumentType type, string? fileName, byte[]? content, string contentHash, long maxBytes, long uploadedByUserId, DateTime uploadedAtUtc, out StoredDocument? document, out PdfError error)

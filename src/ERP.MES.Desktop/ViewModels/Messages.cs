@@ -185,6 +185,7 @@ public static class Messages
         ValidationIssue.DateInvalid => "تاریخ معتبر نیست (مثال: ۱۴۰۵/۰۷/۲۰).",
         ValidationIssue.RequestPdfRequired => "پیش از ارسال به مدیریت، فایل PDF درخواست را پیوست کنید.",
         ValidationIssue.PdfEmpty => "فایل انتخاب‌شده خالی است.",
+        ValidationIssue.DrawingItemNotFound => "آیتم مورد نظر دیگر وجود ندارد؛ فهرست را دوباره بارگذاری کنید.",
         ValidationIssue.PdfTooLarge => "حجم فایل بیشتر از حد مجاز است (پیش‌فرض ۲۰ مگابایت).",
         ValidationIssue.PdfNotPdf => "فایل انتخاب‌شده یک PDF معتبر نیست.",
         ValidationIssue.PdfFileNameInvalid => "نام فایل باید با .pdf پایان یابد.",
