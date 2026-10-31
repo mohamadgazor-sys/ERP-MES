@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | Implemented and covered by the automated end-to-end acceptance test `EndToEndDemoTests` (Decision Log #108, updated for work sessions by #112-#115). The application windows are opened and navigated by an automated UI test on a Windows runner (`docs/UI_SMOKE.md`: sign-in, one-time password replacement and all 23 pages for three accounts), but a person has not yet walked the business steps through the Desktop application on Windows; the manual checklist sections O to Y in `docs/MANUAL_UI_CHECKLIST.md` list what to look at on each screen. |
-| **Database** | A demonstration database created with `demo-init` (see `docs/DEMO_SEED_AND_RESET.md`). It contains two sample requests that precede Management's decision (`DEMO-1405-014` waiting for Management, `DEMO-1405-015` just created without a PDF) and the master data below; the nine demonstration accounts each have a random one-time password in the protected credentials file and must replace it at the first sign-in. |
+| **Database** | A demonstration database created with `demo-init` (see `docs/DEMO_SEED_AND_RESET.md`). It contains three sample requests that precede Management's decision (`DEMO-1405-014` waiting for Management, `DEMO-1405-015` just created without a PDF, `DEMO-1405-016` with a nested assembly waiting for Management) and the master data below; the ten demonstration accounts each have a random one-time password in the protected credentials file and must replace it at the first sign-in. |
 | **Everything is fictional.** | Names end with `(نمونه آزمایشی)`. Currency is Iranian Rial. Dates are Jalali. |
 
 ## 1. What the demonstration database already contains
@@ -49,7 +49,7 @@ Start the Desktop application against `<file>`, sign in as each account in the o
 
 ## 3. Honest limits
 
-- The two sample requests (`DEMO-1405-014`, `DEMO-1405-015`) precede Management's decision and carry no stages (Decision Log #118); the walkthrough request does not use them. They are useful to show the list screens and the "attach the PDF before submitting" rule.
+- The three sample requests (`DEMO-1405-014`, `DEMO-1405-015`, `DEMO-1405-016`) precede Management's decision and carry no stages (Decision Log #118); the walkthrough request does not use them. They are useful to show the list screens and the "attach the PDF before submitting" rule.
 - A person has not yet performed this walkthrough in the WPF application on Windows; the automated test performs the same use cases. The work-board window (`WorkBoardView`) in particular has been compiled and its view model tested against the real services, but its rendering and button behaviour have not been seen on a Windows desktop (checklist section Y).
 - The worker schedule is not seeded: without step 6, dispatch is refused until the supervisor writes the reason for working outside the shift, which is the intended behaviour.
 - The legacy daily job reports still exist for stages that are tracked by reports; a stage is tracked by sessions or by reports, never both (Decision Log #113).
