@@ -37,6 +37,13 @@ public interface ISchedulingRepository
 
     Task<Stored<WeeklyWorkday>> SetWeekdayAsync(DayOfWeek day, long expectedVersion, bool isWorkday, DateTime atUtc, AuditLogEntry audit, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Stores a date-specific "own hours" shift of one unit in ONE transaction (Decision Log #123 Q17): the shift template, the unit-shift that runs on no regular day, and the exceptions that
+    /// make the unit work only these hours on the date. The factories receive the new template id. Either everything is saved or nothing.
+    /// </summary>
+    Task<Stored<UnitShift>> AddDateHoursAsync(
+        ShiftTemplate template, Func<long, UnitShift> unitShift, Func<long, IReadOnlyList<CalendarException>> exceptions, AuditLogEntry audit, CancellationToken cancellationToken = default);
+
     Task<Stored<CalendarException>> AddExceptionAsync(CalendarException value, AuditLogEntry audit, CancellationToken cancellationToken = default);
 
     Task<Stored<CalendarException>> CancelExceptionAsync(long id, long expectedVersion, AuditLogEntry audit, CancellationToken cancellationToken = default);

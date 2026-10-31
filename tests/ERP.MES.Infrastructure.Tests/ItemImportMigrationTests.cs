@@ -35,7 +35,7 @@ public class ItemImportMigrationTests
         Assert.Empty(db.Query("SELECT * FROM ItemImports"));
         Assert.Empty(db.Query("SELECT * FROM ItemImportRows"));
         Assert.Empty(db.Query("PRAGMA foreign_key_check"));
-        Assert.Equal(29, db.Query("SELECT MigrationId FROM __EFMigrationsHistory").Count);
+        Assert.Equal(30, db.Query("SELECT MigrationId FROM __EFMigrationsHistory").Count);
 
         var keys = db.Query("SELECT 'ItemImports:' || \"from\" || '->' || \"table\" || ':' || on_delete FROM pragma_foreign_key_list('ItemImports') UNION ALL SELECT 'ItemImportRows:' || \"from\" || '->' || \"table\" || ':' || on_delete FROM pragma_foreign_key_list('ItemImportRows')");
         Assert.Equal(

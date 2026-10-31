@@ -470,6 +470,12 @@ public enum ValidationIssue
     /// <summary>The shift overlaps another shift of the unit and Planning has not marked the overlap explicitly.</summary>
     UnitShiftOverlapNotMarked,
 
+    /// <summary>The weekday set of a recurring unit schedule is not valid (only the seven weekday bits).</summary>
+    UnitShiftDaysInvalid,
+
+    /// <summary>The overtime interval lies inside the unit's regular working time (its shifts or recurring schedule), which is not overtime (Decision Log #123).</summary>
+    OvertimeInsideRegularTime,
+
     /// <summary>Capacity needs 1 &lt;= maximum &lt;= 1000 and 0 &lt;= minimum &lt;= maximum.</summary>
     CapacityInvalid,
 

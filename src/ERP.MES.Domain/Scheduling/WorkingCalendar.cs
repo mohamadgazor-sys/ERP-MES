@@ -13,7 +13,8 @@ public sealed record ShiftOccurrence(ShiftTemplate Template, long UnitShiftId, D
 /// shift templates. All times are LOCAL wall-clock times of the display zone; conversion to stored UTC happens at the boundary. Nothing here is a constant of the company's schedule.
 ///
 /// A shift occurrence of a unit exists on a date when the unit-shift and the template are active and the shift is not switched off. The state of a day is decided from the most specific rule: weekly
-/// pattern, then a company exception, then a unit exception, then a shift exception (all units) and last a unit-and-shift exception; at equal scope an Off exception wins over a Working one.
+/// pattern (or, for a shift with its own weekdays, the recurring unit schedule), then a company exception, then a unit exception, then a shift exception (all units) and last a unit-and-shift
+/// exception; at equal scope an Off exception wins over a Working one.
 /// </summary>
 public sealed class WorkingCalendar
 {
@@ -41,7 +42,9 @@ public sealed class WorkingCalendar
     /// <summary>Whether the shift of the unit works on the date.</summary>
     public bool IsWorking(long unitId, long shiftTemplateId, DateOnly date)
     {
-        var working = _weekly.TryGetValue(date.DayOfWeek, out var regular) && regular;
+        // The regular state: a shift with its own weekdays (a recurring unit schedule) follows them; any other shift follows the company's weekly pattern (Decision Log #123 Q13).
+        var own = _unitShifts.FirstOrDefault(u => u.ProductionUnitId == unitId && u.ShiftTemplateId == shiftTemplateId)?.RegularDays;
+        var working = own is { } mask ? (mask >> (int)date.DayOfWeek & 1) == 1 : _weekly.TryGetValue(date.DayOfWeek, out var regular) && regular;
         foreach (var scope in new Func<CalendarException, bool>[]
         {
             e => e.ProductionUnitId is null && e.ShiftTemplateId is null,

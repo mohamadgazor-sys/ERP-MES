@@ -3376,6 +3376,9 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
                     b.Property<long>("ProductionUnitId")
                         .HasColumnType("INTEGER");
 
+                    b.Property<int?>("RegularDays")
+                        .HasColumnType("INTEGER");
+
                     b.Property<long>("ShiftTemplateId")
                         .HasColumnType("INTEGER");
 

@@ -141,7 +141,7 @@ public sealed class CalendarService(
         }, cancellationToken);
 
     public Task<Outcome<Stored<UnitShift>>> AddUnitShiftAsync(
-        Principal? principal, long unitId, long templateId, int maxOperators, int minOperators, bool overlapAllowed, CancellationToken cancellationToken = default) =>
+        Principal? principal, long unitId, long templateId, int maxOperators, int minOperators, bool overlapAllowed, CancellationToken cancellationToken = default, int? regularDays = null) =>
         MaintainAsync<Stored<UnitShift>>(principal, async (user, now) =>
         {
             if ((await planning.ListUnitsAsync(cancellationToken)).All(x => x.Value.Id != unitId || !x.Value.IsActive))
@@ -165,13 +165,17 @@ public sealed class CalendarService(
             try
             {
                 value = new UnitShift(0, unitId, templateId, maxOperators, minOperators, overlapAllowed, user.UserId, now);
+                if (regularDays is not null)
+                {
+                    value.SetRegularDays(regularDays, now);
+                }
             }
             catch (ArgumentOutOfRangeException)
             {
                 return Outcome<Stored<UnitShift>>.Invalid(ValidationIssue.CapacityInvalid);
             }
 
-            if (!overlapAllowed && OverlapsAnotherShift(config, unitId, template.Value))
+            if (!overlapAllowed && OverlapsAnotherShift(config, unitId, template.Value, null, regularDays))
             {
                 return Outcome<Stored<UnitShift>>.Invalid(ValidationIssue.UnitShiftOverlapNotMarked);
             }
@@ -189,7 +193,7 @@ public sealed class CalendarService(
                 var config = await store.LoadConfigurationAsync(cancellationToken);
                 var current = config.UnitShifts.FirstOrDefault(u => u.Value.Id == id);
                 var template = current is null ? null : config.Templates.FirstOrDefault(t => t.Value.Id == current.Value.ShiftTemplateId);
-                if (current is not null && template is not null && !overlapAllowed && OverlapsAnotherShift(config, current.Value.ProductionUnitId, template.Value, current.Value.Id))
+                if (current is not null && template is not null && !overlapAllowed && OverlapsAnotherShift(config, current.Value.ProductionUnitId, template.Value, current.Value.Id, current.Value.RegularDays))
                 {
                     return Outcome<Stored<UnitShift>>.Invalid(ValidationIssue.UnitShiftOverlapNotMarked);
                 }
@@ -201,6 +205,134 @@ public sealed class CalendarService(
             {
                 return Outcome<Stored<UnitShift>>.Invalid(ValidationIssue.CapacityInvalid);
             }
+        }, cancellationToken);
+
+    /// <summary>
+    /// Sets the weekdays a unit-shift runs on (a recurring unit schedule, Decision Log #123 Q13): a mask makes it run on exactly those weekdays even where the company pattern says off, null makes it follow the
+    /// company pattern again. A change that makes the shift overlap another shift of the unit is refused unless overlap was marked allowed.
+    /// </summary>
+    public Task<Outcome<Stored<UnitShift>>> SetUnitShiftDaysAsync(Principal? principal, long id, long expectedVersion, int? regularDays, CancellationToken cancellationToken = default) =>
+        MaintainAsync<Stored<UnitShift>>(principal, async (user, now) =>
+        {
+            if (regularDays is < 0 or > UnitShift.AllDaysMask)
+            {
+                return Outcome<Stored<UnitShift>>.Invalid(ValidationIssue.UnitShiftDaysInvalid);
+            }
+
+            var config = await store.LoadConfigurationAsync(cancellationToken);
+            var current = config.UnitShifts.FirstOrDefault(u => u.Value.Id == id);
+            var template = current is null ? null : config.Templates.FirstOrDefault(t => t.Value.Id == current.Value.ShiftTemplateId);
+            if (current is not null && template is not null && !current.Value.OverlapAllowed && OverlapsAnotherShift(config, current.Value.ProductionUnitId, template.Value, current.Value.Id, regularDays))
+            {
+                return Outcome<Stored<UnitShift>>.Invalid(ValidationIssue.UnitShiftOverlapNotMarked);
+            }
+
+            return Outcome<Stored<UnitShift>>.Ok(await store.UpdateUnitShiftAsync(id, expectedVersion, u => u.SetRegularDays(regularDays, now),
+                Audit(user, now, AuditActions.UnitShiftChanged, "UnitShift", id.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                    $"Unit shift {id} runs on {(regularDays is null ? "the company pattern" : "weekday mask " + regularDays.Value.ToString(System.Globalization.CultureInfo.InvariantCulture))}"), cancellationToken));
+        }, cancellationToken);
+
+    /// <summary>
+    /// A date-specific exception of one unit with its own working hours (Decision Log #123 Q17): on that date the unit works only the given interval (which may cross midnight), whatever its regular shifts or
+    /// the company pattern say; several intervals on one date are added one after another. Stored in one transaction as a dedicated shift that runs on no regular day, a unit-level Off exception for the date
+    /// and a Working exception for that shift. Refused when the interval overlaps another interval the unit works around that date.
+    /// </summary>
+    public Task<Outcome<Stored<UnitShift>>> AddUnitDateHoursAsync(
+        Principal? principal, long unitId, DateOnly date, TimeOnly start, TimeOnly end, int maxOperators, string? reason, CancellationToken cancellationToken = default) =>
+        MaintainAsync<Stored<UnitShift>>(principal, async (user, now) =>
+        {
+            try
+            {
+                _ = CalendarException.RequireReason(reason);
+            }
+            catch (ArgumentException)
+            {
+                return Outcome<Stored<UnitShift>>.Invalid(ValidationIssue.CalendarReasonRequired);
+            }
+
+            if ((await planning.ListUnitsAsync(cancellationToken)).All(x => x.Value.Id != unitId || !x.Value.IsActive))
+            {
+                return Outcome<Stored<UnitShift>>.Invalid(ValidationIssue.ProductionUnitInvalid);
+            }
+
+            var config = await store.LoadConfigurationAsync(cancellationToken);
+            // At most 20 characters of A-Z, 0-9 and '-': D + yyMMdd + the two times + the unit in base 36.
+            var code = $"D{date:yyMMdd}{start:HHmm}{end:HHmm}-{Base36(unitId)}";
+            ShiftTemplate template;
+            try
+            {
+                template = new ShiftTemplate(0, code, $"ساعت ویژه {date:yyyy-MM-dd} {start:HH\\:mm}-{end:HH\\:mm}", start, end, null, null, user.UserId, now);
+            }
+            catch (ArgumentException)
+            {
+                return Outcome<Stored<UnitShift>>.Invalid(ValidationIssue.ShiftTimesInvalid);
+            }
+
+            if (config.Templates.Any(t => string.Equals(t.Value.Code, code, StringComparison.Ordinal)))
+            {
+                return Outcome<Stored<UnitShift>>.Invalid(ValidationIssue.CalendarExceptionExists);
+            }
+
+            UnitShift probeShift;
+            try
+            {
+                probeShift = new UnitShift(-2, unitId, -1, maxOperators, 0, false, user.UserId, now);
+                probeShift.SetRegularDays(0, now);
+            }
+            catch (ArgumentOutOfRangeException)
+            {
+                return Outcome<Stored<UnitShift>>.Invalid(ValidationIssue.CapacityInvalid);
+            }
+
+            var unitOffExists = config.Exceptions.Any(e => e.Value.IsActive && e.Value.Date == date && e.Value.ProductionUnitId == unitId && e.Value.ShiftTemplateId is null && e.Value.Kind == CalendarExceptionKind.Off);
+            var probeTemplate = new ShiftTemplate(-1, code, "probe", start, end, null, null, user.UserId, now);
+            var probeExceptions = new List<CalendarException>(config.Exceptions.Select(e => e.Value))
+            {
+                new(0, date, CalendarExceptionKind.Working, unitId, -1, reason!, user.UserId, now),
+            };
+            if (!unitOffExists)
+            {
+                probeExceptions.Add(new CalendarException(0, date, CalendarExceptionKind.Off, unitId, null, reason!, user.UserId, now));
+            }
+
+            var probe = new WorkingCalendar(config.Weekly.Select(w => w.Value), probeExceptions, [.. config.UnitShifts.Select(u => u.Value), probeShift], [.. config.Templates.Select(t => t.Value), probeTemplate]);
+            for (var offset = -1; offset <= 1; offset++)
+            {
+                var occurrences = probe.Occurrences(unitId, date.AddDays(offset));
+                var mine = occurrences.FirstOrDefault(o => o.Template.Id == -1);
+                if (mine is null)
+                {
+                    continue;
+                }
+
+                if (probe.Occurrences(unitId, date.AddDays(-1)).Concat(probe.Occurrences(unitId, date)).Concat(probe.Occurrences(unitId, date.AddDays(1))).Any(o => o.Template.Id != -1 && o.Overlaps(mine)))
+                {
+                    return Outcome<Stored<UnitShift>>.Invalid(ValidationIssue.UnitShiftOverlapNotMarked);
+                }
+            }
+
+            var added = await store.AddDateHoursAsync(
+                template,
+                templateId =>
+                {
+                    var shift = new UnitShift(0, unitId, templateId, maxOperators, 0, false, user.UserId, now);
+                    shift.SetRegularDays(0, now);
+                    return shift;
+                },
+                templateId =>
+                {
+                    var list = new List<CalendarException> { new(0, date, CalendarExceptionKind.Working, unitId, templateId, reason!, user.UserId, now) };
+                    if (!unitOffExists)
+                    {
+                        list.Add(new CalendarException(0, date, CalendarExceptionKind.Off, unitId, null, reason!, user.UserId, now));
+                    }
+
+                    return list;
+                },
+                Audit(user, now, AuditActions.CalendarExceptionAdded, "CalendarException", date.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture),
+                    $"Unit {unitId} works {start:HH\\:mm}-{end:HH\\:mm} on {date:yyyy-MM-dd} (own hours): {reason}"),
+                cancellationToken);
+            return Outcome<Stored<UnitShift>>.Ok(added);
         }, cancellationToken);
 
     public Task<Outcome<Stored<UnitShift>>> SetUnitShiftActiveAsync(Principal? principal, long id, long expectedVersion, bool active, CancellationToken cancellationToken = default) =>
@@ -226,6 +358,19 @@ public sealed class CalendarService(
         }
     }
 
+    private static string Base36(long value)
+    {
+        const string digits = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        var text = string.Empty;
+        do
+        {
+            text = digits[(int)(value % 36)] + text;
+            value /= 36;
+        }
+        while (value > 0);
+        return text;
+    }
+
     private async Task<int> CountAffectedRowsAsync(DateOnly date, CancellationToken cancellationToken)
     {
         var config = await store.LoadConfigurationAsync(cancellationToken);
@@ -234,8 +379,11 @@ public sealed class CalendarService(
     }
 
     /// <summary>True when the template overlaps another active shift of the unit (occurrences on the same day or on neighbouring days are compared).</summary>
-    internal static bool OverlapsAnotherShift(CalendarConfiguration config, long unitId, ShiftTemplate template, long? exceptUnitShiftId = null)
+    internal static bool OverlapsAnotherShift(CalendarConfiguration config, long unitId, ShiftTemplate template, long? exceptUnitShiftId = null, int? candidateRegularDays = null)
     {
+        // Two shifts can collide only on weekdays both can run (a shift without its own weekdays can run on any day), including a midnight spill into the next day (Decision Log #123 Q13).
+        // A shift without its own weekdays follows the company pattern, so it runs only on the company's workdays.
+        bool CanRun(int? mask, DayOfWeek day) => mask is { } m ? (m >> (int)day & 1) == 1 : config.Weekly.Where(w => w.Value.Day == day).Select(w => w.Value.IsWorkday).DefaultIfEmpty(true).First();
         var reference = new DateOnly(2026, 1, 1);
         foreach (var other in config.UnitShifts.Where(u => u.Value.IsActive && u.Value.ProductionUnitId == unitId && u.Value.Id != exceptUnitShiftId))
         {
@@ -251,7 +399,16 @@ public sealed class CalendarService(
                 var b = reference.AddDays(shift).ToDateTime(otherTemplate.StartTime);
                 if (a < b.AddMinutes(otherTemplate.TotalMinutes) && b < a.AddMinutes(template.TotalMinutes))
                 {
-                    return true;
+                    // The overlap exists on some weekday d (candidate) when the other shift runs on d + shift; check all seven.
+                    for (var d = 0; d < 7; d++)
+                    {
+                        var day = (DayOfWeek)d;
+                        var otherDay = (DayOfWeek)(((d + shift) % 7 + 7) % 7);
+                        if (CanRun(candidateRegularDays, day) && CanRun(other.Value.RegularDays, otherDay))
+                        {
+                            return true;
+                        }
+                    }
                 }
             }
         }

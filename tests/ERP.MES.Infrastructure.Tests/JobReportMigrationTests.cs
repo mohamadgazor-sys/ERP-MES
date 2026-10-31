@@ -41,7 +41,7 @@ public class JobReportMigrationTests
         Assert.Empty(db.Query("SELECT * FROM DailyJobReportLines"));
         Assert.Empty(db.Query("SELECT * FROM DailyJobReportEvents"));
         Assert.Empty(db.Query("PRAGMA foreign_key_check"));
-        Assert.Equal(29, db.Query("SELECT MigrationId FROM __EFMigrationsHistory").Count);
+        Assert.Equal(30, db.Query("SELECT MigrationId FROM __EFMigrationsHistory").Count);
 
         var keys = new List<string>();
         foreach (var table in new[] { "DailyJobReports", "DailyJobReportLines", "DailyJobReportEvents" })

@@ -17,7 +17,7 @@ public sealed record WeekdayRow(Stored<WeeklyWorkday> Stored, string DayText, st
 
 public sealed record ExceptionRow(Stored<CalendarException> Stored, string DateText, string KindText, string ScopeText, string ReasonText, string StatusText);
 
-public sealed record UnitShiftRow(Stored<UnitShift> Stored, string UnitText, string ShiftText, string CapacityText, string OverlapText, string StatusText);
+public sealed record UnitShiftRow(Stored<UnitShift> Stored, string UnitText, string ShiftText, string CapacityText, string OverlapText, string StatusText, string DaysText = "");
 
 public sealed record ScheduleDisplayRow(ScheduleRowView View, string DateText, string OperatorText, string UnitText, string ShiftText, string MachineText, string StatusText, string FlagText);
 
@@ -215,7 +215,7 @@ public sealed class CalendarViewModel(
         {
             _unitShifts.Add(new UnitShiftRow(
                 u, unitNames.GetValueOrDefault(u.Value.ProductionUnitId, "?"), templates.GetValueOrDefault(u.Value.ShiftTemplateId)?.Value.Code ?? "?",
-                $"{Digits(u.Value.MinOrZero())} تا {Digits(u.Value.MaxOperators)}", u.Value.OverlapAllowed ? "هم‌پوشانی علامت‌خورده" : string.Empty, u.Value.IsActive ? "فعال" : "بازنشسته"));
+                $"{Digits(u.Value.MinOrZero())} تا {Digits(u.Value.MaxOperators)}", u.Value.OverlapAllowed ? "هم‌پوشانی علامت‌خورده" : string.Empty, u.Value.IsActive ? "فعال" : "بازنشسته", DaysText(u.Value.RegularDays)));
         }
 
         var range = await schedule.LoadAsync(currentUser(), _from, _to, cancellationToken);
@@ -269,15 +269,43 @@ public sealed class CalendarViewModel(
 
     public Task CancelExceptionAsync(ExceptionRow row) => CommandAsync("استثنا لغو شد.", token => calendar.CancelExceptionAsync(currentUser(), row.Stored.Value.Id, row.Stored.Version, token));
 
-    public Task AddUnitShiftAsync(long unitId, long templateId, string? max, string? min, bool overlapAllowed) => CommandAsync("شیفت واحد ثبت شد.", async token =>
+    public Task AddUnitShiftAsync(long unitId, long templateId, string? max, string? min, bool overlapAllowed, int? regularDays = null) => CommandAsync("شیفت واحد ثبت شد.", async token =>
     {
         if (!TryInt(max, out var maxValue) || !TryInt(min, out var minValue))
         {
             return Outcome<int>.Invalid(ValidationIssue.CapacityInvalid);
         }
 
-        return Wrap(await calendar.AddUnitShiftAsync(currentUser(), unitId, templateId, maxValue, minValue, overlapAllowed, token));
+        return Wrap(await calendar.AddUnitShiftAsync(currentUser(), unitId, templateId, maxValue, minValue, overlapAllowed, token, regularDays));
     });
+
+    /// <summary>Sets the weekdays of the selected unit-shift (a recurring unit schedule); null returns it to the company pattern.</summary>
+    public Task SetUnitShiftDaysAsync(UnitShiftRow row, int? regularDays) => CommandAsync("روزهای شیفت واحد تغییر کرد.", async token =>
+        Wrap(await calendar.SetUnitShiftDaysAsync(currentUser(), row.Stored.Value.Id, row.Stored.Version, regularDays, token)));
+
+    /// <summary>A date on which the unit works only the given hours (Decision Log #123 Q17).</summary>
+    public Task AddUnitDateHoursAsync(long unitId, string? dateText, string? start, string? end, string? max, string? reason) => CommandAsync("ساعت ویژهٔ تاریخ ثبت شد.", async token =>
+    {
+        if (!TryDate(dateText, out var date))
+        {
+            return Outcome<int>.Invalid(ValidationIssue.DateInvalid);
+        }
+
+        if (!TryTime(start, out var s) || !TryTime(end, out var e))
+        {
+            return Outcome<int>.Invalid(ValidationIssue.ShiftTimesInvalid);
+        }
+
+        if (!TryInt(max, out var maxValue))
+        {
+            return Outcome<int>.Invalid(ValidationIssue.CapacityInvalid);
+        }
+
+        return Wrap(await calendar.AddUnitDateHoursAsync(currentUser(), unitId, date, s, e, maxValue, reason, token));
+    });
+
+    private string DaysText(int? mask) =>
+        mask is not { } m ? "الگوی شرکت" : m == 0 ? "فقط با استثنای تاریخی" : string.Join("، ", Enumerable.Range(0, 7).Where(d => (m >> d & 1) == 1).Select(d => DayNames[d]));
 
     public Task SetUnitShiftActiveAsync(UnitShiftRow row, bool active) => CommandAsync(active ? "شیفت واحد فعال شد." : "شیفت واحد بازنشسته شد.", async token =>
         Wrap(await calendar.SetUnitShiftActiveAsync(currentUser(), row.Stored.Value.Id, row.Stored.Version, active, token)));

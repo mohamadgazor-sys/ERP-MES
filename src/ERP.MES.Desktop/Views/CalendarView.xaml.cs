@@ -70,7 +70,34 @@ public partial class CalendarView : UserControl
     {
         if (UnitOf(UsUnit) is { } unit && ShiftOf(UsShift) is { } shift)
         {
-            await _viewModel.AddUnitShiftAsync(unit, shift, UsMax.Text, UsMin.Text, UsOverlap.IsChecked == true);
+            await _viewModel.AddUnitShiftAsync(unit, shift, UsMax.Text, UsMin.Text, UsOverlap.IsChecked == true, CheckedDaysMask());
+        }
+    }
+
+    // The weekday boxes (Saturday first, like the week of the factory) as the bit mask of the Domain (bit n = DayOfWeek n); nothing checked means "follow the company pattern".
+    private int? CheckedDaysMask()
+    {
+        var boxes = new (CheckBox Box, DayOfWeek Day)[]
+        {
+            (DaySat, DayOfWeek.Saturday), (DaySun, DayOfWeek.Sunday), (DayMon, DayOfWeek.Monday), (DayTue, DayOfWeek.Tuesday), (DayWed, DayOfWeek.Wednesday), (DayThu, DayOfWeek.Thursday), (DayFri, DayOfWeek.Friday),
+        };
+        var days = boxes.Where(b => b.Box.IsChecked == true).Select(b => b.Day).ToList();
+        return days.Count == 0 ? null : ERP.MES.Domain.Scheduling.UnitShift.MaskOf(days);
+    }
+
+    private async void OnSetUnitShiftDays(object sender, RoutedEventArgs e)
+    {
+        if (UnitShiftGrid.SelectedItem is UnitShiftRow row)
+        {
+            await _viewModel.SetUnitShiftDaysAsync(row, CheckedDaysMask());
+        }
+    }
+
+    private async void OnAddDateHours(object sender, RoutedEventArgs e)
+    {
+        if (UnitOf(UsUnit) is { } unit)
+        {
+            await _viewModel.AddUnitDateHoursAsync(unit, DhDate.Text, DhStart.Text, DhEnd.Text, DhMax.Text, DhReason.Text);
         }
     }
 

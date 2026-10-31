@@ -185,6 +185,8 @@ public static class Messages
         ValidationIssue.DateInvalid => "تاریخ معتبر نیست (مثال: ۱۴۰۵/۰۷/۲۰).",
         ValidationIssue.RequestPdfRequired => "پیش از ارسال به مدیریت، فایل PDF درخواست را پیوست کنید.",
         ValidationIssue.PdfEmpty => "فایل انتخاب‌شده خالی است.",
+        ValidationIssue.OvertimeInsideRegularTime => "این بازه در ساعت کاری عادی واحد است (شیفت یا برنامهٔ هفتگی ثابت) و اضافه‌کاری نیست؛ بازه‌ای خارج از ساعت کاری عادی انتخاب کنید.",
+        ValidationIssue.UnitShiftDaysInvalid => "روزهای هفتهٔ برنامهٔ ثابت واحد معتبر نیست.",
         ValidationIssue.TechnicalImportStatus => "نقشه‌کشی فقط وقتی درخواست در بررسی نقشه‌کشی است می‌تواند آیتم وارد کند.",
         ValidationIssue.DrawingItemNotFound => "آیتم مورد نظر دیگر وجود ندارد؛ فهرست را دوباره بارگذاری کنید.",
         ValidationIssue.PdfTooLarge => "حجم فایل بیشتر از حد مجاز است (پیش‌فرض ۲۰ مگابایت).",

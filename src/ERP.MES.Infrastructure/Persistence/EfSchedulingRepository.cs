@@ -52,6 +52,25 @@ public sealed class EfSchedulingRepository(IDbContextFactory<ErpMesDbContext> co
         return new Stored<WeeklyWorkday>(row, context.GetRowVersion(row));
     }
 
+    public async Task<Stored<UnitShift>> AddDateHoursAsync(
+        ShiftTemplate template, Func<long, UnitShift> unitShift, Func<long, IReadOnlyList<CalendarException>> exceptions, AuditLogEntry audit, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(template);
+        ArgumentNullException.ThrowIfNull(unitShift);
+        ArgumentNullException.ThrowIfNull(exceptions);
+        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
+        await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
+        context.ShiftTemplates.Add(template);
+        await PersistenceSave.SaveAsync(context, cancellationToken);
+        var shift = unitShift(template.Id);
+        context.UnitShifts.Add(shift);
+        context.CalendarExceptions.AddRange(exceptions(template.Id));
+        context.AuditLog.Add(audit);
+        await PersistenceSave.SaveAsync(context, cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+        return new Stored<UnitShift>(shift, context.GetRowVersion(shift));
+    }
+
     public async Task<Stored<CalendarException>> AddExceptionAsync(CalendarException value, AuditLogEntry audit, CancellationToken cancellationToken = default)
     {
         await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);

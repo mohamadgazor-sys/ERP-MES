@@ -429,4 +429,31 @@ public class OvertimeTests
 
         Assert.Equal(ValidationIssue.EndBeforeStart, (await w.Overtime.LoadAsync(w.Planning, range, range.AddDays(-1), Token)).Issue);
     }
+
+    [Fact]
+    public async Task Overtime_cannot_be_booked_inside_the_units_regular_hours_including_a_standing_friday_schedule()
+    {
+        using var w = await StartAsync();
+        var s = await SetupAsync(w, plan: false);
+        await LimitsAsync(w, 240, 960);
+
+        // Saturday 10:00-12:00 is inside the unit's regular 08:00-17:00 shift: that is not overtime, whoever is (not) planned there.
+        var inside = await w.Overtime.ProposeAsync(w.Supervisor, s.SecondOperatorId, s.Unit, s.Machine, At(0, 10), At(0, 12), "سفارش فوری", Token);
+        Assert.Equal(ValidationIssue.OvertimeInsideRegularTime, inside.Issue);
+        Assert.Equal(0, Count(w, "OvertimeAssignments"));
+
+        // Friday is off for the company, so Friday morning is outside the regular hours and may be booked as overtime.
+        var fridayFree = await w.Overtime.ProposeAsync(w.Supervisor, s.SecondOperatorId, s.Unit, s.Machine, At(-1, 7), At(-1, 9), "سفارش فوری", Token);
+        Assert.True(fridayFree.Succeeded, fridayFree.Status + " " + fridayFree.Issue);
+
+        // Once the unit has a standing Friday 06:00-12:00 schedule, Friday morning is regular working time and a further booking is refused.
+        var friday = (await w.Services.Calendar.AddTemplateAsync(w.Planning, "F", "جمعه", new TimeOnly(6, 0), new TimeOnly(12, 0), null, null, Token)).Value!.Value.Id;
+        Assert.True((await w.Services.Calendar.AddUnitShiftAsync(w.Planning, s.Unit, friday, 3, 1, false, Token, UnitShift.MaskOf([DayOfWeek.Friday]))).Succeeded);
+        var standing = await w.Overtime.ProposeAsync(w.Supervisor, s.SecondOperatorId, s.Unit, s.SecondMachine, At(-1, 9), At(-1, 10), "سفارش فوری", Token);
+        Assert.Equal(ValidationIssue.OvertimeInsideRegularTime, standing.Issue);
+
+        // Outside the standing hours the same Friday is still overtime.
+        var afternoon = await w.Overtime.ProposeAsync(w.Supervisor, s.SecondOperatorId, s.Unit, s.SecondMachine, At(-1, 13), At(-1, 15), "سفارش فوری", Token);
+        Assert.True(afternoon.Succeeded, afternoon.Status + " " + afternoon.Issue);
+    }
 }

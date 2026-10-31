@@ -69,6 +69,13 @@ public static class OvertimeRules
             }
         }
 
+        // Overtime is outside the unit's regular working time: the effective calendar (weekly pattern, recurring unit schedules, dated exceptions) decides what is regular (Decision Log #123 Q13).
+        if (context.Calendar is { } calendar
+            && calendar.WorkingIntervals(candidate.ProductionUnitId, candidate.StartLocal.Date.AddDays(-1), 3).Any(i => i.Start < candidate.EndLocal && candidate.StartLocal < i.End))
+        {
+            return ValidationIssue.OvertimeInsideRegularTime;
+        }
+
         return ValidationIssue.None;
     }
 

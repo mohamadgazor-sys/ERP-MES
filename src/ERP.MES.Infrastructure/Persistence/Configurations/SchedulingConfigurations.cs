@@ -87,6 +87,7 @@ public sealed class UnitShiftConfiguration : IEntityTypeConfiguration<UnitShift>
         builder.Property(u => u.MaxOperators).IsRequired();
         builder.Property(u => u.MinOperators).IsRequired();
         builder.Property(u => u.OverlapAllowed).IsRequired();
+        builder.Property(u => u.RegularDays);
         builder.Property(u => u.IsActive).IsRequired();
         builder.Property(u => u.CreatedByUserId).IsRequired();
         builder.HasOne<User>().WithMany().HasForeignKey(u => u.CreatedByUserId).IsRequired().OnDelete(DeleteBehavior.Restrict);

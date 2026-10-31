@@ -105,6 +105,10 @@ public sealed class EfOvertimeRepository(IDbContextFactory<ErpMesDbContext> cont
         var assignments = await context.OvertimeAssignments.AsNoTracking()
             .Where(a => a.Id != row.Id && a.WorkDate >= weekFrom && a.WorkDate <= weekTo && (a.OperatorId == row.OperatorId || a.MachineId == row.MachineId))
             .ToListAsync(cancellationToken);
-        return new OvertimeContext(limits, operatorActive, machineUsable, offDays, planned, templates, assignments);
+        // The same effective calendar as the forecast, the session checks and the job reports, so regular unit hours (for example a standing Friday schedule) are never booked as overtime (Decision Log #123).
+        var weekly = await context.WeeklyWorkdays.AsNoTracking().ToListAsync(cancellationToken);
+        var exceptions = await context.CalendarExceptions.AsNoTracking().ToListAsync(cancellationToken);
+        var unitShifts = await context.UnitShifts.AsNoTracking().ToListAsync(cancellationToken);
+        return new OvertimeContext(limits, operatorActive, machineUsable, offDays, planned, templates, assignments, new WorkingCalendar(weekly, exceptions, unitShifts, templates));
     }
 }
