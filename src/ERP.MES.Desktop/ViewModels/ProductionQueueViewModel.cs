@@ -21,7 +21,8 @@ public sealed record QueueRow(
     string StageStatusText,
     string QcStatusText,
     string StageEstimateText,
-    string TotalEstimateText);
+    string TotalEstimateText,
+    long ItemId = 0) : IHasItemId;
 
 /// <summary>
 /// State of the read-only production overview (Management and Planning). It asks the Application (<see cref="ProductionQueueService"/>), which checks the user's CURRENT permission; this

@@ -21,12 +21,12 @@ public class MigrationTests
         // EF Core keeps its own bookkeeping tables (the migration history, and in EF Core 10 a migrations lock); only the application tables are compared.
         Assert.Contains("__EFMigrationsHistory", tables);
         Assert.Equal(
-            new[] { "AuditLog", "CalendarExceptions", "ContractDocumentLinks", "ContractHistory", "ContractVersions", "Contracts", "CustomerDispatches", "Customers", "DailyJobReportEvents", "DailyJobReportLines", "DailyJobReports", "Departments", "Documents", "DrawingClarifications", "ItemContractDecisions", "ItemCostCalculations", "ItemCostLines", "ItemFinishedSent", "ItemImportRows", "ItemImports", "ItemPriceDecisions", "ItemStages", "MachineHourlyRates", "Machines", "MaterialPrices", "Materials", "OperatorMachineAssignments", "OperatorMachineQualifications", "OperatorOffDays", "Operators", "OutageEvents", "OvertimeAssignments", "OvertimeLimits", "PauseReasons", "ProductionUnits", "QcApprovals", "QcInspectionLines", "QuantityTypeMembers", "QuantityTypes", "QueueOverrideHistory", "QueueOverrides", "RawMaterialInquiries", "RawMaterialInquiryDispositions", "RawMaterialInquiryHistory", "RawMaterialInquiryLines", "RawMaterialInquiryResponses", "RawMaterialInquirySupplyRoutes", "RequestDocumentLinks", "RequestItems", "RequestWorkflowEntries", "Requests", "Roles", "ShiftTemplates", "ShortfallDecisions", "StageTitles", "SystemSetup", "UnitConversions", "UnitShifts", "UnitsOfMeasure", "UserCredentials", "UserUnitDesignations", "Users", "WarehouseReceipts", "WeeklyWorkdays", "WorkSessionCorrections", "WorkSessionEvents", "WorkSessionIntervals", "WorkSessionPauses", "WorkSessions", "WorkerSchedules" },
+            new[] { "AuditLog", "CalendarExceptions", "ContractDocumentLinks", "ContractHistory", "ContractVersions", "Contracts", "CustomerDispatches", "Customers", "DailyJobReportEvents", "DailyJobReportLines", "DailyJobReports", "Departments", "Documents", "DrawingClarifications", "ItemContractDecisions", "ItemCostCalculations", "ItemCostLines", "ItemDrawings", "ItemFinishedSent", "ItemImportRows", "ItemImports", "ItemPriceDecisions", "ItemStages", "MachineHourlyRates", "Machines", "MaterialPrices", "Materials", "OperatorMachineAssignments", "OperatorMachineQualifications", "OperatorOffDays", "Operators", "OutageEvents", "OvertimeAssignments", "OvertimeLimits", "PauseReasons", "ProductionUnits", "QcApprovals", "QcInspectionLines", "QuantityTypeMembers", "QuantityTypes", "QueueOverrideHistory", "QueueOverrides", "RawMaterialInquiries", "RawMaterialInquiryDispositions", "RawMaterialInquiryHistory", "RawMaterialInquiryLines", "RawMaterialInquiryResponses", "RawMaterialInquirySupplyRoutes", "RequestDocumentLinks", "RequestItems", "RequestWorkflowEntries", "Requests", "Roles", "ShiftTemplates", "ShortfallDecisions", "StageTitles", "SystemSetup", "UnitConversions", "UnitShifts", "UnitsOfMeasure", "UserCredentials", "UserUnitDesignations", "Users", "WarehouseReceipts", "WeeklyWorkdays", "WorkSessionCorrections", "WorkSessionEvents", "WorkSessionIntervals", "WorkSessionPauses", "WorkSessions", "WorkerSchedules" },
             tables.Where(t => !t.StartsWith("__EF", StringComparison.Ordinal)).ToArray());
 
         await using var context = db.NewContext();
         var applied = (await context.Database.GetAppliedMigrationsAsync(TestContext.Current.CancellationToken)).ToArray();
-        Assert.Equal(28, applied.Length);
+        Assert.Equal(29, applied.Length);
         Assert.EndsWith("_InitialCreate", applied[0], StringComparison.Ordinal);
         Assert.EndsWith("_AddAuthentication", applied[1], StringComparison.Ordinal);
         Assert.EndsWith("_SingleWorkTypePerRequest", applied[2], StringComparison.Ordinal);
@@ -59,7 +59,7 @@ public class MigrationTests
 
         // Fails if the model changed without a new migration, or if the snapshot was edited away from the model.
         Assert.False(context.Database.HasPendingModelChanges());
-        Assert.Equal(28, context.Database.GetMigrations().Count());
+        Assert.Equal(29, context.Database.GetMigrations().Count());
     }
 
     [Fact]

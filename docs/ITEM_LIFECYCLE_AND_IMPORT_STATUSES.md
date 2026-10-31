@@ -41,3 +41,7 @@ The existing contract rule of #111 (item-scoped contract decision) now has the i
 3. Planning defines stages from the stage-title catalog (gates as today).
 4. Stage release: gates as today; additionally, an assembly's first stage waits until every descendant has completed its route with QC approval (#121); an incomplete REPAIR item (no delivery date or warehouse code) cannot be released (#124).
 5. Production, QC, warehouse, costing as today.
+
+## 5. Item drawings (Decision Log #125 Q14)
+
+The technical drawing of an item is a PDF of at most 20 MiB, uploaded and replaced by Drawing alone on the page «نقشه‌های آیتم‌ها». An item has one current drawing; replacing it keeps the earlier revisions as history (each upload is audited with the actor). Every signed-in user can open the current or an older revision with an explicit «نقشه» button on the item lists (definition, requests, contracts, production queue, unit queue, QC inspection) or on the drawings page; nothing is loaded until the button is clicked. A missing drawing never blocks work; releasing the first stage of an item without a drawing succeeds with a warning.

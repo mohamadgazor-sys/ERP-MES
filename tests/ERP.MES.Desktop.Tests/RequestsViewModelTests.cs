@@ -235,7 +235,8 @@ public class RequestsViewModelTests
         // Both items inherit the request's one work type (Decision Log #84).
         Assert.Equal(
             new[] { new ItemRow("P-565-001", "حلقه", "ساخت", "۱۰", "عادی"), new ItemRow("P-565-002", "شفت", "ساخت", "۲.۵", "فوری") },
-            planning.Items.ToArray());
+            planning.Items.Select(i => i with { ItemId = 0 }).ToArray());
+        Assert.All(planning.Items, i => Assert.True(i.ItemId > 0));
         Assert.Equal(2, planning.Requests.Single().ItemCount);
 
         var restarted = h.RequestsFor(h.Qc, h.Restarted());

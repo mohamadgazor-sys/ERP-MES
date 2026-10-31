@@ -22,7 +22,8 @@ internal sealed class QueueRowFormatter(DigitStyle digitStyle)
         e.CurrentStage is null ? ProductionQueueViewModel.NotAvailableText : ProductionQueueViewModel.StageStatusText(e.CurrentStage.Status),
         QcStatusText(e),
         e.CurrentStage is null ? ProductionQueueViewModel.NotAvailableText : Number(e.CurrentStage.EstimatedMinutes),
-        e.TotalEstimatedMinutes is null ? ProductionQueueViewModel.NotAvailableText : Number(e.TotalEstimatedMinutes.Value));
+        e.TotalEstimatedMinutes is null ? ProductionQueueViewModel.NotAvailableText : Number(e.TotalEstimatedMinutes.Value),
+        e.ItemId);
 
     private string CurrentStageText(ProductionQueueEntry e) => e.RouteState switch
     {

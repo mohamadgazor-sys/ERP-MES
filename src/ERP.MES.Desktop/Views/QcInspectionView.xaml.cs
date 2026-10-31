@@ -49,4 +49,6 @@ public partial class QcInspectionView : UserControl
     private async void OnAcceptShortfallClick(object sender, RoutedEventArgs e) => await _viewModel.DecideShortfallAsync(ShortfallKind.ManagementAccepted, ShortfallNote.Text);
 
     private async void OnReplacementClick(object sender, RoutedEventArgs e) => await _viewModel.DecideShortfallAsync(ShortfallKind.ReplacementOrdered, ShortfallNote.Text);
+
+    private async void OnOpenDrawingClick(object sender, RoutedEventArgs e) => await DrawingLauncher.OpenAsync(sender);
 }

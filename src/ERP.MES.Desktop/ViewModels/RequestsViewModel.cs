@@ -9,7 +9,7 @@ namespace ERP.MES.Desktop.ViewModels;
 
 public sealed record RequestRow(long RequestId, string RequestNo, string CustomerName, string WorkTypeText, string DateText, string YearText, string Title, string StatusText, int ItemCount);
 
-public sealed record ItemRow(string ItemNo, string PartName, string WorkTypeText, string QuantityText, string PriorityText);
+public sealed record ItemRow(string ItemNo, string PartName, string WorkTypeText, string QuantityText, string PriorityText, long ItemId = 0) : IHasItemId;
 
 public sealed record HistoryRow(string DateText, string ActionText, string StatusChangeText, string DepartmentText, string OutcomeText, string NoteText);
 
@@ -425,7 +425,7 @@ public sealed class RequestsViewModel(
         OnPropertyChanged(nameof(HasNoHistory));
         foreach (var item in _detail.Value.Items)
         {
-            _items.Add(new ItemRow(item.ItemNo, item.PartName, Messages.WorkTypeText(_detail.Value.WorkType), QuantityDisplay(item.RequestedQuantity), item.Priority.PersianName()));
+            _items.Add(new ItemRow(item.ItemNo, item.PartName, Messages.WorkTypeText(_detail.Value.WorkType), QuantityDisplay(item.RequestedQuantity), item.Priority.PersianName(), item.Id));
         }
 
         SelectedRequest = _rows.FirstOrDefault(r => r.RequestId == requestId) ?? _selected;

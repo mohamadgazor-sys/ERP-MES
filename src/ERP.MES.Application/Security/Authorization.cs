@@ -224,6 +224,12 @@ public enum Permission
 
     /// <summary>Planning maintains the stage-title catalog (Decision Log #124 B4).</summary>
     MaintainStageTitles,
+
+    /// <summary>Drawing uploads and replaces the technical drawing of an item (Decision Log #125 Q14).</summary>
+    ManageItemDrawings,
+
+    /// <summary>Open the technical drawing of an item: every signed-in user who works with items (Decision Log #125 Q14).</summary>
+    ViewItemDrawings,
 }
 
 /// <summary>
@@ -250,6 +256,8 @@ public static class AuthorizationRules
         [Permission.MaintainUnitsOfMeasure] = new([DepartmentCodes.Qc], null),
         [Permission.MaintainOperatorQualifications] = new([DepartmentCodes.Planning], null),
         [Permission.MaintainStageTitles] = new([DepartmentCodes.Planning], null),
+        [Permission.ManageItemDrawings] = new([DepartmentCodes.Drawing], null),
+        [Permission.ViewItemDrawings] = new([], null),
         [Permission.MaintainHolidayCalendar] = new([DepartmentCodes.Planning, DepartmentCodes.ProductionManager], null),
         [Permission.RegisterDowntime] = new([DepartmentCodes.MaintenancePm], null),
         [Permission.CreateAndSubmitRequest] = new([DepartmentCodes.Central], null),

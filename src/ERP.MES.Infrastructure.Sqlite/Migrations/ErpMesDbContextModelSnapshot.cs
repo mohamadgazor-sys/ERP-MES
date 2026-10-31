@@ -572,6 +572,63 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
                     b.ToTable("ItemPriceDecisions", (string)null);
                 });
 
+            modelBuilder.Entity("ERP.MES.Domain.Documents.ItemDrawing", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ContentHash")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("ContentLength")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("DocumentId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("RequestItemId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Revision")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("SupersededAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long?>("SupersededByUserId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("UploadedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("UploadedByUserId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DocumentId");
+
+                    b.HasIndex("RequestItemId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_ItemDrawings_CurrentPerItem")
+                        .HasFilter("[SupersededAtUtc] IS NULL");
+
+                    b.HasIndex("SupersededByUserId");
+
+                    b.HasIndex("UploadedByUserId");
+
+                    b.HasIndex("RequestItemId", "Revision")
+                        .IsUnique();
+
+                    b.ToTable("ItemDrawings", (string)null);
+                });
+
             modelBuilder.Entity("ERP.MES.Domain.Documents.StoredDocument", b =>
                 {
                     b.Property<long>("Id")
@@ -3773,6 +3830,34 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Calculation");
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Documents.ItemDrawing", b =>
+                {
+                    b.HasOne("ERP.MES.Domain.Documents.StoredDocument", "Document")
+                        .WithMany()
+                        .HasForeignKey("DocumentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ERP.MES.Domain.Requests.RequestItem", null)
+                        .WithMany()
+                        .HasForeignKey("RequestItemId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ERP.MES.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("SupersededByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("ERP.MES.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("UploadedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Document");
                 });
 
             modelBuilder.Entity("ERP.MES.Domain.Documents.StoredDocument", b =>

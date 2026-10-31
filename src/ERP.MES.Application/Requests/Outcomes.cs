@@ -173,6 +173,9 @@ public enum ValidationIssue
     /// <summary>A MAKE item needs a quantity type, a material and a weight.</summary>
     ItemSpecificationIncomplete,
 
+    /// <summary>The item the drawing belongs to does not exist.</summary>
+    DrawingItemNotFound,
+
     /// <summary>The stage title is not an active entry of the stage-title catalog (Decision Log #124 B4).</summary>
     StageTitleNotInCatalog,
 

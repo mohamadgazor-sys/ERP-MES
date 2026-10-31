@@ -173,6 +173,8 @@ public partial class UnitQueueView : UserControl
             await _viewModel.SetSupervisorAsync(row, false);
         }
     }
+
+    private async void OnOpenDrawingClick(object sender, RoutedEventArgs e) => await DrawingLauncher.OpenAsync(sender);
 }
 
 /// <summary>A small modal prompt for a required reason. Returns null when cancelled.</summary>

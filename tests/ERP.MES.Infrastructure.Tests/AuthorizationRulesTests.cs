@@ -92,6 +92,8 @@ public class AuthorizationRulesTests
         [Permission.ViewCalendar] = (["MANAGEMENT", "PLANNING", "PRODUCTION", "PRODUCTION_MANAGER"], null),
         [Permission.ScheduleWorkers] = (["PLANNING", "PRODUCTION_MANAGER"], null),
         [Permission.MaintainStageTitles] = (["PLANNING"], null),
+        [Permission.ManageItemDrawings] = (["DRAWING"], null),
+        [Permission.ViewItemDrawings] = ([], null),
     };
 
     [Fact]
@@ -135,7 +137,7 @@ public class AuthorizationRulesTests
         var allowed = Enum.GetValues<Permission>().Where(p => AuthorizationRules.IsAllowed("SYSTEM", "ADMIN", p)).ToArray();
 
         // Read-only viewing (requests, QC master data) is open to every active user (Decision Log #75, #90); the write permissions of the Admin role are administering accounts, the working-unit assignment and the production master data (Decision Log #122).
-        Assert.Equal(new[] { Permission.AdministerUsers, Permission.AssignWorkingUnits, Permission.MaintainProductionResources, Permission.ViewCustomersAndRequests, Permission.ViewMaterials, Permission.ViewOperators, Permission.ViewPlanningMasterData, Permission.ViewQcMasterData }.OrderBy(p => (int)p), allowed.OrderBy(p => (int)p));
+        Assert.Equal(new[] { Permission.AdministerUsers, Permission.AssignWorkingUnits, Permission.MaintainProductionResources, Permission.ViewCustomersAndRequests, Permission.ViewMaterials, Permission.ViewOperators, Permission.ViewPlanningMasterData, Permission.ViewQcMasterData, Permission.ViewItemDrawings }.OrderBy(p => (int)p), allowed.OrderBy(p => (int)p));
         Assert.False(AuthorizationRules.IsAllowed("PLANNING", "STAFF", Permission.AdministerUsers));
         Assert.False(AuthorizationRules.IsAllowed("MANAGEMENT", "MANAGER", Permission.AdministerUsers));
     }

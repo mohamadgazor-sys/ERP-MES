@@ -48,6 +48,13 @@
                 <DataGrid ItemsSource="{Binding ItemRows}" SelectedItem="{Binding SelectedItemRow, Mode=TwoWay}" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single" HeadersVisibility="Column" CanUserAddRows="False" CanUserDeleteRows="False" MaxHeight="170" Background="{StaticResource CardBrush}">
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="آیتم" Binding="{Binding ItemNo}" ElementStyle="{StaticResource LtrCell}" Width="90" />
+                        <DataGridTemplateColumn Header="نقشه" Width="64">
+                                                <DataGridTemplateColumn.CellTemplate>
+                                                    <DataTemplate>
+                                                        <Button Content="نقشه" Padding="6,1" MinWidth="48" Click="OnOpenDrawingClick" ToolTip="نقشهٔ فنی این آیتم (فایل PDF) را باز می‌کند. نقشه فقط با همین کلیک خوانده می‌شود؛ اگر نقشه‌ای بارگذاری نشده باشد پیام می‌دهد." />
+                                                    </DataTemplate>
+                                                </DataGridTemplateColumn.CellTemplate>
+                                            </DataGridTemplateColumn>
                         <DataGridTextColumn Header="نام قطعه" Binding="{Binding PartName}" Width="*" />
                         <DataGridTextColumn Header="تصمیم" Binding="{Binding EffectiveText}" Width="150" />
                         <DataGridTextColumn Header="دلیل" Binding="{Binding ReasonText}" Width="*" />

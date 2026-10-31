@@ -27,6 +27,36 @@ public sealed class StoredDocumentConfiguration : IEntityTypeConfiguration<Store
     }
 }
 
+/// <summary>One revision of an item's technical drawing (Decision Log #125 Q14): a link row to the stored binary. Never deleted; a replaced revision is marked superseded.</summary>
+public sealed class ItemDrawingConfiguration : IEntityTypeConfiguration<ItemDrawing>
+{
+    public void Configure(EntityTypeBuilder<ItemDrawing> builder)
+    {
+        builder.ToTable("ItemDrawings");
+        builder.HasKey(d => d.Id);
+        builder.Property(d => d.Id).ValueGeneratedOnAdd();
+        builder.Property(d => d.RequestItemId).IsRequired();
+        builder.Property(d => d.Revision).IsRequired();
+        builder.Property(d => d.FileName).IsRequired();
+        builder.Property(d => d.ContentLength).IsRequired();
+        builder.Property(d => d.ContentHash).IsRequired();
+        builder.Property(d => d.UploadedByUserId).IsRequired();
+        builder.Property(d => d.UploadedAtUtc).IsRequired();
+        builder.Property(d => d.SupersededAtUtc);
+        builder.Property(d => d.SupersededByUserId);
+        builder.Ignore(d => d.IsCurrent);
+
+        builder.HasOne(d => d.Document).WithMany().HasForeignKey(d => d.DocumentId).IsRequired().OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<RequestItem>().WithMany().HasForeignKey(d => d.RequestItemId).IsRequired().OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<User>().WithMany().HasForeignKey(d => d.UploadedByUserId).IsRequired().OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<User>().WithMany().HasForeignKey(d => d.SupersededByUserId).IsRequired(false).OnDelete(DeleteBehavior.Restrict);
+
+        // One revision number per item, and at most one current (not superseded) revision per item.
+        builder.HasIndex(d => new { d.RequestItemId, d.Revision }).IsUnique();
+        builder.HasIndex(d => d.RequestItemId).IsUnique().HasFilter("[SupersededAtUtc] IS NULL").HasDatabaseName("IX_ItemDrawings_CurrentPerItem");
+    }
+}
+
 /// <summary>The association of a document with a request (a link table, Decision Log #35). A link is never deleted; a replaced PDF is marked superseded.</summary>
 public sealed class RequestDocumentLinkConfiguration : IEntityTypeConfiguration<RequestDocumentLink>
 {

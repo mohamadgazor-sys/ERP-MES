@@ -19,4 +19,6 @@ public partial class ProductionQueueView : UserControl
     private async void OnLoaded(object sender, RoutedEventArgs e) => await _viewModel.LoadAsync();
 
     private async void OnReloadClick(object sender, RoutedEventArgs e) => await _viewModel.LoadAsync();
+
+    private async void OnOpenDrawingClick(object sender, RoutedEventArgs e) => await DrawingLauncher.OpenAsync(sender);
 }

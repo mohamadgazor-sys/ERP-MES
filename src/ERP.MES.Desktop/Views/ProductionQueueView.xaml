@@ -33,6 +33,13 @@
                 <DataGridTextColumn Header="مشتری" Binding="{Binding CustomerName}" Width="140" />
                 <DataGridTextColumn Header="وضعیت درخواست" Binding="{Binding RequestStatusText}" Width="150" />
                 <DataGridTextColumn Header="شمارهٔ آیتم" Binding="{Binding ItemNo}" ElementStyle="{StaticResource LtrCell}" Width="90" />
+                <DataGridTemplateColumn Header="نقشه" Width="64">
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <Button Content="نقشه" Padding="6,1" MinWidth="48" Click="OnOpenDrawingClick" ToolTip="نقشهٔ فنی این آیتم (فایل PDF) را باز می‌کند. نقشه فقط با همین کلیک خوانده می‌شود؛ اگر نقشه‌ای بارگذاری نشده باشد پیام می‌دهد." />
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
                 <DataGridTextColumn Header="نام قطعه" Binding="{Binding PartName}" Width="140" />
                 <DataGridTextColumn Header="نوع کار" Binding="{Binding WorkTypeText}" Width="70" />
                 <DataGridTextColumn Header="تعداد" Binding="{Binding QuantityText}" Width="70" />

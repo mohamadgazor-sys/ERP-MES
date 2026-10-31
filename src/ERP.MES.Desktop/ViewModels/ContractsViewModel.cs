@@ -11,7 +11,7 @@ public sealed record ContractListRow(long RequestId, string RequestNo, string Cu
 
 public sealed record ContractVersionRow(int VersionNo, string ContractNo, string DateText, string StateText, string PdfText, string DecisionText, string DecisionNoteText);
 
-public sealed record ItemContractRow(long ItemId, string ItemNo, string PartName, string EffectiveText, string ReasonText, bool IsInProduction);
+public sealed record ItemContractRow(long ItemId, string ItemNo, string PartName, string EffectiveText, string ReasonText, bool IsInProduction) : IHasItemId;
 
 public sealed record ContractHistoryRow(string DateText, string ActionText, string StatusChangeText, string DepartmentText, string NoteText);
 

@@ -61,8 +61,11 @@ public sealed record StageActionResult(StageAction Action, int StageNo, ItemStag
 /// GUARANTEE (per row, not per aggregate - Decision Log #77): the named rows are protected against a stale view, and every row the change touches is protected until it is saved.
 /// A row of the same request that the action neither names nor changes is not compared.
 /// </summary>
-public sealed class StageWorkService(IRequestRepository requests, CurrentAuthorization authorization, IClock clock, IAuditContext auditContext, RequestGateService gates, IUnitQueueRepository unitStore, IWorkSessionRepository workSessions)
+public sealed class StageWorkService(IRequestRepository requests, CurrentAuthorization authorization, IClock clock, IAuditContext auditContext, RequestGateService gates, IUnitQueueRepository unitStore, IWorkSessionRepository workSessions, IItemDrawingRepository? drawings = null)
 {
+    /// <summary>The warning text carried in <see cref="Outcome{T}.Warnings"/> when the first stage of an item without a technical drawing is released.</summary>
+    public const string NoDrawingWarning = "NoDrawing";
+
     /// <summary>
     /// Planning corrects an erroneous stage start (back to waiting) or submission (back to in progress) with a mandatory reason, audited (Decision Log #95 D8, #102). It is refused once QC has decided
     /// anything about the stage. Nobody else can change a start or submission made by another operator.
@@ -213,7 +216,15 @@ public sealed class StageWorkService(IRequestRepository requests, CurrentAuthori
                 }
 
                 await requests.UpdateRowsAsync(target.RequestId, expected, Change, Audit, cancellationToken);
-                return Outcome<StageActionResult>.Ok(new StageActionResult(action, number, after, null, null));
+
+                // A missing technical drawing warns when the first stage is released but never blocks it (Decision Log #125 Q14).
+                IReadOnlyList<string>? warnings = null;
+                if (action == StageAction.Release && target.StageNo == 1 && drawings is not null && (await drawings.ListCurrentAsync([target.ItemId], cancellationToken)).Count == 0)
+                {
+                    warnings = [NoDrawingWarning];
+                }
+
+                return Outcome<StageActionResult>.Ok(new StageActionResult(action, number, after, null, null), warnings);
             });
         }
         catch (InvalidOperationException)
