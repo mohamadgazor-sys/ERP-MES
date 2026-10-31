@@ -17,7 +17,7 @@
                 <StackPanel x:Name="UnlockPanel">
                     <TextBlock Text="برای ادامه، گذرواژه خود را وارد کنید." Margin="0,0,0,6" />
                     <PasswordBox x:Name="UnlockPassword" Margin="0,0,0,12" />
-                    <Button Content="باز کردن قفل" Click="OnUnlockClick" Padding="12,6" IsDefault="True" />
+                    <Button Content="باز کردن قفل" Click="OnUnlockClick" Padding="12,6" IsDefault="True" ToolTip="قفل حساب بر اثر ورود ناموفق را برمی‌دارد تا کاربر دوباره بتواند وارد شود." />
                 </StackPanel>
 
                 <StackPanel x:Name="ChangePanel" Visibility="Collapsed">
@@ -27,10 +27,10 @@
                     <PasswordBox x:Name="NewPassword" Margin="0,2,0,8" />
                     <TextBlock Text="تکرار گذرواژه جدید" />
                     <PasswordBox x:Name="NewPasswordRepeat" Margin="0,2,0,12" />
-                    <Button Content="تغییر گذرواژه" Click="OnChangePasswordClick" Padding="12,6" IsDefault="True" />
+                    <Button Content="تغییر گذرواژه" Click="OnChangePasswordClick" Padding="12,6" IsDefault="True" ToolTip="گذرواژهٔ شما را عوض می‌کند. بعد از آن باید با گذرواژهٔ جدید وارد شوید." />
                 </StackPanel>
 
-                <Button Content="ورود با کاربر دیگر" Click="OnSwitchUserClick" Margin="0,16,0,0" Padding="12,6" />
+                <Button Content="ورود با کاربر دیگر" Click="OnSwitchUserClick" Margin="0,16,0,0" Padding="12,6" ToolTip="از حساب فعلی خارج می‌شود و صفحهٔ ورود را باز می‌کند." />
             </StackPanel>
         </Border>
     </Grid>

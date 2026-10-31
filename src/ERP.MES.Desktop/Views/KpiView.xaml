@@ -24,7 +24,7 @@
             <WrapPanel>
                 <TextBox x:Name="RangeFrom" Width="90" Margin="0,0,6,4" ToolTip="از تاریخ" />
                 <TextBox x:Name="RangeTo" Width="90" Margin="0,0,6,4" ToolTip="تا تاریخ" />
-                <Button Content="نمایش بازه" Padding="10,3" Margin="0,0,6,4" Click="OnRange" />
+                <Button Content="نمایش بازه" Padding="10,3" Margin="0,0,6,4" Click="OnRange" ToolTip="فهرست را برای بازهٔ تاریخ واردشده نشان می‌دهد. چیزی تغییر نمی‌کند." />
             </WrapPanel>
             <TextBlock Text="{Binding RunText}" Margin="0,0,0,6" TextWrapping="Wrap" />
             <DataGrid ItemsSource="{Binding Units}" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single" HeadersVisibility="Column" CanUserAddRows="False" MaxHeight="320" Background="{StaticResource CardBrush}">

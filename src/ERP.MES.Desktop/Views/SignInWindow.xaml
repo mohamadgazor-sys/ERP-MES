@@ -35,7 +35,7 @@
             <PasswordBox x:Name="FirstRunPassword" Margin="0,2,0,8" />
             <TextBlock Text="تکرار گذرواژه" />
             <PasswordBox x:Name="FirstRunRepeat" Margin="0,2,0,12" />
-            <Button Content="ایجاد مدیر سیستم" Click="OnFirstRunClick" Padding="12,6" IsDefault="True" />
+            <Button Content="ایجاد مدیر سیستم" Click="OnFirstRunClick" Padding="12,6" IsDefault="True" ToolTip="اولین مدیر سیستم را با توکن راه‌اندازی می‌سازد. فقط یک بار لازم است." />
         </StackPanel>
 
         <StackPanel x:Name="SignInPanel" Visibility="Collapsed">
@@ -43,9 +43,9 @@
             <TextBox x:Name="SignInUsername" FlowDirection="LeftToRight" Margin="0,2,0,8" />
             <TextBlock Text="گذرواژه" />
             <PasswordBox x:Name="SignInPassword" Margin="0,2,0,12" />
-            <Button Content="ورود" Click="OnSignInClick" Padding="12,6" IsDefault="True" />
+            <Button Content="ورود" Click="OnSignInClick" Padding="12,6" IsDefault="True" ToolTip="با نام کاربری و گذرواژه وارد برنامه می‌شود." />
             <Button x:Name="UseRecoveryButton" Content="استفاده از توکن بازیابی" Click="OnUseRecoveryClick" Margin="0,12,0,0"
-                    Padding="12,6" Visibility="Collapsed" />
+                    Padding="12,6" Visibility="Collapsed" ToolTip="توکن بازیابی را برای ادامه به کار می‌برد." />
         </StackPanel>
 
         <StackPanel x:Name="RecoveryPanel" Visibility="Collapsed">
@@ -56,8 +56,8 @@
             <PasswordBox x:Name="RecoveryPassword" Margin="0,2,0,8" />
             <TextBlock Text="تکرار گذرواژه جدید" />
             <PasswordBox x:Name="RecoveryRepeat" Margin="0,2,0,12" />
-            <Button Content="ثبت گذرواژه جدید" Click="OnRecoveryClick" Padding="12,6" IsDefault="True" />
-            <Button Content="بازگشت به ورود" Click="OnBackClick" Margin="0,12,0,0" Padding="12,6" />
+            <Button Content="ثبت گذرواژه جدید" Click="OnRecoveryClick" Padding="12,6" IsDefault="True" ToolTip="گذرواژهٔ جدید را ذخیره می‌کند و وارد برنامه می‌شود." />
+            <Button Content="بازگشت به ورود" Click="OnBackClick" Margin="0,12,0,0" Padding="12,6" ToolTip="به صفحهٔ ورود برمی‌گردد." />
         </StackPanel>
 
         <StackPanel x:Name="ChangePasswordPanel" Visibility="Collapsed">
@@ -67,7 +67,7 @@
             <PasswordBox x:Name="NewPassword" Margin="0,2,0,8" />
             <TextBlock Text="تکرار گذرواژه جدید" />
             <PasswordBox x:Name="NewPasswordRepeat" Margin="0,2,0,12" />
-            <Button Content="تغییر گذرواژه" Click="OnChangePasswordClick" Padding="12,6" IsDefault="True" />
+            <Button Content="تغییر گذرواژه" Click="OnChangePasswordClick" Padding="12,6" IsDefault="True" ToolTip="گذرواژهٔ شما را عوض می‌کند. بعد از آن باید با گذرواژهٔ جدید وارد شوید." />
         </StackPanel>
     </StackPanel>
 </Window>

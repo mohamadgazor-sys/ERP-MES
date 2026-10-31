@@ -34,7 +34,7 @@
                             <TextBox x:Name="TitleBox" Margin="0,2,0,8" />
                             <TextBlock Text="توضیحات (اختیاری)" />
                             <TextBox x:Name="DescriptionBox" Margin="0,2,0,8" TextWrapping="Wrap" AcceptsReturn="True" Height="60" />
-                            <Button Content="ثبت درخواست" Padding="12,5" HorizontalAlignment="Left" Click="OnCreateClick" />
+                            <Button Content="ثبت درخواست" Padding="12,5" HorizontalAlignment="Left" Click="OnCreateClick" ToolTip="درخواست مشتری را با شماره و تاریخ واردشده ثبت می‌کند. شماره بعداً تغییر نمی‌کند." />
                         </StackPanel>
                     </Grid>
                 </Border>
@@ -72,10 +72,10 @@
                     <TextBlock Text="{Binding DetailDescription}" Margin="0,2,0,0" TextWrapping="Wrap" Foreground="{StaticResource MutedTextBrush}" />
                     <TextBlock Text="{Binding PdfText}" Margin="0,6,0,0" TextWrapping="Wrap" />
                     <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
-                        <Button Content="پیوست یا جایگزینی PDF" Padding="12,5" Margin="0,0,8,0" Click="OnAttachPdfClick" IsEnabled="{Binding CanAttachPdf}" />
-                        <Button Content="مشاهدهٔ PDF" Padding="12,5" Click="OnViewPdfClick" IsEnabled="{Binding HasPdf}" />
+                        <Button Content="پیوست یا جایگزینی PDF" Padding="12,5" Margin="0,0,8,0" Click="OnAttachPdfClick" IsEnabled="{Binding CanAttachPdf}" ToolTip="فایل PDF درخواست را پیوست می‌کند. اگر فایلی بوده، فایل جدید جای آن می‌نشیند و قبلی در سابقه می‌ماند." />
+                        <Button Content="مشاهدهٔ PDF" Padding="12,5" Click="OnViewPdfClick" IsEnabled="{Binding HasPdf}" ToolTip="فایل PDF را با برنامهٔ PDF باز می‌کند." />
                     </StackPanel>
-                    <Button Content="ارسال به مدیریت" Padding="12,5" Margin="0,8,0,8" HorizontalAlignment="Left" Click="OnSubmitClick" IsEnabled="{Binding CanSubmit}" />
+                    <Button Content="ارسال به مدیریت" Padding="12,5" Margin="0,8,0,8" HorizontalAlignment="Left" Click="OnSubmitClick" IsEnabled="{Binding CanSubmit}" ToolTip="درخواست را برای تأیید یا رد به مدیریت می‌فرستد؛ بعد از ارسال دیگر قابل ویرایش نیست." />
 
                     <!-- Request lifecycle after submission (Decision Log #29, #82). Buttons appear only for the user and status that allow them; the Application checks again. -->
                     <Border Padding="8" Margin="0,0,0,8" BorderBrush="{StaticResource BorderBrushSoft}" BorderThickness="1"
@@ -91,12 +91,12 @@
                                           Visibility="{Binding CanRecordDrawingResult, Converter={StaticResource BoolToVisibility}}" />
                             </StackPanel>
                             <WrapPanel Margin="0,6,0,0">
-                                <Button Content="تأیید" Padding="12,5" Margin="0,0,8,4" Click="OnApproveClick" Visibility="{Binding CanApprove, Converter={StaticResource BoolToVisibility}}" />
-                                <Button Content="رد (با دلیل)" Padding="12,5" Margin="0,0,8,4" Click="OnRejectClick" Visibility="{Binding CanReject, Converter={StaticResource BoolToVisibility}}" />
-                                <Button Content="بازگشایی (با دلیل)" Padding="12,5" Margin="0,0,8,4" Click="OnReopenClick" Visibility="{Binding CanReopen, Converter={StaticResource BoolToVisibility}}" />
-                                <Button Content="ارسال به نقشه‌کشی" Padding="12,5" Margin="0,0,8,4" Click="OnForwardClick" Visibility="{Binding CanForwardToDrawing, Converter={StaticResource BoolToVisibility}}" />
-                                <Button Content="ثبت نتیجهٔ نقشه‌کشی" Padding="12,5" Margin="0,0,8,4" Click="OnDrawingResultClick" Visibility="{Binding CanRecordDrawingResult, Converter={StaticResource BoolToVisibility}}" />
-                                <Button Content="بازگشت به نقشه‌کشی (با دلیل)" Padding="12,5" Margin="0,0,8,4" Click="OnSendBackClick" Visibility="{Binding CanSendBackToDrawing, Converter={StaticResource BoolToVisibility}}" />
+                                <Button Content="تأیید" Padding="12,5" Margin="0,0,8,4" Click="OnApproveClick" Visibility="{Binding CanApprove, Converter={StaticResource BoolToVisibility}}" ToolTip="انتخاب یا مقدار واردشده را تأیید می‌کند." />
+                                <Button Content="رد (با دلیل)" Padding="12,5" Margin="0,0,8,4" Click="OnRejectClick" Visibility="{Binding CanReject, Converter={StaticResource BoolToVisibility}}" ToolTip="درخواست را با دلیلی که می‌نویسید رد می‌کند." />
+                                <Button Content="بازگشایی (با دلیل)" Padding="12,5" Margin="0,0,8,4" Click="OnReopenClick" Visibility="{Binding CanReopen, Converter={StaticResource BoolToVisibility}}" ToolTip="درخواست ردشده را با دلیل دوباره باز می‌کند تا ارسال شود." />
+                                <Button Content="ارسال به نقشه‌کشی" Padding="12,5" Margin="0,0,8,4" Click="OnForwardClick" Visibility="{Binding CanForwardToDrawing, Converter={StaticResource BoolToVisibility}}" ToolTip="درخواست را برای بررسی فنی به نقشه‌کشی می‌فرستد." />
+                                <Button Content="ثبت نتیجهٔ نقشه‌کشی" Padding="12,5" Margin="0,0,8,4" Click="OnDrawingResultClick" Visibility="{Binding CanRecordDrawingResult, Converter={StaticResource BoolToVisibility}}" ToolTip="نتیجهٔ بررسی فنی (پذیرش کامل یا جزئی، رد، نیاز به اطلاعات، بازگشت برای اصلاح) را ثبت می‌کند و درخواست را به برنامه‌ریزی برمی‌گرداند." />
+                                <Button Content="بازگشت به نقشه‌کشی (با دلیل)" Padding="12,5" Margin="0,0,8,4" Click="OnSendBackClick" Visibility="{Binding CanSendBackToDrawing, Converter={StaticResource BoolToVisibility}}" ToolTip="آیتم را با دلیل برای بررسی دوباره به نقشه‌کشی برمی‌گرداند." />
                             </WrapPanel>
                         </StackPanel>
                     </Border>

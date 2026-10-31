@@ -27,7 +27,7 @@
                 <TextBlock Text="{Binding RangeText}" VerticalAlignment="Center" Margin="0,0,8,0" />
                 <TextBox x:Name="RangeFrom" Width="90" Margin="0,0,6,4" ToolTip="از تاریخ" />
                 <TextBox x:Name="RangeTo" Width="90" Margin="0,0,6,4" ToolTip="تا تاریخ" />
-                <Button Content="نمایش بازه" Padding="10,3" Margin="0,0,6,4" Click="OnRange" />
+                <Button Content="نمایش بازه" Padding="10,3" Margin="0,0,6,4" Click="OnRange" ToolTip="فهرست را برای بازهٔ تاریخ واردشده نشان می‌دهد. چیزی تغییر نمی‌کند." />
             </WrapPanel>
             <DataGrid x:Name="ReportGrid" ItemsSource="{Binding Rows}" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single" HeadersVisibility="Column" CanUserAddRows="False" MaxHeight="280" Background="{StaticResource CardBrush}">
                 <DataGrid.Columns>
@@ -36,14 +36,14 @@
                     <DataGridTextColumn Header="واحد" Binding="{Binding UnitText}" Width="*" />
                     <DataGridTextColumn Header="شیفت" Binding="{Binding ShiftText}" Width="60" />
                     <DataGridTextColumn Header="وضعیت" Binding="{Binding StatusText}" Width="*" />
-                    <DataGridTextColumn Header="خط‌ها" Binding="{Binding LinesText}" Width="*" />
+                    <DataGridTextColumn Header="ردیف‌های کار" Binding="{Binding LinesText}" Width="*" />
                     <DataGridTextColumn Header="علامت" Binding="{Binding FlagsText}" Width="*" />
                     <DataGridTextColumn Header="بررسی" Binding="{Binding ReviewText}" Width="*" />
                 </DataGrid.Columns>
             </DataGrid>
             <WrapPanel Margin="0,6,0,0" IsEnabled="{Binding CanReview}">
-                <Button Content="تأیید گزارش" Padding="10,3" Margin="0,0,6,4" Click="OnApprove" />
-                <Button Content="بازگرداندن با دلیل…" Padding="10,3" Margin="0,0,6,4" Click="OnReturn" />
+                <Button Content="تأیید گزارش" Padding="10,3" Margin="0,0,6,4" Click="OnApprove" ToolTip="گزارش ارسال‌شده را تأیید می‌کند؛ پس از تأیید قابل تغییر نیست." />
+                <Button Content="بازگرداندن با دلیل…" Padding="10,3" Margin="0,0,6,4" Click="OnReturn" ToolTip="گزارش را با دلیل به اپراتور برمی‌گرداند تا اصلاح کند." />
             </WrapPanel>
 
             <StackPanel Visibility="{Binding CanSubmit, Converter={StaticResource BoolToVisibility}}">
@@ -51,19 +51,19 @@
                 <WrapPanel>
                     <TextBox x:Name="ReportDate" Width="90" Margin="0,0,6,4" ToolTip="تاریخ شمسی گزارش" />
                     <ComboBox x:Name="UnitBox" ItemsSource="{Binding Units}" DisplayMemberPath="Name" Width="150" Margin="0,0,6,4" SelectionChanged="OnUnitChanged" />
-                    <ComboBox x:Name="ShiftBox" ItemsSource="{Binding Templates}" DisplayMemberPath="Value.Code" Width="70" Margin="0,0,6,4" />
-                    <Button Content="ویرایش گزارش انتخاب‌شده" Padding="10,3" Margin="0,0,6,4" Click="OnEdit" />
+                    <ComboBox x:Name="ShiftBox" FlowDirection="LeftToRight" ItemsSource="{Binding Templates}" DisplayMemberPath="Value.Code" Width="70" Margin="0,0,6,4" />
+                    <Button Content="ویرایش گزارش انتخاب‌شده" Padding="10,3" Margin="0,0,6,4" Click="OnEdit" ToolTip="گزارش انتخاب‌شده را برای ویرایش باز می‌کند؛ فقط پیش‌نویس یا گزارش برگشتی قابل ویرایش است." />
                 </WrapPanel>
                 <WrapPanel>
                     <ComboBox x:Name="StageBox" ItemsSource="{Binding Stages}" DisplayMemberPath="Text" Width="300" Margin="0,0,6,4" />
-                    <ComboBox x:Name="MachineBox" ItemsSource="{Binding Machines}" DisplayMemberPath="Value.Code" Width="90" Margin="0,0,6,4" />
+                    <ComboBox x:Name="MachineBox" FlowDirection="LeftToRight" ItemsSource="{Binding Machines}" DisplayMemberPath="Value.Code" Width="90" Margin="0,0,6,4" />
                     <TextBox x:Name="StartBox" Width="60" Margin="0,0,6,4" ToolTip="شروع ۰۸:۰۰" />
                     <TextBox x:Name="EndBox" Width="60" Margin="0,0,6,4" ToolTip="پایان ۱۲:۰۰" />
                     <TextBox x:Name="DowntimeBox" Width="60" Margin="0,0,6,4" Text="0" ToolTip="دقیقهٔ توقف" />
                     <TextBox x:Name="DowntimeReasonBox" Width="140" Margin="0,0,6,4" ToolTip="دلیل توقف" />
                     <TextBox x:Name="UnitsBox" Width="60" Margin="0,0,6,4" ToolTip="واحد پایهٔ فرآوری‌شده" />
                     <TextBox x:Name="NoteBox" Width="140" Margin="0,0,6,4" ToolTip="یادداشت" />
-                    <Button Content="افزودن خط" Padding="10,3" Margin="0,0,6,4" Click="OnAddLine" />
+                    <Button Content="افزودن ردیف" Padding="10,3" Margin="0,0,6,4" Click="OnAddLine" ToolTip="ردیف کار واردشده را به پیش‌نویس گزارش اضافه می‌کند؛ برای ثبت باید پیش‌نویس ذخیره شود." />
                 </WrapPanel>
                 <DataGrid x:Name="DraftGrid" ItemsSource="{Binding Draft}" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single" HeadersVisibility="Column" CanUserAddRows="False" MaxHeight="200" Background="{StaticResource CardBrush}">
                     <DataGrid.Columns>
@@ -74,9 +74,9 @@
                     </DataGrid.Columns>
                 </DataGrid>
                 <WrapPanel Margin="0,6,0,0">
-                    <Button Content="حذف خط انتخاب‌شده" Padding="10,3" Margin="0,0,6,4" Click="OnRemoveLine" />
-                    <Button Content="ذخیرهٔ پیش‌نویس" Padding="10,3" Margin="0,0,6,4" Click="OnSaveDraft" />
-                    <Button Content="ارسال گزارش" Padding="10,3" Margin="0,0,6,4" Click="OnSubmit" />
+                    <Button Content="حذف ردیف انتخاب‌شده" Padding="10,3" Margin="0,0,6,4" Click="OnRemoveLine" ToolTip="ردیف انتخاب‌شده را از پیش‌نویس برمی‌دارد؛ تا ذخیرهٔ پیش‌نویس در پایگاه داده اثری ندارد." />
+                    <Button Content="ذخیرهٔ پیش‌نویس" Padding="10,3" Margin="0,0,6,4" Click="OnSaveDraft" ToolTip="گزارش را به‌صورت پیش‌نویس ذخیره می‌کند؛ هنوز برای سرپرست ارسال نشده و قابل ویرایش است." />
+                    <Button Content="ارسال گزارش" Padding="10,3" Margin="0,0,6,4" Click="OnSubmit" ToolTip="گزارش را برای بررسی سرپرست ارسال می‌کند؛ پس از ارسال تا برگشت قابل ویرایش نیست." />
                 </WrapPanel>
             </StackPanel>
         </StackPanel>

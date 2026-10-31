@@ -10,7 +10,7 @@
             <TextBlock Text="{Binding Message}" TextWrapping="Wrap" Foreground="#9B1C1C" FontWeight="SemiBold" Margin="0,0,0,8" />
             <TextBlock TextWrapping="Wrap" Foreground="{StaticResource MutedTextBrush}" Margin="0,0,0,8"
                        Text="برنامه‌ریزی آیتم‌ها و مرحله‌های هر درخواست را تعریف می‌کند (نقشه‌کشی دیگر آیتم تعریف نمی‌کند). این کار فقط پس از برقرار شدن دروازه‌ها ممکن است: تأیید مدیریت، نتیجهٔ پذیرفتهٔ نقشه‌کشی، تصمیم قرارداد (ساخت)، پاسخ استعلام‌ها با تعیین تکلیف هر «خیر» و بسته شدن پرسش‌ها. آیتم ساخت به نوع تعداد، ماده و وزن (کیلوگرم برای هر واحد پایه) نیاز دارد؛ ابعاد به میلی‌متر. شمارهٔ آیتم متن آزاد است." />
-            <Button Content="بارگذاری مجدد" Padding="10,3" HorizontalAlignment="Left" Click="OnReloadClick" Margin="0,0,0,8" />
+            <Button Content="بارگذاری مجدد" Padding="10,3" HorizontalAlignment="Left" Click="OnReloadClick" Margin="0,0,0,8" ToolTip="فهرست را دوباره از پایگاه داده می‌خواند. چیزی ذخیره یا حذف نمی‌شود." />
 
             <TextBlock Text="درخواست‌ها" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource PrimaryBrush}" Margin="0,4,0,6" />
             <DataGrid ItemsSource="{Binding Requests}" SelectedItem="{Binding SelectedRequest, Mode=TwoWay}" SelectionChanged="OnRequestSelected" AutoGenerateColumns="False" IsReadOnly="True"
@@ -96,7 +96,7 @@
                             <StackPanel Margin="0,0,10,0"><TextBlock Text="واحد تولیدی" /><ComboBox x:Name="UnitBox" ItemsSource="{Binding UnitChoices}" DisplayMemberPath="Text" Width="180" SelectionChanged="OnUnitChanged" /></StackPanel>
                             <StackPanel Margin="0,0,10,0"><TextBlock Text="ماشین (اختیاری)" /><ComboBox x:Name="MachineBox" DisplayMemberPath="Text" Width="180" /></StackPanel>
                         </WrapPanel>
-                        <Button Content="ثبت مرحله" Padding="12,5" HorizontalAlignment="Left" Margin="0,8,0,0" Click="OnDefineStageClick" />
+                        <Button Content="ثبت مرحله" Padding="12,5" HorizontalAlignment="Left" Margin="0,8,0,0" Click="OnDefineStageClick" ToolTip="مرحلهٔ واردشده را به مسیر آیتم اضافه می‌کند؛ بعد از آزادسازی مرحلهٔ اول دیگر مرحله‌ای افزوده نمی‌شود." />
                     </StackPanel>
                 </Border>
             </StackPanel>

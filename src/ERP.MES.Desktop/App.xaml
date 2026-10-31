@@ -12,6 +12,28 @@
             <Setter Property="TextAlignment" Value="Right" />
         </Style>
 
+        <!-- Toolbar buttons with long Persian captions (for example «جایگزینی مدیریت…», «پایان نوبت…»): a minimum width so that short captions do not shrink, and a caption that wraps instead of being cut at 1366x768 with 125% scaling (Decision Log #126 B6). -->
+        <!-- Every button explains itself in a tooltip (purpose and consequence); a disabled button still shows it, so the user can see what the action is, and the tooltip also opens on keyboard focus (Decision Log #126). -->
+        <Style TargetType="Button">
+            <Setter Property="ToolTipService.ShowOnDisabled" Value="True" />
+            <Setter Property="ToolTipService.ShowsToolTipOnKeyboardFocus" Value="True" />
+        </Style>
+
+        <Style x:Key="WrapButton" TargetType="Button">
+            <Setter Property="ToolTipService.ShowOnDisabled" Value="True" />
+            <Setter Property="ToolTipService.ShowsToolTipOnKeyboardFocus" Value="True" />
+            <Setter Property="MinWidth" Value="104" />
+            <Setter Property="MaxWidth" Value="250" />
+            <Setter Property="MinHeight" Value="30" />
+            <Setter Property="ContentTemplate">
+                <Setter.Value>
+                    <DataTemplate>
+                        <TextBlock Text="{Binding}" TextWrapping="Wrap" TextAlignment="Center" />
+                    </DataTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <SolidColorBrush x:Key="PrimaryBrush" Color="#1F4E79" />
         <SolidColorBrush x:Key="PrimaryTextBrush" Color="#FFFFFF" />
         <SolidColorBrush x:Key="SurfaceBrush" Color="#F4F6F8" />

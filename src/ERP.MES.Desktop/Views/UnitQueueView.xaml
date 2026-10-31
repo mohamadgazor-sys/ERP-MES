@@ -25,7 +25,7 @@
             <WrapPanel Margin="0,0,0,8">
                 <TextBlock Text="واحد تولید:" VerticalAlignment="Center" Margin="0,0,6,0" />
                 <ComboBox x:Name="UnitBox" ItemsSource="{Binding Units}" DisplayMemberPath="Name" Width="220" Margin="0,0,8,0" SelectionChanged="OnUnitChanged" />
-                <Button Content="بارگذاری دوباره" Padding="12,4" Click="OnReloadClick" />
+                <Button Style="{StaticResource WrapButton}" Content="بارگذاری دوباره" Padding="12,4" Click="OnReloadClick" ToolTip="فهرست را دوباره از پایگاه داده می‌خواند. چیزی ذخیره یا حذف نمی‌شود." />
                 <TextBlock Text="{Binding Summary}" VerticalAlignment="Center" Margin="12,0,0,0" Foreground="{StaticResource MutedTextBrush}" TextWrapping="Wrap" />
             </WrapPanel>
 
@@ -57,17 +57,17 @@
             </DataGrid>
 
             <WrapPanel Margin="0,8,0,0">
-                <Button Content="بالا (برنامه‌ریزی)" Padding="10,4" Margin="0,0,6,4" Click="OnUpClick" IsEnabled="{Binding CanOrder}" />
-                <Button Content="پایین (برنامه‌ریزی)" Padding="10,4" Margin="0,0,6,4" Click="OnDownClick" IsEnabled="{Binding CanOrder}" />
+                <Button Style="{StaticResource WrapButton}" Content="بالا (برنامه‌ریزی)" Padding="10,4" Margin="0,0,6,4" Click="OnUpClick" IsEnabled="{Binding CanOrder}" ToolTip="ردیف انتخاب‌شده را یک جا بالاتر می‌برد. ترتیب برنامه‌ریزی تغییر می‌کند و صف عملیاتی را اثر می‌دهد." />
+                <Button Style="{StaticResource WrapButton}" Content="پایین (برنامه‌ریزی)" Padding="10,4" Margin="0,0,6,4" Click="OnDownClick" IsEnabled="{Binding CanOrder}" ToolTip="ردیف انتخاب‌شده را یک جا پایین‌تر می‌برد. ترتیب برنامه‌ریزی تغییر می‌کند و صف عملیاتی را اثر می‌دهد." />
                 <ComboBox x:Name="PriorityBox" ItemsSource="{Binding Priorities}" DisplayMemberPath="Text" SelectedIndex="2" Width="90" Margin="0,0,6,4" />
-                <Button Content="تغییر اولویت" Padding="10,4" Margin="0,0,14,4" Click="OnPriorityClick" IsEnabled="{Binding CanChangePriority}" />
-                <Button Content="شروع (تولید)" Padding="10,4" Margin="0,0,6,4" Click="OnStartClick" IsEnabled="{Binding CanRun}" />
-                <Button Content="ارسال به کنترل کیفیت (تولید)" Padding="10,4" Margin="0,0,14,4" Click="OnSubmitClick" IsEnabled="{Binding CanRun}" />
-                <Button Content="توقف…" Padding="10,4" Margin="0,0,6,4" Click="OnStopClick" IsEnabled="{Binding CanHold}" />
-                <Button Content="ازسرگیری" Padding="10,4" Margin="0,0,14,4" Click="OnResumeClick" IsEnabled="{Binding CanHold}" />
-                <Button Content="جایگزینی مدیریت…" Padding="10,4" Margin="0,0,6,4" Click="OnOverrideClick" IsEnabled="{Binding CanOverride}" />
-                <Button Content="پاک‌کردن جایگزینی…" Padding="10,4" Margin="0,0,6,4" Click="OnClearOverrideClick" IsEnabled="{Binding CanOverride}" />
-                <Button Content="تأیید بازبینی" Padding="10,4" Margin="0,0,6,4" Click="OnConfirmClick" IsEnabled="{Binding CanOverride}" />
+                <Button Style="{StaticResource WrapButton}" Content="تغییر اولویت" Padding="10,4" Margin="0,0,14,4" Click="OnPriorityClick" IsEnabled="{Binding CanChangePriority}" ToolTip="اولویت برنامه‌ریزی ردیف انتخاب‌شده را عوض می‌کند (عادی، فوری، خیلی فوری)؛ ترتیب صف را اثر می‌دهد." />
+                <Button Style="{StaticResource WrapButton}" Content="شروع (تولید)" Padding="10,4" Margin="0,0,6,4" Click="OnStartClick" IsEnabled="{Binding CanRun}" ToolTip="مرحلهٔ آزادشده را شروع می‌کند. فقط تولید همین واحد." />
+                <Button Style="{StaticResource WrapButton}" Content="ارسال به کنترل کیفیت (تولید)" Padding="10,4" Margin="0,0,14,4" Click="OnSubmitClick" IsEnabled="{Binding CanRun}" ToolTip="مرحله را برای بازرسی به کنترل کیفیت می‌فرستد." />
+                <Button Style="{StaticResource WrapButton}" Content="توقف…" Padding="10,4" Margin="0,0,6,4" Click="OnStopClick" IsEnabled="{Binding CanHold}" ToolTip="کار را متوقف می‌کند و دلیل را می‌پرسد. زمان توقف ثبت می‌شود و تا ازسرگیری، زمان مفید حساب نمی‌شود." />
+                <Button Style="{StaticResource WrapButton}" Content="ازسرگیری" Padding="10,4" Margin="0,0,14,4" Click="OnResumeClick" IsEnabled="{Binding CanHold}" ToolTip="کار متوقف‌شده را ادامه می‌دهد؛ ساعت کاری عادی نباشد دلیل خواسته می‌شود." />
+                <Button Style="{StaticResource WrapButton}" Content="جایگزینی مدیریت…" Padding="10,4" Margin="0,0,6,4" Click="OnOverrideClick" IsEnabled="{Binding CanOverride}" ToolTip="مدیریت ترتیب این ردیف را برای واحد جایگزین می‌کند و دلیل را می‌پرسد. اولویت برنامه‌ریزی حفظ می‌شود و همه‌چیز در سابقه ثبت می‌شود." />
+                <Button Style="{StaticResource WrapButton}" Content="پاک‌کردن جایگزینی…" Padding="10,4" Margin="0,0,6,4" Click="OnClearOverrideClick" IsEnabled="{Binding CanOverride}" ToolTip="جایگزینی مدیریت را برمی‌دارد و ردیف به ترتیب برنامه‌ریزی برمی‌گردد؛ دلیل خواسته و در سابقه ثبت می‌شود." />
+                <Button Style="{StaticResource WrapButton}" Content="تأیید بازبینی" Padding="10,4" Margin="0,0,6,4" Click="OnConfirmClick" IsEnabled="{Binding CanOverride}" ToolTip="بازبینی جایگزینی مدیریت را تأیید می‌کند." />
             </WrapPanel>
 
             <TextBlock Text="در انتظار آزادسازی (قابل اجرا نیست)" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource PrimaryBrush}" Margin="0,12,0,4" />
@@ -91,7 +91,7 @@
                 </DataGrid.Columns>
             </DataGrid>
             <WrapPanel Margin="0,8,0,0">
-                <Button Content="آزادسازی مرحلهٔ اول (برنامه‌ریزی)" Padding="10,4" Click="OnReleaseClick" />
+                <Button Style="{StaticResource WrapButton}" Content="آزادسازی مرحلهٔ اول (برنامه‌ریزی)" Padding="10,4" Click="OnReleaseClick" ToolTip="مرحلهٔ اول را برای تولید آزاد می‌کند و به صف واحد می‌اندازد. اگر نقشه یا شرطی کم باشد هشدار یا خطا می‌دهد." />
             </WrapPanel>
 
             <StackPanel Visibility="{Binding CanManageDesignations, Converter={StaticResource BoolToVisibility}}" Margin="0,16,0,0">
@@ -108,9 +108,9 @@
                     </DataGrid.Columns>
                 </DataGrid>
                 <WrapPanel Margin="0,6,0,0">
-                    <Button Content="تعیین به‌عنوان سرپرست" Padding="10,4" MinWidth="150" Margin="0,0,8,4" Click="OnMakeSupervisorClick"
+                    <Button Style="{StaticResource WrapButton}" Content="تعیین به‌عنوان سرپرست" Padding="10,4" MinWidth="150" Margin="0,0,8,4" Click="OnMakeSupervisorClick"
                             ToolTip="کاربر انتخاب‌شده را سرپرست واحدش می‌کند." />
-                    <Button Content="برداشتن سرپرستی" Padding="10,4" MinWidth="130" Margin="0,0,8,4" Click="OnRemoveSupervisorClick"
+                    <Button Style="{StaticResource WrapButton}" Content="برداشتن سرپرستی" Padding="10,4" MinWidth="130" Margin="0,0,8,4" Click="OnRemoveSupervisorClick"
                             ToolTip="سرپرستی کاربر انتخاب‌شده را برمی‌دارد؛ او همچنان در واحد کار می‌کند." />
                 </WrapPanel>
             </StackPanel>

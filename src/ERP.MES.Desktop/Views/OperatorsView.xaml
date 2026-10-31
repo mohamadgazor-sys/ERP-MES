@@ -11,7 +11,7 @@
             <TextBlock TextWrapping="Wrap" Foreground="{StaticResource MutedTextBrush}" Margin="0,0,0,8"
                        Text="مدیر سیستم اپراتورها و تخصیص اصلی اپراتور به ماشین را ثبت می‌کند و برنامه‌ریزی صلاحیت‌ها را؛ سرپرست نمی‌تواند ماشین برنامه‌ریزی‌شده را تغییر دهد. تخصیص به معنای صلاحیت نیست: تخصیص بدون صلاحیت جاری با هشدار ثبت می‌شود. تخصیص‌ها و صلاحیت‌ها حذف یا ویرایش نمی‌شوند؛ فقط بسته/پایان داده می‌شوند و تاریخچه می‌ماند." />
             <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-                <Button Content="بارگذاری مجدد" Padding="10,3" Click="OnReloadClick" />
+                <Button Content="بارگذاری مجدد" Padding="10,3" Click="OnReloadClick" ToolTip="فهرست را دوباره از پایگاه داده می‌خواند. چیزی ذخیره یا حذف نمی‌شود." />
                 <TextBlock Text="در حال بارگذاری…" Margin="16,0,0,0" VerticalAlignment="Center" Foreground="{StaticResource MutedTextBrush}"
                            Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibility}}" />
             </StackPanel>
@@ -20,7 +20,7 @@
             <DataGrid ItemsSource="{Binding Operators}" SelectedItem="{Binding SelectedOperator, Mode=TwoWay}" AutoGenerateColumns="False" IsReadOnly="True"
                       SelectionMode="Single" HeadersVisibility="Column" CanUserAddRows="False" CanUserDeleteRows="False" MaxHeight="170" Background="{StaticResource CardBrush}">
                 <DataGrid.Columns>
-                    <DataGridTextColumn Header="کد اپراتور" Binding="{Binding Code}" Width="110" />
+                    <DataGridTextColumn Header="کد اپراتور" Binding="{Binding Code}" ElementStyle="{StaticResource LtrCell}" Width="110" />
                     <DataGridTextColumn Header="نام کامل" Binding="{Binding FullName}" Width="*" />
                     <DataGridTextColumn Header="حساب کاربری" Binding="{Binding AccountText}" Width="100" />
                     <DataGridTextColumn Header="وضعیت" Binding="{Binding StatusText}" Width="90" />
@@ -33,10 +33,10 @@
                         <StackPanel Margin="0,0,12,0"><TextBlock Text="نام کامل" /><TextBox x:Name="OperatorNameBox" Width="240" /></StackPanel>
                     </WrapPanel>
                     <WrapPanel Margin="0,8,0,0">
-                        <Button Content="ثبت اپراتور" Padding="12,5" Margin="0,0,8,0" Click="OnRegisterClick" IsEnabled="{Binding CanMaintain}" />
-                        <Button Content="تغییر نام انتخاب‌شده (از کادر نام)" Padding="12,5" Margin="0,0,8,0" Click="OnRenameClick" IsEnabled="{Binding CanMaintain}" />
-                        <Button Content="غیرفعال کردن" Padding="12,5" Margin="0,0,8,0" Click="OnDeactivateClick" IsEnabled="{Binding CanMaintain}" />
-                        <Button Content="فعال کردن" Padding="12,5" Click="OnActivateClick" IsEnabled="{Binding CanMaintain}" />
+                        <Button Content="ثبت اپراتور" Padding="12,5" Margin="0,0,8,0" Click="OnRegisterClick" IsEnabled="{Binding CanMaintain}" ToolTip="اپراتور جدید را با کد و نام ثبت می‌کند. کد بعداً تغییر نمی‌کند." />
+                        <Button Content="تغییر نام انتخاب‌شده (از کادر نام)" Padding="12,5" Margin="0,0,8,0" Click="OnRenameClick" IsEnabled="{Binding CanMaintain}" ToolTip="نام مورد انتخاب‌شده را با متن کادر نام عوض می‌کند؛ کد تغییر نمی‌کند." />
+                        <Button Content="غیرفعال کردن" Padding="12,5" Margin="0,0,8,0" Click="OnDeactivateClick" IsEnabled="{Binding CanMaintain}" ToolTip="ردیف انتخاب‌شده برای کارهای جدید پیشنهاد نمی‌شود؛ سابقه و کارهای قبلی حذف نمی‌شود." />
+                        <Button Content="فعال کردن" Padding="12,5" Click="OnActivateClick" IsEnabled="{Binding CanMaintain}" ToolTip="ردیف انتخاب‌شده را دوباره فعال می‌کند تا برای کارهای جدید قابل انتخاب باشد." />
                     </WrapPanel>
                 </StackPanel>
             </Border>
@@ -66,8 +66,8 @@
                         <StackPanel Margin="0,0,12,0"><TextBlock Text="آخرین روز (برای بستن انتخاب‌شده)" /><TextBox x:Name="CloseDateBox" Width="110" FlowDirection="LeftToRight" /></StackPanel>
                     </WrapPanel>
                     <WrapPanel Margin="0,8,0,0">
-                        <Button Content="ثبت تخصیص" Padding="12,5" Margin="0,0,8,0" Click="OnAssignClick" IsEnabled="{Binding CanMaintain}" />
-                        <Button Content="بستن تخصیص انتخاب‌شده" Padding="12,5" Click="OnCloseAssignmentClick" IsEnabled="{Binding CanMaintain}" />
+                        <Button Content="ثبت تخصیص" Padding="12,5" Margin="0,0,8,0" Click="OnAssignClick" IsEnabled="{Binding CanMaintain}" ToolTip="تخصیص اپراتور به ماشین را ثبت می‌کند." />
+                        <Button Content="بستن تخصیص انتخاب‌شده" Padding="12,5" Click="OnCloseAssignmentClick" IsEnabled="{Binding CanMaintain}" ToolTip="تخصیص اپراتور به ماشین را از امروز می‌بندد؛ سابقه می‌ماند." />
                     </WrapPanel>
                 </StackPanel>
             </Border>
@@ -95,8 +95,8 @@
                         <StackPanel Margin="0,0,12,0"><TextBlock Text="آخرین روز (برای پایان انتخاب‌شده)" /><TextBox x:Name="EndQualDateBox" Width="110" FlowDirection="LeftToRight" /></StackPanel>
                     </WrapPanel>
                     <WrapPanel Margin="0,8,0,0">
-                        <Button Content="ثبت صلاحیت" Padding="12,5" Margin="0,0,8,0" Click="OnRecordQualificationClick" IsEnabled="{Binding CanMaintainQualifications}" />
-                        <Button Content="پایان صلاحیت انتخاب‌شده" Padding="12,5" Click="OnEndQualificationClick" IsEnabled="{Binding CanMaintainQualifications}" />
+                        <Button Content="ثبت صلاحیت" Padding="12,5" Margin="0,0,8,0" Click="OnRecordQualificationClick" IsEnabled="{Binding CanMaintainQualifications}" ToolTip="صلاحیت اپراتور برای ماشین انتخاب‌شده را ثبت می‌کند." />
+                        <Button Content="پایان صلاحیت انتخاب‌شده" Padding="12,5" Click="OnEndQualificationClick" IsEnabled="{Binding CanMaintainQualifications}" ToolTip="صلاحیت اپراتور روی ماشین را از امروز تمام می‌کند؛ سابقه می‌ماند." />
                     </WrapPanel>
                 </StackPanel>
             </Border>
