@@ -29,6 +29,12 @@ public static class ItemImportTemplate
 
     /// <summary>"بله" when the item is an assembly that may have children.</summary>
     public const string Assembly = "مونتاژ";
+
+    /// <summary>The Jalali delivery date of a REPAIR item (on or after the request date; Decision Log #124 B5).</summary>
+    public const string DeliveryDate = "تاریخ تحویل آیتم";
+
+    /// <summary>The warehouse's own code of a REPAIR item (at most 40 characters; a duplicate is only a warning).</summary>
+    public const string WarehouseCode = "کد کالا انبار";
     public const string PartName = "نام قطعه";
     public const string Quantity = "تعداد";
     public const string QuantityType = "کد نوع تعداد";
@@ -58,8 +64,8 @@ public static class ItemImportTemplate
     /// <summary>Two FICTIONAL example rows (one MAKE with a two-stage route, one without stages). The codes must exist in the target database for the example to import.</summary>
     public static IReadOnlyList<IReadOnlyList<string>> ExampleRows { get; } =
     [
-        Row("ساخت", "1.10", "حلقه فولادی", "10", "PIECE", "ST37-R30", "1.2345", "6000", "30", "فوری", "", "", ("برش", "5", "SAW", ""), ("فرزکاری", "12.5", "MILLING", "FCC-06")),
-        Row("ساخت", "1.20", "شفت", "4", "PIECE", "ST37-R30", "3.5", "800", "40", "عادی", "", ""),
+        Row("ساخت", "1.10", "حلقه فولادی", "10", "PIECE", "ST37-R30", "1.2345", "6000", "30", "فوری", "", "", "", "", ("برش", "5", "SAW", ""), ("فرزکاری", "12.5", "MILLING", "FCC-06")),
+        Row("ساخت", "1.20", "شفت", "4", "PIECE", "ST37-R30", "3.5", "800", "40", "عادی", "", "", "", ""),
     ];
 
     /// <summary>Normalizes a header or label for comparison: trims, unifies Arabic and Persian letters and digits, removes the zero-width non-joiner and collapses white space.</summary>
@@ -116,7 +122,7 @@ public static class ItemImportTemplate
 
     private static IReadOnlyList<string> BuildHeaders(int stages)
     {
-        var headers = new List<string> { WorkType, CustomerItemRef, PartName, Quantity, QuantityType, Material, Weight, Length, Diameter, Priority, ParentRef, Assembly };
+        var headers = new List<string> { WorkType, CustomerItemRef, PartName, Quantity, QuantityType, Material, Weight, Length, Diameter, Priority, ParentRef, Assembly, DeliveryDate, WarehouseCode };
         for (var stage = 1; stage <= stages; stage++)
         {
             headers.AddRange([StageTitle(stage), StageMinutes(stage), StageUnit(stage), StageMachine(stage)]);
@@ -126,10 +132,10 @@ public static class ItemImportTemplate
     }
 
     private static IReadOnlyList<string> Row(
-        string workType, string customerRef, string partName, string quantity, string typeCode, string materialCode, string weight, string length, string diameter, string priority, string parentRef, string assembly,
+        string workType, string customerRef, string partName, string quantity, string typeCode, string materialCode, string weight, string length, string diameter, string priority, string parentRef, string assembly, string deliveryDate, string warehouseCode,
         params (string Title, string Minutes, string Unit, string Machine)[] stages)
     {
-        var cells = new List<string> { workType, customerRef, partName, quantity, typeCode, materialCode, weight, length, diameter, priority, parentRef, assembly };
+        var cells = new List<string> { workType, customerRef, partName, quantity, typeCode, materialCode, weight, length, diameter, priority, parentRef, assembly, deliveryDate, warehouseCode };
         for (var i = 0; i < TemplateStages; i++)
         {
             if (i < stages.Length)

@@ -38,6 +38,9 @@ public sealed class RequestItemConfiguration : IEntityTypeConfiguration<RequestI
         builder.Property(i => i.WeightKgPerBaseUnit);
         builder.Property(i => i.LengthMm);
         builder.Property(i => i.DiameterMm);
+        builder.Property(i => i.DeliveryDate);
+        builder.Property(i => i.WarehouseItemCode).UseCollation("BINARY").HasMaxLength(ERP.MES.Domain.Requests.ItemSpecification.MaxWarehouseItemCodeLength);
+        builder.HasIndex(nameof(RequestItem.WarehouseItemCode));
 
         // The Planning priority lives on the item; stages inherit it (Decision Log #58, G6).
         builder.Property(i => i.Priority).HasConversion<int>().IsRequired();

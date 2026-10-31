@@ -7,7 +7,7 @@ namespace ERP.MES.Application.Requests;
 /// <summary>What Planning typed to define one item. The system item number is derived (Decision Log #121); <c>CustomerItemRef</c> is the customer's own optional number. Quantity is in the chosen quantity type; weight is kg per base unit; length and diameter are millimetres.</summary>
 public sealed record DefineItemCommand(
     string? CustomerItemRef, string? PartName, decimal Quantity, Priority Priority, long? QuantityTypeId, long? MaterialId, decimal? WeightKgPerBaseUnit, decimal? LengthMm, decimal? DiameterMm,
-    long? ParentItemId = null, bool IsAssembly = false);
+    long? ParentItemId = null, bool IsAssembly = false, DateOnly? DeliveryDate = null, string? WarehouseItemCode = null);
 
 /// <summary>What Planning typed to plan one stage of an item: title, minutes per piece, the production unit and optionally the machine. Planned quantity defaults to the item's quantity.</summary>
 public sealed record DefineStageCommand(string? StageTitle, decimal PlannedMinutesPerPiece, long ProductionUnitId, long? MachineId, decimal? PlannedQuantity = null);
@@ -81,7 +81,7 @@ public sealed class ItemDefinitionService(
             return Outcome<Stored<Request>>.Invalid(ValidationIssue.QuantityInvalid);
         }
 
-        var specification = new ItemSpecification(command.QuantityTypeId, command.MaterialId, command.WeightKgPerBaseUnit, command.LengthMm, command.DiameterMm);
+        var specification = new ItemSpecification(command.QuantityTypeId, command.MaterialId, command.WeightKgPerBaseUnit, command.LengthMm, command.DiameterMm, 1, command.DeliveryDate, command.WarehouseItemCode);
         var user = set.Current;
         var now = clock.UtcNow;
         return await CustomerService.GuardAsync(async () =>
@@ -109,13 +109,16 @@ public sealed class ItemDefinitionService(
                 return Outcome<Stored<Request>>.Invalid(ValidationIssue.ItemGateNotSatisfied);
             }
 
-            var problem = specification.Check(current.Value.WorkType);
+            var problem = specification.Check(current.Value.WorkType, current.Value.RequestDate);
             if (problem != SpecificationProblem.None)
             {
                 return Outcome<Stored<Request>>.Invalid(problem switch
                 {
                     SpecificationProblem.WeightInvalid => ValidationIssue.WeightInvalid,
                     SpecificationProblem.DimensionInvalid => ValidationIssue.DimensionInvalid,
+                    SpecificationProblem.RepairFieldsMissing => ValidationIssue.RepairFieldsMissing,
+                    SpecificationProblem.WarehouseCodeInvalid => ValidationIssue.WarehouseCodeInvalid,
+                    SpecificationProblem.DeliveryBeforeRequest => ValidationIssue.DeliveryBeforeRequest,
                     _ => ValidationIssue.ItemSpecificationIncomplete,
                 });
             }
@@ -155,7 +158,19 @@ public sealed class ItemDefinitionService(
                     r => [Audit(user, now, AuditActions.ItemDefined, requestId,
                         $"Request {r.RequestNo.Value}: item '{r.Items[^1].ItemNo}'{(command.CustomerItemRef is null ? string.Empty : $" (customer reference '{command.CustomerItemRef}')")} defined by Planning ({r.WorkType.Code()}, quantity {command.Quantity}{(command.ParentItemId is null ? string.Empty : ", child of " + r.Items.First(p => p.Id == command.ParentItemId).ItemNo)}{(command.IsAssembly ? ", assembly" : string.Empty)})")],
                     cancellationToken);
-                return Outcome<Stored<Request>>.Ok(new Stored<Request>(saved.Value, saved.Versions.Request));
+                // A warehouse code that other items already carry is allowed, but Planning is told which items: the warnings are the system numbers of those items (Decision Log #124 B5).
+                IReadOnlyList<string>? warnings = null;
+                if (command.WarehouseItemCode is { } warehouseCode)
+                {
+                    var created = saved.Value.Items[^1].ItemNo;
+                    var others = (await requests.FindItemNosByWarehouseCodeAsync(warehouseCode, cancellationToken)).Where(n => n != created).ToList();
+                    if (others.Count > 0)
+                    {
+                        warnings = others;
+                    }
+                }
+
+                return Outcome<Stored<Request>>.Ok(new Stored<Request>(saved.Value, saved.Versions.Request), warnings);
             }
             catch (ItemSpecificationException)
             {

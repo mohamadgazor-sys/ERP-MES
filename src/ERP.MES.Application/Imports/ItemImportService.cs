@@ -34,6 +34,8 @@ public enum ImportField
     Weight,
     Length,
     Diameter,
+    DeliveryDate,
+    WarehouseItemCode,
 }
 
 /// <summary>One field that differs between the existing item (<see cref="Old"/>) and the worksheet (<see cref="New"/>), as invariant text (null = empty).</summary>
@@ -297,7 +299,7 @@ public sealed class ItemImportService(
         }
 
         var lookups = await BuildLookupsAsync(cancellationToken);
-        var parsed = ItemImportParser.Parse(reader.Read(content), current.Value.WorkType, lookups);
+        var parsed = ItemImportParser.Parse(reader.Read(content), current.Value.WorkType, lookups, current.Value.RequestDate);
         var rows = parsed.Rows.Select(r => Classify(r, current.Value, parsed.Rows)).ToList();
         var preview = new ImportPreview(fileName.Trim(), DocumentHash.Sha256Hex(content), current.Version, parsed.FileMessages, rows);
         return new Loaded(preview, parsed, null);
@@ -349,6 +351,8 @@ public sealed class ItemImportService(
         Compare(ImportField.Weight, existing.WeightKgPerBaseUnit, data.Specification.WeightKgPerBaseUnit);
         Compare(ImportField.Length, existing.LengthMm, data.Specification.LengthMm);
         Compare(ImportField.Diameter, existing.DiameterMm, data.Specification.DiameterMm);
+        Compare(ImportField.DeliveryDate, existing.DeliveryDate, data.Specification.DeliveryDate);
+        Compare(ImportField.WarehouseItemCode, existing.WarehouseItemCode, data.Specification.WarehouseItemCode);
 
         // The stage columns apply to NEW items only. For an existing item they are not compared as data; a note says its stages are kept.
         var messages = (data.Stages.Count > 0 ? new[] { new ImportMessage(row.SheetRowNo, ImportIssue.StagesIgnoredForExistingItem, data.ItemNo, false) } : []).Concat(row.Messages).ToArray();

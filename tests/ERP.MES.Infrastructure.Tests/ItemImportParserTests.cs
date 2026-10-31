@@ -110,6 +110,41 @@ public class ItemImportParserTests
         Assert.Contains(make.Messages, m => m.Issue == ImportIssue.WeightMissing);
 
         var repair = ItemImportParser.Parse(Book(Row(1, Header), Row(2, "1", "x", "1")), WorkType.Repair, Lookups).Rows.Single();
-        Assert.NotNull(repair.Data);
+        Assert.Null(repair.Data);
+        Assert.Contains(repair.Messages, m => m.Issue == ImportIssue.RepairFieldsMissing);
+        Assert.DoesNotContain(repair.Messages, m => m.Issue is ImportIssue.QuantityTypeMissing or ImportIssue.MaterialMissing or ImportIssue.WeightMissing);
     }
+
+    private static readonly string[] RepairHeader = [ItemImportTemplate.ItemNo, ItemImportTemplate.PartName, ItemImportTemplate.Quantity, ItemImportTemplate.DeliveryDate, ItemImportTemplate.WarehouseCode];
+    private static readonly DateOnly RequestDate = new(2026, 5, 6);
+
+    [Fact]
+    public void A_repair_row_needs_a_jalali_delivery_date_on_or_after_the_request_date_and_a_warehouse_code_of_at_most_forty_characters()
+    {
+        ImportRowOutcome Parse(string delivery, string code) => new(ItemImportParser.Parse(Book(Row(1, RepairHeader), Row(2, "R-1", "Shaft", "1", delivery, code)), WorkType.Repair, Lookups, RequestDate).Rows.Single());
+
+        var ok = Parse("1405/02/16", "WH-77");
+        Assert.NotNull(ok.Row.Data);
+        Assert.Equal(new DateOnly(2026, 5, 6), ok.Row.Data!.Specification.DeliveryDate);
+        Assert.Equal("WH-77", ok.Row.Data.Specification.WarehouseItemCode);
+
+        Assert.Contains(Parse("1405/02/15", "WH-77").Row.Messages, m => m.Issue == ImportIssue.DeliveryBeforeRequest);
+        Assert.Contains(Parse("2026-05-10", "WH-77").Row.Messages, m => m.Issue == ImportIssue.DeliveryDateInvalid);
+        Assert.Contains(Parse("1405/02/16", new string('W', 41)).Row.Messages, m => m.Issue == ImportIssue.WarehouseCodeInvalid);
+        Assert.NotNull(Parse("1405/02/16", new string('W', 40)).Row.Data);
+        Assert.Contains(Parse("", "WH-77").Row.Messages, m => m.Issue == ImportIssue.RepairFieldsMissing);
+        Assert.Contains(Parse("1405/02/16", "").Row.Messages, m => m.Issue == ImportIssue.RepairFieldsMissing);
+    }
+
+    [Fact]
+    public void A_make_row_does_not_need_the_repair_fields_but_checks_them_when_given()
+    {
+        var header = new[] { ItemImportTemplate.ItemNo, ItemImportTemplate.PartName, ItemImportTemplate.Quantity, ItemImportTemplate.QuantityType, ItemImportTemplate.Material, ItemImportTemplate.Weight, ItemImportTemplate.DeliveryDate };
+        var without = ItemImportParser.Parse(Book(Row(1, header), Row(2, "M-1", "x", "1", "PIECE", "ST37", "1", "")), WorkType.Make, Lookups, RequestDate).Rows.Single();
+        Assert.NotNull(without.Data);
+        var early = ItemImportParser.Parse(Book(Row(1, header), Row(2, "M-1", "x", "1", "PIECE", "ST37", "1", "1405/02/01")), WorkType.Make, Lookups, RequestDate).Rows.Single();
+        Assert.Contains(early.Messages, m => m.Issue == ImportIssue.DeliveryBeforeRequest);
+    }
+
+    private readonly record struct ImportRowOutcome(ParsedImportRow Row);
 }

@@ -2837,6 +2837,9 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
                         .HasColumnType("TEXT")
                         .UseCollation("BINARY");
 
+                    b.Property<DateOnly?>("DeliveryDate")
+                        .HasColumnType("TEXT");
+
                     b.Property<decimal?>("DiameterMm")
                         .HasColumnType("TEXT");
 
@@ -2890,6 +2893,11 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
                         .IsConcurrencyToken()
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("WarehouseItemCode")
+                        .HasMaxLength(40)
+                        .HasColumnType("TEXT")
+                        .UseCollation("BINARY");
+
                     b.Property<decimal?>("WeightKgPerBaseUnit")
                         .HasColumnType("TEXT");
 
@@ -2902,6 +2910,8 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
                     b.HasIndex("ParentItemId");
 
                     b.HasIndex("QuantityTypeId");
+
+                    b.HasIndex("WarehouseItemCode");
 
                     b.HasIndex("RequestId", "CustomerItemRef")
                         .IsUnique()

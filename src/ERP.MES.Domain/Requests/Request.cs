@@ -352,7 +352,7 @@ public sealed class Request
         RequestItem? parent = null, bool isAssembly = false)
     {
         ArgumentNullException.ThrowIfNull(specification);
-        var problem = specification.Check(WorkType);
+        var problem = specification.Check(WorkType, RequestDate);
         if (problem != SpecificationProblem.None)
         {
             throw new ItemSpecificationException(problem);
@@ -368,7 +368,7 @@ public sealed class Request
     public bool ReviseItem(string customerItemRef, string partName, decimal requestedQuantity, Priority priority, ItemSpecification specification, DateTime changedAtUtc)
     {
         ArgumentNullException.ThrowIfNull(specification);
-        var problem = specification.Check(WorkType);
+        var problem = specification.Check(WorkType, RequestDate);
         if (problem != SpecificationProblem.None)
         {
             throw new ItemSpecificationException(problem);

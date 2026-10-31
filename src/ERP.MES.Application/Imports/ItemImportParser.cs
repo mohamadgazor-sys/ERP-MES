@@ -60,6 +60,18 @@ public enum ImportIssue
     WeightMissing,
     WeightInvalid,
     DimensionInvalid,
+
+    /// <summary>A REPAIR row lacks the delivery date or the warehouse item code (Decision Log #124 B5).</summary>
+    RepairFieldsMissing,
+
+    /// <summary>The delivery date is not a valid Jalali date.</summary>
+    DeliveryDateInvalid,
+
+    /// <summary>The delivery date is before the request date.</summary>
+    DeliveryBeforeRequest,
+
+    /// <summary>The warehouse item code is longer than 40 characters or has surrounding white space.</summary>
+    WarehouseCodeInvalid,
     PriorityUnknown,
     StageIncomplete,
     StageGap,
@@ -101,7 +113,7 @@ public sealed record ImportLookups(
 /// </summary>
 public static class ItemImportParser
 {
-    public static ParsedImport Parse(WorkbookReadResult workbook, WorkType workType, ImportLookups lookups)
+    public static ParsedImport Parse(WorkbookReadResult workbook, WorkType workType, ImportLookups lookups, DateOnly? requestDate = null)
     {
         ArgumentNullException.ThrowIfNull(workbook);
         ArgumentNullException.ThrowIfNull(lookups);
@@ -181,13 +193,13 @@ public static class ItemImportParser
         var rows = new List<ParsedImportRow>(dataRows.Count);
         foreach (var row in dataRows)
         {
-            rows.Add(ParseRow(row, columns, workType, lookups, firstRowOfItemNo));
+            rows.Add(ParseRow(row, columns, workType, lookups, firstRowOfItemNo, requestDate));
         }
 
         return new ParsedImport(file, rows);
     }
 
-    private static ParsedImportRow ParseRow(WorkbookRow row, Dictionary<string, int> columns, WorkType workType, ImportLookups lookups, Dictionary<string, int> firstRowOfItemNo)
+    private static ParsedImportRow ParseRow(WorkbookRow row, Dictionary<string, int> columns, WorkType workType, ImportLookups lookups, Dictionary<string, int> firstRowOfItemNo, DateOnly? requestDate)
     {
         var messages = new List<ImportMessage>();
 
@@ -352,7 +364,44 @@ public static class ItemImportParser
             }
         }
 
-        var specification = new ItemSpecification(quantityTypeId, materialId, weight, length, diameter);
+        // REPAIR fields (Decision Log #124 B5): a Jalali delivery date on or after the request date, and the warehouse code.
+        DateOnly? deliveryDate = null;
+        if (Text(ItemImportTemplate.DeliveryDate) is { } deliveryText)
+        {
+            if (!ImportDates.TryParseDate(deliveryText, out var parsedDelivery))
+            {
+                Error(ImportIssue.DeliveryDateInvalid, deliveryText);
+            }
+            else if (requestDate is { } requested && parsedDelivery < requested)
+            {
+                Error(ImportIssue.DeliveryBeforeRequest, deliveryText);
+            }
+            else
+            {
+                deliveryDate = parsedDelivery;
+            }
+        }
+
+        string? warehouseCode = null;
+        if (Text(ItemImportTemplate.WarehouseCode) is { } warehouseText)
+        {
+            if (warehouseText.Length > ItemSpecification.MaxWarehouseItemCodeLength)
+            {
+                Error(ImportIssue.WarehouseCodeInvalid, warehouseText);
+            }
+            else
+            {
+                warehouseCode = warehouseText;
+            }
+        }
+
+        if (workType == WorkType.Repair && messages.All(m => m.Issue is not (ImportIssue.DeliveryDateInvalid or ImportIssue.DeliveryBeforeRequest or ImportIssue.WarehouseCodeInvalid))
+            && (deliveryDate is null || warehouseCode is null))
+        {
+            Error(ImportIssue.RepairFieldsMissing);
+        }
+
+        var specification = new ItemSpecification(quantityTypeId, materialId, weight, length, diameter, 1, deliveryDate, warehouseCode);
         if (messages.All(m => m.Issue is not (ImportIssue.WeightInvalid or ImportIssue.DimensionInvalid or ImportIssue.WeightMissing)))
         {
             switch (specification.Check(WorkType.Repair))
@@ -448,5 +497,23 @@ public static class ItemImportParser
         }
 
         return new ParsedImportRow(row.RowNumber, itemNo, new ImportRowData(row.RowNumber, itemNo, partName!, quantity, priority, specification, stages, parentRef, isAssembly), messages);
+    }
+}
+
+/// <summary>Reads the Jalali dates of a worksheet. Pure conversion, so the display digit style and time zone do not matter.</summary>
+internal static class ImportDates
+{
+    private static readonly ERP.MES.Domain.Calendar.JalaliDateService Dates = new(ERP.MES.Domain.Calendar.DigitStyle.Latin, TimeZoneInfo.Utc);
+
+    public static bool TryParseDate(string text, out DateOnly gregorian)
+    {
+        gregorian = default;
+        if (!Dates.TryParseDate(text, out var jalali, out _))
+        {
+            return false;
+        }
+
+        gregorian = Dates.ToGregorian(jalali);
+        return true;
     }
 }

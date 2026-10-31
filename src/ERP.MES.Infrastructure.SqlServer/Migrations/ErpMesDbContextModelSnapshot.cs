@@ -2944,6 +2944,9 @@ namespace ERP.MES.Infrastructure.SqlServer.Migrations
                         .HasColumnType("nvarchar(40)")
                         .UseCollation("Latin1_General_100_BIN2");
 
+                    b.Property<DateOnly?>("DeliveryDate")
+                        .HasColumnType("date");
+
                     b.Property<decimal?>("DiameterMm")
                         .HasColumnType("decimal(18,2)");
 
@@ -2997,6 +3000,11 @@ namespace ERP.MES.Infrastructure.SqlServer.Migrations
                         .IsConcurrencyToken()
                         .HasColumnType("bigint");
 
+                    b.Property<string>("WarehouseItemCode")
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)")
+                        .UseCollation("Latin1_General_100_BIN2");
+
                     b.Property<decimal?>("WeightKgPerBaseUnit")
                         .HasColumnType("decimal(18,2)");
 
@@ -3009,6 +3017,8 @@ namespace ERP.MES.Infrastructure.SqlServer.Migrations
                     b.HasIndex("ParentItemId");
 
                     b.HasIndex("QuantityTypeId");
+
+                    b.HasIndex("WarehouseItemCode");
 
                     b.HasIndex("RequestId", "CustomerItemRef")
                         .IsUnique()

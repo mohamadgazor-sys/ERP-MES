@@ -6,8 +6,12 @@ namespace ERP.MES.Domain.Requests;
 /// A MAKE item needs the quantity type, the material and the weight; a REPAIR item may omit them where they do not apply. Values are exact: more decimals than the scale allows are refused,
 /// never rounded.
 /// </summary>
-public sealed record ItemSpecification(long? QuantityTypeId, long? MaterialId, decimal? WeightKgPerBaseUnit, decimal? LengthMm, decimal? DiameterMm, int BaseUnitsPerUnit = 1)
+public sealed record ItemSpecification(
+    long? QuantityTypeId, long? MaterialId, decimal? WeightKgPerBaseUnit, decimal? LengthMm, decimal? DiameterMm, int BaseUnitsPerUnit = 1, DateOnly? DeliveryDate = null, string? WarehouseItemCode = null)
 {
+    /// <summary>The longest warehouse item code (Decision Log #124 B5).</summary>
+    public const int MaxWarehouseItemCodeLength = 40;
+
     /// <summary>How many base units one ordered unit counts, taken from the quantity type when the item is defined (piece 1, pair 2, a set the sum of its members; Decision Log #90, #101). QC inspects in base units.</summary>
     /// <summary>Weight scale (decimal 12,4): at most 8 integer digits and 4 decimals.</summary>
     public const decimal MaxWeightKg = 99_999_999.9999m;
@@ -17,7 +21,31 @@ public sealed record ItemSpecification(long? QuantityTypeId, long? MaterialId, d
 
     public static ItemSpecification None { get; } = new(null, null, null, null, null);
 
-    /// <summary>What the specification lacks for a MAKE item; <see cref="SpecificationProblem.None"/> when it is complete and valid.</summary>
+    /// <summary>
+    /// What the specification lacks; <see cref="SpecificationProblem.None"/> when it is complete and valid. A REPAIR item needs a delivery date on or after the request date and a warehouse item
+    /// code of 1 to 40 characters (Decision Log #124 B5); a MAKE item needs neither, but a value that is given is checked the same way.
+    /// </summary>
+    public SpecificationProblem Check(WorkType workType, DateOnly requestDate)
+    {
+        if (WarehouseItemCode is { } code && (code.Length == 0 || code.Length > MaxWarehouseItemCodeLength || code.Trim() != code))
+        {
+            return SpecificationProblem.WarehouseCodeInvalid;
+        }
+
+        if (DeliveryDate is { } delivery && delivery < requestDate)
+        {
+            return SpecificationProblem.DeliveryBeforeRequest;
+        }
+
+        if (workType == WorkType.Repair && (DeliveryDate is null || WarehouseItemCode is null))
+        {
+            return SpecificationProblem.RepairFieldsMissing;
+        }
+
+        return Check(workType);
+    }
+
+    /// <summary>What the specification lacks for a MAKE item, without the REPAIR fields (they need the request date).</summary>
     public SpecificationProblem Check(WorkType workType)
     {
         if (WeightKgPerBaseUnit is { } weight && !IsValid(weight, MaxWeightKg, 4))
@@ -49,4 +77,13 @@ public enum SpecificationProblem
 
     /// <summary>A MAKE item needs a quantity type, a material and a weight.</summary>
     IncompleteForMake,
+
+    /// <summary>A REPAIR item needs a delivery date and a warehouse item code (Decision Log #124 B5).</summary>
+    RepairFieldsMissing,
+
+    /// <summary>The warehouse item code is empty, longer than 40 characters or has leading or trailing white space.</summary>
+    WarehouseCodeInvalid,
+
+    /// <summary>The delivery date is before the request date.</summary>
+    DeliveryBeforeRequest,
 }

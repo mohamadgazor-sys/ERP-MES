@@ -258,6 +258,14 @@ public sealed class StageWorkService(IRequestRepository requests, CurrentAuthori
             return Outcome<StageActionResult>.Invalid(ValidationIssue.AssemblyChildrenNotComplete);
         }
 
+        // An existing REPAIR item without its delivery date or warehouse code stays visible but cannot be released until completed (Decision Log #124 B5).
+        if (action == StageAction.Release
+            && loaded.Value.Items.FirstOrDefault(i => i.Id == target.ItemId) is { } repair
+            && repair.IsRepairIncomplete(loaded.Value.WorkType))
+        {
+            return Outcome<StageActionResult>.Invalid(ValidationIssue.RepairFieldsMissing);
+        }
+
         if (action is StageAction.Release or StageAction.Start)
         {
             var gate = await gates.EvaluateAsync(target.RequestId, target.ItemId, cancellationToken);

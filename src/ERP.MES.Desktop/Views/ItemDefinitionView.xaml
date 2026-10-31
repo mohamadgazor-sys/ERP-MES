@@ -57,6 +57,8 @@
                             <StackPanel Margin="0,0,10,0"><TextBlock Text="وزن (kg برای هر واحد پایه)" /><TextBox x:Name="WeightBox" Width="110" FlowDirection="LeftToRight" /></StackPanel>
                             <StackPanel Margin="0,0,10,0"><TextBlock Text="طول (mm)" /><TextBox x:Name="LengthBox" Width="80" FlowDirection="LeftToRight" /></StackPanel>
                             <StackPanel Margin="0,0,10,0"><TextBlock Text="قطر (mm)" /><TextBox x:Name="DiameterBox" Width="80" FlowDirection="LeftToRight" /></StackPanel>
+                            <StackPanel Margin="0,0,10,0"><TextBlock Text="تاریخ تحویل (تعمیر)" /><TextBox x:Name="DeliveryDateBox" Width="100" FlowDirection="LeftToRight" ToolTip="تاریخ شمسی تحویل آیتم، مثل ۱۴۰۵/۰۲/۱۵؛ برای آیتم تعمیر الزامی است و نباید پیش از تاریخ درخواست باشد." /></StackPanel>
+                            <StackPanel Margin="0,0,10,0"><TextBlock Text="کد کالای انبار (تعمیر)" /><TextBox x:Name="WarehouseCodeBox" Width="120" MaxLength="40" FlowDirection="LeftToRight" ToolTip="کد کالا در انبار، حداکثر ۴۰ نویسه؛ برای آیتم تعمیر الزامی است. کد تکراری فقط هشدار می‌دهد." /></StackPanel>
                             <StackPanel Margin="0,0,10,0"><TextBlock Text="اولویت" /><ComboBox x:Name="PriorityBox" ItemsSource="{Binding Priorities}" DisplayMemberPath="Text" Width="110" /></StackPanel>
                         </WrapPanel>
                         <WrapPanel Margin="0,8,0,0">
