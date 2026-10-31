@@ -29,6 +29,7 @@
                     <DataGridTextColumn Header="اندازه" Binding="{Binding SizeText}" ElementStyle="{StaticResource LtrCell}" Width="90" />
                     <DataGridTextColumn Header="بارگذاری" Binding="{Binding UploadedText}" Width="150" />
                     <DataGridTextColumn Header="وضعیت" Binding="{Binding StatusText}" Width="80" />
+                    <DataGridTextColumn Header="انجام‌دهنده" Binding="{Binding ActorText}" Width="160" />
                 </DataGrid.Columns>
             </DataGrid>
             <WrapPanel Margin="0,8,0,0">

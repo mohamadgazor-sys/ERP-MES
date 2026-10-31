@@ -11,7 +11,7 @@ using ERP.MES.Domain.Requests;
 
 namespace ERP.MES.Desktop.ViewModels;
 
-public sealed record CostingRow(CostingItemSummary Summary, string RequestText, string ItemText, string QuantityText, string StatusText, string CostText, string PriceText);
+public sealed record CostingRow(CostingItemSummary Summary, string RequestText, string ItemText, string QuantityText, string StatusText, string CostText, string PriceText, string ActorText = "");
 
 /// <summary>
 /// State and actions of the cost and price screen (docs/COSTING_DESIGN.md; Decision Log #91, #95 D3/D4, #104). Warehouse calculates and submits, Management approves or changes the price, Planning reads.
@@ -22,7 +22,8 @@ public sealed class CostingViewModel(
     PlanningMasterService planning,
     IJalaliDateService dates,
     DigitStyle digitStyle,
-    Func<Principal> currentUser) : ObservableObject
+    Func<Principal> currentUser,
+    UserDirectoryService? users = null) : ObservableObject
 {
     public const string Heading = "هزینه و قیمت آیتم‌ها";
 
@@ -154,6 +155,10 @@ public sealed class CostingViewModel(
         NotifyCaps();
         var master = await planning.LoadAsync(currentUser(), cancellationToken);
         _machines = master.Succeeded ? master.Value!.Machines.ToDictionary(m => m.Value.Id, m => m.Value.Code) : [];
+        var actors = await ActorLookup.DescribeAsync(
+            users, currentUser(),
+            outcome.Value.Items.SelectMany(i => new long?[] { i.LatestCalculation?.Value.CalculatedByUserId, i.LatestDecision?.Value.SubmittedByUserId, i.LatestDecision?.Value.ApprovedByUserId }).Where(id => id is not null).Select(id => id!.Value),
+            cancellationToken);
         foreach (var item in outcome.Value.Items)
         {
             var calc = item.LatestCalculation?.Value;
@@ -165,8 +170,30 @@ public sealed class CostingViewModel(
                 Digits(item.AcceptedBaseUnits.ToString(CultureInfo.InvariantCulture)),
                 decision is null ? "محاسبه نشده" : decision.Status switch { PriceDecisionStatus.Draft => "محاسبه‌شده (ارسال نشده)", PriceDecisionStatus.Submitted => "ارسال‌شده به مدیریت", _ => "قیمت تأییدشده" },
                 calc is null ? string.Empty : $"{Rial(calc.TotalRial)} ریال (هر واحد {Rial(calc.UnitCostRial)})",
-                decision?.ApprovedPriceRial is { } approved ? $"{Rial(approved)} ریال" : decision?.ProposedPriceRial is { } proposed ? $"پیشنهاد {Rial(proposed)} ریال" : string.Empty));
+                decision?.ApprovedPriceRial is { } approved ? $"{Rial(approved)} ریال" : decision?.ProposedPriceRial is { } proposed ? $"پیشنهاد {Rial(proposed)} ریال" : string.Empty,
+                ActorsOf(actors, calc?.CalculatedByUserId, decision?.SubmittedByUserId, decision?.ApprovedByUserId)));
         }
+    }
+
+    private static string ActorsOf(IReadOnlyDictionary<long, string> names, long? calculatedBy, long? submittedBy, long? approvedBy)
+    {
+        var parts = new List<string>();
+        if (calculatedBy is not null)
+        {
+            parts.Add("محاسبه: " + ActorLookup.Text(names, calculatedBy));
+        }
+
+        if (submittedBy is not null)
+        {
+            parts.Add("ارسال: " + ActorLookup.Text(names, submittedBy));
+        }
+
+        if (approvedBy is not null)
+        {
+            parts.Add("تأیید: " + ActorLookup.Text(names, approvedBy));
+        }
+
+        return string.Join("؛ ", parts);
     }
 
     private void NotifyCaps()

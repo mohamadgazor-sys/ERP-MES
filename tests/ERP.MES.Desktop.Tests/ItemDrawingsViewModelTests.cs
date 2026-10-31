@@ -32,7 +32,7 @@ public class ItemDrawingsViewModelTests
         return (created.Value.Id, defined.Value!.Value.Items.Single().Id);
     }
 
-    private static ItemDrawingsViewModel For(WorkflowHarness h, ERP.MES.Application.Security.Principal user) => new(h.Workflow.Requests, h.Workflow.Drawings, h.Dates, () => user);
+    private static ItemDrawingsViewModel For(WorkflowHarness h, ERP.MES.Application.Security.Principal user) => new(h.Workflow.Requests, h.Workflow.Drawings, h.Dates, () => user, h.Workflow.Users);
 
     [Fact]
     public async Task Drawing_uploads_and_replaces_through_the_screen_and_every_other_user_can_only_open()
@@ -53,6 +53,7 @@ public class ItemDrawingsViewModelTests
         Assert.Equal("نسخه 1: a.pdf", drawing.Items.Single().DrawingText);
         Assert.True(await drawing.UploadAsync("b.pdf", Pdf("two"), Token));
         Assert.Equal(["فعلی", "قدیمی"], drawing.Revisions.Select(r => r.StatusText).ToArray());
+        Assert.All(drawing.Revisions, r => Assert.Equal("User drawing.one (drawing.one)", r.ActorText));
 
         Assert.False(await drawing.UploadAsync("c.png", Pdf("x"), Token));
         Assert.True(drawing.IsErrorMessage);

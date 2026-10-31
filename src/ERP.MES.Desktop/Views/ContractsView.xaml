@@ -72,6 +72,7 @@
                         <DataGridTextColumn Header="اقدام" Binding="{Binding ActionText}" Width="*" />
                         <DataGridTextColumn Header="وضعیت" Binding="{Binding StatusChangeText}" Width="*" />
                         <DataGridTextColumn Header="واحد" Binding="{Binding DepartmentText}" Width="100" />
+                        <DataGridTextColumn Header="انجام‌دهنده" Binding="{Binding ActorText}" Width="160" />
                         <DataGridTextColumn Header="توضیح" Binding="{Binding NoteText}" Width="*" />
                     </DataGrid.Columns>
                 </DataGrid>

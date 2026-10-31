@@ -65,6 +65,7 @@
                     <DataGridTextColumn Header="تصمیم" Binding="{Binding KindText}" Width="*" />
                     <DataGridTextColumn Header="تعداد (واحد پایه)" Binding="{Binding UnitsText}" Width="110" />
                     <DataGridTextColumn Header="دلیل / یادداشت" Binding="{Binding ReasonText}" Width="*" />
+                    <DataGridTextColumn Header="انجام‌دهنده" Binding="{Binding ActorText}" Width="160" />
                 </DataGrid.Columns>
             </DataGrid>
         </StackPanel>

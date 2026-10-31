@@ -31,6 +31,7 @@
                     <DataGridTextColumn Header="وضعیت" Binding="{Binding StatusText}" Width="*" />
                     <DataGridTextColumn Header="هزینه" Binding="{Binding CostText}" Width="*" />
                     <DataGridTextColumn Header="قیمت" Binding="{Binding PriceText}" Width="*" />
+                    <DataGridTextColumn Header="ثبت‌کنندگان" Binding="{Binding ActorText}" Width="*" />
                 </DataGrid.Columns>
             </DataGrid>
             <ItemsControl ItemsSource="{Binding Detail}" Margin="0,6,0,0">

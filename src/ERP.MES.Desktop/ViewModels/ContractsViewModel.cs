@@ -13,7 +13,7 @@ public sealed record ContractVersionRow(int VersionNo, string ContractNo, string
 
 public sealed record ItemContractRow(long ItemId, string ItemNo, string PartName, string EffectiveText, string ReasonText, bool IsInProduction) : IHasItemId;
 
-public sealed record ContractHistoryRow(string DateText, string ActionText, string StatusChangeText, string DepartmentText, string NoteText);
+public sealed record ContractHistoryRow(string DateText, string ActionText, string StatusChangeText, string DepartmentText, string NoteText, string ActorText = "");
 
 /// <summary>
 /// State and actions of the contract screen (Decision Log #85): the MAKE requests that Drawing returned or that already have a contract. Planning decides whether a contract is required,
@@ -21,7 +21,7 @@ public sealed record ContractHistoryRow(string DateText, string ActionText, stri
 /// command is checked again there. A rejection returns the contract to Planning for a new version (a PROVISIONAL default routing). Approval is shown in this list to Planning and Warehouse;
 /// there is no separate notification mechanism yet.
 /// </summary>
-public sealed class ContractsViewModel(ContractService service, RequestGateService gates, IJalaliDateService dates, Func<Principal> currentUser) : ObservableObject
+public sealed class ContractsViewModel(ContractService service, RequestGateService gates, IJalaliDateService dates, Func<Principal> currentUser, UserDirectoryService? users = null) : ObservableObject
 {
     private readonly ObservableCollection<ContractListRow> _rows = [];
     private readonly ObservableCollection<ContractVersionRow> _versions = [];
@@ -336,12 +336,13 @@ public sealed class ContractsViewModel(ContractService service, RequestGateServi
                     v.DecisionNote ?? string.Empty));
             }
 
+            var actors = await ActorLookup.DescribeAsync(users, currentUser(), contract.History.Select(h => h.ActionByUserId));
             foreach (var h in contract.History.Reverse())
             {
                 _history.Add(new ContractHistoryRow(
                     dates.FormatDateTime(h.ActionAtUtc), Messages.ContractActionText(h.Action),
                     (h.FromStatus is { } from ? Messages.ContractStatusText(from) + " ← " : string.Empty) + Messages.ContractStatusText(h.ToStatus) + (h.VersionNo is { } n ? $" (نسخه {n})" : string.Empty),
-                    Messages.DepartmentText(h.ActionByDepartmentCode), h.Note ?? string.Empty));
+                    Messages.DepartmentText(h.ActionByDepartmentCode), h.Note ?? string.Empty, ActorLookup.Text(actors, h.ActionByUserId)));
             }
         }
 

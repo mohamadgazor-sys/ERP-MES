@@ -153,29 +153,29 @@ public partial class App : System.Windows.Application
         Principal CurrentUser() => session.Principal;
         var pages = new WorkflowPages(
             new CustomersViewModel(workflow.Customers, workflow.Requests, dates, CurrentUser),
-            new RequestsViewModel(workflow.Requests, workflow.Documents, workflow.Lifecycle, workflow.Customers, dates, DigitStyle.Persian, () => DateTime.UtcNow, CurrentUser),
+            new RequestsViewModel(workflow.Requests, workflow.Documents, workflow.Lifecycle, workflow.Customers, dates, DigitStyle.Persian, () => DateTime.UtcNow, CurrentUser, workflow.Users),
             new ProductionQueueViewModel(workflow.Queue, dates, DigitStyle.Persian, () => DateTime.UtcNow, CurrentUser),
             new QcMasterViewModel(workflow.QcMaster, CurrentUser),
             new PlanningMasterViewModel(workflow.PlanningMaster, dates, DigitStyle.Persian, CurrentUser),
             new OperatorsViewModel(workflow.Operators, workflow.PlanningMaster, dates, CurrentUser),
             new MaterialsViewModel(workflow.Materials, dates, DigitStyle.Persian, CurrentUser),
-            new ContractsViewModel(workflow.Contracts, workflow.Gates, dates, CurrentUser),
+            new ContractsViewModel(workflow.Contracts, workflow.Gates, dates, CurrentUser, workflow.Users),
             new InquiriesViewModel(workflow.Inquiries, workflow.QcMaster, workflow.Gates, dates, CurrentUser),
             new ClarificationsViewModel(workflow.Clarifications, dates, CurrentUser),
             new ItemDefinitionViewModel(workflow.ItemDefinition, workflow.Requests, workflow.Gates, workflow.QcMaster, workflow.Materials, workflow.PlanningMaster, DigitStyle.Persian, CurrentUser),
             new ItemImportViewModel(workflow.ItemImport, workflow.Requests, new ERP.MES.Infrastructure.Imports.XlsxWorkbookWriter(), CurrentUser),
             new UnitQueueViewModel(workflow.UnitQueue, workflow.StageWork, workflow.UnitDesignations, dates, DigitStyle.Persian, CurrentUser),
             new CalendarViewModel(workflow.Calendar, workflow.WorkerSchedule, workflow.PlanningMaster, workflow.Operators, dates, DigitStyle.Persian, () => DateTime.UtcNow, CurrentUser),
-            new QcInspectionViewModel(workflow.QcInspection, dates, DigitStyle.Persian, CurrentUser),
+            new QcInspectionViewModel(workflow.QcInspection, dates, DigitStyle.Persian, CurrentUser, workflow.Users),
             new JobReportsViewModel(workflow.JobReports, workflow.UnitQueue, workflow.PlanningMaster, workflow.Calendar, dates, DigitStyle.Persian, () => DateTime.UtcNow, CurrentUser),
             new OvertimeViewModel(workflow.Overtime, workflow.Operators, workflow.PlanningMaster, dates, DigitStyle.Persian, () => DateTime.UtcNow, CurrentUser),
-            new CostingViewModel(workflow.Costing, workflow.PlanningMaster, dates, DigitStyle.Persian, CurrentUser),
+            new CostingViewModel(workflow.Costing, workflow.PlanningMaster, dates, DigitStyle.Persian, CurrentUser, workflow.Users),
             new CompletionViewModel(workflow.Completion, dates, DigitStyle.Persian, CurrentUser),
             new KpiViewModel(workflow.Kpi, dates, DigitStyle.Persian, () => DateTime.UtcNow, CurrentUser),
             new WorkBoardViewModel(workflow.UnitQueue, workflow.WorkSessions, workflow.StageWork, dates, DigitStyle.Persian, () => DateTime.UtcNow, CurrentUser),
             new UsersViewModel(_services.Accounts, workflow.Users, workflow.UnitDesignations, workflow.PlanningMaster, dates, CurrentUser),
             new StageTitlesViewModel(workflow.PlanningMaster, CurrentUser),
-            new ItemDrawingsViewModel(workflow.Requests, workflow.Drawings, dates, CurrentUser));
+            new ItemDrawingsViewModel(workflow.Requests, workflow.Drawings, dates, CurrentUser, workflow.Users));
         DrawingLauncher.Configure(workflow.Drawings, CurrentUser);
 
         _mainWindow = new MainWindow(shell, session, pages);
