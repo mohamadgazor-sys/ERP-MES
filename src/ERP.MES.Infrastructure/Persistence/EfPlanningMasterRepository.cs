@@ -8,6 +8,38 @@ namespace ERP.MES.Infrastructure.Persistence;
 /// <summary>Planning resource master data persistence on <see cref="ErpMesDbContext"/> (provider-neutral). Each call uses its own short-lived context and one transaction; rules stay in the Domain.</summary>
 public sealed class EfPlanningMasterRepository(IDbContextFactory<ErpMesDbContext> contextFactory) : IPlanningMasterRepository
 {
+    public async Task<IReadOnlyList<Stored<StageTitle>>> ListStageTitlesAsync(CancellationToken cancellationToken = default)
+    {
+        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
+        var titles = await context.StageTitles.OrderBy(t => t.Id).ToListAsync(cancellationToken);
+        return titles.Select(t => new Stored<StageTitle>(t, context.GetRowVersion(t))).ToList();
+    }
+
+    public async Task<Stored<StageTitle>> AddStageTitleAsync(StageTitle title, IReadOnlyList<AuditLogEntry> audit, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(title);
+        ArgumentNullException.ThrowIfNull(audit);
+        RequireNew(title.Id);
+        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
+        context.StageTitles.Add(title);
+        context.AuditLog.AddRange(audit);
+        await PersistenceSave.SaveAsync(context, cancellationToken);
+        return new Stored<StageTitle>(title, context.GetRowVersion(title));
+    }
+
+    public async Task<Stored<StageTitle>> UpdateStageTitleAsync(long titleId, long expectedVersion, Action<StageTitle> change, IReadOnlyList<AuditLogEntry> audit, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(change);
+        ArgumentNullException.ThrowIfNull(audit);
+        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
+        var title = await context.StageTitles.SingleOrDefaultAsync(t => t.Id == titleId, cancellationToken) ?? throw new RecordNotFoundException("stage title", titleId);
+        PersistenceSave.CheckExpectedVersion(context, title, expectedVersion);
+        change(title);
+        context.AuditLog.AddRange(audit);
+        await PersistenceSave.SaveAsync(context, cancellationToken);
+        return new Stored<StageTitle>(title, context.GetRowVersion(title));
+    }
+
     public async Task<IReadOnlyList<Stored<ProductionUnit>>> ListUnitsAsync(CancellationToken cancellationToken = default)
     {
         await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);

@@ -10,6 +10,13 @@ namespace ERP.MES.Application.Persistence;
 /// </summary>
 public interface IPlanningMasterRepository
 {
+    /// <summary>The stage-title catalog (Decision Log #124 B4), oldest first. Titles are unique (exact comparison), retired and never deleted.</summary>
+    Task<IReadOnlyList<Stored<StageTitle>>> ListStageTitlesAsync(CancellationToken cancellationToken = default);
+
+    Task<Stored<StageTitle>> AddStageTitleAsync(StageTitle title, IReadOnlyList<AuditLogEntry> audit, CancellationToken cancellationToken = default);
+
+    Task<Stored<StageTitle>> UpdateStageTitleAsync(long titleId, long expectedVersion, Action<StageTitle> change, IReadOnlyList<AuditLogEntry> audit, CancellationToken cancellationToken = default);
+
     Task<IReadOnlyList<Stored<ProductionUnit>>> ListUnitsAsync(CancellationToken cancellationToken = default);
 
     Task<Stored<ProductionUnit>> AddUnitAsync(ProductionUnit unit, IReadOnlyList<AuditLogEntry> audit, CancellationToken cancellationToken = default);

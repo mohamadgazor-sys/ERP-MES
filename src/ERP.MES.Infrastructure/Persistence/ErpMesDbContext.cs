@@ -44,6 +44,8 @@ public sealed class ErpMesDbContext(DbContextOptions<ErpMesDbContext> options) :
 
     public DbSet<ProductionUnit> ProductionUnits => Set<ProductionUnit>();
 
+    public DbSet<StageTitle> StageTitles => Set<StageTitle>();
+
     public DbSet<Machine> Machines => Set<Machine>();
 
     public DbSet<RequestContract> RequestContracts => Set<RequestContract>();

@@ -110,7 +110,21 @@ internal sealed class SecurityFixture : IDisposable
         Assert.True(issued.Issued);
         var result = await Services.Bootstrap.CompleteAsync(issued.Token, username, "Test Administrator", password, cancellationToken);
         Assert.Equal(BootstrapStatus.Succeeded, result.Status);
-        return await SignInAsync(username, password, cancellationToken);
+        var admin = await SignInAsync(username, password, cancellationToken);
+        SeedStageTitles(admin.UserId);
+        return admin;
+    }
+
+    /// <summary>The titles the existing tests give to stages. Stage definition requires an active catalog entry (Decision Log #124 B4), so the fixture registers them like Planning would.</summary>
+    public static readonly string[] StageTitlesForTests =
+        ["Turning", "t", "x", "فرز", "فرزکاری", "تراشکاری", "مرحله", "اول", "دوم", "سوم", "برش", .. Enumerable.Range(1, 12).Select(n => "مرحله " + n.ToString(System.Globalization.CultureInfo.InvariantCulture))];
+
+    private void SeedStageTitles(long adminUserId)
+    {
+        foreach (var title in StageTitlesForTests)
+        {
+            Db.Execute($"INSERT INTO StageTitles (Title, IsActive, CreatedByUserId, CreatedAtUtc, UpdatedAtUtc, Version) VALUES ('{title.Replace("'", "''")}', 1, {adminUserId}, '2026-10-15 09:30:15', '2026-10-15 09:30:15', 1)");
+        }
     }
 
     public async Task<Principal> SignInAsync(string username, string password, CancellationToken cancellationToken = default)

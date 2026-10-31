@@ -221,6 +221,9 @@ public enum Permission
     /// did not move qualifications, so they stay with Planning (a labelled default: confirm or reassign).
     /// </summary>
     MaintainOperatorQualifications,
+
+    /// <summary>Planning maintains the stage-title catalog (Decision Log #124 B4).</summary>
+    MaintainStageTitles,
 }
 
 /// <summary>
@@ -246,6 +249,7 @@ public static class AuthorizationRules
         [Permission.RecordFinalWarehouseReceipt] = new([DepartmentCodes.Warehouse], null),
         [Permission.MaintainUnitsOfMeasure] = new([DepartmentCodes.Qc], null),
         [Permission.MaintainOperatorQualifications] = new([DepartmentCodes.Planning], null),
+        [Permission.MaintainStageTitles] = new([DepartmentCodes.Planning], null),
         [Permission.MaintainHolidayCalendar] = new([DepartmentCodes.Planning, DepartmentCodes.ProductionManager], null),
         [Permission.RegisterDowntime] = new([DepartmentCodes.MaintenancePm], null),
         [Permission.CreateAndSubmitRequest] = new([DepartmentCodes.Central], null),

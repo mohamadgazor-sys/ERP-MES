@@ -56,6 +56,8 @@ public static class AuditActions
     // Request lifecycle (Decision Log #29, #82). Written in the same transaction as the status change and the workflow-history entry; the free-text reason stays in the history, not here.
     // Planning resource master data (Decision Log #82 R2). Rate changes are cost-relevant, so every one is audited with the reason.
     public const string ProductionUnitAdded = "ProductionUnitAdded";
+    public const string StageTitleAdded = "StageTitleAdded";
+    public const string StageTitleActivityChanged = "StageTitleActivityChanged";
     public const string MachineAdded = "MachineAdded";
     public const string MachineRateChanged = "MachineRateChanged";
     public const string JobReportSaved = "JobReportSaved";

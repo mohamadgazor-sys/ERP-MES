@@ -1,0 +1,34 @@
+<UserControl x:Class="ERP.MES.Desktop.Views.StageTitlesView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Loaded="OnLoaded">
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel>
+            <TextBlock Text="{Binding Message}" TextWrapping="Wrap" Foreground="#9B1C1C" FontWeight="SemiBold" Margin="0,0,0,8" />
+            <TextBlock TextWrapping="Wrap" Foreground="{StaticResource MutedTextBrush}" Margin="0,0,0,8"
+                       Text="فهرست عنوان مرحله‌ها را برنامه‌ریزی نگه می‌دارد. هنگام تعریف مرحله و در ورود از اکسل فقط عنوان‌های فعال این فهرست پذیرفته می‌شود. عنوان حذف نمی‌شود، فقط بازنشسته می‌شود؛ مرحله‌های ساخته‌شده متن عنوان خود را نگه می‌دارند."/>
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                <Button Content="بارگذاری مجدد" Padding="10,3" MinWidth="110" Click="OnReloadClick" ToolTip="فهرست عنوان‌ها را دوباره از پایگاه داده می‌خواند." />
+            </StackPanel>
+            <DataGrid ItemsSource="{Binding Titles}" SelectedItem="{Binding Selected, Mode=TwoWay}" AutoGenerateColumns="False" IsReadOnly="True"
+                      SelectionMode="Single" HeadersVisibility="Column" CanUserAddRows="False" CanUserDeleteRows="False" MaxHeight="320" Background="{StaticResource CardBrush}">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="عنوان مرحله" Binding="{Binding Title}" Width="*" />
+                    <DataGridTextColumn Header="وضعیت" Binding="{Binding StatusText}" Width="100" />
+                </DataGrid.Columns>
+            </DataGrid>
+            <Border Padding="10" Margin="0,12,0,0" Background="{StaticResource CardBrush}" BorderBrush="{StaticResource BorderBrushSoft}" BorderThickness="1" IsEnabled="{Binding CanMaintain}">
+                <StackPanel>
+                    <WrapPanel>
+                        <StackPanel Margin="0,0,12,6"><TextBlock Text="عنوان جدید" /><TextBox x:Name="NewTitleBox" Width="260" MaxLength="200" ToolTip="عنوان دقیق مرحله، بدون فاصلهٔ ابتدا یا انتها؛ با حروف بزرگ و کوچک مقایسه می‌شود." /></StackPanel>
+                    </WrapPanel>
+                    <WrapPanel>
+                        <Button Content="افزودن عنوان" Padding="10,3" MinWidth="110" Margin="0,0,8,0" Click="OnAddClick" ToolTip="عنوان را به فهرست اضافه می‌کند تا در تعریف مرحله و ورود اکسل قابل استفاده شود." />
+                        <Button Content="بازنشسته کردن عنوان انتخاب‌شده" Padding="10,3" MinWidth="200" Margin="0,0,8,0" Click="OnRetireClick" ToolTip="عنوان دیگر برای مرحله‌های جدید پذیرفته نمی‌شود؛ مرحله‌های موجود تغییری نمی‌کنند." />
+                        <Button Content="فعال کردن دوبارهٔ عنوان" Padding="10,3" MinWidth="170" Click="OnReactivateClick" ToolTip="عنوان بازنشسته را دوباره برای مرحله‌های جدید در دسترس می‌گذارد." />
+                    </WrapPanel>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

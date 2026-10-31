@@ -367,6 +367,12 @@ public sealed class ItemDefinitionService(
                 return Outcome<Stored<Request>>.Invalid(ValidationIssue.ItemGateNotSatisfied);
             }
 
+            var stageTitle = command.StageTitle!.Trim();
+            if (!(await planning.ListStageTitlesAsync(cancellationToken)).Any(t => t.Value.IsActive && string.Equals(t.Value.Title, stageTitle, StringComparison.Ordinal)))
+            {
+                return Outcome<Stored<Request>>.Invalid(ValidationIssue.StageTitleNotInCatalog);
+            }
+
             var unit = (await planning.ListUnitsAsync(cancellationToken)).FirstOrDefault(u => u.Value.Id == command.ProductionUnitId);
             if (unit is null || !unit.Value.IsActive)
             {

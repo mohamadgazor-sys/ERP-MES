@@ -34,6 +34,9 @@ public class PageAccessTests
         Assert.Contains(ShellViewModel.WorkBoardKey, production);
         Assert.Contains(ShellViewModel.UnitQueueKey, production);
 
+        Assert.DoesNotContain(ShellViewModel.StageTitlesKey, production);
+        Assert.Contains(ShellViewModel.StageTitlesKey, await VisibleAsync(h, h.Planning));
+
         var qc = await VisibleAsync(h, h.Qc);
         Assert.Contains(ShellViewModel.QcInspectionKey, qc);
         Assert.DoesNotContain(ShellViewModel.UnitQueueKey, qc);

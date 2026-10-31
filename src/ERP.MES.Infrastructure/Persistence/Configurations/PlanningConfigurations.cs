@@ -24,6 +24,26 @@ public sealed class ProductionUnitConfiguration : IEntityTypeConfiguration<Produ
     }
 }
 
+public sealed class StageTitleConfiguration : IEntityTypeConfiguration<StageTitle>
+{
+    public void Configure(EntityTypeBuilder<StageTitle> builder)
+    {
+        builder.ToTable("StageTitles");
+        builder.HasKey(t => t.Id);
+        builder.Property(t => t.Id).ValueGeneratedOnAdd();
+
+        // Exact, case-sensitive and unique, like the other business codes; a stage keeps its own copy of the text.
+        builder.Property(t => t.Title).UseCollation("BINARY").HasMaxLength(StageTitle.MaxLength).IsRequired();
+        builder.HasIndex(t => t.Title).IsUnique();
+        builder.Property(t => t.IsActive).IsRequired();
+        builder.Property(t => t.CreatedByUserId).IsRequired();
+        builder.HasOne<User>().WithMany().HasForeignKey(t => t.CreatedByUserId).IsRequired().OnDelete(DeleteBehavior.Restrict);
+        builder.Property(t => t.CreatedAtUtc).IsRequired();
+        builder.Property(t => t.UpdatedAtUtc).IsRequired();
+        builder.Property<long>(ErpMesDbContext.RowVersionPropertyName).IsConcurrencyToken().IsRequired();
+    }
+}
+
 public sealed class MachineConfiguration : IEntityTypeConfiguration<Machine>
 {
     public void Configure(EntityTypeBuilder<Machine> builder)
