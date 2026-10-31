@@ -228,6 +228,9 @@ public enum Permission
     /// <summary>Drawing uploads and replaces the technical drawing of an item (Decision Log #125 Q14).</summary>
     ManageItemDrawings,
 
+    /// <summary>Drawing imports the technical columns of items from Excel while the request is under Drawing review (Decision Log #125 Q15).</summary>
+    ImportTechnicalItems,
+
     /// <summary>Open the technical drawing of an item: every signed-in user who works with items (Decision Log #125 Q14).</summary>
     ViewItemDrawings,
 }
@@ -257,6 +260,7 @@ public static class AuthorizationRules
         [Permission.MaintainOperatorQualifications] = new([DepartmentCodes.Planning], null),
         [Permission.MaintainStageTitles] = new([DepartmentCodes.Planning], null),
         [Permission.ManageItemDrawings] = new([DepartmentCodes.Drawing], null),
+        [Permission.ImportTechnicalItems] = new([DepartmentCodes.Drawing], null),
         [Permission.ViewItemDrawings] = new([], null),
         [Permission.MaintainHolidayCalendar] = new([DepartmentCodes.Planning, DepartmentCodes.ProductionManager], null),
         [Permission.RegisterDowntime] = new([DepartmentCodes.MaintenancePm], null),

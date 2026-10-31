@@ -97,11 +97,11 @@ public class ItemImportViewModelTests
     }
 
     [Fact]
-    public async Task Everyone_but_planning_sees_no_import_and_the_application_refuses_them_too()
+    public async Task Everyone_but_planning_and_drawing_sees_no_import_and_drawing_is_refused_outside_drawing_review()
     {
         using var h = await WorkflowHarness.CreateAsync(Token);
         var id = await ReadyAsync(h, WorkType.Make, "M-3");
-        foreach (var user in new[] { h.Drawing, h.Central, h.Manager, h.Warehouse, h.Qc, h.Production })
+        foreach (var user in new[] { h.Central, h.Manager, h.Warehouse, h.Qc, h.Production })
         {
             var vm = For(h, user);
             await vm.LoadAsync(Token);
@@ -109,8 +109,10 @@ public class ItemImportViewModelTests
             Assert.False(vm.CanCommit);
         }
 
+        // Drawing sees the import page (technical scope, Decision Log #125 Q15), but the request has left Drawing review, so the Application refuses.
         var planningVm = For(h, h.Drawing);
         await planningVm.LoadAsync(Token);
+        Assert.True(planningVm.CanImport);
         planningVm.SelectedRequest = planningVm.Requests.FirstOrDefault(r => r.RequestId == id);
         Assert.False(await planningVm.PreviewAsync("a.xlsx", File(["1", "x", "1", "PIECE", "X", "1"]), Token));
         Assert.False(planningVm.HasPreview);

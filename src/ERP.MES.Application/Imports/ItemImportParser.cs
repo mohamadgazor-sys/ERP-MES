@@ -75,6 +75,9 @@ public enum ImportIssue
     PriorityUnknown,
     StageIncomplete,
 
+    /// <summary>A Planning-only column (priority, stage, title, unit or machine) is filled in a Drawing import (Decision Log #125 Q15).</summary>
+    PlanningColumnNotAllowed,
+
     /// <summary>The stage title is not an active entry of the stage-title catalog (Decision Log #124 B4).</summary>
     StageTitleUnknown,
     StageGap,
@@ -117,7 +120,7 @@ public sealed record ImportLookups(
 /// </summary>
 public static class ItemImportParser
 {
-    public static ParsedImport Parse(WorkbookReadResult workbook, WorkType workType, ImportLookups lookups, DateOnly? requestDate = null)
+    public static ParsedImport Parse(WorkbookReadResult workbook, WorkType workType, ImportLookups lookups, DateOnly? requestDate = null, bool technicalOnly = false)
     {
         ArgumentNullException.ThrowIfNull(workbook);
         ArgumentNullException.ThrowIfNull(lookups);
@@ -197,13 +200,13 @@ public static class ItemImportParser
         var rows = new List<ParsedImportRow>(dataRows.Count);
         foreach (var row in dataRows)
         {
-            rows.Add(ParseRow(row, columns, workType, lookups, firstRowOfItemNo, requestDate));
+            rows.Add(ParseRow(row, columns, workType, lookups, firstRowOfItemNo, requestDate, technicalOnly));
         }
 
         return new ParsedImport(file, rows);
     }
 
-    private static ParsedImportRow ParseRow(WorkbookRow row, Dictionary<string, int> columns, WorkType workType, ImportLookups lookups, Dictionary<string, int> firstRowOfItemNo, DateOnly? requestDate)
+    private static ParsedImportRow ParseRow(WorkbookRow row, Dictionary<string, int> columns, WorkType workType, ImportLookups lookups, Dictionary<string, int> firstRowOfItemNo, DateOnly? requestDate, bool technicalOnly)
     {
         var messages = new List<ImportMessage>();
 
@@ -417,6 +420,23 @@ public static class ItemImportParser
                     Error(ImportIssue.DimensionInvalid, Text(ItemImportTemplate.Length) ?? Text(ItemImportTemplate.Diameter));
                     break;
             }
+        }
+
+        // A Drawing import carries the technical columns only: priority, stages, units and machines belong to Planning (Decision Log #125 Q15).
+        if (technicalOnly)
+        {
+            var planningHeaders = new List<string> { ItemImportTemplate.Priority };
+            for (var k = 1; k <= ItemImportTemplate.MaxStages; k++)
+            {
+                planningHeaders.AddRange([ItemImportTemplate.StageTitle(k), ItemImportTemplate.StageMinutes(k), ItemImportTemplate.StageUnit(k), ItemImportTemplate.StageMachine(k)]);
+            }
+
+            foreach (var header in planningHeaders.Where(h => Text(h) is not null))
+            {
+                Error(ImportIssue.PlanningColumnNotAllowed, header);
+            }
+
+            return new ParsedImportRow(row.RowNumber, itemNo, messages.Any(m => m.IsError) ? null : new ImportRowData(row.RowNumber, itemNo, partName!, quantity, Priority.Normal, specification, [], parentRef, isAssembly), messages);
         }
 
         // priority (blank = Normal)

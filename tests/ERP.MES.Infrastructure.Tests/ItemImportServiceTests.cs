@@ -502,14 +502,14 @@ public class ItemImportServiceTests
     }
 
     [Fact]
-    public async Task Only_planning_may_import_and_the_gates_must_hold()
+    public async Task Only_planning_and_for_the_technical_scope_drawing_may_import_and_the_gates_must_hold()
     {
         var (w, id, version) = await ReadyWorldAsync();
         using var disposeWorld = w;
         var file = Sheet(MakeRow("1.10"));
         var preview = await PreviewOkAsync(w, id, file);
 
-        foreach (var user in new Principal?[] { w.Drawing, w.Central, w.Manager, w.ManagementStaff, w.Warehouse, w.Qc, w.Production, w.Admin, null })
+        foreach (var user in new Principal?[] { w.Central, w.Manager, w.ManagementStaff, w.Warehouse, w.Qc, w.Production, w.Admin, null })
         {
             Assert.Equal(OperationStatus.NotAuthorized, (await Svc(w).PreviewAsync(user, id, "a.xlsx", file, Token)).Status);
             Assert.Equal(OperationStatus.NotAuthorized, (await Svc(w).CommitAsync(user, id, version, "a.xlsx", file, preview.FileHash, [], Token)).Status);
@@ -517,6 +517,8 @@ public class ItemImportServiceTests
         }
 
         Assert.True(await Svc(w).CanImportAsync(w.Planning, Token));
+        Assert.True(await Svc(w).CanImportAsync(w.Drawing, Token));
+        Assert.Equal(ValidationIssue.TechnicalImportStatus, (await Svc(w).PreviewAsync(w.Drawing, id, "a.xlsx", file, Token)).Issue);
         Assert.Equal(0, Count(w, "RequestItems"));
 
         // A request that has not passed Drawing: gate blocks both preview and commit.
@@ -718,5 +720,124 @@ public class ItemImportServiceTests
         }
 
         return stream.ToArray();
+    }
+
+    // ---- Drawing's technical import (Decision Log #125 Q15) --------------------------------------------------------------------------------------------------------
+
+    /// <summary>A request forwarded to Drawing and still under Drawing review: no Drawing result, no contract decision yet.</summary>
+    private static async Task<long> UnderReviewAsync(World w, string requestNo = "U-1")
+    {
+        var customer = (await w.Services.Customers.CreateAsync(w.Central, "Fictional Customer " + requestNo, Token)).Value!;
+        var created = (await w.Services.Requests.CreateAsync(w.Central, new CreateRequestCommand(customer.Value.Id, requestNo, WorkType.Make, "1405/07/20", null, null), Token)).Value!;
+        Tick(w);
+        var withPdf = (await w.Services.Documents.AttachRequestPdfAsync(w.Central, created.Value.Id, created.Version, "a.pdf", Pdf(), Token)).Value!;
+        Tick(w);
+        var sent = (await w.Services.Requests.SubmitToManagementAsync(w.Central, withPdf.Value.Id, withPdf.Version, Token)).Value!;
+        Tick(w);
+        var approved = (await w.Services.Lifecycle.ApproveAsync(w.Manager, sent.Value.Id, sent.Version, Token)).Value!;
+        Tick(w);
+        var forwarded = await w.Services.Lifecycle.ForwardToDrawingAsync(w.Planning, approved.Value.Id, approved.Version, Token);
+        Assert.True(forwarded.Succeeded, forwarded.Status + " " + forwarded.Issue);
+        Tick(w);
+        return created.Value.Id;
+    }
+
+    private static readonly string[] TechnicalHeaders = [ItemImportTemplate.CustomerItemRef, ItemImportTemplate.PartName, ItemImportTemplate.Quantity, ItemImportTemplate.QuantityType, ItemImportTemplate.Material, ItemImportTemplate.Weight, ItemImportTemplate.Priority];
+
+    private static byte[] TechnicalSheet(params IReadOnlyList<string>[] rows) => Writer.Write("آیتم‌ها", TechnicalHeaders, rows);
+
+    private static async Task<Outcome<ImportCommitResult>> DrawingCommitAsync(World w, long id, byte[] file)
+    {
+        var preview = await Svc(w).PreviewAsync(w.Drawing, id, "t.xlsx", file, Token);
+        if (!preview.Succeeded)
+        {
+            return Outcome<ImportCommitResult>.Invalid(preview.Issue);
+        }
+
+        return await Svc(w).CommitAsync(w.Drawing, id, preview.Value!.RequestVersion, "t.xlsx", file, preview.Value.FileHash, [], Token);
+    }
+
+    [Fact]
+    public async Task Drawing_imports_the_technical_columns_while_the_request_is_under_drawing_review_and_planning_cannot_yet()
+    {
+        using var w = await StartAsync();
+        await MaterialAsync(w);
+        var id = await UnderReviewAsync(w);
+        Assert.True(await Svc(w).CanImportAsync(w.Drawing, Token));
+        Assert.False(await Svc(w).CanImportAsync(w.Qc, Token));
+
+        var file = TechnicalSheet(["T-1", "Ring", "10", "PIECE", "ST37-R30", "1.5", ""], ["T-2", "Shaft", "4", "PIECE", "ST37-R30", "2", ""]);
+        var planning = await Svc(w).PreviewAsync(w.Planning, id, "t.xlsx", file, Token);
+        Assert.Equal(ValidationIssue.ItemGateNotSatisfied, planning.Issue);
+        Assert.Equal(OperationStatus.NotAuthorized, (await Svc(w).PreviewAsync(w.Qc, id, "t.xlsx", file, Token)).Status);
+
+        var result = await DrawingCommitAsync(w, id, file);
+        Assert.True(result.Succeeded, result.Status + " " + result.Issue);
+        Assert.Equal(2, result.Value!.Created);
+        var items = (await LoadAsync(w, id)).Items;
+        Assert.All(items, i => Assert.Equal(Priority.Normal, i.Priority));
+        Assert.All(items, i => Assert.Empty(i.Stages));
+        Assert.Equal(2, w.Fixture.Db.Query("SELECT ActionCode FROM AuditLog WHERE ActionCode = 'ItemDefined'").Count);
+
+        // The same file again changes nothing.
+        var again = await DrawingCommitAsync(w, id, file);
+        Assert.Equal(0, again.Value!.Created);
+        Assert.Equal(2, again.Value.Unchanged);
+    }
+
+    [Fact]
+    public async Task A_drawing_import_rejects_every_planning_column_and_never_changes_planning_priority()
+    {
+        using var w = await StartAsync();
+        await MaterialAsync(w);
+        var id = await UnderReviewAsync(w);
+
+        var withPriority = TechnicalSheet(["T-1", "Ring", "10", "PIECE", "ST37-R30", "1.5", "فوری"]);
+        var preview = (await Svc(w).PreviewAsync(w.Drawing, id, "t.xlsx", withPriority, Token)).Value!;
+        Assert.False(preview.CanCommit);
+        Assert.Contains(preview.Rows.Single().Messages, m => m.Issue == ImportIssue.PlanningColumnNotAllowed && m.Detail == ItemImportTemplate.Priority);
+
+        string[] stageHeaders = [ItemImportTemplate.CustomerItemRef, ItemImportTemplate.PartName, ItemImportTemplate.Quantity, ItemImportTemplate.QuantityType, ItemImportTemplate.Material, ItemImportTemplate.Weight,
+            ItemImportTemplate.StageTitle(1), ItemImportTemplate.StageMinutes(1), ItemImportTemplate.StageUnit(1), ItemImportTemplate.StageMachine(1)];
+        foreach (var cells in new[] { new[] { "فرزکاری", "", "", "" }, new[] { "", "5", "", "" }, new[] { "", "", "MILLING", "" }, new[] { "", "", "", "FCC-06" } })
+        {
+            var file = Writer.Write("S", stageHeaders, [["T-1", "Ring", "10", "PIECE", "ST37-R30", "1.5", .. cells]]);
+            var bad = (await Svc(w).PreviewAsync(w.Drawing, id, "t.xlsx", file, Token)).Value!;
+            Assert.False(bad.CanCommit);
+            Assert.Contains(bad.Rows.Single().Messages, m => m.Issue == ImportIssue.PlanningColumnNotAllowed);
+        }
+
+        Assert.Equal(0, Count(w, "RequestItems"));
+
+        // Planning sets an urgent priority later; a Drawing re-import with a changed description updates the technical fields and leaves the priority alone.
+        var first = TechnicalSheet(["T-1", "Ring", "10", "PIECE", "ST37-R30", "1.5", ""]);
+        Assert.True((await DrawingCommitAsync(w, id, first)).Succeeded);
+        w.Fixture.Db.Execute("UPDATE RequestItems SET Priority = 2");
+        var changed = TechnicalSheet(["T-1", "Ring (revised)", "12", "PIECE", "ST37-R30", "1.5", ""]);
+        var preview2 = (await Svc(w).PreviewAsync(w.Drawing, id, "t.xlsx", changed, Token)).Value!;
+        Assert.Equal(ImportRowStatus.Conflict, preview2.Rows.Single().Status);
+        Assert.DoesNotContain(preview2.Rows.Single().Changes, c => c.Field == ImportField.Priority);
+        var updated = await Svc(w).CommitAsync(w.Drawing, id, preview2.RequestVersion, "t.xlsx", changed, preview2.FileHash, [new ImportDecision(preview2.Rows.Single().SheetRowNo, ConflictChoice.Update)], Token);
+        Assert.True(updated.Succeeded, updated.Status + " " + updated.Issue);
+        var item = (await LoadAsync(w, id)).Items.Single();
+        Assert.Equal("Ring (revised)", item.PartName);
+        Assert.Equal(12m, item.RequestedQuantity);
+        Assert.Equal((Priority)2, item.Priority);
+    }
+
+    [Fact]
+    public async Task Drawing_cannot_import_once_the_request_left_drawing_review_and_planning_keeps_all_its_gates()
+    {
+        var (w, id, _) = await ReadyWorldAsync();
+        using var disposeWorld = w;
+        var file = TechnicalSheet(["T-1", "Ring", "10", "PIECE", "ST37-R30", "1.5", ""]);
+
+        var preview = await Svc(w).PreviewAsync(w.Drawing, id, "t.xlsx", file, Token);
+        Assert.Equal(ValidationIssue.TechnicalImportStatus, preview.Issue);
+        Assert.Equal(ValidationIssue.TechnicalImportStatus, (await DrawingCommitAsync(w, id, file)).Issue);
+        Assert.Equal(0, Count(w, "RequestItems"));
+
+        var planning = await CommitAsync(w, id, file);
+        Assert.True(planning.Succeeded, planning.Status + " " + planning.Issue);
     }
 }
