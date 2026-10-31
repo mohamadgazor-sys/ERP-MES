@@ -12,6 +12,8 @@ public sealed record InspectionRow(
     InspectionEntry2 Entry, string RequestNo, string ItemNo, string PartName, string StageText, string StatusText, string UnitsText, string InputText, string AwaitingText, string AcceptedText, string ReworkText, string ScrapText) : IHasItemId
 {
     public long ItemId => Entry.ItemId;
+
+    public string CustomerName => Entry.CustomerName;
 }
 
 public sealed record InspectionHistoryRow(string TimeText, string KindText, string UnitsText, string ReasonText, string ActorText = "");

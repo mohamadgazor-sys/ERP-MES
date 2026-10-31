@@ -26,6 +26,7 @@
                       MaxHeight="300" Background="{StaticResource CardBrush}" SelectionChanged="OnSelectionChanged">
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="درخواست" Binding="{Binding RequestNo}" ElementStyle="{StaticResource LtrCell}" Width="90" />
+                    <DataGridTextColumn Header="مشتری" Binding="{Binding CustomerName}" Width="110" />
                     <DataGridTextColumn Header="آیتم" Binding="{Binding ItemNo}" ElementStyle="{StaticResource LtrCell}" Width="80" />
                     <DataGridTemplateColumn Header="نقشه" Width="64">
                                             <DataGridTemplateColumn.CellTemplate>

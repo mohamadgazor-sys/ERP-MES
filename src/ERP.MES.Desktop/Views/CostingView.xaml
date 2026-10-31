@@ -30,6 +30,7 @@
                     <DataGridTextColumn Header="پذیرفته‌شده (واحد پایه)" Binding="{Binding QuantityText}" Width="90" />
                     <DataGridTextColumn Header="وضعیت" Binding="{Binding StatusText}" Width="*" />
                     <DataGridTextColumn Header="هزینه" Binding="{Binding CostText}" Width="*" />
+                    <DataGridTextColumn Header="مشتری" Binding="{Binding CustomerText}" Width="110" />
                     <DataGridTextColumn Header="قیمت" Binding="{Binding PriceText}" Width="*" />
                     <DataGridTextColumn Header="ثبت‌کنندگان" Binding="{Binding ActorText}" Width="*" />
                 </DataGrid.Columns>

@@ -11,7 +11,7 @@ using ERP.MES.Domain.Requests;
 
 namespace ERP.MES.Desktop.ViewModels;
 
-public sealed record CostingRow(CostingItemSummary Summary, string RequestText, string ItemText, string QuantityText, string StatusText, string CostText, string PriceText, string ActorText = "");
+public sealed record CostingRow(CostingItemSummary Summary, string RequestText, string ItemText, string QuantityText, string StatusText, string CostText, string PriceText, string ActorText = "", string CustomerText = "");
 
 /// <summary>
 /// State and actions of the cost and price screen (docs/COSTING_DESIGN.md; Decision Log #91, #95 D3/D4, #104). Warehouse calculates and submits, Management approves or changes the price, Planning reads.
@@ -171,7 +171,8 @@ public sealed class CostingViewModel(
                 decision is null ? "محاسبه نشده" : decision.Status switch { PriceDecisionStatus.Draft => "محاسبه‌شده (ارسال نشده)", PriceDecisionStatus.Submitted => "ارسال‌شده به مدیریت", _ => "قیمت تأییدشده" },
                 calc is null ? string.Empty : $"{Rial(calc.TotalRial)} ریال (هر واحد {Rial(calc.UnitCostRial)})",
                 decision?.ApprovedPriceRial is { } approved ? $"{Rial(approved)} ریال" : decision?.ProposedPriceRial is { } proposed ? $"پیشنهاد {Rial(proposed)} ریال" : string.Empty,
-                ActorsOf(actors, calc?.CalculatedByUserId, decision?.SubmittedByUserId, decision?.ApprovedByUserId)));
+                ActorsOf(actors, calc?.CalculatedByUserId, decision?.SubmittedByUserId, decision?.ApprovedByUserId),
+                item.CustomerName));
         }
     }
 

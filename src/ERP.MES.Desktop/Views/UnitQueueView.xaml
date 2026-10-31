@@ -35,6 +35,7 @@
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="ردیف" Binding="{Binding OrderText}" Width="50" />
                     <DataGridTextColumn Header="درخواست" Binding="{Binding RequestNo}" ElementStyle="{StaticResource LtrCell}" Width="90" />
+                    <DataGridTextColumn Header="مشتری" Binding="{Binding CustomerName}" Width="110" />
                     <DataGridTextColumn Header="آیتم" Binding="{Binding ItemNo}" ElementStyle="{StaticResource LtrCell}" Width="80" />
                     <DataGridTemplateColumn Header="نقشه" Width="64">
                                             <DataGridTemplateColumn.CellTemplate>
@@ -75,6 +76,7 @@
                       CanUserAddRows="False" CanUserDeleteRows="False" MaxHeight="220" Background="{StaticResource CardBrush}">
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="درخواست" Binding="{Binding RequestNo}" ElementStyle="{StaticResource LtrCell}" Width="90" />
+                    <DataGridTextColumn Header="مشتری" Binding="{Binding CustomerName}" Width="110" />
                     <DataGridTextColumn Header="آیتم" Binding="{Binding ItemNo}" ElementStyle="{StaticResource LtrCell}" Width="80" />
                     <DataGridTemplateColumn Header="نقشه" Width="64">
                                             <DataGridTemplateColumn.CellTemplate>

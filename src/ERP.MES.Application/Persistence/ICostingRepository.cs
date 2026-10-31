@@ -43,7 +43,7 @@ public sealed record CostBuild(ItemCostCalculation? Calculation, ItemPriceDecisi
 /// <summary>An item whose route is complete with its latest snapshot and price decision, for the costing list.</summary>
 public sealed record CostingItemSummary(
     long RequestId, string RequestNo, long ItemId, string ItemNo, string PartName, WorkType WorkType, bool ContractApproved, long AcceptedBaseUnits,
-    Stored<ItemCostCalculation>? LatestCalculation, Stored<ItemPriceDecision>? LatestDecision);
+    Stored<ItemCostCalculation>? LatestCalculation, Stored<ItemPriceDecision>? LatestDecision, string CustomerName = "");
 
 public sealed record CostingHistory(IReadOnlyList<Stored<ItemCostCalculation>> Calculations, IReadOnlyList<Stored<ItemPriceDecision>> Decisions);
 

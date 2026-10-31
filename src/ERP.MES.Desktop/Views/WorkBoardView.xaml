@@ -38,6 +38,8 @@
             <DataGrid x:Name="StageGrid" ItemsSource="{Binding Stages}" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single" HeadersVisibility="Column"
                       CanUserAddRows="False" CanUserDeleteRows="False" MaxHeight="300" Background="{StaticResource CardBrush}" SelectionChanged="OnStageChanged">
                 <DataGrid.Columns>
+                    <DataGridTextColumn Header="درخواست" Binding="{Binding RequestNo}" ElementStyle="{StaticResource LtrCell}" Width="90" />
+                    <DataGridTextColumn Header="مشتری" Binding="{Binding CustomerName}" Width="110" />
                     <DataGridTextColumn Header="آیتم" Binding="{Binding ItemText}" Width="*" />
                     <DataGridTextColumn Header="مرحله" Binding="{Binding StageText}" Width="*" />
                     <DataGridTextColumn Header="وضعیت" Binding="{Binding StatusText}" Width="120" />
