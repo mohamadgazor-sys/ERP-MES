@@ -146,5 +146,19 @@ public class ItemImportParserTests
         Assert.Contains(early.Messages, m => m.Issue == ImportIssue.DeliveryBeforeRequest);
     }
 
+    [Fact]
+    public void A_stage_title_must_be_an_active_entry_of_the_catalog_when_the_catalog_is_given()
+    {
+        var header = new[] { ItemImportTemplate.ItemNo, ItemImportTemplate.PartName, ItemImportTemplate.Quantity, ItemImportTemplate.QuantityType, ItemImportTemplate.Material, ItemImportTemplate.Weight,
+            ItemImportTemplate.StageTitle(1), ItemImportTemplate.StageMinutes(1), ItemImportTemplate.StageUnit(1) };
+        var lookups = Lookups with { StageTitles = new HashSet<string>(StringComparer.Ordinal) { "برش" } };
+
+        var known = ItemImportParser.Parse(Book(Row(1, header), Row(2, "S-1", "x", "1", "PIECE", "ST37", "1", "برش", "5", "MILL")), WorkType.Make, lookups).Rows.Single();
+        Assert.NotNull(known.Data);
+
+        var unknown = ItemImportParser.Parse(Book(Row(1, header), Row(2, "S-1", "x", "1", "PIECE", "ST37", "1", "برش۲", "5", "MILL"), Row(3, "S-2", "x", "1", "PIECE", "ST37", "1", "Cut", "5", "MILL")), WorkType.Make, lookups).Rows;
+        Assert.All(unknown, r => Assert.Contains(r.Messages, m => m.Issue == ImportIssue.StageTitleUnknown));
+    }
+
     private readonly record struct ImportRowOutcome(ParsedImportRow Row);
 }

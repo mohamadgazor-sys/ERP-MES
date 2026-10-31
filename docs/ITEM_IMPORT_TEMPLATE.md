@@ -46,3 +46,7 @@ For a REPAIR request the specification columns may be empty (a value that is giv
 - Whether the company will use this layout, or a different real workbook, is open (needs the actual workbook).
 - Revision of an item that already has a route; deleting items; more than 20 stages per item (safety limit, Decision Log #98); per-row stage quantities different from the item's.
 - Import progress and cancellation for very large files: the reader is bounded (size, expanded size, rows), and 1,000 rows import in seconds, so background processing was not added.
+
+## Stage titles
+
+A stage title in an import file must be an active entry of the stage-title catalog (page «فهرست عنوان مرحله‌ها», maintained by Planning; Decision Log #124 B4). Titles are compared exactly. A row with an unknown or retired title is rejected with the title named. A stage keeps its own copy of the title text, so retiring an entry never changes existing stages.

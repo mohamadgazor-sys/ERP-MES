@@ -31,6 +31,7 @@ public static class PageAccess
         [ShellViewModel.ClarificationsKey] = [Permission.ViewDrawingClarifications, Permission.AskDrawingClarification, Permission.AnswerDrawingClarification],
         [ShellViewModel.ItemDefinitionKey] = [Permission.DefineMakeItems, Permission.DefineRepairItemsAndEditAnyItem, Permission.ViewProductionGates],
         [ShellViewModel.ItemImportKey] = [Permission.ImportItemsFromExcel],
+        [ShellViewModel.StageTitlesKey] = [Permission.MaintainStageTitles, Permission.DefineMakeItems, Permission.DefineRepairItemsAndEditAnyItem],
         [ShellViewModel.UsersKey] = [Permission.AdministerUsers],
     };
 

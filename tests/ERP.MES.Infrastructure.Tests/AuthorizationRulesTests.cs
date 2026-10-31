@@ -91,6 +91,7 @@ public class AuthorizationRulesTests
         [Permission.OrderShortfallReplacement] = (["PLANNING"], null),
         [Permission.ViewCalendar] = (["MANAGEMENT", "PLANNING", "PRODUCTION", "PRODUCTION_MANAGER"], null),
         [Permission.ScheduleWorkers] = (["PLANNING", "PRODUCTION_MANAGER"], null),
+        [Permission.MaintainStageTitles] = (["PLANNING"], null),
     };
 
     [Fact]

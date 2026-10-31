@@ -173,6 +173,12 @@ public enum ValidationIssue
     /// <summary>A MAKE item needs a quantity type, a material and a weight.</summary>
     ItemSpecificationIncomplete,
 
+    /// <summary>The stage title is not an active entry of the stage-title catalog (Decision Log #124 B4).</summary>
+    StageTitleNotInCatalog,
+
+    /// <summary>The catalog already has this exact title.</summary>
+    StageTitleDuplicate,
+
     /// <summary>A REPAIR item needs a delivery date and a warehouse item code (Decision Log #124 B5).</summary>
     RepairFieldsMissing,
 

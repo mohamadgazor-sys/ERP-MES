@@ -173,7 +173,8 @@ public partial class App : System.Windows.Application
             new CompletionViewModel(workflow.Completion, dates, DigitStyle.Persian, CurrentUser),
             new KpiViewModel(workflow.Kpi, dates, DigitStyle.Persian, () => DateTime.UtcNow, CurrentUser),
             new WorkBoardViewModel(workflow.UnitQueue, workflow.WorkSessions, workflow.StageWork, dates, DigitStyle.Persian, () => DateTime.UtcNow, CurrentUser),
-            new UsersViewModel(_services.Accounts, workflow.Users, workflow.UnitDesignations, workflow.PlanningMaster, dates, CurrentUser));
+            new UsersViewModel(_services.Accounts, workflow.Users, workflow.UnitDesignations, workflow.PlanningMaster, dates, CurrentUser),
+            new StageTitlesViewModel(workflow.PlanningMaster, CurrentUser));
 
         _mainWindow = new MainWindow(shell, session, pages);
         _mainWindow.Show();

@@ -17,7 +17,7 @@ public class DemoMasterDataTests
     private static List<string> MasterSnapshot(TempDatabase db)
     {
         var rows = new List<string>();
-        foreach (var table in new[] { "ProductionUnits", "Machines", "MachineHourlyRates", "ShiftTemplates", "UnitShifts", "Materials", "MaterialPrices", "Operators", "UserUnitDesignations" })
+        foreach (var table in new[] { "StageTitles", "ProductionUnits", "Machines", "MachineHourlyRates", "ShiftTemplates", "UnitShifts", "Materials", "MaterialPrices", "Operators", "UserUnitDesignations" })
         {
             rows.Add("# " + table);
             rows.AddRange(db.Query("SELECT * FROM " + table + " ORDER BY 1, 2"));
@@ -65,6 +65,7 @@ public class DemoMasterDataTests
         Assert.Equal(
             new[]
             {
+                "StageTitleAdded|demo.planning", "StageTitleAdded|demo.planning", "StageTitleAdded|demo.planning", "StageTitleAdded|demo.planning", "StageTitleAdded|demo.planning", "StageTitleAdded|demo.planning", "StageTitleAdded|demo.planning",
                 "ProductionUnitAdded|demo.planning", "ProductionUnitAdded|demo.planning", "MachineAdded|demo.planning", "MachineRateChanged|demo.planning", "MachineAdded|demo.planning", "MachineRateChanged|demo.planning",
                 "ShiftTemplateAdded|demo.planning", "UnitShiftAdded|demo.planning", "UnitShiftAdded|demo.planning", "MaterialAdded|demo.warehouse", "MaterialPriceChanged|demo.warehouse",
                 "OperatorRegistered|demo.planning", "UnitDesignationAssigned|demo.planning", "OperatorMachineAssigned|demo.planning", "OperatorQualificationRecorded|demo.planning", "UnitDesignationAssigned|demo.planning", "UnitSupervisorChanged|demo.planning",
@@ -87,7 +88,7 @@ public class DemoMasterDataTests
             new EfUnitQueueRepository(db.ContextFactory), PersistenceTestData.Dates, actors, new DateTime(2026, 10, 23, 5, 0, 0, DateTimeKind.Utc)).SeedAsync(Token);
 
         Assert.Equal(0, again.Added);
-        Assert.Equal(17, again.Existing);
+        Assert.Equal(24, again.Existing);
         Assert.Equal(before, MasterSnapshot(db));
 
         await DemoDatabase.ResetAsync(db.Path, PersistenceTestData.Dates, db.NextCredentialPath(), SecurityFixture.FastPolicy, Token);

@@ -200,6 +200,8 @@ public class SqlServerPassTests
         Assert.True(defined.Succeeded, defined.Status + " " + defined.Issue);
         var itemId = defined.Value!.Value.Items.Single().Id;
         var current = (await s.Requests.GetAsync(w.Planning, requestId, Token)).Value!;
+        // Stage definition needs an active catalog title (Decision Log #124 B4).
+        Assert.True((await s.PlanningMaster.AddStageTitleAsync(w.Planning, "فرز", Token)).Succeeded);
         Assert.True((await s.ItemDefinition.DefineStageAsync(w.Planning, requestId, current.Request.Version, itemId, current.Versions.ItemVersion(itemId), new DefineStageCommand("فرز", 2m, milling, null), Token)).Succeeded);
 
         async Task<StageTarget> TargetAsync()

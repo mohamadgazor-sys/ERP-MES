@@ -50,6 +50,62 @@ public sealed class PlanningMasterService(IPlanningMasterRepository repository, 
             ratesVisible)));
     }
 
+    // ---- stage-title catalog (Decision Log #124 B4) ----
+
+    /// <summary>The catalog, for the catalog screen, the stage form and the import; any signed-in user who may read the Planning master data.</summary>
+    public async Task<Outcome<IReadOnlyList<Stored<StageTitle>>>> ListStageTitlesAsync(Principal? principal, CancellationToken cancellationToken = default)
+    {
+        if (!(await authorization.CheckAsync(principal, Permission.ViewPlanningMasterData, cancellationToken)).IsAllowed)
+        {
+            return Outcome<IReadOnlyList<Stored<StageTitle>>>.Fail(OperationStatus.NotAuthorized);
+        }
+
+        return await CustomerService.GuardAsync(async () => Outcome<IReadOnlyList<Stored<StageTitle>>>.Ok(await repository.ListStageTitlesAsync(cancellationToken)));
+    }
+
+    public async Task<bool> CanMaintainStageTitlesAsync(Principal? principal, CancellationToken cancellationToken = default) =>
+        (await authorization.CheckAsync(principal, Permission.MaintainStageTitles, cancellationToken)).IsAllowed;
+
+    public async Task<Outcome<Stored<StageTitle>>> AddStageTitleAsync(Principal? principal, string? title, CancellationToken cancellationToken = default)
+    {
+        var decision = await authorization.CheckAsync(principal, Permission.MaintainStageTitles, cancellationToken);
+        if (!decision.IsAllowed)
+        {
+            return Outcome<Stored<StageTitle>>.Fail(OperationStatus.NotAuthorized);
+        }
+
+        if (!StageTitle.IsValid(title))
+        {
+            return Outcome<Stored<StageTitle>>.Invalid(ValidationIssue.StageTitleRequired);
+        }
+
+        var now = clock.UtcNow;
+        return await CustomerService.GuardAsync(async () =>
+        {
+            if ((await repository.ListStageTitlesAsync(cancellationToken)).Any(t => string.Equals(t.Value.Title, title, StringComparison.Ordinal)))
+            {
+                return Outcome<Stored<StageTitle>>.Invalid(ValidationIssue.StageTitleDuplicate);
+            }
+
+            var entry = new StageTitle(0, title!, decision.Current!.UserId, now);
+            return Outcome<Stored<StageTitle>>.Ok(await repository.AddStageTitleAsync(entry, [Audit(decision.Current, now, AuditActions.StageTitleAdded, "StageTitle", title!, $"Stage title '{title}' added to the catalog")], cancellationToken));
+        });
+    }
+
+    public async Task<Outcome<Stored<StageTitle>>> SetStageTitleActiveAsync(Principal? principal, long titleId, long expectedVersion, bool isActive, CancellationToken cancellationToken = default)
+    {
+        var decision = await authorization.CheckAsync(principal, Permission.MaintainStageTitles, cancellationToken);
+        if (!decision.IsAllowed)
+        {
+            return Outcome<Stored<StageTitle>>.Fail(OperationStatus.NotAuthorized);
+        }
+
+        var now = clock.UtcNow;
+        return await CustomerService.GuardAsync(async () => Outcome<Stored<StageTitle>>.Ok(await repository.UpdateStageTitleAsync(
+            titleId, expectedVersion, t => t.SetActive(isActive, now),
+            [Audit(decision.Current!, now, AuditActions.StageTitleActivityChanged, "StageTitle", titleId.ToString(System.Globalization.CultureInfo.InvariantCulture), isActive ? "Stage title reactivated" : "Stage title retired")], cancellationToken)));
+    }
+
     // ---- production units ----
 
     public async Task<Outcome<Stored<ProductionUnit>>> AddUnitAsync(Principal? principal, string? code, string? name, CancellationToken cancellationToken = default)

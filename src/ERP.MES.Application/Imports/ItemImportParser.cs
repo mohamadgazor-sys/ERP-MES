@@ -74,6 +74,9 @@ public enum ImportIssue
     WarehouseCodeInvalid,
     PriorityUnknown,
     StageIncomplete,
+
+    /// <summary>The stage title is not an active entry of the stage-title catalog (Decision Log #124 B4).</summary>
+    StageTitleUnknown,
     StageGap,
     StageMinutesInvalid,
     StageUnitUnknown,
@@ -105,7 +108,8 @@ public sealed record ImportLookups(
     IReadOnlyDictionary<string, long> QuantityTypes,
     IReadOnlyDictionary<string, long> Materials,
     IReadOnlyDictionary<string, long> Units,
-    IReadOnlyDictionary<string, (long Id, long UnitId)> Machines);
+    IReadOnlyDictionary<string, (long Id, long UnitId)> Machines,
+    IReadOnlySet<string>? StageTitles = null);
 
 /// <summary>
 /// Parses the rows of the first worksheet into item definitions (Decision Log #16, #97). Pure: no database, no clock. Headers are matched by name (see <see cref="ItemImportTemplate"/>), every
@@ -455,6 +459,13 @@ public static class ItemImportParser
             if (title is null || title.Length > 200 || minutesText is null || unitCode is null)
             {
                 Error(ImportIssue.StageIncomplete, number);
+                continue;
+            }
+
+            // Only titles of the active stage-title catalog are accepted (Decision Log #124 B4); null means the caller did not supply the catalog.
+            if (lookups.StageTitles is { } catalog && !catalog.Contains(title))
+            {
+                Error(ImportIssue.StageTitleUnknown, title);
                 continue;
             }
 

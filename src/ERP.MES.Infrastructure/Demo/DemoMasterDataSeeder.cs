@@ -45,6 +45,19 @@ public sealed class DemoMasterDataSeeder(
     {
         var effectiveFrom = dates.TryParseDate("1405/01/01", out var jalali, out _) ? dates.ToGregorian(jalali) : throw new InvalidOperationException("The demonstration rate date is invalid.");
 
+        // The stage-title catalog (Decision Log #124 B4): the titles Planning uses in the demonstration, including the one the UI interaction test types.
+        var storedTitles = await planning.ListStageTitlesAsync(cancellationToken);
+        foreach (var title in new[] { "برش", "فرزکاری", "تراشکاری", "سنگ‌زنی", "مونتاژ", "کنترل نهایی", "فرزکاری آزمون رابط" })
+        {
+            var present = storedTitles.Any(t => string.Equals(t.Value.Title, title, StringComparison.Ordinal));
+            if (!present)
+            {
+                await planning.AddStageTitleAsync(new StageTitle(0, title, actors.PlanningUserId, atUtc), [Audit(actors.PlanningUserId, AuditActions.StageTitleAdded, "StageTitle", title, $"Stage title '{title}' added to the catalog (demonstration)")], cancellationToken);
+            }
+
+            Count(present);
+        }
+
         var storedUnits = await planning.ListUnitsAsync(cancellationToken);
         var units = new Dictionary<string, long>(StringComparer.Ordinal);
         foreach (var (code, name) in new[] { (MillingCode, "فرزکاری " + DemoDataSeeder.DemoNameSuffix), (TurningCode, "تراشکاری " + DemoDataSeeder.DemoNameSuffix) })

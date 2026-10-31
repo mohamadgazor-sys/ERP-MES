@@ -1513,6 +1513,44 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
                     b.ToTable("ProductionUnits", (string)null);
                 });
 
+            modelBuilder.Entity("ERP.MES.Domain.Planning.StageTitle", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("CreatedByUserId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT")
+                        .UseCollation("BINARY");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("Title")
+                        .IsUnique();
+
+                    b.ToTable("StageTitles", (string)null);
+                });
+
             modelBuilder.Entity("ERP.MES.Domain.Production.OutageEvent", b =>
                 {
                     b.Property<long>("Id")
@@ -4037,6 +4075,15 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
                 });
 
             modelBuilder.Entity("ERP.MES.Domain.Planning.ProductionUnit", b =>
+                {
+                    b.HasOne("ERP.MES.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Planning.StageTitle", b =>
                 {
                     b.HasOne("ERP.MES.Domain.Identity.User", null)
                         .WithMany()

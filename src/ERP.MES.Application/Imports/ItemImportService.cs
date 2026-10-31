@@ -311,7 +311,8 @@ public sealed class ItemImportService(
         var mats = (await materials.ListMaterialsAsync(cancellationToken)).Where(m => m.Value.IsActive).ToDictionary(m => m.Value.Code, m => m.Value.Id, StringComparer.Ordinal);
         var units = (await planning.ListUnitsAsync(cancellationToken)).Where(u => u.Value.IsActive).ToDictionary(u => u.Value.Code, u => u.Value.Id, StringComparer.Ordinal);
         var machines = (await planning.ListMachinesAsync(cancellationToken)).Where(m => m.Value.IsActive).ToDictionary(m => m.Value.Code, m => (m.Value.Id, m.Value.ProductionUnitId), StringComparer.Ordinal);
-        return new ImportLookups(types, mats, units, machines);
+        var titles = (await planning.ListStageTitlesAsync(cancellationToken)).Where(t => t.Value.IsActive).Select(t => t.Value.Title).ToHashSet(StringComparer.Ordinal);
+        return new ImportLookups(types, mats, units, machines, titles);
     }
 
     private static ImportRowPreview Classify(ParsedImportRow row, Request request, IReadOnlyList<ParsedImportRow> fileRows)

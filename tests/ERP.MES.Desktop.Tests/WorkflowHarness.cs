@@ -86,6 +86,13 @@ internal sealed class WorkflowHarness : IDisposable
         h.Warehouse = await h.UserAsync("warehouse.one", DepartmentCodes.Warehouse, cancellationToken);
         h.Manager = await h.UserAsync("manager.one", DepartmentCodes.Management, cancellationToken, RoleCodes.Manager);
         h.RequestRepository = new EfRequestRepository(factory);
+
+        // Stage definition requires an active catalog title (Decision Log #124 B4); Planning registers the titles the screens' tests use.
+        foreach (var title in new[] { "فرز", "فرزکاری", "تراشکاری", "برش", "Turning", "t", "x", "مرحله", "مرحله 1", "مرحله 2" })
+        {
+            Assert.True((await h.Workflow.PlanningMaster.AddStageTitleAsync(h.Planning, title, cancellationToken)).Succeeded);
+        }
+
         return h;
     }
 
