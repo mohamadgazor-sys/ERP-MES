@@ -45,10 +45,10 @@ public partial class ItemDefinitionView : UserControl
         var saved = false;
         await SafeAsync(async () => saved = await _viewModel.DefineItemAsync(
             ItemNoBox.Text, PartNameBox.Text, QuantityBox.Text, priority, (TypeBox.SelectedItem as Choice<long>)?.Value, (MaterialBox.SelectedItem as Choice<long>)?.Value,
-            WeightBox.Text, LengthBox.Text, DiameterBox.Text, default, (ParentBox.SelectedItem as Choice<long>)?.Value, AssemblyBox.IsChecked == true));
+            WeightBox.Text, LengthBox.Text, DiameterBox.Text, default, (ParentBox.SelectedItem as Choice<long>)?.Value, AssemblyBox.IsChecked == true, DeliveryDateBox.Text, WarehouseCodeBox.Text));
         if (saved)
         {
-            foreach (var box in new[] { ItemNoBox, PartNameBox, QuantityBox, WeightBox, LengthBox, DiameterBox })
+            foreach (var box in new[] { ItemNoBox, PartNameBox, QuantityBox, WeightBox, LengthBox, DiameterBox, DeliveryDateBox, WarehouseCodeBox })
             {
                 box.Clear();
             }

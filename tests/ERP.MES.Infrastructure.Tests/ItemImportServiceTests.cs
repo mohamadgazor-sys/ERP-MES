@@ -562,11 +562,16 @@ public class ItemImportServiceTests
     }
 
     [Fact]
-    public async Task A_repair_request_imports_rows_without_a_specification()
+    public async Task A_repair_request_imports_rows_without_a_specification_but_with_the_repair_fields()
     {
         var (w, id, _) = await ReadyWorldAsync(WorkType.Repair);
         using var disposeWorld = w;
-        var file = Writer.Write("S", [ItemImportTemplate.WorkType, ItemImportTemplate.ItemNo, ItemImportTemplate.PartName, ItemImportTemplate.Quantity], [["تعمیر", "R-1", "Shaft", "3"], ["", "R-2", "Gear", "1"]]);
+        string[] header = [ItemImportTemplate.WorkType, ItemImportTemplate.ItemNo, ItemImportTemplate.PartName, ItemImportTemplate.Quantity, ItemImportTemplate.DeliveryDate, ItemImportTemplate.WarehouseCode];
+        var incomplete = Writer.Write("S", header, [["تعمیر", "R-1", "Shaft", "3", "", ""]]);
+        var preview = await Svc(w).PreviewAsync(w.Planning, id, "r.xlsx", incomplete, Token);
+        Assert.Contains(preview.Value!.Rows.Single().Messages, m => m.Issue == ImportIssue.RepairFieldsMissing);
+
+        var file = Writer.Write("S", header, [["تعمیر", "R-1", "Shaft", "3", "1450/01/01", "WH-1"], ["", "R-2", "Gear", "1", "1450/01/02", "WH-2"]]);
 
         var result = await CommitAsync(w, id, file);
 
@@ -574,6 +579,8 @@ public class ItemImportServiceTests
         var items = (await LoadAsync(w, id)).Items;
         Assert.Equal(2, items.Count);
         Assert.All(items, i => Assert.Null(i.MaterialId));
+        Assert.All(items, i => Assert.NotNull(i.DeliveryDate));
+        Assert.Equal(["WH-1", "WH-2"], items.Select(i => i.WarehouseItemCode).Order().ToArray());
     }
 
     [Fact]

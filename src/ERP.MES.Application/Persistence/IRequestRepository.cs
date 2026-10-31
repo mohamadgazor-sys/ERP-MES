@@ -63,4 +63,10 @@ public interface IRequestRepository
     /// </summary>
     Task<VersionedRequest> UpdateRowsAsync(
         long requestId, RowVersionExpectations expected, Action<Request> change, Func<Request, IReadOnlyList<AuditLogEntry>> audit, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// The system numbers of the items, in any request, that already carry this exact warehouse item code (case-sensitive), for the duplicate warning of Decision Log #124 B5. A duplicate is
+    /// allowed; the caller only warns. The default answers "none" for repositories that cannot search across requests.
+    /// </summary>
+    Task<IReadOnlyList<string>> FindItemNosByWarehouseCodeAsync(string warehouseItemCode, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<string>>([]);
 }

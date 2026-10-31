@@ -58,6 +58,12 @@ public sealed class EfRequestRepository(IDbContextFactory<ErpMesDbContext> conte
         return request is null ? null : new Stored<Request>(request, context.GetRowVersion(request));
     }
 
+    public async Task<IReadOnlyList<string>> FindItemNosByWarehouseCodeAsync(string warehouseItemCode, CancellationToken cancellationToken = default)
+    {
+        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
+        return await context.Set<RequestItem>().AsNoTracking().Where(i => i.WarehouseItemCode == warehouseItemCode).Select(i => i.ItemNo).OrderBy(n => n).ToListAsync(cancellationToken);
+    }
+
     public async Task<bool> ExistsAsync(RequestKey key, CancellationToken cancellationToken = default)
     {
         // A number the Domain would reject (empty, or with leading/trailing white space) cannot be stored, so it does not exist.

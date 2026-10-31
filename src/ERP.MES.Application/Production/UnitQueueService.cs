@@ -537,7 +537,7 @@ public sealed class UnitQueueService(
                         : !gateOk ? QueueBlock.GateNotSatisfied
                         : stage.Status switch
                         {
-                            ItemStageStatus.Planned => stage.StageNo == 1 && item.IsAssembly && !loaded.Value.AllDescendantsRouteCompleted(item) ? QueueBlock.WaitingChildren : QueueBlock.NotReleased,
+                            ItemStageStatus.Planned => item.IsRepairIncomplete(loaded.Value.WorkType) ? QueueBlock.RepairIncomplete : stage.StageNo == 1 && item.IsAssembly && !loaded.Value.AllDescendantsRouteCompleted(item) ? QueueBlock.WaitingChildren : QueueBlock.NotReleased,
                             ItemStageStatus.WaitingPreviousQc => QueueBlock.WaitingPreviousQc,
                             ItemStageStatus.WaitingQc => QueueBlock.WaitingQc,
                             ItemStageStatus.WaitingShortfallDecision => QueueBlock.WaitingShortfallDecision,

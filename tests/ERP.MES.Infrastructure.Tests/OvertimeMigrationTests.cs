@@ -33,7 +33,7 @@ public class OvertimeMigrationTests
         Assert.Empty(db.Query("SELECT * FROM OvertimeAssignments"));
         Assert.Empty(db.Query("SELECT * FROM OvertimeLimits"));
         Assert.Empty(db.Query("PRAGMA foreign_key_check"));
-        Assert.Equal(26, db.Query("SELECT MigrationId FROM __EFMigrationsHistory").Count);
+        Assert.Equal(27, db.Query("SELECT MigrationId FROM __EFMigrationsHistory").Count);
 
         var keys = new List<string>();
         foreach (var table in new[] { "OvertimeAssignments", "OvertimeLimits" })

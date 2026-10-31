@@ -30,6 +30,7 @@ public sealed class ItemDefinitionViewModel(
     DigitStyle digitStyle,
     Func<Principal> currentUser) : ObservableObject
 {
+    private readonly ERP.MES.Domain.Calendar.JalaliDateService _dates = new(digitStyle, TimeZoneInfo.Utc);
     private readonly ObservableCollection<DefinitionRequestRow> _requests = [];
     private readonly ObservableCollection<DefinedItemRow> _items = [];
     private readonly ObservableCollection<DefinedStageRow> _stages = [];
@@ -131,7 +132,7 @@ public sealed class ItemDefinitionViewModel(
 
     public async Task<bool> DefineItemAsync(
         string? customerItemRef, string? partName, string? quantityText, Priority priority, long? quantityTypeId, long? materialId, string? weightText, string? lengthText, string? diameterText,
-        CancellationToken cancellationToken = default, long? parentItemId = null, bool isAssembly = false)
+        CancellationToken cancellationToken = default, long? parentItemId = null, bool isAssembly = false, string? deliveryDateText = null, string? warehouseItemCode = null)
     {
         if (_detail is null)
         {
@@ -157,10 +158,23 @@ public sealed class ItemDefinitionViewModel(
             return false;
         }
 
+        // REPAIR fields (Decision Log #124 B5): a Jalali delivery date and the warehouse item code; empty boxes mean "not given".
+        DateOnly? deliveryDate = null;
+        if (!string.IsNullOrWhiteSpace(deliveryDateText))
+        {
+            if (!_dates.TryParseDate(deliveryDateText, out var jalali, out var dateError))
+            {
+                Message = Messages.ForIssue(ValidationIssue.RequestDateInvalid, dateError);
+                return false;
+            }
+
+            deliveryDate = _dates.ToGregorian(jalali);
+        }
+
         var requestId = _detail.Request.Value.Id;
         var version = _detail.Request.Version;
         return await ChangeAsync(
-            () => service.DefineItemAsync(currentUser(), requestId, version, new DefineItemCommand(string.IsNullOrEmpty(customerItemRef) ? null : customerItemRef, partName, quantity, priority, quantityTypeId, materialId, weight, length, diameter, parentItemId, isAssembly), cancellationToken),
+            () => service.DefineItemAsync(currentUser(), requestId, version, new DefineItemCommand(string.IsNullOrEmpty(customerItemRef) ? null : customerItemRef, partName, quantity, priority, quantityTypeId, materialId, weight, length, diameter, parentItemId, isAssembly, deliveryDate, string.IsNullOrEmpty(warehouseItemCode) ? null : warehouseItemCode), cancellationToken),
             "آیتم تعریف شد.");
     }
 
@@ -255,7 +269,7 @@ public sealed class ItemDefinitionViewModel(
 
             saved = true;
             await ReloadAsync(requestId, CancellationToken.None, itemId);
-            Message = success;
+            Message = outcome.WarningList.Count == 0 ? success : success + " هشدار: این کد کالای انبار برای آیتم‌های دیگر هم ثبت شده است: " + string.Join("، ", outcome.WarningList) + ".";
         });
         return saved;
     }
@@ -348,6 +362,16 @@ public sealed class ItemDefinitionViewModel(
         if (item.DiameterMm is { } diameter)
         {
             parts.Add("قطر: " + Digits(diameter.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)) + " mm");
+        }
+
+        if (item.DeliveryDate is { } delivery)
+        {
+            parts.Add("تحویل: " + _dates.FormatDate(delivery));
+        }
+
+        if (item.WarehouseItemCode is { } warehouseCode)
+        {
+            parts.Add("کد انبار: \u200E" + warehouseCode + "\u200E");
         }
 
         return parts.Count == 0 ? "—" : string.Join("؛ ", parts);

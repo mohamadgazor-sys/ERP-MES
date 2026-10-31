@@ -173,6 +173,15 @@ public enum ValidationIssue
     /// <summary>A MAKE item needs a quantity type, a material and a weight.</summary>
     ItemSpecificationIncomplete,
 
+    /// <summary>A REPAIR item needs a delivery date and a warehouse item code (Decision Log #124 B5).</summary>
+    RepairFieldsMissing,
+
+    /// <summary>The warehouse item code is empty, longer than 40 characters or has surrounding white space.</summary>
+    WarehouseCodeInvalid,
+
+    /// <summary>The item delivery date is before the request date.</summary>
+    DeliveryBeforeRequest,
+
     /// <summary>The weight must be greater than zero, at most 99,999,999.9999 kg and have at most 4 decimals.</summary>
     WeightInvalid,
 

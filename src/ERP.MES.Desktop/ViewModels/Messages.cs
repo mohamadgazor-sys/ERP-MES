@@ -116,6 +116,9 @@ public static class Messages
         ValidationIssue.ItemGateNotSatisfied => "هنوز دروازه‌ها برقرار نیست؛ تعریف آیتم پس از تأیید مدیریت، نتیجهٔ پذیرفتهٔ نقشه‌کشی، تصمیم قرارداد (برای ساخت)، پاسخ استعلام‌ها و بسته شدن پرسش‌ها ممکن است.",
         ValidationIssue.ItemSpecificationIncomplete => "برای آیتم ساخت، نوع تعداد، ماده و وزن (کیلوگرم برای هر واحد پایه) الزامی است.",
         ValidationIssue.WeightInvalid => "وزن باید بزرگ‌تر از صفر، حداکثر ۹۹٬۹۹۹٬۹۹۹٫۹۹۹۹ کیلوگرم و با حداکثر ۴ رقم اعشار باشد.",
+        ValidationIssue.RepairFieldsMissing => "برای آیتم تعمیر، تاریخ تحویل و کد کالای انبار الزامی است.",
+        ValidationIssue.WarehouseCodeInvalid => "کد کالای انبار باید ۱ تا ۴۰ نویسه و بدون فاصلهٔ ابتدا یا انتها باشد.",
+        ValidationIssue.DeliveryBeforeRequest => "تاریخ تحویل آیتم نمی‌تواند پیش از تاریخ درخواست باشد.",
         ValidationIssue.DimensionInvalid => "طول و قطر باید بزرگ‌تر از صفر (میلی‌متر)، حداکثر ۹۹٬۹۹۹٬۹۹۹٫۹۹ و با حداکثر ۲ رقم اعشار باشد.",
         ValidationIssue.QuantityTypeInvalid => "نوع تعداد انتخاب‌شده وجود ندارد یا فعال نیست.",
         ValidationIssue.ItemNotFound => "آیتم انتخاب‌شده در این درخواست وجود ندارد.",
@@ -332,6 +335,8 @@ public static class Messages
 
     public static string ImportFieldText(ERP.MES.Application.Imports.ImportField field) => field switch
     {
+        ERP.MES.Application.Imports.ImportField.DeliveryDate => "تاریخ تحویل آیتم",
+        ERP.MES.Application.Imports.ImportField.WarehouseItemCode => "کد کالای انبار",
         ERP.MES.Application.Imports.ImportField.PartName => "نام قطعه",
         ERP.MES.Application.Imports.ImportField.Quantity => "تعداد",
         ERP.MES.Application.Imports.ImportField.Priority => "اولویت",
@@ -379,6 +384,10 @@ public static class Messages
             ERP.MES.Application.Imports.ImportIssue.MaterialUnknown => "کد ماده وجود ندارد یا فعال نیست" + detail + ".",
             ERP.MES.Application.Imports.ImportIssue.WeightMissing => "وزن برای آیتم ساخت الزامی است.",
             ERP.MES.Application.Imports.ImportIssue.WeightInvalid => "وزن نامعتبر است (بزرگ‌تر از صفر، حداکثر ۴ رقم اعشار)" + detail + ".",
+            ERP.MES.Application.Imports.ImportIssue.RepairFieldsMissing => "برای آیتم تعمیر، تاریخ تحویل و کد کالای انبار الزامی است.",
+            ERP.MES.Application.Imports.ImportIssue.DeliveryDateInvalid => "تاریخ تحویل آیتم شمسی معتبر نیست" + detail + ".",
+            ERP.MES.Application.Imports.ImportIssue.DeliveryBeforeRequest => "تاریخ تحویل آیتم پیش از تاریخ درخواست است" + detail + ".",
+            ERP.MES.Application.Imports.ImportIssue.WarehouseCodeInvalid => "کد کالای انبار باید حداکثر ۴۰ نویسه و بدون فاصلهٔ ابتدا یا انتها باشد" + detail + ".",
             ERP.MES.Application.Imports.ImportIssue.DimensionInvalid => "طول یا قطر نامعتبر است (بزرگ‌تر از صفر، حداکثر ۲ رقم اعشار)" + detail + ".",
             ERP.MES.Application.Imports.ImportIssue.PriorityUnknown => "اولویت باید «عادی»، «فوری» یا «خیلی فوری» باشد" + detail + ".",
             ERP.MES.Application.Imports.ImportIssue.StageIncomplete => "مرحلهٔ " + message.Detail + ": عنوان، دقیقه و کد واحد هر سه لازم است.",
@@ -469,6 +478,7 @@ public static class Messages
         ERP.MES.Application.Production.QueueBlock.StageStopped => "متوقف شده",
         ERP.MES.Application.Production.QueueBlock.RequestClosed => "درخواست لغو یا بسته شده است",
         ERP.MES.Application.Production.QueueBlock.GateNotSatisfied => "شرط‌های آزادسازی تولید برقرار نیست",
+        ERP.MES.Application.Production.QueueBlock.RepairIncomplete => "آیتم تعمیر ناقص است: تاریخ تحویل یا کد کالای انبار ثبت نشده",
         ERP.MES.Application.Production.QueueBlock.WaitingChildren => "منتظر پایان مسیر و تأیید کنترل کیفیت همهٔ زیرمجموعه‌ها",
         ERP.MES.Application.Production.QueueBlock.NotReleased => "هنوز توسط برنامه‌ریزی آزاد نشده است",
         ERP.MES.Application.Production.QueueBlock.WaitingPreviousQc => "منتظر تأیید کنترل کیفیت مرحلهٔ قبل",

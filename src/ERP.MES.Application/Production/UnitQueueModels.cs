@@ -40,6 +40,9 @@ public enum QueueBlock
 
     /// <summary>The first stage of an assembly waits until every child and descendant has finished its route with every QC approval (Decision Log #121 Q5).</summary>
     WaitingChildren,
+
+    /// <summary>A REPAIR item lacks its delivery date or warehouse item code and cannot be released until completed (Decision Log #124 B5).</summary>
+    RepairIncomplete,
 }
 
 /// <summary>

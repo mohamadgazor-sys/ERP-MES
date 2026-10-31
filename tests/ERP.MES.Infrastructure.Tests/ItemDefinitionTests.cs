@@ -172,7 +172,7 @@ public class ItemDefinitionTests
     private static DefineItemCommand Make(long typeId, long materialId, string itemNo = "1.10", Priority priority = Priority.Normal) =>
         new(itemNo, "Ring A", 10m, priority, typeId, materialId, 1.2345m, 6000m, 30m);
 
-    private static DefineItemCommand Repair(string itemNo = "2.10", Priority priority = Priority.Normal) => new(itemNo, "Shaft B", 4m, priority, null, null, null, null, null);
+    private static DefineItemCommand Repair(string itemNo = "2.10", Priority priority = Priority.Normal) => new(itemNo, "Shaft B", 4m, priority, null, null, null, null, null, null, false, new DateOnly(2100, 1, 1), "WH-" + itemNo);
 
     private static long Count(World w, string tableAndWhere) => long.Parse(w.Fixture.Db.Query("SELECT COUNT(*) FROM " + tableAndWhere).Single(), System.Globalization.CultureInfo.InvariantCulture);
 
@@ -630,5 +630,87 @@ public class ItemDefinitionTests
         var line = (await w.Services.Inquiries.AddLineAsync(w.Drawing, draft.Value.Id, draft.Version, new InquiryLineInput("ST37", "میلگرد", 30m, 6000m, null, 5m, kg, null, null), Token)).Value!;
         Assert.True((await w.Services.Inquiries.SendAsync(w.Drawing, draft.Value.Id, line.Version, Token)).Succeeded);
         Assert.Equal(ValidationIssue.ItemGateNotSatisfied, (await Define("سوم")).Issue);
+    }
+
+    [Fact]
+    public async Task A_repair_item_needs_a_delivery_date_not_before_the_request_date_and_a_warehouse_code_of_one_to_forty_characters()
+    {
+        using var w = await StartAsync();
+        var (id, version) = await ReadyAsync(w, WorkType.Repair);
+
+        Assert.Equal(ValidationIssue.RepairFieldsMissing, (await w.Items.DefineItemAsync(w.Planning, id, version, Repair("R-1") with { DeliveryDate = null }, Token)).Issue);
+        Assert.Equal(ValidationIssue.RepairFieldsMissing, (await w.Items.DefineItemAsync(w.Planning, id, version, Repair("R-1") with { WarehouseItemCode = null }, Token)).Issue);
+        Assert.Equal(ValidationIssue.DeliveryBeforeRequest, (await w.Items.DefineItemAsync(w.Planning, id, version, Repair("R-1") with { DeliveryDate = new DateOnly(2000, 1, 1) }, Token)).Issue);
+        Assert.Equal(ValidationIssue.WarehouseCodeInvalid, (await w.Items.DefineItemAsync(w.Planning, id, version, Repair("R-1") with { WarehouseItemCode = new string('W', 41) }, Token)).Issue);
+        Assert.Equal(ValidationIssue.WarehouseCodeInvalid, (await w.Items.DefineItemAsync(w.Planning, id, version, Repair("R-1") with { WarehouseItemCode = " W1" }, Token)).Issue);
+        Assert.Equal(ValidationIssue.WarehouseCodeInvalid, (await w.Items.DefineItemAsync(w.Planning, id, version, Repair("R-1") with { WarehouseItemCode = string.Empty }, Token)).Issue);
+        Assert.Equal(0, w.Fixture.Db.Query("SELECT Id FROM RequestItems").Count);
+
+        var ok = await w.Items.DefineItemAsync(w.Planning, id, version, Repair("R-1") with { WarehouseItemCode = new string('W', 40) }, Token);
+        Assert.True(ok.Succeeded, ok.Status + " " + ok.Issue);
+        var item = (await LoadAsync(w, id)).Items.Single();
+        Assert.Equal(new DateOnly(2100, 1, 1), item.DeliveryDate);
+        Assert.Equal(new string('W', 40), item.WarehouseItemCode);
+    }
+
+    [Fact]
+    public async Task A_make_item_needs_no_repair_fields_but_a_given_delivery_date_is_checked()
+    {
+        using var w = await StartAsync();
+        var (id, version) = await ReadyAsync(w);
+        var (piece, _) = await TypesAsync(w);
+        var material = await MaterialAsync(w);
+        var make = new DefineItemCommand("M-1", "Ring", 2m, Priority.Normal, piece, material, 1m, null, null);
+
+        Assert.Equal(ValidationIssue.DeliveryBeforeRequest, (await w.Items.DefineItemAsync(w.Planning, id, version, make with { DeliveryDate = new DateOnly(2000, 1, 1) }, Token)).Issue);
+        var ok = await w.Items.DefineItemAsync(w.Planning, id, version, make, Token);
+        Assert.True(ok.Succeeded, ok.Status + " " + ok.Issue);
+        Assert.Null((await LoadAsync(w, id)).Items.Single().WarehouseItemCode);
+    }
+
+    [Fact]
+    public async Task A_duplicate_warehouse_code_is_allowed_and_names_the_other_items_in_a_warning()
+    {
+        using var w = await StartAsync();
+        var first = await ReadyAsync(w, WorkType.Repair, "W-1");
+        var second = await ReadyAsync(w, WorkType.Repair, "W-2");
+
+        var one = await w.Items.DefineItemAsync(w.Planning, first.Id, first.Version, Repair("A") with { WarehouseItemCode = "SHARED-1" }, Token);
+        Assert.True(one.Succeeded);
+        Assert.Empty(one.WarningList);
+
+        var two = await w.Items.DefineItemAsync(w.Planning, second.Id, second.Version, Repair("B") with { WarehouseItemCode = "SHARED-1" }, Token);
+        Assert.True(two.Succeeded, two.Status + " " + two.Issue);
+        Assert.Equal(["W-1-001"], two.WarningList);
+
+        var different = await w.Items.DefineItemAsync(w.Planning, second.Id, two.Value!.Version, Repair("C") with { WarehouseItemCode = "shared-1" }, Token);
+        Assert.Empty(different.WarningList);
+    }
+
+    [Fact]
+    public async Task An_existing_repair_item_without_its_fields_stays_visible_but_cannot_be_released()
+    {
+        using var w = await StartAsync();
+        var (id, version) = await ReadyAsync(w, WorkType.Repair);
+        var item = await w.Items.DefineItemAsync(w.Planning, id, version, Repair("A"), Token);
+        var itemId = item.Value!.Value.Items.Single().Id;
+        var unit = (await w.Services.PlanningMaster.AddUnitAsync(w.Admin, "MILLING", "فرزکاری", Token)).Value!;
+        var current = (await w.Services.Requests.GetAsync(w.Planning, id, Token)).Value!;
+        Assert.True((await w.Items.DefineStageAsync(w.Planning, id, current.Request.Version, itemId, current.Versions.ItemVersion(itemId), new DefineStageCommand("اول", 2m, unit.Value.Id, null), Token)).Succeeded);
+
+        async Task<StageTarget> Target()
+        {
+            var c = (await w.Services.Requests.GetAsync(w.Planning, id, Token)).Value!;
+            return new StageTarget(id, itemId, 1, c.Request.Version, c.Versions.ItemVersion(itemId), c.Versions.Stages.Where(s => s.Key.ItemId == itemId).ToDictionary(s => s.Key.StageNo, s => s.Value));
+        }
+
+        // An item from before the rule: its delivery date is missing. It is still listed, but its release is refused with the reason.
+        w.Fixture.Db.Execute("UPDATE RequestItems SET DeliveryDate = NULL");
+        Assert.Single((await LoadAsync(w, id)).Items);
+        var refused = await w.Services.StageWork.PerformAsync(w.Planning, StageAction.Release, await Target(), Token);
+        Assert.Equal(ValidationIssue.RepairFieldsMissing, refused.Issue);
+
+        w.Fixture.Db.Execute("UPDATE RequestItems SET DeliveryDate = '2100-01-01'");
+        Assert.NotEqual(ValidationIssue.RepairFieldsMissing, (await w.Services.StageWork.PerformAsync(w.Planning, StageAction.Release, await Target(), Token)).Issue);
     }
 }

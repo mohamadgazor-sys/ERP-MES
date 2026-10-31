@@ -77,6 +77,8 @@ public sealed class RequestItem
         WeightKgPerBaseUnit = spec.WeightKgPerBaseUnit;
         LengthMm = spec.LengthMm;
         DiameterMm = spec.DiameterMm;
+        DeliveryDate = spec.DeliveryDate;
+        WarehouseItemCode = spec.WarehouseItemCode;
         Id = id;
         ItemNo = itemNo;
         ItemSequence = itemSequence;
@@ -161,6 +163,15 @@ public sealed class RequestItem
     /// <summary>Millimetres (decimal 10,2).</summary>
     public decimal? DiameterMm { get; private set; }
 
+    /// <summary>The date the repaired item is to be delivered (REPAIR items; on or after the request date; Decision Log #124 B5).</summary>
+    public DateOnly? DeliveryDate { get; private set; }
+
+    /// <summary>The warehouse's own code of the item (REPAIR items; at most 40 characters). A duplicate is a warning, not an error (Decision Log #124 B5).</summary>
+    public string? WarehouseItemCode { get; private set; }
+
+    /// <summary>True when a REPAIR item still lacks its delivery date or warehouse code: it stays visible but cannot be released until completed (Decision Log #124 B5).</summary>
+    public bool IsRepairIncomplete(WorkType workType) => workType == WorkType.Repair && (DeliveryDate is null || WarehouseItemCode is null);
+
     /// <summary>Planning-controlled priority. Its storage location (item or stage) is still pending confirmation (section 18); the item field of section 5.1 is used and stages carry none.</summary>
     public Priority Priority { get; private set; }
 
@@ -208,7 +219,8 @@ public sealed class RequestItem
 
         var utc = Customer.RequireUtc(changedAtUtc, nameof(changedAtUtc));
         var changed = partName != PartName || requestedQuantity != RequestedQuantity || priority != Priority || specification.QuantityTypeId != QuantityTypeId
-            || specification.MaterialId != MaterialId || specification.WeightKgPerBaseUnit != WeightKgPerBaseUnit || specification.LengthMm != LengthMm || specification.DiameterMm != DiameterMm;
+            || specification.MaterialId != MaterialId || specification.WeightKgPerBaseUnit != WeightKgPerBaseUnit || specification.LengthMm != LengthMm || specification.DiameterMm != DiameterMm
+            || specification.DeliveryDate != DeliveryDate || specification.WarehouseItemCode != WarehouseItemCode;
         PartName = partName;
         RequestedQuantity = requestedQuantity;
         Priority = priority;
@@ -218,6 +230,8 @@ public sealed class RequestItem
         WeightKgPerBaseUnit = specification.WeightKgPerBaseUnit;
         LengthMm = specification.LengthMm;
         DiameterMm = specification.DiameterMm;
+        DeliveryDate = specification.DeliveryDate;
+        WarehouseItemCode = specification.WarehouseItemCode;
         if (changed)
         {
             UpdatedAtUtc = utc;
