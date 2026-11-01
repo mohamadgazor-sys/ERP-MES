@@ -30,7 +30,7 @@ public static class PageAccess
         [ShellViewModel.InquiriesKey] = [Permission.ViewRawMaterialInquiries, Permission.ManageRawMaterialInquiries, Permission.AnswerRawMaterialInquiry],
         [ShellViewModel.ClarificationsKey] = [Permission.ViewDrawingClarifications, Permission.AskDrawingClarification, Permission.AnswerDrawingClarification],
         [ShellViewModel.ItemDefinitionKey] = [Permission.DefineMakeItems, Permission.DefineRepairItemsAndEditAnyItem, Permission.ViewProductionGates],
-        [ShellViewModel.ItemImportKey] = [Permission.ImportItemsFromExcel],
+        [ShellViewModel.ItemImportKey] = [Permission.ImportItemsFromExcel, Permission.ImportTechnicalItems],
         [ShellViewModel.ItemDrawingsKey] = [Permission.ViewItemDrawings],
         [ShellViewModel.StageTitlesKey] = [Permission.MaintainStageTitles, Permission.DefineMakeItems, Permission.DefineRepairItemsAndEditAnyItem],
         [ShellViewModel.UsersKey] = [Permission.AdministerUsers],

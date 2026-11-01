@@ -100,19 +100,36 @@ public sealed class ItemImportService(
     /// <summary>Largest accepted file (20 MiB, like the PDF default).</summary>
     public const long MaxFileBytes = 20L * 1024 * 1024;
 
+    private static readonly Permission[] ImportPermissions = [Permission.ImportItemsFromExcel, Permission.ImportTechnicalItems];
+
+    /// <summary>
+    /// Who is importing (Decision Log #125 Q15): Planning imports everything once the definition gates hold; Drawing imports the technical columns only, while the request is under Drawing review.
+    /// Null when the user may do neither.
+    /// </summary>
+    private async Task<(Principal User, bool TechnicalOnly)?> ResolveScopeAsync(Principal? principal, CancellationToken cancellationToken)
+    {
+        var set = await authorization.EvaluateAsync(principal, ImportPermissions, cancellationToken);
+        if (set.Current is null)
+        {
+            return null;
+        }
+
+        return set.Has(Permission.ImportItemsFromExcel) ? (set.Current, false) : set.Has(Permission.ImportTechnicalItems) ? (set.Current, true) : null;
+    }
+
     public async Task<bool> CanImportAsync(Principal? principal, CancellationToken cancellationToken = default) =>
-        (await authorization.CheckAsync(principal, Permission.ImportItemsFromExcel, cancellationToken)).IsAllowed;
+        await ResolveScopeAsync(principal, cancellationToken) is not null;
 
     public async Task<Outcome<ImportPreview>> PreviewAsync(Principal? principal, long requestId, string? fileName, byte[]? content, CancellationToken cancellationToken = default)
     {
-        if (!(await authorization.CheckAsync(principal, Permission.ImportItemsFromExcel, cancellationToken)).IsAllowed)
+        if (await ResolveScopeAsync(principal, cancellationToken) is not { } scope)
         {
             return Outcome<ImportPreview>.Fail(OperationStatus.NotAuthorized);
         }
 
         return await CustomerService.GuardAsync(async () =>
         {
-            var loaded = await LoadAsync(requestId, fileName, content, cancellationToken);
+            var loaded = await LoadAsync(requestId, fileName, content, scope.TechnicalOnly, cancellationToken);
             return loaded.Failure is { } failure ? failure.As<ImportPreview>() : Outcome<ImportPreview>.Ok(loaded.Preview!);
         });
     }
@@ -128,19 +145,19 @@ public sealed class ItemImportService(
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(decisions);
-        var decision = await authorization.CheckAsync(principal, Permission.ImportItemsFromExcel, cancellationToken);
-        if (!decision.IsAllowed)
+        if (await ResolveScopeAsync(principal, cancellationToken) is not { } scope)
         {
             return Outcome<ImportCommitResult>.Fail(OperationStatus.NotAuthorized);
         }
 
-        var user = decision.Current!;
+        var user = scope.User;
+        var technicalOnly = scope.TechnicalOnly;
         var now = clock.UtcNow;
         try
         {
             return await CustomerService.GuardAsync(async () =>
             {
-                var loaded = await LoadAsync(requestId, fileName, content, cancellationToken);
+                var loaded = await LoadAsync(requestId, fileName, content, technicalOnly, cancellationToken);
                 if (loaded.Failure is { } failure)
                 {
                     return failure.As<ImportCommitResult>();
@@ -224,7 +241,9 @@ public sealed class ItemImportService(
                             }
                             else if (outcome == ItemImportOutcome.Updated)
                             {
-                                request.ReviseItem(rowData!.ItemNo!, rowData.PartName, rowData.Quantity, rowData.Priority, WithBaseUnits(rowData.Specification), now);
+                                // A Drawing import never changes Planning's priority (Decision Log #125 Q15).
+                                var priority = technicalOnly ? request.FindByCustomerItemRef(rowData!.ItemNo)!.Priority : rowData!.Priority;
+                                request.ReviseItem(rowData.ItemNo!, rowData.PartName, rowData.Quantity, priority, WithBaseUnits(rowData.Specification), now);
                             }
                         }
                     },
@@ -269,7 +288,7 @@ public sealed class ItemImportService(
         public Outcome<T> As<T>() => Status == OperationStatus.ValidationFailed ? Outcome<T>.Invalid(Issue) : Outcome<T>.Fail(Status);
     }
 
-    private async Task<Loaded> LoadAsync(long requestId, string? fileName, byte[]? content, CancellationToken cancellationToken)
+    private async Task<Loaded> LoadAsync(long requestId, string? fileName, byte[]? content, bool technicalOnly, CancellationToken cancellationToken)
     {
         var current = await requests.FindAsync(requestId, cancellationToken);
         if (current is null)
@@ -292,15 +311,26 @@ public sealed class ItemImportService(
             return new Loaded(null, null, new Failed(OperationStatus.ValidationFailed, ValidationIssue.RequestClosedForItems));
         }
 
-        var gate = await gates.EvaluateAsync(requestId, cancellationToken);
-        if (gate is null || !gate.DefinitionAllowed)
+        if (technicalOnly)
         {
-            return new Loaded(null, null, new Failed(OperationStatus.ValidationFailed, ValidationIssue.ItemGateNotSatisfied));
+            // Drawing works before the Drawing result, the contract and the inquiries exist: only the review status matters (Decision Log #125 Q15). Stage definition and release keep all the gates.
+            if (current.Value.Status != RequestStatus.UnderDrawingReview)
+            {
+                return new Loaded(null, null, new Failed(OperationStatus.ValidationFailed, ValidationIssue.TechnicalImportStatus));
+            }
+        }
+        else
+        {
+            var gate = await gates.EvaluateAsync(requestId, cancellationToken);
+            if (gate is null || !gate.DefinitionAllowed)
+            {
+                return new Loaded(null, null, new Failed(OperationStatus.ValidationFailed, ValidationIssue.ItemGateNotSatisfied));
+            }
         }
 
         var lookups = await BuildLookupsAsync(cancellationToken);
-        var parsed = ItemImportParser.Parse(reader.Read(content), current.Value.WorkType, lookups, current.Value.RequestDate);
-        var rows = parsed.Rows.Select(r => Classify(r, current.Value, parsed.Rows)).ToList();
+        var parsed = ItemImportParser.Parse(reader.Read(content), current.Value.WorkType, lookups, current.Value.RequestDate, technicalOnly);
+        var rows = parsed.Rows.Select(r => Classify(r, current.Value, parsed.Rows, technicalOnly)).ToList();
         var preview = new ImportPreview(fileName.Trim(), DocumentHash.Sha256Hex(content), current.Version, parsed.FileMessages, rows);
         return new Loaded(preview, parsed, null);
     }
@@ -315,7 +345,7 @@ public sealed class ItemImportService(
         return new ImportLookups(types, mats, units, machines, titles);
     }
 
-    private static ImportRowPreview Classify(ParsedImportRow row, Request request, IReadOnlyList<ParsedImportRow> fileRows)
+    private static ImportRowPreview Classify(ParsedImportRow row, Request request, IReadOnlyList<ParsedImportRow> fileRows, bool technicalOnly)
     {
         if (row.Data is not { } data)
         {
@@ -346,7 +376,11 @@ public sealed class ItemImportService(
 
         Compare(ImportField.PartName, existing.PartName, data.PartName);
         Compare(ImportField.Quantity, existing.RequestedQuantity, data.Quantity);
-        Compare(ImportField.Priority, existing.Priority, data.Priority);
+        if (!technicalOnly)
+        {
+            Compare(ImportField.Priority, existing.Priority, data.Priority);
+        }
+
         Compare(ImportField.QuantityType, existing.QuantityTypeId, data.Specification.QuantityTypeId);
         Compare(ImportField.Material, existing.MaterialId, data.Specification.MaterialId);
         Compare(ImportField.Weight, existing.WeightKgPerBaseUnit, data.Specification.WeightKgPerBaseUnit);

@@ -176,6 +176,9 @@ public enum ValidationIssue
     /// <summary>The item the drawing belongs to does not exist.</summary>
     DrawingItemNotFound,
 
+    /// <summary>Drawing may import items only while the request is under Drawing review (Decision Log #125 Q15).</summary>
+    TechnicalImportStatus,
+
     /// <summary>The stage title is not an active entry of the stage-title catalog (Decision Log #124 B4).</summary>
     StageTitleNotInCatalog,
 

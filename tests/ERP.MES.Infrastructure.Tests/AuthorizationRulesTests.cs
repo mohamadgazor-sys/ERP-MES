@@ -93,6 +93,7 @@ public class AuthorizationRulesTests
         [Permission.ScheduleWorkers] = (["PLANNING", "PRODUCTION_MANAGER"], null),
         [Permission.MaintainStageTitles] = (["PLANNING"], null),
         [Permission.ManageItemDrawings] = (["DRAWING"], null),
+        [Permission.ImportTechnicalItems] = (["DRAWING"], null),
         [Permission.ViewItemDrawings] = ([], null),
     };
 

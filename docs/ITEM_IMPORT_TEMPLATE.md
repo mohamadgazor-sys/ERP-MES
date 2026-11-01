@@ -50,3 +50,9 @@ For a REPAIR request the specification columns may be empty (a value that is giv
 ## Stage titles
 
 A stage title in an import file must be an active entry of the stage-title catalog (page «فهرست عنوان مرحله‌ها», maintained by Planning; Decision Log #124 B4). Titles are compared exactly. A row with an unknown or retired title is rejected with the title named. A stage keeps its own copy of the title text, so retiring an entry never changes existing stages.
+
+## Who imports, and when (Decision Log #125 Q15)
+
+* **Planning** imports every column once the definition gates hold (request returned from Drawing with an accepted outcome, contract and inquiry gates).
+* **Drawing** imports with the same template, but only while the request is under Drawing review, and only the technical columns: customer reference, part name, quantity, quantity type, material, weight, length, diameter, work type, the REPAIR fields, parent reference and assembly flag. A Drawing file in which the priority or any stage, title, unit or machine column is filled is rejected row by row. A Drawing re-import never changes the priority Planning set.
+* Items created by Drawing gate nothing by themselves: stage definition and release still need the Drawing result, the contract and the inquiry/clarification gates.
