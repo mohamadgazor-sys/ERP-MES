@@ -2233,7 +2233,7 @@ Append one dated entry after every substantial session. Do not replace prior ent
 - Owner to confirm the overtime-inside-regular-time rule (#127 point 5).
 - Operator availability on a standing Friday works through the shift's worker schedule like any shift (operators are planned into the Friday shift); no automatic "everyone is available" rule was added.
 - Not verified: real Windows 10/11 client, a physically disconnected computer, screen sizes 1366x768 at 125% and 1920x1080 at 100% (the wrapping buttons and minimum widths are built and the WPF project compiles, but no screenshot comparison was made), Persian tooltip wording read by a native speaker. Windows CI proves that the application builds and that the UI smoke walk opens every page of ten accounts.
-- The 54 tooltips-per-button texts, actor-history columns and customer columns were checked by compile and view-model tests only.
+- The tooltip texts (164 added, one per button), the actor-history columns and the customer columns were checked by compile, view-model tests and the Windows UI smoke walk only; a native speaker has not read them.
 - The company's SQL Server 2008 R2 system was never touched or contacted.
 
 ### Commands/tests actually run and results
