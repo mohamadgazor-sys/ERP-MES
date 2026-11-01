@@ -3501,6 +3501,9 @@ namespace ERP.MES.Infrastructure.SqlServer.Migrations
                     b.Property<long>("ProductionUnitId")
                         .HasColumnType("bigint");
 
+                    b.Property<int?>("RegularDays")
+                        .HasColumnType("int");
+
                     b.Property<long>("ShiftTemplateId")
                         .HasColumnType("bigint");
 
