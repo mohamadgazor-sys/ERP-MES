@@ -11,7 +11,7 @@
             <TextBlock TextWrapping="Wrap" Foreground="{StaticResource MutedTextBrush}" Margin="0,0,0,8"
                        Text="واحد اندازه‌گیری (مثل کیلوگرم، میلی‌متر، عدد) با «نوع مقدار» (قطعه، جفت، ست) یکی نیست. تعریف‌ها را فقط کنترل کیفیت تغییر می‌دهد؛ همهٔ کاربران می‌توانند آن‌ها را ببینند. هیچ تعریفی حذف نمی‌شود، فقط غیرفعال می‌شود." />
             <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-                <Button Content="بارگذاری مجدد" Padding="10,3" Click="OnReloadClick" />
+                <Button Content="بارگذاری مجدد" Padding="10,3" Click="OnReloadClick" ToolTip="فهرست را دوباره از پایگاه داده می‌خواند. چیزی ذخیره یا حذف نمی‌شود." />
                 <TextBlock Text="در حال بارگذاری…" Margin="16,0,0,0" VerticalAlignment="Center" Foreground="{StaticResource MutedTextBrush}"
                            Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibility}}" />
             </StackPanel>
@@ -21,7 +21,7 @@
             <DataGrid ItemsSource="{Binding Units}" SelectedItem="{Binding SelectedUnit, Mode=TwoWay}" AutoGenerateColumns="False" IsReadOnly="True"
                       SelectionMode="Single" HeadersVisibility="Column" CanUserAddRows="False" CanUserDeleteRows="False" MaxHeight="170" Background="{StaticResource CardBrush}">
                 <DataGrid.Columns>
-                    <DataGridTextColumn Header="کد" Binding="{Binding Code}" Width="100" />
+                    <DataGridTextColumn Header="کد" Binding="{Binding Code}" ElementStyle="{StaticResource LtrCell}" Width="100" />
                     <DataGridTextColumn Header="نام" Binding="{Binding Name}" Width="*" />
                     <DataGridTextColumn Header="نوع" Binding="{Binding KindText}" Width="100" />
                     <DataGridTextColumn Header="وضعیت" Binding="{Binding StatusText}" Width="90" />
@@ -35,10 +35,10 @@
                         <StackPanel Margin="0,0,12,0"><TextBlock Text="نوع" /><ComboBox x:Name="UnitKindBox" ItemsSource="{Binding Kinds}" DisplayMemberPath="Text" Width="120" SelectedIndex="0" /></StackPanel>
                     </WrapPanel>
                     <WrapPanel Margin="0,8,0,0">
-                        <Button Content="افزودن واحد" Padding="12,5" Margin="0,0,8,0" Click="OnAddUnitClick" IsEnabled="{Binding CanMaintain}" />
-                        <Button Content="تغییر نام انتخاب‌شده (از کادر نام)" Padding="12,5" Margin="0,0,8,0" Click="OnRenameUnitClick" IsEnabled="{Binding CanMaintain}" />
-                        <Button Content="غیرفعال کردن" Padding="12,5" Margin="0,0,8,0" Click="OnDeactivateUnitClick" IsEnabled="{Binding CanMaintain}" />
-                        <Button Content="فعال کردن" Padding="12,5" Click="OnActivateUnitClick" IsEnabled="{Binding CanMaintain}" />
+                        <Button Content="افزودن واحد" Padding="12,5" Margin="0,0,8,0" Click="OnAddUnitClick" IsEnabled="{Binding CanMaintain}" ToolTip="واحد جدید را با کد و نام واردشده ثبت می‌کند. کد بعداً تغییر نمی‌کند." />
+                        <Button Content="تغییر نام انتخاب‌شده (از کادر نام)" Padding="12,5" Margin="0,0,8,0" Click="OnRenameUnitClick" IsEnabled="{Binding CanMaintain}" ToolTip="نام مورد انتخاب‌شده را با متن کادر نام عوض می‌کند؛ کد تغییر نمی‌کند." />
+                        <Button Content="غیرفعال کردن" Padding="12,5" Margin="0,0,8,0" Click="OnDeactivateUnitClick" IsEnabled="{Binding CanMaintain}" ToolTip="ردیف انتخاب‌شده برای کارهای جدید پیشنهاد نمی‌شود؛ سابقه و کارهای قبلی حذف نمی‌شود." />
+                        <Button Content="فعال کردن" Padding="12,5" Click="OnActivateUnitClick" IsEnabled="{Binding CanMaintain}" ToolTip="ردیف انتخاب‌شده را دوباره فعال می‌کند تا برای کارهای جدید قابل انتخاب باشد." />
                     </WrapPanel>
                 </StackPanel>
             </Border>
@@ -62,9 +62,9 @@
                         <StackPanel Margin="0,0,12,0"><TextBlock Text="از واحدِ" /><ComboBox x:Name="ToUnitBox" ItemsSource="{Binding UnitChoices}" DisplayMemberPath="Text" Width="190" /></StackPanel>
                     </WrapPanel>
                     <WrapPanel Margin="0,8,0,0">
-                        <Button Content="افزودن تبدیل" Padding="12,5" Margin="0,0,8,0" Click="OnAddConversionClick" IsEnabled="{Binding CanMaintain}" />
-                        <Button Content="غیرفعال کردن انتخاب‌شده" Padding="12,5" Margin="0,0,8,0" Click="OnDeactivateConversionClick" IsEnabled="{Binding CanMaintain}" />
-                        <Button Content="فعال کردن انتخاب‌شده" Padding="12,5" Click="OnActivateConversionClick" IsEnabled="{Binding CanMaintain}" />
+                        <Button Content="افزودن تبدیل" Padding="12,5" Margin="0,0,8,0" Click="OnAddConversionClick" IsEnabled="{Binding CanMaintain}" ToolTip="ضریب تبدیل دو واحد را ثبت می‌کند؛ ضریب معکوس خودکار ساخته می‌شود." />
+                        <Button Content="غیرفعال کردن انتخاب‌شده" Padding="12,5" Margin="0,0,8,0" Click="OnDeactivateConversionClick" IsEnabled="{Binding CanMaintain}" ToolTip="مورد انتخاب‌شده برای کارهای جدید پیشنهاد نمی‌شود؛ سابقه و کارهای قبلی حذف نمی‌شود." />
+                        <Button Content="فعال کردن انتخاب‌شده" Padding="12,5" Click="OnActivateConversionClick" IsEnabled="{Binding CanMaintain}" ToolTip="مورد انتخاب‌شده را دوباره فعال می‌کند تا برای کارهای جدید قابل انتخاب باشد." />
                     </WrapPanel>
                 </StackPanel>
             </Border>
@@ -74,7 +74,7 @@
             <DataGrid ItemsSource="{Binding QuantityTypes}" SelectedItem="{Binding SelectedType, Mode=TwoWay}" AutoGenerateColumns="False" IsReadOnly="True"
                       SelectionMode="Single" HeadersVisibility="Column" CanUserAddRows="False" CanUserDeleteRows="False" MaxHeight="170" Background="{StaticResource CardBrush}">
                 <DataGrid.Columns>
-                    <DataGridTextColumn Header="کد" Binding="{Binding Code}" Width="100" />
+                    <DataGridTextColumn Header="کد" Binding="{Binding Code}" ElementStyle="{StaticResource LtrCell}" Width="100" />
                     <DataGridTextColumn Header="نام" Binding="{Binding Name}" Width="140" />
                     <DataGridTextColumn Header="واحد پایه" Binding="{Binding BaseUnitText}" Width="90" />
                     <DataGridTextColumn Header="تعداد واحد پایه" Binding="{Binding BaseUnitsPerType}" Width="110" />
@@ -93,10 +93,10 @@
                     <TextBlock Text="ست: هر عضو در یک خط به شکل «شرح: تعداد». ست ترکیب استاندارد ندارد؛ ترکیب هر ست باید صریحاً تعریف شود و تعداد واحد پایهٔ آن مجموع اعضاست (در این حالت کادر بالا نادیده گرفته می‌شود)." TextWrapping="Wrap" Margin="0,8,0,2" FontSize="12" Foreground="{StaticResource MutedTextBrush}" />
                     <TextBox x:Name="MembersBox" Height="60" TextWrapping="Wrap" AcceptsReturn="True" />
                     <WrapPanel Margin="0,8,0,0">
-                        <Button Content="افزودن نوع مقدار" Padding="12,5" Margin="0,0,8,0" Click="OnAddTypeClick" IsEnabled="{Binding CanMaintain}" />
-                        <Button Content="تغییر نام انتخاب‌شده (از کادر نام)" Padding="12,5" Margin="0,0,8,0" Click="OnRenameTypeClick" IsEnabled="{Binding CanMaintain}" />
-                        <Button Content="غیرفعال کردن" Padding="12,5" Margin="0,0,8,0" Click="OnDeactivateTypeClick" IsEnabled="{Binding CanMaintain}" />
-                        <Button Content="فعال کردن" Padding="12,5" Click="OnActivateTypeClick" IsEnabled="{Binding CanMaintain}" />
+                        <Button Content="افزودن نوع مقدار" Padding="12,5" Margin="0,0,8,0" Click="OnAddTypeClick" IsEnabled="{Binding CanMaintain}" ToolTip="نوع مقدار جدید (مثل جفت یا ست) را ثبت می‌کند." />
+                        <Button Content="تغییر نام انتخاب‌شده (از کادر نام)" Padding="12,5" Margin="0,0,8,0" Click="OnRenameTypeClick" IsEnabled="{Binding CanMaintain}" ToolTip="نام مورد انتخاب‌شده را با متن کادر نام عوض می‌کند؛ کد تغییر نمی‌کند." />
+                        <Button Content="غیرفعال کردن" Padding="12,5" Margin="0,0,8,0" Click="OnDeactivateTypeClick" IsEnabled="{Binding CanMaintain}" ToolTip="ردیف انتخاب‌شده برای کارهای جدید پیشنهاد نمی‌شود؛ سابقه و کارهای قبلی حذف نمی‌شود." />
+                        <Button Content="فعال کردن" Padding="12,5" Click="OnActivateTypeClick" IsEnabled="{Binding CanMaintain}" ToolTip="ردیف انتخاب‌شده را دوباره فعال می‌کند تا برای کارهای جدید قابل انتخاب باشد." />
                     </WrapPanel>
                     <TextBlock Text="تعریف و نگاشت یک نوع مقدار تغییر نمی‌کند؛ برای نگاشت دیگر، نوع مقدار تازه‌ای تعریف کنید." FontSize="12" Foreground="{StaticResource MutedTextBrush}" Margin="0,6,0,0" />
                 </StackPanel>

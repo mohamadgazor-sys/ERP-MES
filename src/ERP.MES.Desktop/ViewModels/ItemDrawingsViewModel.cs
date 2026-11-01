@@ -17,7 +17,7 @@ public sealed record DrawingRequestRow(long RequestId, string RequestNo, string 
 public sealed record DrawingItemRow(long ItemId, string ItemNo, string PartName, string DrawingText);
 
 /// <summary>One revision of the selected item's drawing.</summary>
-public sealed record DrawingRevisionRow(int Revision, string FileName, string SizeText, string UploadedText, string StatusText);
+public sealed record DrawingRevisionRow(int Revision, string FileName, string SizeText, string UploadedText, string StatusText, string ActorText = "");
 
 /// <summary>
 /// Opens an item's drawing on request (Decision Log #125 Q14): the PDF is read from the database only when somebody asks, written to a temporary file and handed to the viewer by the caller. It
@@ -56,7 +56,7 @@ public static class DrawingOpening
 /// The drawings screen (Decision Log #125 Q14): pick a request and an item, see the drawing revisions, open one explicitly, and (Drawing only) upload or replace the PDF. It relays to
 /// <see cref="ItemDrawingService"/>, which checks the Drawing permission, the PDF rules and the size again.
 /// </summary>
-public sealed class ItemDrawingsViewModel(RequestService requests, ItemDrawingService drawings, IJalaliDateService dates, Func<Principal> currentUser) : ObservableObject
+public sealed class ItemDrawingsViewModel(RequestService requests, ItemDrawingService drawings, IJalaliDateService dates, Func<Principal> currentUser, UserDirectoryService? users = null) : ObservableObject
 {
     private readonly ObservableCollection<DrawingRequestRow> _requests = [];
     private readonly ObservableCollection<DrawingItemRow> _items = [];
@@ -239,9 +239,10 @@ public sealed class ItemDrawingsViewModel(RequestService requests, ItemDrawingSe
             return;
         }
 
+        var actors = await ActorLookup.DescribeAsync(users, currentUser(), outcome.Value!.Select(r => r.UploadedByUserId), cancellationToken);
         foreach (var revision in outcome.Value!)
         {
-            _revisions.Add(new DrawingRevisionRow(revision.Revision, revision.FileName, SizeText(revision.ContentLength), dates.FormatDateTime(revision.UploadedAtUtc), revision.IsCurrent ? "فعلی" : "قدیمی"));
+            _revisions.Add(new DrawingRevisionRow(revision.Revision, revision.FileName, SizeText(revision.ContentLength), dates.FormatDateTime(revision.UploadedAtUtc), revision.IsCurrent ? "فعلی" : "قدیمی", ActorLookup.Text(actors, revision.UploadedByUserId)));
         }
     }
 

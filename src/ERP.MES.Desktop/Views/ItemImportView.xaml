@@ -11,8 +11,8 @@
             <TextBlock TextWrapping="Wrap" Foreground="{StaticResource MutedTextBrush}" Margin="0,0,0,8"
                        Text="ورود گروهی آیتم‌ها از یک فایل اکسل (xlsx، یک برگه، عنوان ستون‌ها فارسی؛ تا حدود ۱۰۰۰ آیتم). فقط برنامه‌ریزی و فقط پس از برقرار شدن دروازه‌های تعریف آیتم. نخست پیش‌نمایش می‌گیرید (چیزی ذخیره نمی‌شود)؛ هر خطا با شمارهٔ ردیف نشان داده می‌شود. اگر شمارهٔ آیتمی از قبل با مقادیر دیگر وجود داشته باشد، برای آن «رد کردن» یا «به‌روزرسانی» را خودتان انتخاب می‌کنید؛ هیچ مقداری بی‌صدا جایگزین نمی‌شود. ثبت یکجا انجام می‌شود یا هیچ‌چیز ثبت نمی‌شود. این قالب را خود برنامه تعریف کرده و با فایل واقعی هیچ شرکتی تطبیق داده نشده است." />
             <WrapPanel Margin="0,0,0,8">
-                <Button Content="ذخیرهٔ قالب نمونه (xlsx)" Padding="10,3" Margin="0,0,8,0" Click="OnSaveTemplateClick" />
-                <Button Content="بارگذاری مجدد" Padding="10,3" Click="OnReloadClick" />
+                <Button Content="ذخیرهٔ قالب نمونه (xlsx)" Padding="10,3" Margin="0,0,8,0" Click="OnSaveTemplateClick" ToolTip="فایل اکسل نمونه با سرستون‌های درست و دو ردیف فرضی را ذخیره می‌کند. به داده‌ها دست نمی‌زند." />
+                <Button Content="بارگذاری مجدد" Padding="10,3" Click="OnReloadClick" ToolTip="فهرست را دوباره از پایگاه داده می‌خواند. چیزی ذخیره یا حذف نمی‌شود." />
             </WrapPanel>
 
             <TextBlock Text="درخواست مقصد" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource PrimaryBrush}" Margin="0,4,0,6" />
@@ -27,8 +27,8 @@
                 </DataGrid.Columns>
             </DataGrid>
             <WrapPanel Margin="0,8,0,0">
-                <Button Content="انتخاب فایل اکسل و پیش‌نمایش…" Padding="12,5" Margin="0,0,8,0" Click="OnChooseFileClick" IsEnabled="{Binding CanImport}" />
-                <Button Content="ثبت ورود" Padding="12,5" Click="OnCommitClick" IsEnabled="{Binding CanCommit}" />
+                <Button Content="انتخاب فایل اکسل و پیش‌نمایش…" Padding="12,5" Margin="0,0,8,0" Click="OnChooseFileClick" IsEnabled="{Binding CanImport}" ToolTip="فایل اکسل را می‌خواند و فقط پیش‌نمایش و خطاها را نشان می‌دهد. تا تأیید نهایی چیزی ثبت نمی‌شود." />
+                <Button Content="ثبت ورود" Padding="12,5" Click="OnCommitClick" IsEnabled="{Binding CanCommit}" ToolTip="اطلاعات واردشده را برای ورود ثبت می‌کند." />
             </WrapPanel>
 
             <StackPanel Visibility="{Binding HasPreview, Converter={StaticResource BoolToVisibility}}" Margin="0,10,0,0">

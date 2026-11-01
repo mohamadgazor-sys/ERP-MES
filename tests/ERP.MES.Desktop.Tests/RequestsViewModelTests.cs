@@ -397,4 +397,30 @@ public class RequestsViewModelTests
         Assert.False(await central.SubmitAsync(Token));
         Assert.Equal(Messages.NothingSelected, central.Message);
     }
+
+    [Fact]
+    public async Task The_history_names_who_acted_with_display_name_and_user_name_and_marks_an_inactive_account()
+    {
+        using var h = await WorkflowHarness.CreateAsync(Token);
+        var customerId = await CustomerAsync(h);
+        var central = h.RequestsFor(h.Central);
+        await central.LoadAsync(Token);
+        Assert.True(await central.CreateAsync(customerId, "H-1", WorkType.Make, DateText, "عنوان", null, Token));
+        Assert.True(await central.AttachPdfAsync("a.pdf", System.Text.Encoding.ASCII.GetBytes("%PDF-1.4\n% fictional\n%%EOF\n"), Token));
+        Assert.True(await central.SubmitAsync(Token));
+
+        // Anyone who may read requests sees the same identities: display name, user name in brackets, and the department column next to it.
+        var qc = h.RequestsFor(h.Qc);
+        await qc.LoadAsync(Token);
+        await qc.SelectAsync(qc.Requests.Single(), Token);
+        Assert.All(qc.History, row => Assert.Equal("User central.one (central.one)", row.ActorText));
+        Assert.All(qc.History, row => Assert.Equal("منشی", row.DepartmentText));
+
+        // A deactivated account is still identified, with the inactive marker; the record keeps the user id, so nothing was copied into the history.
+        Assert.Equal(ERP.MES.Application.Security.AccountStatus.Succeeded, (await h.Security.Accounts.SetActiveAsync(h.Admin, h.Central.UserId, false, Token)).Status);
+        var fresh = h.RequestsFor(h.Qc);
+        await fresh.LoadAsync(Token);
+        await fresh.SelectAsync(fresh.Requests.Single(), Token);
+        Assert.All(fresh.History, row => Assert.Equal("User central.one (central.one) — غیرفعال", row.ActorText));
+    }
 }

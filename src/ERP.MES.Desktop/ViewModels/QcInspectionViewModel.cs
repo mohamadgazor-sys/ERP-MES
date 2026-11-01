@@ -12,15 +12,17 @@ public sealed record InspectionRow(
     InspectionEntry2 Entry, string RequestNo, string ItemNo, string PartName, string StageText, string StatusText, string UnitsText, string InputText, string AwaitingText, string AcceptedText, string ReworkText, string ScrapText) : IHasItemId
 {
     public long ItemId => Entry.ItemId;
+
+    public string CustomerName => Entry.CustomerName;
 }
 
-public sealed record InspectionHistoryRow(string TimeText, string KindText, string UnitsText, string ReasonText);
+public sealed record InspectionHistoryRow(string TimeText, string KindText, string UnitsText, string ReasonText, string ActorText = "");
 
 /// <summary>
 /// State and actions of the QC inspection screen (Decision Log #92, #95 D2/D3, #101): QC decides base units of a submitted stage as accepted, rework or scrap; Management accepts a shortfall and Planning
 /// records a replacement order. Rules, permissions, row versions and the audit are the Application's; the screen shows what it reports and relays the typed counts.
 /// </summary>
-public sealed class QcInspectionViewModel(QcInspectionService service, IJalaliDateService dates, DigitStyle digitStyle, Func<Principal> currentUser) : ObservableObject
+public sealed class QcInspectionViewModel(QcInspectionService service, IJalaliDateService dates, DigitStyle digitStyle, Func<Principal> currentUser, UserDirectoryService? users = null) : ObservableObject
 {
     public const string Heading = "بازرسی کنترل کیفیت — پذیرفته / بازکاری / ضایعات";
 
@@ -136,14 +138,15 @@ public sealed class QcInspectionViewModel(QcInspectionService service, IJalaliDa
             return;
         }
 
+        var actors = await ActorLookup.DescribeAsync(users, currentUser(), history.Value!.Lines.Select(l => l.DecidedByUserId).Concat(history.Value.Decisions.Select(d => d.DecidedByUserId)), cancellationToken);
         foreach (var line in history.Value!.Lines)
         {
-            _history.Add(new InspectionHistoryRow(dates.FormatDateTime(line.DecidedAtUtc), line.Disposition switch { InspectionDisposition.Accepted => "پذیرفته", InspectionDisposition.Rework => "بازکاری", _ => "ضایعات" }, Digits(line.BaseUnits), line.Reason ?? string.Empty));
+            _history.Add(new InspectionHistoryRow(dates.FormatDateTime(line.DecidedAtUtc), line.Disposition switch { InspectionDisposition.Accepted => "پذیرفته", InspectionDisposition.Rework => "بازکاری", _ => "ضایعات" }, Digits(line.BaseUnits), line.Reason ?? string.Empty, ActorLookup.Text(actors, line.DecidedByUserId)));
         }
 
         foreach (var decision in history.Value.Decisions)
         {
-            _history.Add(new InspectionHistoryRow(dates.FormatDateTime(decision.DecidedAtUtc), decision.Kind == ShortfallKind.ManagementAccepted ? "پذیرش کسری توسط مدیریت" : "سفارش جایگزین ثبت شد", Digits(decision.ShortfallBaseUnits), decision.Note));
+            _history.Add(new InspectionHistoryRow(dates.FormatDateTime(decision.DecidedAtUtc), decision.Kind == ShortfallKind.ManagementAccepted ? "پذیرش کسری توسط مدیریت" : "سفارش جایگزین ثبت شد", Digits(decision.ShortfallBaseUnits), decision.Note, ActorLookup.Text(actors, decision.DecidedByUserId)));
         }
     }
 

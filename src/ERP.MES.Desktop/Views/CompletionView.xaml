@@ -37,8 +37,8 @@
             <StackPanel Visibility="{Binding CanReceive, Converter={StaticResource BoolToVisibility}}" Margin="0,8,0,0">
                 <WrapPanel>
                     <TextBox x:Name="ReceiptNoteBox" Width="220" Margin="0,0,6,4" ToolTip="یادداشت دریافت (اختیاری)" />
-                    <Button Content="ثبت دریافت نهایی" Padding="10,3" Margin="0,0,6,4" Click="OnReceive" />
-                    <Button Content="تکمیل/ارسال شد" Padding="10,3" Margin="0,0,6,4" Click="OnFinished" />
+                    <Button Content="ثبت دریافت نهایی" Padding="10,3" Margin="0,0,6,4" Click="OnReceive" ToolTip="دریافت آیتم در انبار را ثبت می‌کند؛ فقط انبار." />
+                    <Button Content="تکمیل/ارسال شد" Padding="10,3" Margin="0,0,6,4" Click="OnFinished" ToolTip="وضعیت تکمیل یا ارسال آیتم را ثبت می‌کند." />
                 </WrapPanel>
             </StackPanel>
             <StackPanel Visibility="{Binding CanDispatch, Converter={StaticResource BoolToVisibility}}">
@@ -47,7 +47,7 @@
                     <TextBox x:Name="DispatchDateBox" Width="90" Margin="0,0,6,4" ToolTip="تاریخ شمسی" />
                     <TextBox x:Name="DispatchReferenceBox" Width="140" Margin="0,0,6,4" ToolTip="شمارهٔ سند" />
                     <TextBox x:Name="DispatchNoteBox" Width="200" Margin="0,0,6,4" ToolTip="یادداشت" />
-                    <Button Content="ثبت ارسال" Padding="10,3" Margin="0,0,6,4" Click="OnDispatch" />
+                    <Button Content="ثبت ارسال" Padding="10,3" Margin="0,0,6,4" Click="OnDispatch" ToolTip="ارسال محصول به مشتری را ثبت می‌کند." />
                 </WrapPanel>
             </StackPanel>
         </StackPanel>

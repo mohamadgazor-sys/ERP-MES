@@ -29,6 +29,9 @@ public sealed record UnitQueueRow(
 {
     public long ItemId => Entry.ItemId;
 
+    /// <summary>The customer of the request: a queue combines requests of several customers, so each row names its customer (Decision Log #121).</summary>
+    public string CustomerName => Entry.CustomerName;
+
     /// <summary>The customer's own item number (optional); <see cref="ItemNo"/> is the system number.</summary>
     public string? CustomerItemRef => Entry.CustomerItemRef;
 }

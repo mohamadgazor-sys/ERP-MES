@@ -10,7 +10,7 @@
             <TextBlock Text="{Binding Message}" TextWrapping="Wrap" Foreground="#9B1C1C" FontWeight="SemiBold" Margin="0,0,0,8" />
             <TextBlock TextWrapping="Wrap" Foreground="{StaticResource MutedTextBrush}" Margin="0,0,0,8"
                        Text="نقشه‌کشی هنگام بررسی یک درخواست از برنامه‌ریزی می‌پرسد؛ برنامه‌ریزی پاسخ می‌دهد (یا اطلاعات را بیرون از برنامه می‌گیرد و پاسخ را ثبت می‌کند)؛ نقشه‌کشی که پرسیده، پرسش را می‌بندد. وضعیت درخواست در این مدت «در حال بررسی نقشه‌کشی» می‌ماند. پرسشِ بسته‌نشده مانع آزادسازی تولید است و کل تاریخچه نگه داشته می‌شود." />
-            <Button Content="بارگذاری مجدد" Padding="10,3" HorizontalAlignment="Left" Click="OnReloadClick" Margin="0,0,0,8" />
+            <Button Content="بارگذاری مجدد" Padding="10,3" HorizontalAlignment="Left" Click="OnReloadClick" Margin="0,0,0,8" ToolTip="فهرست را دوباره از پایگاه داده می‌خواند. چیزی ذخیره یا حذف نمی‌شود." />
 
             <TextBlock Text="پرسش‌های بسته‌نشده" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource PrimaryBrush}" Margin="0,4,0,6" />
             <DataGrid ItemsSource="{Binding Rows}" SelectedItem="{Binding SelectedRow, Mode=TwoWay}" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single"
@@ -31,9 +31,9 @@
                     <TextBox x:Name="TextBox" Width="520" Height="70" TextWrapping="Wrap" AcceptsReturn="True" HorizontalAlignment="Left" />
                     <WrapPanel Margin="0,8,0,0">
                         <ComboBox x:Name="RequestBox" ItemsSource="{Binding RequestChoices}" DisplayMemberPath="Text" Width="260" Margin="0,0,8,0" ToolTip="درخواست در حال بررسی نقشه‌کشی" />
-                        <Button Content="ثبت پرسش (نقشه‌کشی)" Padding="12,5" Margin="0,0,8,0" Click="OnAskClick" IsEnabled="{Binding CanAsk}" />
-                        <Button Content="ثبت پاسخ به پرسش انتخاب‌شده (برنامه‌ریزی)" Padding="12,5" Margin="0,0,8,0" Click="OnAnswerClick" IsEnabled="{Binding CanAnswer}" />
-                        <Button Content="بستن پرسش انتخاب‌شده (نقشه‌کشی)" Padding="12,5" Click="OnCloseClick" IsEnabled="{Binding CanClose}" />
+                        <Button Content="ثبت پرسش (نقشه‌کشی)" Padding="12,5" Margin="0,0,8,0" Click="OnAskClick" IsEnabled="{Binding CanAsk}" ToolTip="پرسش نقشه‌کشی را برای پاسخ برنامه‌ریزی ثبت می‌کند." />
+                        <Button Content="ثبت پاسخ به پرسش انتخاب‌شده (برنامه‌ریزی)" Padding="12,5" Margin="0,0,8,0" Click="OnAnswerClick" IsEnabled="{Binding CanAnswer}" ToolTip="پاسخ برنامه‌ریزی را برای پرسش انتخاب‌شده ثبت می‌کند." />
+                        <Button Content="بستن پرسش انتخاب‌شده (نقشه‌کشی)" Padding="12,5" Click="OnCloseClick" IsEnabled="{Binding CanClose}" ToolTip="پرسش را بعد از دریافت پاسخ می‌بندد." />
                     </WrapPanel>
                 </StackPanel>
             </Border>

@@ -21,11 +21,12 @@
             <TextBlock Text="{x:Static vm:QcInspectionViewModel.Heading}" FontSize="18" FontWeight="SemiBold" Foreground="{StaticResource PrimaryBrush}" />
             <TextBlock Text="{x:Static vm:QcInspectionViewModel.Note}" Margin="0,2,0,8" TextWrapping="Wrap" Foreground="{StaticResource MutedTextBrush}" />
             <TextBlock Text="{Binding Message}" Style="{StaticResource MessageStyle}" />
-            <Button Content="بارگذاری دوباره" Padding="12,4" HorizontalAlignment="Left" Margin="0,0,0,6" Click="OnReloadClick" />
+            <Button Content="بارگذاری دوباره" Padding="12,4" HorizontalAlignment="Left" Margin="0,0,0,6" Click="OnReloadClick" ToolTip="فهرست را دوباره از پایگاه داده می‌خواند. چیزی ذخیره یا حذف نمی‌شود." />
             <DataGrid x:Name="Grid" ItemsSource="{Binding Rows}" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single" HeadersVisibility="Column" CanUserAddRows="False"
                       MaxHeight="300" Background="{StaticResource CardBrush}" SelectionChanged="OnSelectionChanged">
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="درخواست" Binding="{Binding RequestNo}" ElementStyle="{StaticResource LtrCell}" Width="90" />
+                    <DataGridTextColumn Header="مشتری" Binding="{Binding CustomerName}" Width="110" />
                     <DataGridTextColumn Header="آیتم" Binding="{Binding ItemNo}" ElementStyle="{StaticResource LtrCell}" Width="80" />
                     <DataGridTemplateColumn Header="نقشه" Width="64">
                                             <DataGridTemplateColumn.CellTemplate>
@@ -51,12 +52,12 @@
                 <TextBox x:Name="Rework" Width="60" Margin="0,0,6,4" ToolTip="بازکاری" />
                 <TextBox x:Name="Scrap" Width="60" Margin="0,0,6,4" ToolTip="ضایعات" />
                 <TextBox x:Name="Reason" Width="260" Margin="0,0,6,4" ToolTip="دلیل (الزامی برای بازکاری و ضایعات)" />
-                <Button Content="ثبت بازرسی" Padding="12,4" Margin="0,0,6,4" Click="OnInspectClick" />
+                <Button Content="ثبت بازرسی" Padding="12,4" Margin="0,0,6,4" Click="OnInspectClick" ToolTip="تعداد پذیرفته، بازکاری و ضایعات را برای مرحله ثبت می‌کند. نتیجه در سابقهٔ بازرسی می‌ماند." />
             </WrapPanel>
             <WrapPanel Margin="0,4,0,0">
                 <TextBox x:Name="ShortfallNote" Width="320" Margin="0,0,6,4" ToolTip="یادداشت یا شمارهٔ ارجاع" />
-                <Button Content="پذیرش کسری (مدیریت)" Padding="12,4" Margin="0,0,6,4" Click="OnAcceptShortfallClick" IsEnabled="{Binding CanAcceptShortfall}" />
-                <Button Content="ثبت سفارش جایگزین (برنامه‌ریزی)" Padding="12,4" Margin="0,0,6,4" Click="OnReplacementClick" IsEnabled="{Binding CanOrderReplacement}" />
+                <Button Content="پذیرش کسری (مدیریت)" Padding="12,4" Margin="0,0,6,4" Click="OnAcceptShortfallClick" IsEnabled="{Binding CanAcceptShortfall}" ToolTip="کسری مقدار را می‌پذیرد و مرحله بدون جایگزینی ادامه می‌یابد. فقط مدیریت؛ در سابقه ثبت می‌شود." />
+                <Button Content="ثبت سفارش جایگزین (برنامه‌ریزی)" Padding="12,4" Margin="0,0,6,4" Click="OnReplacementClick" IsEnabled="{Binding CanOrderReplacement}" ToolTip="برنامه‌ریزی اعلام می‌کند برای کسری، سفارش جایگزین ثبت شده است." />
             </WrapPanel>
             <TextBlock Text="تاریخچهٔ مرحلهٔ انتخاب‌شده" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource PrimaryBrush}" Margin="0,12,0,4" />
             <DataGrid ItemsSource="{Binding History}" AutoGenerateColumns="False" IsReadOnly="True" HeadersVisibility="Column" CanUserAddRows="False" MaxHeight="220" Background="{StaticResource CardBrush}">
@@ -65,6 +66,7 @@
                     <DataGridTextColumn Header="تصمیم" Binding="{Binding KindText}" Width="*" />
                     <DataGridTextColumn Header="تعداد (واحد پایه)" Binding="{Binding UnitsText}" Width="110" />
                     <DataGridTextColumn Header="دلیل / یادداشت" Binding="{Binding ReasonText}" Width="*" />
+                    <DataGridTextColumn Header="انجام‌دهنده" Binding="{Binding ActorText}" Width="160" />
                 </DataGrid.Columns>
             </DataGrid>
         </StackPanel>

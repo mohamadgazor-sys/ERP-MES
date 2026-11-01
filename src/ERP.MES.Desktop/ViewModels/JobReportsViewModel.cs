@@ -39,7 +39,7 @@ public sealed class JobReportsViewModel(
 
     public const string Note =
         "هر اپراتور فقط گزارش خودش را می‌سازد و ارسال می‌کند؛ هیچ‌کس به‌جای اپراتور دیگر گزارش نمی‌دهد. گزارش پذیرفته/بازکاری/ضایعات ندارد (آن‌ها را کنترل کیفیت تعیین می‌کند). "
-        + "خط‌های خارج از شیفت، بدون برنامه، در روز مرخصی، روی ماشین غیر از برنامه یا هم‌پوشان با اپراتور دیگر رد نمی‌شوند؛ برای بررسی‌کننده علامت می‌خورند. سرپرست واحد گزارش را تأیید یا (با دلیل) برمی‌گرداند؛ "
+        + "ردیف‌های کار خارج از شیفت، بدون برنامه، در روز مرخصی، روی ماشین غیر از برنامه یا هم‌پوشان با اپراتور دیگر رد نمی‌شوند؛ برای بررسی‌کننده علامت می‌خورند. سرپرست واحد گزارش را تأیید یا (با دلیل) برمی‌گرداند؛ "
         + "اگر واحد سرپرست ندارد، برنامه‌ریزی بررسی می‌کند و این موضوع علامت‌گذاری می‌شود. فقط گزارش‌های تأییدشده بعداً در هزینه و شاخص‌ها می‌آیند.";
 
     private readonly ObservableCollection<JobReportRow> _rows = [];
@@ -139,7 +139,7 @@ public sealed class JobReportsViewModel(
             var endUtc = dates.LocalToUtc(end > start ? date : date.AddDays(1), end);
             var input = new JobLineInput(stage.Entry.RequestId, stage.Entry.ItemId, stage.Entry.StageNo, machine.Value.Id, startUtc, endUtc, downtimeMinutes, downtimeReason, processed, note);
             _draft.Add(new DraftLineRow(input, stage.Text, machine.Value.Code, $"{Digits(start.ToString("HH:mm", CultureInfo.InvariantCulture))} تا {Digits(end.ToString("HH:mm", CultureInfo.InvariantCulture))}", Digits(processed.ToString(CultureInfo.InvariantCulture))));
-            Succeed("خط به پیش‌نویس اضافه شد؛ برای ثبت، «ذخیرهٔ پیش‌نویس» را بزنید.");
+            Succeed("ردیف کار به پیش‌نویس اضافه شد؛ برای ثبت، «ذخیرهٔ پیش‌نویس» را بزنید.");
         }
         catch (ArgumentException)
         {
@@ -267,8 +267,8 @@ public sealed class JobReportsViewModel(
             _rows.Add(new JobReportRow(
                 item, dates.FormatDate(r.WorkDate), item.OperatorName, unitNames.GetValueOrDefault(r.ProductionUnitId, "?"), shiftCodes.GetValueOrDefault(r.ShiftTemplateId, "?"),
                 r.Status switch { JobReportStatus.Draft => "پیش‌نویس", JobReportStatus.Submitted => "ارسال‌شده", JobReportStatus.Returned => "بازگردانده‌شده: " + r.ReturnReason, _ => "تأییدشده" + (r.ReviewedByPlanningFallback ? " (بررسی توسط برنامه‌ریزی چون واحد سرپرست ندارد)" : string.Empty) },
-                Digits(r.Lines.Count.ToString(CultureInfo.InvariantCulture)) + " خط، " + Digits(r.Lines.Sum(l => l.ProductiveMinutes).ToString(CultureInfo.InvariantCulture)) + " دقیقهٔ مفید",
-                r.HasFlaggedLines ? $"{Digits(r.Lines.Count(l => l.Flags != JobLineFlags.None).ToString(CultureInfo.InvariantCulture))} خط علامت‌دار" : string.Empty,
+                Digits(r.Lines.Count.ToString(CultureInfo.InvariantCulture)) + " ردیف کار، " + Digits(r.Lines.Sum(l => l.ProductiveMinutes).ToString(CultureInfo.InvariantCulture)) + " دقیقهٔ مفید",
+                r.HasFlaggedLines ? $"{Digits(r.Lines.Count(l => l.Flags != JobLineFlags.None).ToString(CultureInfo.InvariantCulture))} ردیف کار علامت‌دار" : string.Empty,
                 item.CanReview ? (item.ReviewWouldBePlanningFallback ? "قابل بررسی (به‌عنوان جایگزین سرپرست)" : "قابل بررسی") : string.Empty));
         }
 

@@ -10,7 +10,7 @@
             <TextBlock Text="{Binding Message}" TextWrapping="Wrap" Foreground="#9B1C1C" FontWeight="SemiBold" Margin="0,0,0,8" />
             <TextBlock TextWrapping="Wrap" Foreground="{StaticResource MutedTextBrush}" Margin="0,0,0,8"
                        Text="نقشه‌کشی ردیف‌های مادهٔ اولیه را برای انبار ارسال می‌کند؛ انبار برای هر ردیف «بله» یا «خیر» می‌گوید. این استعلام فقط اطلاع‌رسانی است: چیزی رزرو یا کسر نمی‌شود، وضعیت درخواست را تغییر نمی‌دهد و دربارهٔ امکان‌پذیری فنی تصمیم نمی‌گیرد. اقدام پس از «خیر» و پرسش و پاسخ توضیحی هنوز تصمیم‌گیری نشده و در این صفحه نیست." />
-            <Button Content="بارگذاری مجدد" Padding="10,3" HorizontalAlignment="Left" Click="OnReloadClick" Margin="0,0,0,8" />
+            <Button Content="بارگذاری مجدد" Padding="10,3" HorizontalAlignment="Left" Click="OnReloadClick" Margin="0,0,0,8" ToolTip="فهرست را دوباره از پایگاه داده می‌خواند. چیزی ذخیره یا حذف نمی‌شود." />
 
             <TextBlock Text="درخواست‌ها" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource PrimaryBrush}" Margin="0,4,0,6" />
             <DataGrid ItemsSource="{Binding Requests}" SelectedItem="{Binding SelectedRequest, Mode=TwoWay}" SelectionChanged="OnRequestSelected" AutoGenerateColumns="False" IsReadOnly="True"
@@ -35,7 +35,7 @@
             </DataGrid>
             <WrapPanel Margin="0,6,0,0">
                 <TextBox x:Name="CreateNoteBox" Width="260" Margin="0,0,8,0" ToolTip="توضیح (اختیاری)" />
-                <Button Content="استعلام جدید برای درخواست انتخاب‌شده" Padding="12,5" Click="OnCreateClick" IsEnabled="{Binding CanCreate}" />
+                <Button Content="استعلام جدید برای درخواست انتخاب‌شده" Padding="12,5" Click="OnCreateClick" IsEnabled="{Binding CanCreate}" ToolTip="برای درخواست انتخاب‌شده استعلام ماده اولیه می‌سازد." />
             </WrapPanel>
 
             <StackPanel Visibility="{Binding HasInquiry, Converter={StaticResource BoolToVisibility}}" Margin="0,12,0,0">
@@ -71,9 +71,9 @@
                             <StackPanel Margin="0,0,10,0"><TextBlock Text="توضیح" /><TextBox x:Name="RemarksBox" Width="160" /></StackPanel>
                         </WrapPanel>
                         <WrapPanel Margin="0,8,0,0">
-                            <Button Content="افزودن ردیف" Padding="12,5" Margin="0,0,8,0" Click="OnAddLineClick" IsEnabled="{Binding CanEditLines}" />
-                            <Button Content="حذف ردیف انتخاب‌شده" Padding="12,5" Margin="0,0,8,0" Click="OnRemoveLineClick" IsEnabled="{Binding CanEditLines}" />
-                            <Button Content="ارسال به انبار" Padding="12,5" Click="OnSendClick" IsEnabled="{Binding CanSend}" />
+                            <Button Content="افزودن ردیف" Padding="12,5" Margin="0,0,8,0" Click="OnAddLineClick" IsEnabled="{Binding CanEditLines}" ToolTip="ردیف کار واردشده را به پیش‌نویس گزارش اضافه می‌کند؛ برای ثبت باید پیش‌نویس ذخیره شود." />
+                            <Button Content="حذف ردیف انتخاب‌شده" Padding="12,5" Margin="0,0,8,0" Click="OnRemoveLineClick" IsEnabled="{Binding CanEditLines}" ToolTip="ردیف انتخاب‌شده را از پیش‌نویس برمی‌دارد؛ تا ذخیرهٔ پیش‌نویس در پایگاه داده اثری ندارد." />
+                            <Button Content="ارسال به انبار" Padding="12,5" Click="OnSendClick" IsEnabled="{Binding CanSend}" ToolTip="آیتم را برای مرحلهٔ انبار علامت می‌زند." />
                         </WrapPanel>
                     </StackPanel>
                 </Border>
@@ -83,21 +83,21 @@
                         <TextBlock Text="توضیح یا دلیل (لغو: الزامی)" />
                         <TextBox x:Name="NoteBox" Width="420" HorizontalAlignment="Left" />
                         <WrapPanel Margin="0,8,0,0">
-                            <Button Content="پاسخ «بله» به ردیف انتخاب‌شده" Padding="12,5" Margin="0,0,8,0" Click="OnYesClick" IsEnabled="{Binding CanAnswer}" />
-                            <Button Content="پاسخ «خیر» به ردیف انتخاب‌شده" Padding="12,5" Margin="0,0,8,0" Click="OnNoClick" IsEnabled="{Binding CanAnswer}" />
-                            <Button Content="بستن پس از بررسی" Padding="12,5" Margin="0,0,8,0" Click="OnCloseClick" IsEnabled="{Binding CanClose}" />
-                            <Button Content="لغو استعلام" Padding="12,5" Click="OnCancelClick" IsEnabled="{Binding CanCancel}" />
+                            <Button Content="پاسخ «بله» به ردیف انتخاب‌شده" Padding="12,5" Margin="0,0,8,0" Click="OnYesClick" IsEnabled="{Binding CanAnswer}" ToolTip="پاسخ «بله» را برای ردیف انتخاب‌شده ثبت می‌کند." />
+                            <Button Content="پاسخ «خیر» به ردیف انتخاب‌شده" Padding="12,5" Margin="0,0,8,0" Click="OnNoClick" IsEnabled="{Binding CanAnswer}" ToolTip="پاسخ «خیر» را برای ردیف انتخاب‌شده ثبت می‌کند." />
+                            <Button Content="بستن پس از بررسی" Padding="12,5" Margin="0,0,8,0" Click="OnCloseClick" IsEnabled="{Binding CanClose}" ToolTip="استعلام را پس از بررسی نتیجه می‌بندد؛ پس از بستن تغییر نمی‌کند." />
+                            <Button Content="لغو استعلام" Padding="12,5" Click="OnCancelClick" IsEnabled="{Binding CanCancel}" ToolTip="استعلام انتخاب‌شده را لغو می‌کند؛ استعلام لغوشده دیگر پاسخ نمی‌گیرد." />
                         </WrapPanel>
                         <TextBlock Text="تعیین تکلیف پاسخ «خیر» (نقشه‌کشی؛ ردیف را انتخاب کنید) و مسیر تأمین (برنامه‌ریزی)" FontWeight="SemiBold" Margin="0,10,0,4" />
                         <WrapPanel>
                             <ComboBox x:Name="RoundBox" ItemsSource="{Binding RoundChoices}" DisplayMemberPath="Text" Width="110" Margin="0,0,8,0" ToolTip="دور جدید (برای اصلاح در دور جدید)" />
-                            <Button Content="اصلاح در دور جدید" Padding="12,5" Margin="0,0,8,0" Click="OnDisposeRevisedClick" IsEnabled="{Binding CanDispose}" />
-                            <Button Content="ثبت به‌عنوان شرط نتیجهٔ فنی (توضیح الزامی)" Padding="12,5" Margin="0,0,8,0" Click="OnDisposeConditionClick" IsEnabled="{Binding CanDispose}" />
-                            <Button Content="بازگشت بدون تغییر (توضیح الزامی)" Padding="12,5" Margin="0,0,8,0" Click="OnDisposeUnchangedClick" IsEnabled="{Binding CanDispose}" />
+                            <Button Content="اصلاح در دور جدید" Padding="12,5" Margin="0,0,8,0" Click="OnDisposeRevisedClick" IsEnabled="{Binding CanDispose}" ToolTip="نتیجهٔ بازرسی قبلی را اصلاح می‌کند؛ سابقه می‌ماند و آیتم به مرحلهٔ ۱ برمی‌گردد." />
+                            <Button Content="ثبت به‌عنوان شرط نتیجهٔ فنی (توضیح الزامی)" Padding="12,5" Margin="0,0,8,0" Click="OnDisposeConditionClick" IsEnabled="{Binding CanDispose}" ToolTip="نتیجه را همراه شرط فنی ثبت می‌کند؛ توضیح لازم است." />
+                            <Button Content="بازگشت بدون تغییر (توضیح الزامی)" Padding="12,5" Margin="0,0,8,0" Click="OnDisposeUnchangedClick" IsEnabled="{Binding CanDispose}" ToolTip="درخواست را بدون تغییر به نقشه‌کشی برمی‌گرداند و توضیح الزامی است." />
                         </WrapPanel>
                         <WrapPanel Margin="0,6,0,0">
                             <CheckBox x:Name="ExternalBox" Content="خرید بیرونی" VerticalAlignment="Center" Margin="0,0,10,0" />
-                            <Button Content="ثبت مسیر تأمین (توضیح الزامی)" Padding="12,5" Click="OnSupplyRouteClick" IsEnabled="{Binding CanRecordSupplyRoute}" />
+                            <Button Content="ثبت مسیر تأمین (توضیح الزامی)" Padding="12,5" Click="OnSupplyRouteClick" IsEnabled="{Binding CanRecordSupplyRoute}" ToolTip="مسیر تأمین ماده را برای استعلام ثبت می‌کند." />
                         </WrapPanel>
                     </StackPanel>
                 </Border>

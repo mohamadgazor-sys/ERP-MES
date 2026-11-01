@@ -30,7 +30,9 @@
                     <DataGridTextColumn Header="پذیرفته‌شده (واحد پایه)" Binding="{Binding QuantityText}" Width="90" />
                     <DataGridTextColumn Header="وضعیت" Binding="{Binding StatusText}" Width="*" />
                     <DataGridTextColumn Header="هزینه" Binding="{Binding CostText}" Width="*" />
+                    <DataGridTextColumn Header="مشتری" Binding="{Binding CustomerText}" Width="110" />
                     <DataGridTextColumn Header="قیمت" Binding="{Binding PriceText}" Width="*" />
+                    <DataGridTextColumn Header="ثبت‌کنندگان" Binding="{Binding ActorText}" Width="*" />
                 </DataGrid.Columns>
             </DataGrid>
             <ItemsControl ItemsSource="{Binding Detail}" Margin="0,6,0,0">
@@ -42,8 +44,8 @@
             </ItemsControl>
             <WrapPanel Margin="0,6,0,0">
                 <StackPanel Orientation="Horizontal" Visibility="{Binding CanCalculate, Converter={StaticResource BoolToVisibility}}">
-                    <Button Content="محاسبهٔ هزینه" Padding="10,3" Margin="0,0,6,4" Click="OnCalculate" />
-                    <Button Content="ارسال قیمت به مدیریت" Padding="10,3" Margin="0,0,6,4" Click="OnSubmit" />
+                    <Button Content="محاسبهٔ هزینه" Padding="10,3" Margin="0,0,6,4" Click="OnCalculate" ToolTip="هزینهٔ آیتم را از زمان‌های واقعی، نرخ ماشین و قیمت ماده محاسبه و به‌صورت یک نسخهٔ جدید ذخیره می‌کند." />
+                    <Button Content="ارسال قیمت به مدیریت" Padding="10,3" Margin="0,0,6,4" Click="OnSubmit" ToolTip="قیمت محاسبه‌شده را برای تأیید به مدیریت می‌فرستد." />
                 </StackPanel>
             </WrapPanel>
             <StackPanel Visibility="{Binding CanApprove, Converter={StaticResource BoolToVisibility}}">
@@ -52,7 +54,7 @@
                     <TextBox x:Name="PriceBox" Width="140" Margin="0,0,6,4" ToolTip="قیمت به ریال (خالی = پیشنهاد محاسبه‌شده)" />
                     <TextBox x:Name="ReasonBox" Width="200" Margin="0,0,6,4" ToolTip="دلیل تغییر قیمت" />
                     <TextBox x:Name="ReferenceBox" Width="120" Margin="0,0,6,4" ToolTip="شمارهٔ قرارداد (آیتم قراردادی)" />
-                    <Button Content="تأیید قیمت" Padding="10,3" Margin="0,0,6,4" Click="OnApprove" />
+                    <Button Content="تأیید قیمت" Padding="10,3" Margin="0,0,6,4" Click="OnApprove" ToolTip="قیمت محاسبه‌شده را تأیید می‌کند؛ فقط مدیریت." />
                 </WrapPanel>
             </StackPanel>
         </StackPanel>

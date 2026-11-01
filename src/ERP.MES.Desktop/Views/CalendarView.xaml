@@ -32,7 +32,7 @@
             <TextBlock Text="قالب شیفت‌ها" Style="{StaticResource SectionStyle}" />
             <DataGrid x:Name="TemplateGrid" ItemsSource="{Binding Templates}" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single" HeadersVisibility="Column" CanUserAddRows="False" MaxHeight="160" Background="{StaticResource CardBrush}">
                 <DataGrid.Columns>
-                    <DataGridTextColumn Header="کد" Binding="{Binding CodeText}" Width="70" />
+                    <DataGridTextColumn Header="کد" Binding="{Binding CodeText}" ElementStyle="{StaticResource LtrCell}" Width="70" />
                     <DataGridTextColumn Header="نام" Binding="{Binding NameText}" Width="*" />
                     <DataGridTextColumn Header="ساعت‌ها" Binding="{Binding TimesText}" Width="*" />
                     <DataGridTextColumn Header="کار مفید" Binding="{Binding WorkingText}" Width="90" />
@@ -40,14 +40,14 @@
                 </DataGrid.Columns>
             </DataGrid>
             <WrapPanel Margin="0,6,0,0" IsEnabled="{Binding CanMaintain}">
-                <TextBox x:Name="TplCode" Width="60" Margin="0,0,6,4" ToolTip="کد" />
+                <TextBox x:Name="TplCode" FlowDirection="LeftToRight" Width="60" Margin="0,0,6,4" ToolTip="کد" />
                 <TextBox x:Name="TplName" Width="140" Margin="0,0,6,4" ToolTip="نام" />
                 <TextBox x:Name="TplStart" Width="60" Margin="0,0,6,4" ToolTip="شروع ۰۸:۰۰" />
                 <TextBox x:Name="TplEnd" Width="60" Margin="0,0,6,4" ToolTip="پایان ۱۷:۰۰" />
                 <TextBox x:Name="TplBreakStart" Width="60" Margin="0,0,6,4" ToolTip="شروع استراحت (اختیاری)" />
                 <TextBox x:Name="TplBreakEnd" Width="60" Margin="0,0,6,4" ToolTip="پایان استراحت (اختیاری)" />
-                <Button Content="افزودن قالب" Padding="10,3" Margin="0,0,6,4" Click="OnAddTemplate" />
-                <Button Content="فعال/بازنشسته" Padding="10,3" Margin="0,0,6,4" Click="OnToggleTemplate" />
+                <Button Content="افزودن قالب" Padding="10,3" Margin="0,0,6,4" Click="OnAddTemplate" ToolTip="قالب شیفت جدید را با ساعت‌های واردشده ثبت می‌کند." />
+                <Button Content="فعال/بازنشسته" Padding="10,3" Margin="0,0,6,4" Click="OnToggleTemplate" ToolTip="مورد انتخاب‌شده را بازنشسته می‌کند یا دوباره فعال می‌کند؛ هیچ‌چیز حذف نمی‌شود." />
             </WrapPanel>
 
             <TextBlock Text="الگوی هفته" Style="{StaticResource SectionStyle}" />
@@ -57,7 +57,7 @@
                     <DataGridTextColumn Header="وضعیت" Binding="{Binding StateText}" Width="*" />
                 </DataGrid.Columns>
             </DataGrid>
-            <Button Content="تغییر کاری/تعطیل بودن روز انتخاب‌شده" Padding="10,3" Margin="0,6,0,0" HorizontalAlignment="Left" Click="OnToggleWeekday" IsEnabled="{Binding CanMaintain}" />
+            <Button Content="تغییر کاری/تعطیل بودن روز انتخاب‌شده" Padding="10,3" Margin="0,6,0,0" HorizontalAlignment="Left" Click="OnToggleWeekday" IsEnabled="{Binding CanMaintain}" ToolTip="کاری یا تعطیل بودن روز هفتهٔ انتخاب‌شده را برای همهٔ هفته‌ها برعکس می‌کند." />
 
             <TextBlock Text="تعطیلی‌ها و روزهای کاری اضافه" Style="{StaticResource SectionStyle}" />
             <DataGrid x:Name="ExceptionGrid" ItemsSource="{Binding Exceptions}" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single" HeadersVisibility="Column" CanUserAddRows="False" MaxHeight="180" Background="{StaticResource CardBrush}">
@@ -73,11 +73,11 @@
                 <TextBox x:Name="ExDate" Width="90" Margin="0,0,6,4" ToolTip="تاریخ شمسی ۱۴۰۵/۰۷/۲۰" />
                 <ComboBox x:Name="ExKind" ItemsSource="{Binding ExceptionKinds}" DisplayMemberPath="Text" SelectedIndex="0" Width="150" Margin="0,0,6,4" />
                 <ComboBox x:Name="ExUnit" ItemsSource="{Binding Units}" DisplayMemberPath="Value.Name" Width="130" Margin="0,0,6,4" ToolTip="واحد (خالی = همه)" />
-                <ComboBox x:Name="ExShift" ItemsSource="{Binding Templates}" DisplayMemberPath="CodeText" Width="70" Margin="0,0,6,4" ToolTip="شیفت (خالی = همه)" />
+                <ComboBox x:Name="ExShift" FlowDirection="LeftToRight" ItemsSource="{Binding Templates}" DisplayMemberPath="CodeText" Width="70" Margin="0,0,6,4" ToolTip="شیفت (خالی = همه)" />
                 <TextBox x:Name="ExReason" Width="220" Margin="0,0,6,4" ToolTip="دلیل (برای روز اضافه: مرجع تأیید سرپرست)" />
-                <Button Content="ثبت استثنا" Padding="10,3" Margin="0,0,6,4" Click="OnAddException" />
-                <Button Content="لغو استثنای انتخاب‌شده" Padding="10,3" Margin="0,0,6,4" Click="OnCancelException" />
-                <Button Content="پاک‌کردن واحد/شیفت" Padding="10,3" Margin="0,0,6,4" Click="OnClearScope" />
+                <Button Content="ثبت استثنا" Padding="10,3" Margin="0,0,6,4" Click="OnAddException" ToolTip="روز یا واحد/شیفت انتخاب‌شده را تعطیل یا کاری اعلام می‌کند؛ برنامه‌های اپراتور آن روز بررسی و در صورت ناسازگاری علامت‌دار می‌شوند." />
+                <Button Content="لغو استثنای انتخاب‌شده" Padding="10,3" Margin="0,0,6,4" Click="OnCancelException" ToolTip="استثنای انتخاب‌شده را لغو می‌کند و روز به الگوی عادی برمی‌گردد؛ برنامه‌های اپراتور آن روز دوباره بررسی می‌شوند." />
+                <Button Content="پاک‌کردن واحد/شیفت" Padding="10,3" Margin="0,0,6,4" Click="OnClearScope" ToolTip="انتخاب واحد و شیفت را برای ثبت استثنای همهٔ واحدها خالی می‌کند. چیزی ذخیره نمی‌شود." />
             </WrapPanel>
 
             <TextBlock Text="شیفت‌های هر واحد و ظرفیت" Style="{StaticResource SectionStyle}" />
@@ -93,11 +93,11 @@
             </DataGrid>
             <WrapPanel Margin="0,6,0,0" IsEnabled="{Binding CanMaintain}">
                 <ComboBox x:Name="UsUnit" ItemsSource="{Binding Units}" DisplayMemberPath="Value.Name" Width="140" Margin="0,0,6,4" />
-                <ComboBox x:Name="UsShift" ItemsSource="{Binding Templates}" DisplayMemberPath="CodeText" Width="70" Margin="0,0,6,4" />
+                <ComboBox x:Name="UsShift" FlowDirection="LeftToRight" ItemsSource="{Binding Templates}" DisplayMemberPath="CodeText" Width="70" Margin="0,0,6,4" />
                 <TextBox x:Name="UsMax" Width="50" Margin="0,0,6,4" ToolTip="حداکثر اپراتور" />
                 <TextBox x:Name="UsMin" Width="50" Margin="0,0,6,4" Text="0" ToolTip="حداقل اپراتور" />
                 <CheckBox x:Name="UsOverlap" Content="هم‌پوشانی را صریحاً علامت می‌زنم" Margin="0,4,6,4" />
-                <Button Content="افزودن شیفت به واحد" Padding="10,3" Margin="0,0,6,4" Click="OnAddUnitShift" />
+                <Button Content="افزودن شیفت به واحد" Padding="10,3" Margin="0,0,6,4" Click="OnAddUnitShift" ToolTip="قالب انتخاب‌شده را به واحد انتخاب‌شده اختصاص می‌دهد؛ اگر روزهای ثابت علامت خورده باشد فقط در همان روزها اجرا می‌شود. هم‌پوشانی بدون علامت پذیرفته نمی‌شود." />
                 <Button Content="فعال/بازنشسته" Padding="10,3" Margin="0,0,6,4" Click="OnToggleUnitShift" ToolTip="شیفت انتخاب‌شده را بازنشسته می‌کند یا دوباره فعال می‌کند؛ شیفت حذف نمی‌شود." />
             </WrapPanel>
             <TextBlock TextWrapping="Wrap" Foreground="{StaticResource MutedTextBrush}" Margin="0,2,0,2"
@@ -131,7 +131,7 @@
                 <TextBlock Text="{Binding RangeText}" VerticalAlignment="Center" Margin="0,0,8,0" />
                 <TextBox x:Name="RangeFrom" Width="90" Margin="0,0,6,4" ToolTip="از تاریخ" />
                 <TextBox x:Name="RangeTo" Width="90" Margin="0,0,6,4" ToolTip="تا تاریخ" />
-                <Button Content="نمایش بازه" Padding="10,3" Margin="0,0,6,4" Click="OnRange" />
+                <Button Content="نمایش بازه" Padding="10,3" Margin="0,0,6,4" Click="OnRange" ToolTip="فهرست را برای بازهٔ تاریخ واردشده نشان می‌دهد. چیزی تغییر نمی‌کند." />
             </WrapPanel>
             <DataGrid x:Name="ScheduleGrid" ItemsSource="{Binding Schedule}" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single" HeadersVisibility="Column" CanUserAddRows="False" MaxHeight="260" Background="{StaticResource CardBrush}">
                 <DataGrid.Columns>
@@ -148,12 +148,12 @@
                 <ComboBox x:Name="SchOperator" ItemsSource="{Binding OperatorChoices}" DisplayMemberPath="Value.FullName" Width="150" Margin="0,0,6,4" />
                 <TextBox x:Name="SchDate" Width="90" Margin="0,0,6,4" ToolTip="تاریخ شمسی" />
                 <ComboBox x:Name="SchUnit" ItemsSource="{Binding Units}" DisplayMemberPath="Value.Name" Width="130" Margin="0,0,6,4" />
-                <ComboBox x:Name="SchShift" ItemsSource="{Binding Templates}" DisplayMemberPath="CodeText" Width="70" Margin="0,0,6,4" />
-                <ComboBox x:Name="SchMachine" ItemsSource="{Binding Machines}" DisplayMemberPath="Value.Code" Width="90" Margin="0,0,6,4" ToolTip="ماشین (اختیاری)" />
+                <ComboBox x:Name="SchShift" FlowDirection="LeftToRight" ItemsSource="{Binding Templates}" DisplayMemberPath="CodeText" Width="70" Margin="0,0,6,4" />
+                <ComboBox x:Name="SchMachine" FlowDirection="LeftToRight" ItemsSource="{Binding Machines}" DisplayMemberPath="Value.Code" Width="90" Margin="0,0,6,4" ToolTip="ماشین (اختیاری)" />
                 <TextBox x:Name="SchHandover" Width="60" Margin="0,0,6,4" ToolTip="دقیقهٔ هم‌پوشانی تحویل (اختیاری)" />
                 <TextBox x:Name="SchNote" Width="140" Margin="0,0,6,4" ToolTip="یادداشت تحویل" />
-                <Button Content="برنامه‌ریزی اپراتور" Padding="10,3" Margin="0,0,6,4" Click="OnSchedule" />
-                <Button Content="لغو ردیف انتخاب‌شده…" Padding="10,3" Margin="0,0,6,4" Click="OnCancelSchedule" />
+                <Button Content="برنامه‌ریزی اپراتور" Padding="10,3" Margin="0,0,6,4" Click="OnSchedule" ToolTip="اپراتور را برای تاریخ، واحد، شیفت و ماشین انتخاب‌شده برنامه‌ریزی می‌کند؛ ناسازگاری‌ها پذیرفته نمی‌شود." />
+                <Button Content="لغو ردیف انتخاب‌شده…" Padding="10,3" Margin="0,0,6,4" Click="OnCancelSchedule" ToolTip="ردیف انتخاب‌شده را با دلیل لغو می‌کند؛ ردیف حذف نمی‌شود و در سابقه می‌ماند." />
             </WrapPanel>
 
             <TextBlock Text="مرخصی و غیبت اپراتورها" Style="{StaticResource SectionStyle}" />
@@ -171,8 +171,8 @@
                 <TextBox x:Name="OffTo" Width="90" Margin="0,0,6,4" ToolTip="تا تاریخ" />
                 <ComboBox x:Name="OffKind" ItemsSource="{Binding OffDayKinds}" DisplayMemberPath="Text" SelectedIndex="0" Width="100" Margin="0,0,6,4" />
                 <TextBox x:Name="OffNote" Width="160" Margin="0,0,6,4" ToolTip="یادداشت" />
-                <Button Content="ثبت مرخصی/غیبت" Padding="10,3" Margin="0,0,6,4" Click="OnAddOffDay" />
-                <Button Content="لغو ردیف انتخاب‌شده" Padding="10,3" Margin="0,0,6,4" Click="OnCancelOffDay" />
+                <Button Content="ثبت مرخصی/غیبت" Padding="10,3" Margin="0,0,6,4" Click="OnAddOffDay" ToolTip="مرخصی یا غیبت اپراتور را در بازهٔ واردشده ثبت می‌کند؛ در آن روزها نمی‌توان او را برنامه‌ریزی کرد." />
+                <Button Content="لغو ردیف انتخاب‌شده" Padding="10,3" Margin="0,0,6,4" Click="OnCancelOffDay" ToolTip="ردیف انتخاب‌شده را لغو می‌کند؛ ردیف حذف نمی‌شود و در سابقه می‌ماند." />
             </WrapPanel>
         </StackPanel>
     </ScrollViewer>

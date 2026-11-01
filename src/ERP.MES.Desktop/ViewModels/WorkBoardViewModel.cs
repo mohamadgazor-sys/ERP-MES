@@ -11,7 +11,12 @@ using ERP.MES.Domain.Requests;
 namespace ERP.MES.Desktop.ViewModels;
 
 /// <summary>A stage of the unit (queue or pending list) with why it cannot start and what its sessions are doing.</summary>
-public sealed record WorkStageRow(UnitQueueEntry Entry, string ItemText, string StageText, string StatusText, string BlockText, string SessionsText, bool IsReleased, int UnfinishedSessions);
+public sealed record WorkStageRow(UnitQueueEntry Entry, string ItemText, string StageText, string StatusText, string BlockText, string SessionsText, bool IsReleased, int UnfinishedSessions)
+{
+    public string RequestNo => Entry.RequestNo;
+
+    public string CustomerName => Entry.CustomerName;
+}
 
 /// <summary>A work session as shown: texts only; the row carries the identifiers and the row version the commands use.</summary>
 public sealed record SessionDisplayRow(

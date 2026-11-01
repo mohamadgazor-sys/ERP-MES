@@ -30,7 +30,7 @@
             <WrapPanel Margin="0,0,0,8">
                 <TextBlock Text="واحد تولید:" VerticalAlignment="Center" Margin="0,0,6,0" />
                 <ComboBox x:Name="UnitBox" ItemsSource="{Binding Units}" DisplayMemberPath="Name" Width="220" Margin="0,0,8,0" SelectionChanged="OnUnitChanged" />
-                <Button Content="بارگذاری دوباره" Padding="12,4" Click="OnReloadClick" />
+                <Button Style="{StaticResource WrapButton}" Content="بارگذاری دوباره" Padding="12,4" Click="OnReloadClick" ToolTip="فهرست را دوباره از پایگاه داده می‌خواند. چیزی ذخیره یا حذف نمی‌شود." />
                 <TextBlock Text="{Binding Summary}" VerticalAlignment="Center" Margin="12,0,0,0" Foreground="{StaticResource MutedTextBrush}" TextWrapping="Wrap" />
             </WrapPanel>
 
@@ -38,6 +38,8 @@
             <DataGrid x:Name="StageGrid" ItemsSource="{Binding Stages}" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single" HeadersVisibility="Column"
                       CanUserAddRows="False" CanUserDeleteRows="False" MaxHeight="300" Background="{StaticResource CardBrush}" SelectionChanged="OnStageChanged">
                 <DataGrid.Columns>
+                    <DataGridTextColumn Header="درخواست" Binding="{Binding RequestNo}" ElementStyle="{StaticResource LtrCell}" Width="90" />
+                    <DataGridTextColumn Header="مشتری" Binding="{Binding CustomerName}" Width="110" />
                     <DataGridTextColumn Header="آیتم" Binding="{Binding ItemText}" Width="*" />
                     <DataGridTextColumn Header="مرحله" Binding="{Binding StageText}" Width="*" />
                     <DataGridTextColumn Header="وضعیت" Binding="{Binding StatusText}" Width="120" />
@@ -46,8 +48,8 @@
                 </DataGrid.Columns>
             </DataGrid>
             <WrapPanel Margin="0,6,0,0">
-                <Button Content="محاسبهٔ معیارهای مرحله" Padding="10,4" Margin="0,0,8,4" Click="OnMetricsClick" />
-                <Button Content="ارسال مرحله به کنترل کیفیت" Padding="10,4" Margin="0,0,8,4" Click="OnSubmitStageClick" IsEnabled="{Binding IsOperator}" />
+                <Button Style="{StaticResource WrapButton}" Content="محاسبهٔ معیارهای مرحله" Padding="10,4" Margin="0,0,8,4" Click="OnMetricsClick" ToolTip="زمان واقعی و معیارهای مرحلهٔ انتخاب‌شده را از نوبت‌های ثبت‌شده حساب می‌کند. چیزی تغییر نمی‌کند." />
+                <Button Style="{StaticResource WrapButton}" Content="ارسال مرحله به کنترل کیفیت" Padding="10,4" Margin="0,0,8,4" Click="OnSubmitStageClick" IsEnabled="{Binding IsOperator}" ToolTip="مرحله را برای بازرسی به کنترل کیفیت می‌فرستد؛ تا همهٔ نوبت‌ها پایان نیافته‌اند پذیرفته نمی‌شود." />
             </WrapPanel>
             <TextBlock Text="{Binding MetricsText}" TextWrapping="Wrap" Foreground="{StaticResource MutedTextBrush}" />
 
@@ -56,15 +58,15 @@
                     <TextBlock Text="تخصیص و شروع کار (سرپرست واحد)" FontWeight="SemiBold" />
                     <WrapPanel Margin="0,6,0,0">
                         <TextBlock Text="ماشین (فقط ماشین‌های همین واحد):" VerticalAlignment="Center" Margin="0,0,6,0" />
-                        <ComboBox x:Name="MachineBox" ItemsSource="{Binding Machines}" DisplayMemberPath="Code" Width="140" Margin="0,0,12,4" />
+                        <ComboBox x:Name="MachineBox" FlowDirection="LeftToRight" ItemsSource="{Binding Machines}" DisplayMemberPath="Code" Width="140" Margin="0,0,12,4" />
                         <TextBlock Text="اپراتور مجاز:" VerticalAlignment="Center" Margin="0,0,6,0" />
                         <ComboBox x:Name="OperatorBox" ItemsSource="{Binding Operators}" DisplayMemberPath="Name" Width="200" Margin="0,0,12,4" />
                         <TextBlock Text="دلیل کار خارج از شیفت (در صورت نیاز):" VerticalAlignment="Center" Margin="0,0,6,0" />
                         <TextBox x:Name="OutsideBox" Width="220" Margin="0,0,12,4" />
                     </WrapPanel>
                     <WrapPanel>
-                        <Button Content="تخصیص و شروع" Padding="12,5" Margin="0,0,8,4" Click="OnDispatchStartClick" IsEnabled="{Binding CanDispatchSelected}" />
-                        <Button Content="فقط تخصیص" Padding="12,5" Margin="0,0,8,4" Click="OnDispatchOnlyClick" IsEnabled="{Binding CanDispatchSelected}" />
+                        <Button Style="{StaticResource WrapButton}" Content="تخصیص و شروع" Padding="12,5" Margin="0,0,8,4" Click="OnDispatchStartClick" IsEnabled="{Binding CanDispatchSelected}" ToolTip="اپراتور و ماشین را اختصاص می‌دهد و نوبت را همین حالا شروع می‌کند." />
+                        <Button Style="{StaticResource WrapButton}" Content="فقط تخصیص" Padding="12,5" Margin="0,0,8,4" Click="OnDispatchOnlyClick" IsEnabled="{Binding CanDispatchSelected}" ToolTip="اپراتور و ماشین را به مرحله اختصاص می‌دهد، بدون شروع نوبت." />
                     </WrapPanel>
                 </StackPanel>
             </Border>
@@ -88,19 +90,19 @@
             <WrapPanel Margin="0,6,0,0">
                 <TextBlock Text="دلیل توقف:" VerticalAlignment="Center" Margin="0,0,6,0" />
                 <ComboBox x:Name="ReasonBox" ItemsSource="{Binding Reasons}" DisplayMemberPath="Value.Name" Width="260" Margin="0,0,12,4" />
-                <Button Content="شروع" Padding="10,4" Margin="0,0,6,4" Click="OnStartClick" IsEnabled="{Binding IsSupervisor}" />
-                <Button Content="توقف…" Padding="10,4" Margin="0,0,6,4" Click="OnPauseClick" />
-                <Button Content="ازسرگیری" Padding="10,4" Margin="0,0,6,4" Click="OnResumeClick" />
-                <Button Content="پایان نوبت…" Padding="10,4" Margin="0,0,6,4" Click="OnFinishClick" />
-                <Button Content="تحویل به اپراتور انتخابی (بالا)" Padding="10,4" Margin="0,0,6,4" Click="OnHandOverClick" IsEnabled="{Binding IsSupervisor}" />
-                <Button Content="لغو نوبت شروع‌نشده…" Padding="10,4" Margin="0,0,6,4" Click="OnCancelClick" IsEnabled="{Binding IsSupervisor}" />
+                <Button Style="{StaticResource WrapButton}" Content="شروع" Padding="10,4" Margin="0,0,6,4" Click="OnStartClick" IsEnabled="{Binding IsSupervisor}" ToolTip="نوبت تخصیص‌یافته را شروع می‌کند؛ زمان از همین لحظه حساب می‌شود." />
+                <Button Style="{StaticResource WrapButton}" Content="توقف…" Padding="10,4" Margin="0,0,6,4" Click="OnPauseClick" ToolTip="کار را متوقف می‌کند و دلیل را می‌پرسد. زمان توقف ثبت می‌شود و تا ازسرگیری، زمان مفید حساب نمی‌شود." />
+                <Button Style="{StaticResource WrapButton}" Content="ازسرگیری" Padding="10,4" Margin="0,0,6,4" Click="OnResumeClick" ToolTip="کار متوقف‌شده را ادامه می‌دهد؛ ساعت کاری عادی نباشد دلیل خواسته می‌شود." />
+                <Button Style="{StaticResource WrapButton}" Content="پایان نوبت…" Padding="10,4" Margin="0,0,6,4" Click="OnFinishClick" ToolTip="نوبت کاری را پایان می‌دهد و تعداد انجام‌شده را می‌پرسد. بعد از پایان، نوبت دیگر ادامه نمی‌یابد." />
+                <Button Style="{StaticResource WrapButton}" Content="تحویل به اپراتور انتخابی (بالا)" Padding="10,4" Margin="0,0,6,4" Click="OnHandOverClick" IsEnabled="{Binding IsSupervisor}" ToolTip="نوبت را به اپراتور انتخاب‌شده در فهرست بالا تحویل می‌دهد. تغییر در سابقهٔ نوبت ثبت می‌شود." />
+                <Button Style="{StaticResource WrapButton}" Content="لغو نوبت شروع‌نشده…" Padding="10,4" Margin="0,0,6,4" Click="OnCancelClick" IsEnabled="{Binding IsSupervisor}" ToolTip="نوبتی را که هنوز شروع نشده لغو می‌کند و دلیل را می‌پرسد؛ در سابقه می‌ماند." />
             </WrapPanel>
 
             <Border Margin="0,10,0,0" Padding="10" Background="{StaticResource CardBrush}" BorderBrush="{StaticResource BorderBrushSoft}" BorderThickness="1" Visibility="{Binding IsSupervisor, Converter={StaticResource BoolToVisibility}}">
                 <StackPanel>
                     <TextBlock Text="قطعی مشترک (قطع برق و مانند آن): یک رویداد، چند نوبت؛ زمان‌ها برای هر نوبت جدا ثبت می‌شود" FontWeight="SemiBold" TextWrapping="Wrap" />
                     <WrapPanel Margin="0,6,0,0">
-                        <Button Content="ثبت قطعی برای همهٔ نوبت‌های فعال واحد (با دلیل انتخاب‌شده)…" Padding="10,4" Margin="0,0,8,4" Click="OnOutageClick" />
+                        <Button Style="{StaticResource WrapButton}" Content="ثبت قطعی برای همهٔ نوبت‌های فعال واحد (با دلیل انتخاب‌شده)…" Padding="10,4" Margin="0,0,8,4" Click="OnOutageClick" ToolTip="قطعی برق یا خرابی را برای همهٔ نوبت‌های فعال واحد ثبت می‌کند؛ این نوبت‌ها متوقف می‌شوند و زمان قطعی کار مفید حساب نمی‌شود." />
                     </WrapPanel>
                     <DataGrid x:Name="OutageGrid" ItemsSource="{Binding Outages}" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single" HeadersVisibility="Column"
                               CanUserAddRows="False" CanUserDeleteRows="False" MaxHeight="120" Background="{StaticResource CardBrush}">
@@ -109,7 +111,7 @@
                             <DataGridTextColumn Header="توضیح" Binding="{Binding Note}" Width="*" />
                         </DataGrid.Columns>
                     </DataGrid>
-                    <Button Content="پایان قطعی انتخاب‌شده و ازسرگیری نوبت‌ها" Padding="10,4" Margin="0,6,0,0" HorizontalAlignment="Left" Click="OnEndOutageClick" />
+                    <Button Style="{StaticResource WrapButton}" Content="پایان قطعی انتخاب‌شده و ازسرگیری نوبت‌ها" Padding="10,4" Margin="0,6,0,0" HorizontalAlignment="Left" Click="OnEndOutageClick" ToolTip="قطعی ثبت‌شده را می‌بندد و نوبت‌های متوقف‌شده به‌خاطر آن را ازسر می‌گیرد." />
                 </StackPanel>
             </Border>
 
@@ -130,8 +132,8 @@
                         <TextBox x:Name="InstantBox" Width="160" Margin="0,0,8,4" FlowDirection="LeftToRight" />
                     </WrapPanel>
                     <WrapPanel>
-                        <Button Content="اصلاح زمان…" Padding="10,4" Margin="0,0,8,4" Click="OnCorrectClick" />
-                        <Button Content="تأیید زمان واقعی نوبت پایان‌یافته" Padding="10,4" Margin="0,0,8,4" Click="OnApproveClick" IsEnabled="{Binding CanApprove}" />
+                        <Button Style="{StaticResource WrapButton}" Content="اصلاح زمان…" Padding="10,4" Margin="0,0,8,4" Click="OnCorrectClick" ToolTip="زمان ثبت‌شدهٔ نوبت را با دلیل اصلاح می‌کند؛ مقدار قبلی و دلیل در سابقه می‌ماند." />
+                        <Button Style="{StaticResource WrapButton}" Content="تأیید زمان واقعی نوبت پایان‌یافته" Padding="10,4" Margin="0,0,8,4" Click="OnApproveClick" IsEnabled="{Binding CanApprove}" ToolTip="زمان واقعی نوبت پایان‌یافته را برای محاسبهٔ هزینه تأیید می‌کند." />
                     </WrapPanel>
                 </StackPanel>
             </Border>

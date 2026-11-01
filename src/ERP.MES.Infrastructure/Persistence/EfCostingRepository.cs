@@ -20,6 +20,7 @@ public sealed class EfCostingRepository(IDbContextFactory<ErpMesDbContext> conte
         var notRequired = await NotRequiredItemsAsync(context, cancellationToken);
         var calculations = await context.ItemCostCalculations.Include(c => c.Lines).AsNoTracking().OrderBy(c => c.SequenceNo).ToListAsync(cancellationToken);
         var decisions = await context.ItemPriceDecisions.AsNoTracking().OrderBy(d => d.Id).ToListAsync(cancellationToken);
+        var customerNames = await context.Customers.AsNoTracking().ToDictionaryAsync(c => c.Id, c => c.Name, cancellationToken);
         var result = new List<CostingItemSummary>();
         foreach (var request in requests)
         {
@@ -30,7 +31,8 @@ public sealed class EfCostingRepository(IDbContextFactory<ErpMesDbContext> conte
                 result.Add(new CostingItemSummary(
                     request.Id, request.RequestNo.Value, item.Id, item.ItemNo, item.PartName, request.WorkType, IsContractApproved(contracts, request.Id) && !notRequired.Contains(item.Id), item.Stages.OrderBy(s => s.StageNo).Last().AcceptedBaseUnits,
                     latest is null ? null : new Stored<ItemCostCalculation>(latest, 0),
-                    decision is null ? null : new Stored<ItemPriceDecision>(decision, VersionOf(context, decision.Id))));
+                    decision is null ? null : new Stored<ItemPriceDecision>(decision, VersionOf(context, decision.Id)),
+                    customerNames.GetValueOrDefault(request.CustomerId, string.Empty)));
             }
         }
 

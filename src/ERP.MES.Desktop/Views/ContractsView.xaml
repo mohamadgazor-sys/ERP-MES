@@ -10,7 +10,7 @@
             <TextBlock Text="{Binding Message}" TextWrapping="Wrap" Foreground="#9B1C1C" FontWeight="SemiBold" Margin="0,0,0,8" />
             <TextBlock TextWrapping="Wrap" Foreground="{StaticResource MutedTextBrush}" Margin="0,0,0,8"
                        Text="فقط درخواست‌های ساخت. برنامه‌ریزی لزوم قرارداد را ثبت و در صورت نیاز قرارداد را با فایل PDF تهیه و ارسال می‌کند؛ مدیریت تأیید یا رد می‌کند (برای رد، دلیل لازم است). رد = بازگشت به برنامه‌ریزی برای نسخهٔ جدید (روال پیش‌فرض موقت). انبار فقط می‌بیند. نسخه‌های ارسال‌شده، فایل‌ها و تصمیم‌ها هرگز بازنویسی نمی‌شوند." />
-            <Button Content="بارگذاری مجدد" Padding="10,3" HorizontalAlignment="Left" Click="OnReloadClick" Margin="0,0,0,8" />
+            <Button Content="بارگذاری مجدد" Padding="10,3" HorizontalAlignment="Left" Click="OnReloadClick" Margin="0,0,0,8" ToolTip="فهرست را دوباره از پایگاه داده می‌خواند. چیزی ذخیره یا حذف نمی‌شود." />
 
             <TextBlock Text="درخواست‌های ساخت در مرحلهٔ قرارداد یا دارای قرارداد" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource PrimaryBrush}" Margin="0,4,0,6" />
             <DataGrid ItemsSource="{Binding Rows}" SelectedItem="{Binding SelectedRow, Mode=TwoWay}" SelectionChanged="OnRowSelected" AutoGenerateColumns="False" IsReadOnly="True"
@@ -41,7 +41,7 @@
                         <DataGridTextColumn Header="توضیح / دلیل" Binding="{Binding DecisionNoteText}" Width="*" />
                     </DataGrid.Columns>
                 </DataGrid>
-                <Button Content="مشاهدهٔ آخرین PDF" Padding="10,3" HorizontalAlignment="Left" Margin="0,6,0,0" Click="OnViewPdfClick" Visibility="{Binding CanViewPdf, Converter={StaticResource BoolToVisibility}}" />
+                <Button Content="مشاهدهٔ آخرین PDF" Padding="10,3" HorizontalAlignment="Left" Margin="0,6,0,0" Click="OnViewPdfClick" Visibility="{Binding CanViewPdf, Converter={StaticResource BoolToVisibility}}" ToolTip="آخرین فایل PDF ثبت‌شده را با برنامهٔ PDF باز می‌کند." />
 
                 <TextBlock Text="تصمیم قرارداد هر آیتم" FontWeight="SemiBold" Margin="0,12,0,4" />
                 <TextBlock TextWrapping="Wrap" Foreground="{StaticResource MutedTextBrush}" Text="آیتمی که «قرارداد لازم نیست» ثبت شود، منتظر تأیید قرارداد نمی‌ماند؛ سایر آیتم‌ها تا تأیید قرارداد آزاد یا شروع نمی‌شوند. دلیل الزامی است و هر تصمیم در تاریخچه می‌ماند." />
@@ -61,8 +61,8 @@
                     </DataGrid.Columns>
                 </DataGrid>
                 <WrapPanel Margin="0,6,0,0">
-                    <Button Content="این آیتم: قرارداد لازم است" Padding="12,5" Margin="0,0,8,0" Click="OnItemRequiredClick" IsEnabled="{Binding CanDecideItem}" />
-                    <Button Content="این آیتم: قرارداد لازم نیست" Padding="12,5" Margin="0,0,8,0" Click="OnItemNotRequiredClick" IsEnabled="{Binding CanDecideItem}" />
+                    <Button Content="این آیتم: قرارداد لازم است" Padding="12,5" Margin="0,0,8,0" Click="OnItemRequiredClick" IsEnabled="{Binding CanDecideItem}" ToolTip="فقط برای همین آیتم اعلام می‌کند قرارداد لازم است؛ تصمیم قبلی در سابقه می‌ماند." />
+                    <Button Content="این آیتم: قرارداد لازم نیست" Padding="12,5" Margin="0,0,8,0" Click="OnItemNotRequiredClick" IsEnabled="{Binding CanDecideItem}" ToolTip="فقط برای همین آیتم اعلام می‌کند قرارداد لازم نیست؛ تصمیم قبلی در سابقه می‌ماند." />
                 </WrapPanel>
 
                 <TextBlock Text="تاریخچه" FontWeight="SemiBold" Margin="0,12,0,4" />
@@ -72,6 +72,7 @@
                         <DataGridTextColumn Header="اقدام" Binding="{Binding ActionText}" Width="*" />
                         <DataGridTextColumn Header="وضعیت" Binding="{Binding StatusChangeText}" Width="*" />
                         <DataGridTextColumn Header="واحد" Binding="{Binding DepartmentText}" Width="100" />
+                        <DataGridTextColumn Header="انجام‌دهنده" Binding="{Binding ActorText}" Width="160" />
                         <DataGridTextColumn Header="توضیح" Binding="{Binding NoteText}" Width="*" />
                     </DataGrid.Columns>
                 </DataGrid>
@@ -81,10 +82,10 @@
                         <TextBlock Text="توضیح یا دلیل (برای رد و تغییر تصمیم الزامی است)" />
                         <TextBox x:Name="NoteBox" Width="420" HorizontalAlignment="Left" />
                         <WrapPanel Margin="0,8,0,0">
-                            <Button Content="قرارداد لازم است" Padding="12,5" Margin="0,0,8,0" Click="OnDecideRequiredClick" IsEnabled="{Binding CanDecide}" />
-                            <Button Content="قرارداد لازم نیست" Padding="12,5" Margin="0,0,8,0" Click="OnDecideNotRequiredClick" IsEnabled="{Binding CanDecide}" />
-                            <Button Content="تغییر تصمیم به «لازم است»" Padding="12,5" Margin="0,0,8,0" Click="OnChangeToRequiredClick" IsEnabled="{Binding CanChangeRequirement}" />
-                            <Button Content="تغییر تصمیم به «لازم نیست»" Padding="12,5" Margin="0,0,8,0" Click="OnChangeToNotRequiredClick" IsEnabled="{Binding CanChangeRequirement}" />
+                            <Button Content="قرارداد لازم است" Padding="12,5" Margin="0,0,8,0" Click="OnDecideRequiredClick" IsEnabled="{Binding CanDecide}" ToolTip="اعلام می‌کند برای کل این درخواست قرارداد لازم است؛ تا تأیید مدیریت تولید آزاد نمی‌شود." />
+                            <Button Content="قرارداد لازم نیست" Padding="12,5" Margin="0,0,8,0" Click="OnDecideNotRequiredClick" IsEnabled="{Binding CanDecide}" ToolTip="اعلام می‌کند برای این درخواست قرارداد لازم نیست؛ مسیر قرارداد بسته می‌شود." />
+                            <Button Content="تغییر تصمیم به «لازم است»" Padding="12,5" Margin="0,0,8,0" Click="OnChangeToRequiredClick" IsEnabled="{Binding CanChangeRequirement}" ToolTip="تصمیم قرارداد را به «لازم است» تغییر می‌کند و تصمیم قبلی در سابقه می‌ماند." />
+                            <Button Content="تغییر تصمیم به «لازم نیست»" Padding="12,5" Margin="0,0,8,0" Click="OnChangeToNotRequiredClick" IsEnabled="{Binding CanChangeRequirement}" ToolTip="تصمیم قرارداد را به «لازم نیست» تغییر می‌کند و تصمیم قبلی در سابقه می‌ماند." />
                         </WrapPanel>
                         <WrapPanel Margin="0,8,0,0">
                             <StackPanel Margin="0,0,12,0"><TextBlock Text="شمارهٔ قرارداد" /><TextBox x:Name="ContractNoBox" Width="150" FlowDirection="LeftToRight" /></StackPanel>
@@ -92,14 +93,14 @@
                             <StackPanel Margin="0,0,12,0"><TextBlock Text="عنوان" /><TextBox x:Name="TitleBox" Width="220" /></StackPanel>
                         </WrapPanel>
                         <WrapPanel Margin="0,8,0,0">
-                            <Button Content="ذخیرهٔ پیش‌نویس" Padding="12,5" Margin="0,0,8,0" Click="OnSaveDraftClick" IsEnabled="{Binding CanEditDraft}" />
-                            <Button Content="پیوست PDF قرارداد" Padding="12,5" Margin="0,0,8,0" Click="OnAttachPdfClick" IsEnabled="{Binding CanEditDraft}" />
-                            <Button Content="ارسال به مدیریت" Padding="12,5" Margin="0,0,8,0" Click="OnSubmitClick" IsEnabled="{Binding CanEditDraft}" />
-                            <Button Content="شروع نسخهٔ جدید پس از رد" Padding="12,5" Margin="0,0,8,0" Click="OnStartRevisionClick" IsEnabled="{Binding CanStartRevision}" />
+                            <Button Content="ذخیرهٔ پیش‌نویس" Padding="12,5" Margin="0,0,8,0" Click="OnSaveDraftClick" IsEnabled="{Binding CanEditDraft}" ToolTip="گزارش را به‌صورت پیش‌نویس ذخیره می‌کند؛ هنوز برای سرپرست ارسال نشده و قابل ویرایش است." />
+                            <Button Content="پیوست PDF قرارداد" Padding="12,5" Margin="0,0,8,0" Click="OnAttachPdfClick" IsEnabled="{Binding CanEditDraft}" ToolTip="فایل PDF قرارداد را پیوست می‌کند؛ فایل قبلی در سابقه می‌ماند." />
+                            <Button Content="ارسال به مدیریت" Padding="12,5" Margin="0,0,8,0" Click="OnSubmitClick" IsEnabled="{Binding CanEditDraft}" ToolTip="درخواست را برای تأیید یا رد به مدیریت می‌فرستد؛ بعد از ارسال دیگر قابل ویرایش نیست." />
+                            <Button Content="شروع نسخهٔ جدید پس از رد" Padding="12,5" Margin="0,0,8,0" Click="OnStartRevisionClick" IsEnabled="{Binding CanStartRevision}" ToolTip="بعد از رد قرارداد، نسخهٔ جدید را برای اصلاح و ارسال دوباره آغاز می‌کند." />
                         </WrapPanel>
                         <WrapPanel Margin="0,8,0,0">
-                            <Button Content="تأیید قرارداد" Padding="12,5" Margin="0,0,8,0" Click="OnApproveClick" IsEnabled="{Binding CanDecideContract}" />
-                            <Button Content="رد قرارداد" Padding="12,5" Click="OnRejectClick" IsEnabled="{Binding CanDecideContract}" />
+                            <Button Content="تأیید قرارداد" Padding="12,5" Margin="0,0,8,0" Click="OnApproveClick" IsEnabled="{Binding CanDecideContract}" ToolTip="قرارداد را تأیید می‌کند؛ پس از آن برنامه‌ریزی و انبار مطلع می‌شوند. فقط مدیریت." />
+                            <Button Content="رد قرارداد" Padding="12,5" Click="OnRejectClick" IsEnabled="{Binding CanDecideContract}" ToolTip="قرارداد را رد می‌کند (با توضیح اختیاری)؛ برای اصلاح و ارسال دوباره به برنامه‌ریزی برمی‌گردد." />
                         </WrapPanel>
                     </StackPanel>
                 </Border>

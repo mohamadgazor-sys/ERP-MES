@@ -11,7 +11,7 @@
             <TextBlock Text="{x:Static vm:ProductionQueueViewModel.Heading}" FontSize="18" FontWeight="SemiBold" Foreground="{StaticResource PrimaryBrush}" />
             <TextBlock Text="{x:Static vm:ProductionQueueViewModel.OverviewNote}" Margin="0,2,0,0" TextWrapping="Wrap" Foreground="{StaticResource MutedTextBrush}" />
             <StackPanel Orientation="Horizontal" Margin="0,8,0,8">
-                <Button Content="بارگذاری دوباره" Padding="12,5" Click="OnReloadClick" />
+                <Button Content="بارگذاری دوباره" Padding="12,5" Click="OnReloadClick" ToolTip="فهرست را دوباره از پایگاه داده می‌خواند. چیزی ذخیره یا حذف نمی‌شود." />
                 <TextBlock Text="{Binding LoadedAtText}" VerticalAlignment="Center" Margin="12,0,0,0" Foreground="{StaticResource MutedTextBrush}" />
             </StackPanel>
             <TextBlock Text="{Binding Message}" TextWrapping="Wrap" Foreground="#9B1C1C" FontWeight="SemiBold" Margin="0,0,0,8" />

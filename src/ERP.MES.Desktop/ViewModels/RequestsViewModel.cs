@@ -11,7 +11,7 @@ public sealed record RequestRow(long RequestId, string RequestNo, string Custome
 
 public sealed record ItemRow(string ItemNo, string PartName, string WorkTypeText, string QuantityText, string PriorityText, long ItemId = 0) : IHasItemId;
 
-public sealed record HistoryRow(string DateText, string ActionText, string StatusChangeText, string DepartmentText, string OutcomeText, string NoteText);
+public sealed record HistoryRow(string DateText, string ActionText, string StatusChangeText, string DepartmentText, string OutcomeText, string NoteText, string ActorText = "");
 
 public sealed record CustomerChoice(long Id, string Name);
 
@@ -24,7 +24,7 @@ public sealed record Choice<T>(T Value, string Text);
 /// this screen (demonstration build: items are listed, their routes are not edited).
 /// </summary>
 public sealed class RequestsViewModel(
-    RequestService requests, RequestDocumentService documents, RequestWorkflowService lifecycle, CustomerService customers, IJalaliDateService dates, DigitStyle digitStyle, Func<DateTime> utcNow, Func<Principal> currentUser) : ObservableObject
+    RequestService requests, RequestDocumentService documents, RequestWorkflowService lifecycle, CustomerService customers, IJalaliDateService dates, DigitStyle digitStyle, Func<DateTime> utcNow, Func<Principal> currentUser, UserDirectoryService? users = null) : ObservableObject
 {
     private readonly ObservableCollection<RequestRow> _rows = [];
     private readonly ObservableCollection<ItemRow> _items = [];
@@ -410,6 +410,7 @@ public sealed class RequestsViewModel(
         _detailCustomer = outcome.Value.CustomerName;
         _items.Clear();
         _history.Clear();
+        var actors = await ActorLookup.DescribeAsync(users, currentUser(), _detail.Value.WorkflowHistory.Select(e => e.ActionByUserId));
         foreach (var entry in _detail.Value.WorkflowHistory)
         {
             _history.Add(new HistoryRow(
@@ -418,7 +419,8 @@ public sealed class RequestsViewModel(
                 Messages.StatusText(entry.FromStatus) + " ← " + Messages.StatusText(entry.ToStatus),
                 Messages.DepartmentText(entry.ActionByDepartmentCode),
                 entry.Outcome is { } drawingOutcome ? Messages.OutcomeText(drawingOutcome) : string.Empty,
-                entry.Note ?? string.Empty));
+                entry.Note ?? string.Empty,
+                ActorLookup.Text(actors, entry.ActionByUserId)));
         }
 
         OnPropertyChanged(nameof(HasHistory));

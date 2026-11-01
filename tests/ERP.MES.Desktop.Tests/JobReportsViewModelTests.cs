@@ -77,11 +77,11 @@ public class JobReportsViewModelTests
         Assert.False(operatorVm.IsErrorMessage, operatorVm.Message);
         var draftRow = Assert.Single(operatorVm.Rows);
         Assert.Equal("پیش‌نویس", draftRow.StatusText);
-        Assert.Equal("۱ خط، ۲۱۰ دقیقهٔ مفید", draftRow.LinesText);
+        Assert.Equal("۱ ردیف کار، ۲۱۰ دقیقهٔ مفید", draftRow.LinesText);
         await operatorVm.SubmitAsync();
         Assert.False(operatorVm.IsErrorMessage, operatorVm.Message);
         Assert.Equal("ارسال‌شده", operatorVm.Rows.Single().StatusText);
-        Assert.Equal("۱ خط علامت‌دار", operatorVm.Rows.Single().FlagsText); // the operator was not planned that day
+        Assert.Equal("۱ ردیف کار علامت‌دار", operatorVm.Rows.Single().FlagsText); // the operator was not planned that day
 
         // Planning reviews as the fallback because the unit has no supervisor; the screen says so.
         var planning = For(h, h.Planning);

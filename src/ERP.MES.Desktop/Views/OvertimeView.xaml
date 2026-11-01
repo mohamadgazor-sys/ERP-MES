@@ -28,7 +28,7 @@
                 <TextBlock Text="{Binding RangeText}" VerticalAlignment="Center" Margin="0,0,8,0" />
                 <TextBox x:Name="RangeFrom" Width="90" Margin="0,0,6,4" ToolTip="از تاریخ" />
                 <TextBox x:Name="RangeTo" Width="90" Margin="0,0,6,4" ToolTip="تا تاریخ" />
-                <Button Content="نمایش بازه" Padding="10,3" Margin="0,0,6,4" Click="OnRange" />
+                <Button Content="نمایش بازه" Padding="10,3" Margin="0,0,6,4" Click="OnRange" ToolTip="فهرست را برای بازهٔ تاریخ واردشده نشان می‌دهد. چیزی تغییر نمی‌کند." />
             </WrapPanel>
             <DataGrid x:Name="OvertimeGrid" ItemsSource="{Binding Rows}" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single" HeadersVisibility="Column" CanUserAddRows="False" MaxHeight="300" Background="{StaticResource CardBrush}">
                 <DataGrid.Columns>
@@ -42,14 +42,14 @@
             </DataGrid>
             <WrapPanel Margin="0,6,0,0">
                 <StackPanel Orientation="Horizontal" Visibility="{Binding CanDecide, Converter={StaticResource BoolToVisibility}}">
-                    <Button Content="تأیید" Padding="10,3" Margin="0,0,6,4" Click="OnApprove" />
-                    <Button Content="رد…" Padding="10,3" Margin="0,0,6,4" Click="OnReject" />
+                    <Button Content="تأیید" Padding="10,3" Margin="0,0,6,4" Click="OnApprove" ToolTip="انتخاب یا مقدار واردشده را تأیید می‌کند." />
+                    <Button Content="رد…" Padding="10,3" Margin="0,0,6,4" Click="OnReject" ToolTip="مورد انتخاب‌شده را رد می‌کند و دلیل را می‌پرسد." />
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" Visibility="{Binding CanManagementDecide, Converter={StaticResource BoolToVisibility}}">
-                    <Button Content="تأیید (مدیریت)" Padding="10,3" Margin="0,0,6,4" Click="OnManagementApprove" />
-                    <Button Content="رد (مدیریت)…" Padding="10,3" Margin="0,0,6,4" Click="OnManagementReject" />
+                    <Button Content="تأیید (مدیریت)" Padding="10,3" Margin="0,0,6,4" Click="OnManagementApprove" ToolTip="درخواست را تأیید می‌کند و برای برنامه‌ریزی می‌فرستد. فقط مدیریت." />
+                    <Button Content="رد (مدیریت)…" Padding="10,3" Margin="0,0,6,4" Click="OnManagementReject" ToolTip="درخواست را رد می‌کند و دلیل را می‌پرسد؛ برنامه‌ریزی می‌تواند با دلیل دوباره بازش کند." />
                 </StackPanel>
-                <Button Content="لغو با دلیل…" Padding="10,3" Margin="0,0,6,4" Click="OnCancel" />
+                <Button Content="لغو با دلیل…" Padding="10,3" Margin="0,0,6,4" Click="OnCancel" ToolTip="مورد انتخاب‌شده را با دلیلی که می‌نویسید لغو می‌کند؛ سابقه می‌ماند." />
             </WrapPanel>
 
             <StackPanel Visibility="{Binding CanConfigureLimits, Converter={StaticResource BoolToVisibility}}">
@@ -57,7 +57,7 @@
                 <WrapPanel>
                     <TextBox x:Name="DayLimitBox" Width="70" Margin="0,0,6,4" ToolTip="سقف روزانه (دقیقه)" />
                     <TextBox x:Name="WeekLimitBox" Width="70" Margin="0,0,6,4" ToolTip="سقف هفتگی (دقیقه)" />
-                    <Button Content="ذخیرهٔ سقف" Padding="10,3" Margin="0,0,6,4" Click="OnSaveLimits" />
+                    <Button Content="ذخیرهٔ سقف" Padding="10,3" Margin="0,0,6,4" Click="OnSaveLimits" ToolTip="سقف روزانه و هفتگی اضافه‌کاری را ذخیره می‌کند؛ فقط مدیریت. اضافه‌کاری بیشتر از سقف فقط با تأیید مدیریت ممکن است." />
                 </WrapPanel>
             </StackPanel>
 
@@ -66,12 +66,12 @@
                 <WrapPanel>
                     <ComboBox x:Name="PersonBox" ItemsSource="{Binding Operators}" DisplayMemberPath="Value.FullName" Width="160" Margin="0,0,6,4" />
                     <ComboBox x:Name="UnitBox" ItemsSource="{Binding Units}" DisplayMemberPath="Value.Name" Width="140" Margin="0,0,6,4" />
-                    <ComboBox x:Name="MachineBox" ItemsSource="{Binding Machines}" DisplayMemberPath="Value.Code" Width="90" Margin="0,0,6,4" />
+                    <ComboBox x:Name="MachineBox" FlowDirection="LeftToRight" ItemsSource="{Binding Machines}" DisplayMemberPath="Value.Code" Width="90" Margin="0,0,6,4" />
                     <TextBox x:Name="DateBox" Width="90" Margin="0,0,6,4" ToolTip="تاریخ شمسی" />
                     <TextBox x:Name="StartBox" Width="60" Margin="0,0,6,4" ToolTip="شروع ۱۷:۳۰" />
                     <TextBox x:Name="EndBox" Width="60" Margin="0,0,6,4" ToolTip="پایان ۱۹:۰۰" />
                     <TextBox x:Name="ReasonBox" Width="220" Margin="0,0,6,4" ToolTip="دلیل (الزامی)" />
-                    <Button Content="پیشنهاد" Padding="10,3" Margin="0,0,6,4" Click="OnPropose" />
+                    <Button Content="پیشنهاد" Padding="10,3" Margin="0,0,6,4" Click="OnPropose" ToolTip="اضافه‌کاری را با بازهٔ واردشده پیشنهاد می‌کند؛ تا تأیید، اضافه‌کاری معتبر نیست." />
                 </WrapPanel>
             </StackPanel>
         </StackPanel>
