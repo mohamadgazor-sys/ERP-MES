@@ -20,7 +20,7 @@ The application can write the template itself (page "ورود آیتم‌ها ا
 | `مرجع آیتم والد` | no | The customer reference of the assembly this item belongs to; the parent must be an earlier row of the file or already exist in the request, must be an assembly and must not already have stages; nesting is limited to four levels. |
 | `مونتاژ` | no | `بله` marks the item as an assembly that may have children; empty means a normal item. |
 | `تاریخ تحویل آیتم` | REPAIR rows | Jalali delivery date of a repaired item (for example `1405/02/16`); must not be before the request date. A MAKE row may leave it empty; a value that is given is checked the same way (Decision Log #124 B5). |
-| `کد کالا انبار` | REPAIR rows | The warehouse's own code of the item, 1 to 40 characters, no leading or trailing space. A code that other items already carry is allowed and only reported as a warning when an item is defined by hand. |
+| `کد کالا انبار` | REPAIR rows | The warehouse's own code of the item, 1 to 40 characters, no leading or trailing space. A code that other items already carry is allowed and only reported as a warning (naming those items), both when an item is defined by hand and in the import preview. |
 | `نام قطعه` | **yes** | Part name. |
 | `تعداد` | **yes** | Ordered quantity, a positive number (at most the Domain limit); in the unit of the quantity type. |
 | `کد نوع تعداد` | MAKE | Code of an **active** QC quantity type (for example `PIECE`). Unknown code = row error. |

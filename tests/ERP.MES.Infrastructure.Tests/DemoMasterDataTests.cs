@@ -37,8 +37,9 @@ public class DemoMasterDataTests
         Assert.Equal(new[] { "MILLING", "TURNING" }, db.Query("SELECT Code FROM ProductionUnits ORDER BY Code"));
         Assert.Equal(new[] { "FCC-06|MILLING", "TCC-12|TURNING" }, db.Query("SELECT m.Code || '|' || u.Code FROM Machines m JOIN ProductionUnits u ON u.Id = m.ProductionUnitId ORDER BY m.Code"));
         Assert.Equal(new[] { "FCC-06|1200000.0|2026-03-21", "TCC-12|900000.0|2026-03-21" }, db.Query("SELECT m.Code || '|' || r.RatePerHourRial || '|' || r.EffectiveFrom FROM MachineHourlyRates r JOIN Machines m ON m.Id = r.MachineId ORDER BY m.Code"));
-        Assert.Equal(new[] { "D|08:00:00|17:00:00|12:00:00|13:00:00" }, db.Query("SELECT Code || '|' || StartTime || '|' || EndTime || '|' || BreakStart || '|' || BreakEnd FROM ShiftTemplates"));
-        Assert.Equal(2, Count(db, "UnitShifts"));
+        Assert.Equal(new[] { "D|08:00:00|17:00:00|12:00:00|13:00:00", "F|06:00:00|12:00:00|-|-" }, db.Query("SELECT Code || '|' || StartTime || '|' || EndTime || '|' || COALESCE(BreakStart, '-') || '|' || COALESCE(BreakEnd, '-') FROM ShiftTemplates ORDER BY Code"));
+        // The regular shift follows the company pattern (no weekdays); the standing Friday shift of both CNC units runs on Friday only (Decision Log #123 Q13).
+        Assert.Equal(new[] { "MILLING|D|-", "MILLING|F|32", "TURNING|D|-", "TURNING|F|32" }, db.Query("SELECT u.Code || '|' || t.Code || '|' || COALESCE(CAST(s.RegularDays AS TEXT), '-') FROM UnitShifts s JOIN ProductionUnits u ON u.Id = s.ProductionUnitId JOIN ShiftTemplates t ON t.Id = s.ShiftTemplateId ORDER BY u.Code, t.Code"));
         Assert.Equal(new[] { "ST37-R30|90000.0" }, db.Query("SELECT m.Code || '|' || p.PricePerKgRial FROM MaterialPrices p JOIN Materials m ON m.Id = p.MaterialId"));
         Assert.Equal(new[] { "OP-DEMO|demo.production" }, db.Query("SELECT o.Code || '|' || u.Username FROM Operators o JOIN Users u ON u.Id = o.UserId"));
         Assert.Equal(new[] { "demo.production|MILLING|0", "demo.supervisor|MILLING|1" }, db.Query("SELECT u.Username || '|' || p.Code || '|' || d.IsSupervisor FROM UserUnitDesignations d JOIN Users u ON u.Id = d.UserId JOIN ProductionUnits p ON p.Id = d.ProductionUnitId WHERE d.RevokedAtUtc IS NULL ORDER BY u.Username"));
@@ -65,9 +66,11 @@ public class DemoMasterDataTests
         Assert.Equal(
             new[]
             {
+                // The four fictional drawings of the sample requests come first (the requests are seeded before the master data).
+                "ItemDrawingUploaded|demo.drawing", "ItemDrawingUploaded|demo.drawing", "ItemDrawingUploaded|demo.drawing", "ItemDrawingUploaded|demo.drawing",
                 "StageTitleAdded|demo.planning", "StageTitleAdded|demo.planning", "StageTitleAdded|demo.planning", "StageTitleAdded|demo.planning", "StageTitleAdded|demo.planning", "StageTitleAdded|demo.planning", "StageTitleAdded|demo.planning",
                 "ProductionUnitAdded|demo.planning", "ProductionUnitAdded|demo.planning", "MachineAdded|demo.planning", "MachineRateChanged|demo.planning", "MachineAdded|demo.planning", "MachineRateChanged|demo.planning",
-                "ShiftTemplateAdded|demo.planning", "UnitShiftAdded|demo.planning", "UnitShiftAdded|demo.planning", "MaterialAdded|demo.warehouse", "MaterialPriceChanged|demo.warehouse",
+                "ShiftTemplateAdded|demo.planning", "UnitShiftAdded|demo.planning", "UnitShiftAdded|demo.planning", "ShiftTemplateAdded|demo.planning", "UnitShiftAdded|demo.planning", "UnitShiftAdded|demo.planning", "MaterialAdded|demo.warehouse", "MaterialPriceChanged|demo.warehouse",
                 "OperatorRegistered|demo.planning", "UnitDesignationAssigned|demo.planning", "OperatorMachineAssigned|demo.planning", "OperatorQualificationRecorded|demo.planning", "UnitDesignationAssigned|demo.planning", "UnitSupervisorChanged|demo.planning",
             },
             seeded);
@@ -88,7 +91,7 @@ public class DemoMasterDataTests
             new EfUnitQueueRepository(db.ContextFactory), PersistenceTestData.Dates, actors, new DateTime(2026, 10, 23, 5, 0, 0, DateTimeKind.Utc)).SeedAsync(Token);
 
         Assert.Equal(0, again.Added);
-        Assert.Equal(24, again.Existing);
+        Assert.Equal(27, again.Existing);
         Assert.Equal(before, MasterSnapshot(db));
 
         await DemoDatabase.ResetAsync(db.Path, PersistenceTestData.Dates, db.NextCredentialPath(), SecurityFixture.FastPolicy, Token);

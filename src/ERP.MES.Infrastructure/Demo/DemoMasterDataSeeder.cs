@@ -111,6 +111,31 @@ public sealed class DemoMasterDataSeeder(
             Count(false);
         }
 
+        // A standing Friday schedule (Decision Log #123 Q13): Friday 06:00-12:00 is regular working time, not overtime, for the two demonstration CNC units; other units stay off on Friday.
+        var fridayTemplate = calendar.Templates.FirstOrDefault(t => string.Equals(t.Value.Code, "F", StringComparison.Ordinal));
+        var fridayTemplateId = fridayTemplate?.Value.Id
+            ?? (await scheduling.AddTemplateAsync(
+                new ShiftTemplate(0, "F", "جمعهٔ ثابت " + DemoDataSeeder.DemoNameSuffix, new TimeOnly(6, 0), new TimeOnly(12, 0), null, null, actors.PlanningUserId, atUtc),
+                Audit(actors.PlanningUserId, AuditActions.ShiftTemplateAdded, "ShiftTemplate", "F", "Shift F (Friday 06:00-12:00) registered (demonstration)"),
+                cancellationToken)).Value.Id;
+        Count(fridayTemplate is not null);
+        foreach (var (code, unitId) in units)
+        {
+            if (calendar.UnitShifts.Any(u => u.Value.ProductionUnitId == unitId && u.Value.ShiftTemplateId == fridayTemplateId))
+            {
+                Count(true);
+                continue;
+            }
+
+            var friday = new UnitShift(0, unitId, fridayTemplateId, 3, 1, false, actors.PlanningUserId, atUtc);
+            friday.SetRegularDays(UnitShift.MaskOf([DayOfWeek.Friday]), atUtc);
+            await scheduling.AddUnitShiftAsync(
+                friday,
+                Audit(actors.PlanningUserId, AuditActions.UnitShiftAdded, "UnitShift", $"{code}/F", $"Unit {code} runs shift F on Fridays with capacity 1..3 (demonstration)"),
+                cancellationToken);
+            Count(false);
+        }
+
         var storedMaterials = await materials.ListMaterialsAsync(cancellationToken);
         var material = storedMaterials.FirstOrDefault(m => string.Equals(m.Value.Code, MaterialCode, StringComparison.Ordinal));
         var materialId = material?.Value.Id
