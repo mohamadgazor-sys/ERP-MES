@@ -83,4 +83,39 @@ public class CalendarViewModelTests
             Assert.Empty(vm.Weekdays);
         }
     }
+
+    [Fact]
+    public async Task A_standing_friday_schedule_and_a_dated_own_hours_exception_are_set_through_the_screen()
+    {
+        using var h = await WorkflowHarness.CreateAsync(Token);
+        var unit = (await h.Workflow.PlanningMaster.AddUnitAsync(h.Admin, "MILLING", "فرزکاری", Token)).Value!;
+        var vm = For(h, h.Planning);
+        await vm.LoadAsync(Token);
+        await vm.AddTemplateAsync("D", "روزکار", "08:00", "17:00", "12:00", "13:00");
+        await vm.AddTemplateAsync("F", "جمعه", "06:00", "12:00", null, null);
+        var day = vm.Templates.Single(t => t.Stored.Value.Code == "D").Stored.Value.Id;
+        var friday = vm.Templates.Single(t => t.Stored.Value.Code == "F").Stored.Value.Id;
+        await vm.AddUnitShiftAsync(unit.Value.Id, day, "2", "1", false);
+        Assert.False(vm.IsErrorMessage, vm.Message);
+        Assert.Equal("الگوی شرکت", vm.UnitShifts.Single().DaysText);
+
+        await vm.AddUnitShiftAsync(unit.Value.Id, friday, "2", "1", false, UnitShift.MaskOf([DayOfWeek.Friday]));
+        Assert.False(vm.IsErrorMessage, vm.Message);
+        Assert.Equal("جمعه", vm.UnitShifts.Single(u => u.ShiftText == "F").DaysText);
+
+        // A dated exception: on Saturday 1405/08/02 the unit works only 08:00-12:00; wrong input is reported in Persian.
+        await vm.AddUnitDateHoursAsync(unit.Value.Id, "1405/08/02", "08:00", "12:00", "1", "نیم‌روز");
+        Assert.False(vm.IsErrorMessage, vm.Message);
+        await vm.AddUnitDateHoursAsync(unit.Value.Id, "not a date", "08:00", "12:00", "1", "x");
+        Assert.Equal(Messages.ForIssue(ValidationIssue.DateInvalid, JalaliDateError.None), vm.Message);
+        await vm.AddUnitDateHoursAsync(unit.Value.Id, "1405/08/03", "08:00", "08:00", "1", "x");
+        Assert.Equal(Messages.ForIssue(ValidationIssue.ShiftTimesInvalid, JalaliDateError.None), vm.Message);
+        await vm.AddUnitDateHoursAsync(unit.Value.Id, "1405/08/03", "08:00", "12:00", "1", " ");
+        Assert.Equal(Messages.ForIssue(ValidationIssue.CalendarReasonRequired, JalaliDateError.None), vm.Message);
+
+        // Others only see the calendar.
+        var qc = For(h, h.Qc);
+        await qc.LoadAsync(Token);
+        Assert.False(qc.CanMaintain);
+    }
 }

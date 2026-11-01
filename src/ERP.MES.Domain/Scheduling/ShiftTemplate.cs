@@ -260,6 +260,20 @@ public sealed class UnitShift
 
     public bool OverlapAllowed { get; private set; }
 
+    /// <summary>
+    /// The weekdays this shift runs regularly, as a bit mask (bit n = <see cref="DayOfWeek"/> n); null means it follows the company's weekly pattern, which is how every shift behaved before recurring unit
+    /// schedules (Decision Log #123 Q13). A mask makes it a recurring unit schedule: it runs on exactly those weekdays, even where the company pattern says off (for example Friday 06:00-12:00 of a CNC
+    /// unit); 0 means it runs on no regular day, which is how a date-specific "own hours" shift exists only where a Working exception names the date.
+    /// </summary>
+    public int? RegularDays { get; private set; }
+
+    public const int AllDaysMask = 0b111_1111;
+
+    /// <summary>True when the shift can run on this weekday according to its own schedule; a shift without a mask follows the company pattern, so it can run on any weekday.</summary>
+    public bool CanRunOn(DayOfWeek day) => RegularDays is not { } mask || (mask >> (int)day & 1) == 1;
+
+    public static int MaskOf(IEnumerable<DayOfWeek> days) => days.Aggregate(0, (mask, day) => mask | 1 << (int)day);
+
     public bool IsActive { get; private set; }
 
     public long CreatedByUserId { get; private set; }
@@ -267,6 +281,18 @@ public sealed class UnitShift
     public DateTime CreatedAtUtc { get; private set; }
 
     public DateTime UpdatedAtUtc { get; private set; }
+
+    /// <summary>Sets the regular weekdays (null = follow the company pattern; 0 = no regular day). Only the seven weekday bits are valid.</summary>
+    public void SetRegularDays(int? mask, DateTime changedAtUtc)
+    {
+        if (mask is < 0 or > AllDaysMask)
+        {
+            throw new ArgumentOutOfRangeException(nameof(mask), mask, "Only the seven weekday bits are valid.");
+        }
+
+        RegularDays = mask;
+        UpdatedAtUtc = Requirements.Utc(changedAtUtc, nameof(changedAtUtc));
+    }
 
     public void SetCapacity(int maxOperators, int minOperators, bool overlapAllowed, DateTime changedAtUtc)
     {

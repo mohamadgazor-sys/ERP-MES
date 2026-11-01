@@ -87,6 +87,7 @@
                     <DataGridTextColumn Header="شیفت" Binding="{Binding ShiftText}" Width="80" />
                     <DataGridTextColumn Header="ظرفیت (حداقل تا حداکثر)" Binding="{Binding CapacityText}" Width="*" />
                     <DataGridTextColumn Header="هم‌پوشانی" Binding="{Binding OverlapText}" Width="*" />
+                    <DataGridTextColumn Header="روزهای اجرا" Binding="{Binding DaysText}" Width="*" />
                     <DataGridTextColumn Header="وضعیت" Binding="{Binding StatusText}" Width="80" />
                 </DataGrid.Columns>
             </DataGrid>
@@ -97,7 +98,32 @@
                 <TextBox x:Name="UsMin" Width="50" Margin="0,0,6,4" Text="0" ToolTip="حداقل اپراتور" />
                 <CheckBox x:Name="UsOverlap" Content="هم‌پوشانی را صریحاً علامت می‌زنم" Margin="0,4,6,4" />
                 <Button Content="افزودن شیفت به واحد" Padding="10,3" Margin="0,0,6,4" Click="OnAddUnitShift" />
-                <Button Content="فعال/بازنشسته" Padding="10,3" Margin="0,0,6,4" Click="OnToggleUnitShift" />
+                <Button Content="فعال/بازنشسته" Padding="10,3" Margin="0,0,6,4" Click="OnToggleUnitShift" ToolTip="شیفت انتخاب‌شده را بازنشسته می‌کند یا دوباره فعال می‌کند؛ شیفت حذف نمی‌شود." />
+            </WrapPanel>
+            <TextBlock TextWrapping="Wrap" Foreground="{StaticResource MutedTextBrush}" Margin="0,2,0,2"
+                       Text="برنامهٔ هفتگی ثابت واحد: اگر روزهای زیر را علامت بزنید، شیفت فقط در همین روزها اجرا می‌شود و تعطیلی هفتگی شرکت را برای این واحد کنار می‌گذارد (مثلاً جمعه ۰۶:۰۰ تا ۱۲:۰۰ برای واحد فرز CNC)؛ بدون علامت، شیفت از الگوی هفتگی شرکت پیروی می‌کند. این ساعت‌ها ساعت کاری عادی‌اند، نه اضافه‌کاری." />
+            <WrapPanel IsEnabled="{Binding CanMaintain}">
+                <CheckBox x:Name="DaySat" Content="شنبه" Margin="0,0,8,4" />
+                <CheckBox x:Name="DaySun" Content="یکشنبه" Margin="0,0,8,4" />
+                <CheckBox x:Name="DayMon" Content="دوشنبه" Margin="0,0,8,4" />
+                <CheckBox x:Name="DayTue" Content="سه‌شنبه" Margin="0,0,8,4" />
+                <CheckBox x:Name="DayWed" Content="چهارشنبه" Margin="0,0,8,4" />
+                <CheckBox x:Name="DayThu" Content="پنجشنبه" Margin="0,0,8,4" />
+                <CheckBox x:Name="DayFri" Content="جمعه" Margin="0,0,8,4" />
+                <Button Content="اعمال روزها روی شیفت انتخاب‌شده" Padding="10,3" Margin="0,0,6,4" Click="OnSetUnitShiftDays"
+                        ToolTip="روزهای علامت‌خورده را برای شیفت انتخاب‌شدهٔ جدول تعیین می‌کند. بدون هیچ علامتی، شیفت دوباره از الگوی هفتگی شرکت پیروی می‌کند. اگر با شیفت دیگر واحد هم‌پوشانی پیدا کند، پذیرفته نمی‌شود." />
+            </WrapPanel>
+            <TextBlock Text="ساعت ویژهٔ یک تاریخ برای یک واحد" Style="{StaticResource SectionStyle}" />
+            <TextBlock TextWrapping="Wrap" Foreground="{StaticResource MutedTextBrush}" Margin="0,0,0,2"
+                       Text="در تاریخ انتخاب‌شده، واحد انتخاب‌شده در بالا فقط در همین بازه کار می‌کند (ساعت‌های عادی و برنامهٔ هفتگی آن روز کنار می‌روند). بازه می‌تواند از نیمه‌شب عبور کند؛ چند بازه در یک روز با ثبت‌های پیاپی اضافه می‌شود و بازه‌های هم‌پوشان پذیرفته نمی‌شود. دلیل الزامی است و در سابقه می‌ماند." />
+            <WrapPanel IsEnabled="{Binding CanMaintain}">
+                <TextBox x:Name="DhDate" Width="90" Margin="0,0,6,4" FlowDirection="LeftToRight" ToolTip="تاریخ شمسی، مثل ۱۴۰۵/۰۸/۰۳" />
+                <TextBox x:Name="DhStart" Width="60" Margin="0,0,6,4" FlowDirection="LeftToRight" ToolTip="شروع، مثل ۰۸:۰۰" />
+                <TextBox x:Name="DhEnd" Width="60" Margin="0,0,6,4" FlowDirection="LeftToRight" ToolTip="پایان، مثل ۱۲:۰۰ (اگر از شروع کوچک‌تر یا برابر باشد، از نیمه‌شب عبور می‌کند)" />
+                <TextBox x:Name="DhMax" Width="50" Margin="0,0,6,4" Text="1" ToolTip="حداکثر اپراتور در این بازه" />
+                <TextBox x:Name="DhReason" Width="220" Margin="0,0,6,4" ToolTip="دلیل (الزامی)" />
+                <Button Content="ثبت ساعت ویژهٔ تاریخ" Padding="10,3" Margin="0,0,6,4" Click="OnAddDateHours"
+                        ToolTip="واحد انتخاب‌شده در «شیفت‌های هر واحد» را برای همین تاریخ فقط در بازهٔ واردشده کاری می‌کند. برای برگرداندن، استثنای همان تاریخ را در جدول استثناها لغو کنید." />
             </WrapPanel>
 
             <TextBlock Text="برنامهٔ اپراتورها" Style="{StaticResource SectionStyle}" />

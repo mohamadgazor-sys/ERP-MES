@@ -12,7 +12,8 @@ public sealed record OvertimeContext(
     IReadOnlyList<OperatorOffDay> OperatorOffDays,
     IReadOnlyList<WorkerSchedule> PlannedRows,
     IReadOnlyList<ShiftTemplate> Templates,
-    IReadOnlyList<OvertimeAssignment> Assignments);
+    IReadOnlyList<OvertimeAssignment> Assignments,
+    WorkingCalendar? Calendar = null);
 
 /// <summary>Persistence of overtime assignments and the overtime limits (Decision Log #103). Every write is one transaction with its audit entry and uses row versions.</summary>
 public interface IOvertimeRepository

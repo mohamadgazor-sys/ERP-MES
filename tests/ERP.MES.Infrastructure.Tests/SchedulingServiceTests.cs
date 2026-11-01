@@ -517,4 +517,115 @@ public class SchedulingServiceTests
         Assert.True((await w.Calendar.AddExceptionAsync(w.Planning, Saturday, CalendarExceptionKind.Off, null, null, "تعطیل", Token)).Succeeded);
         Assert.Equal(new DateTime(2026, 10, 25, 8, 20, 0, DateTimeKind.Utc), (await LoadAsync(w, w.Planning, milling)).Queue.Single(e => e.Block == QueueBlock.None).PlannedEndUtc);
     }
+
+    // ---- recurring unit schedules and dated own hours (Decision Log #123 Q13, Q17, Q18) ----------------------------------------------------------------------------------
+
+    private static async Task<ERP.MES.Domain.Scheduling.WorkingCalendar> CalendarOfAsync(World w) =>
+        (await new ERP.MES.Infrastructure.Persistence.EfSchedulingRepository(w.Fixture.Db.ContextFactory).LoadConfigurationAsync(Token)).ToCalendar();
+
+    [Fact]
+    public async Task A_standing_friday_schedule_is_a_unit_shift_with_its_own_weekdays_and_only_planning_may_set_it()
+    {
+        using var w = await StartAsync();
+        var unit = (await w.Services.PlanningMaster.AddUnitAsync(w.Admin, "MILLING", "فرز", Token)).Value!.Value.Id;
+        var other = (await w.Services.PlanningMaster.AddUnitAsync(w.Admin, "ASSEMBLY", "مونتاژ", Token)).Value!.Value.Id;
+        var regular = await TemplateAsync(w, "D", "08:00", "17:00", "12:00", "13:00");
+        var friday = await TemplateAsync(w, "F", "06:00", "12:00");
+        await RunUnitShiftAsync(w, unit, regular);
+        await RunUnitShiftAsync(w, other, regular);
+
+        var fridayMask = UnitShift.MaskOf([DayOfWeek.Friday]);
+        foreach (var user in new[] { w.Qc, w.Production, w.Manager, w.Drawing, w.Central })
+        {
+            Assert.Equal(OperationStatus.NotAuthorized, (await w.Calendar.AddUnitShiftAsync(user, unit, friday, 2, 1, false, Token, fridayMask)).Status);
+        }
+
+        var added = await w.Calendar.AddUnitShiftAsync(w.Planning, unit, friday, 2, 1, false, Token, fridayMask);
+        Assert.True(added.Succeeded, added.Status + " " + added.Issue);
+        Assert.Equal(fridayMask, added.Value!.Value.RegularDays);
+
+        var calendar = await CalendarOfAsync(w);
+        Assert.True(calendar.IsWorking(unit, friday, Friday));
+        Assert.False(calendar.IsWorking(unit, friday, Saturday));
+        Assert.False(calendar.IsWorking(unit, regular, Friday));
+        Assert.True(calendar.IsWorking(unit, regular, Saturday));
+        Assert.Empty(calendar.Occurrences(other, Friday));
+        Assert.Equal(new DateTime(2026, 10, 23, 8, 0, 0), calendar.AddWorkingMinutes(unit, new DateTime(2026, 10, 23, 6, 0, 0), 120));
+
+        // The weekdays can be changed afterwards (Planning only) and a mask outside the seven weekday bits is refused.
+        Assert.Equal(OperationStatus.NotAuthorized, (await w.Calendar.SetUnitShiftDaysAsync(w.Qc, added.Value.Value.Id, added.Value.Version, null, Token)).Status);
+        Assert.Equal(ValidationIssue.UnitShiftDaysInvalid, (await w.Calendar.SetUnitShiftDaysAsync(w.Planning, added.Value.Value.Id, added.Value.Version, 200, Token)).Issue);
+        // Handing the Friday shift back to the company pattern would make it overlap the regular 08:00-17:00 shift on the company workdays, so it is refused; retiring it removes the Friday hours.
+        Assert.Equal(ValidationIssue.UnitShiftOverlapNotMarked, (await w.Calendar.SetUnitShiftDaysAsync(w.Planning, added.Value.Value.Id, added.Value.Version, null, Token)).Issue);
+        var retired = await w.Calendar.SetUnitShiftActiveAsync(w.Planning, added.Value.Value.Id, added.Value.Version, false, Token);
+        Assert.True(retired.Succeeded, retired.Status + " " + retired.Issue);
+        Assert.False((await CalendarOfAsync(w)).IsWorking(unit, friday, Friday));
+        Assert.Contains("UnitShiftChanged", w.Fixture.Db.Query("SELECT ActionCode FROM AuditLog WHERE ActionCode = 'UnitShiftChanged'"));
+    }
+
+    [Fact]
+    public async Task Overlapping_intervals_of_a_unit_are_refused_only_when_they_can_run_on_a_common_weekday()
+    {
+        using var w = await StartAsync();
+        var unit = (await w.Services.PlanningMaster.AddUnitAsync(w.Admin, "MILLING", "فرز", Token)).Value!.Value.Id;
+        var morning = await TemplateAsync(w, "AM", "06:00", "12:00");
+        var later = await TemplateAsync(w, "MID", "10:00", "14:00");
+        var night = await TemplateAsync(w, "NT", "22:00", "06:00");
+        var friday = UnitShift.MaskOf([DayOfWeek.Friday]);
+        var saturday = UnitShift.MaskOf([DayOfWeek.Saturday]);
+
+        Assert.True((await w.Calendar.AddUnitShiftAsync(w.Planning, unit, morning, 2, 1, false, Token, friday)).Succeeded);
+        // 10:00-14:00 overlaps 06:00-12:00 on the same weekday: refused; on another weekday it is fine.
+        Assert.Equal(ValidationIssue.UnitShiftOverlapNotMarked, (await w.Calendar.AddUnitShiftAsync(w.Planning, unit, later, 2, 1, false, Token, friday)).Issue);
+        var other = await w.Calendar.AddUnitShiftAsync(w.Planning, unit, later, 2, 1, false, Token, saturday);
+        Assert.True(other.Succeeded, other.Status + " " + other.Issue);
+        // A Friday night shift runs into Saturday morning and collides with the Saturday 10:00-14:00 interval only if it ended later; it ends at 06:00, so it is accepted.
+        Assert.True((await w.Calendar.AddUnitShiftAsync(w.Planning, unit, night, 2, 1, false, Token, friday)).Succeeded);
+        // Moving the Saturday interval to Friday would overlap the Friday morning one again.
+        Assert.Equal(ValidationIssue.UnitShiftOverlapNotMarked, (await w.Calendar.SetUnitShiftDaysAsync(w.Planning, other.Value!.Value.Id, other.Value.Version, friday, Token)).Issue);
+    }
+
+    [Fact]
+    public async Task A_dated_exception_with_its_own_hours_replaces_the_regular_hours_of_that_unit_on_that_date_only()
+    {
+        using var w = await StartAsync();
+        var unit = (await w.Services.PlanningMaster.AddUnitAsync(w.Admin, "MILLING", "فرز", Token)).Value!.Value.Id;
+        var other = (await w.Services.PlanningMaster.AddUnitAsync(w.Admin, "ASSEMBLY", "مونتاژ", Token)).Value!.Value.Id;
+        var regular = await TemplateAsync(w, "D", "08:00", "17:00", "12:00", "13:00");
+        await RunUnitShiftAsync(w, unit, regular);
+        await RunUnitShiftAsync(w, other, regular);
+
+        foreach (var user in new[] { w.Qc, w.Production, w.Manager })
+        {
+            Assert.Equal(OperationStatus.NotAuthorized, (await w.Calendar.AddUnitDateHoursAsync(user, unit, Saturday, new TimeOnly(8, 0), new TimeOnly(12, 0), 2, "نیم‌روز", Token)).Status);
+        }
+
+        Assert.Equal(ValidationIssue.CalendarReasonRequired, (await w.Calendar.AddUnitDateHoursAsync(w.Planning, unit, Saturday, new TimeOnly(8, 0), new TimeOnly(12, 0), 2, " ", Token)).Issue);
+        Assert.Equal(ValidationIssue.ShiftTimesInvalid, (await w.Calendar.AddUnitDateHoursAsync(w.Planning, unit, Saturday, new TimeOnly(8, 0), new TimeOnly(8, 0), 2, "نیم‌روز", Token)).Issue);
+        Assert.Equal(ValidationIssue.ProductionUnitInvalid, (await w.Calendar.AddUnitDateHoursAsync(w.Planning, 987654, Saturday, new TimeOnly(8, 0), new TimeOnly(12, 0), 2, "نیم‌روز", Token)).Issue);
+
+        var hours = await w.Calendar.AddUnitDateHoursAsync(w.Planning, unit, Saturday, new TimeOnly(8, 0), new TimeOnly(12, 0), 2, "نیم‌روز به دلیل تعمیرات", Token);
+        Assert.True(hours.Succeeded, hours.Status + " " + hours.Issue);
+
+        var calendar = await CalendarOfAsync(w);
+        Assert.False(calendar.IsWorking(unit, regular, Saturday));
+        var occurrence = Assert.Single(calendar.Occurrences(unit, Saturday));
+        Assert.Equal(new DateTime(2026, 10, 24, 8, 0, 0), occurrence.LocalStart);
+        Assert.Equal(new DateTime(2026, 10, 24, 12, 0, 0), occurrence.LocalEnd);
+        Assert.True(calendar.IsWorking(unit, regular, Saturday.AddDays(2)));
+        Assert.Single(calendar.Occurrences(other, Saturday));
+        Assert.Equal(new DateTime(2026, 10, 24, 9, 0, 0), calendar.AddWorkingMinutes(unit, new DateTime(2026, 10, 24, 8, 0, 0), 60));
+        // The forecast of 5 working hours starting Saturday 08:00 spills past the 4 hours of that day to Sunday 08:00 + 1 hour.
+        Assert.Equal(new DateTime(2026, 10, 25, 9, 0, 0), calendar.AddWorkingMinutes(unit, new DateTime(2026, 10, 24, 8, 0, 0), 300));
+
+        // A second, non-overlapping interval on the same date is added next to it; an overlapping one is refused.
+        Assert.True((await w.Calendar.AddUnitDateHoursAsync(w.Planning, unit, Saturday, new TimeOnly(14, 0), new TimeOnly(16, 0), 2, "ساعت بعدازظهر", Token)).Succeeded);
+        Assert.Equal(ValidationIssue.UnitShiftOverlapNotMarked, (await w.Calendar.AddUnitDateHoursAsync(w.Planning, unit, Saturday, new TimeOnly(11, 0), new TimeOnly(13, 0), 2, "هم‌پوشان", Token)).Issue);
+        Assert.Equal(2, (await CalendarOfAsync(w)).Occurrences(unit, Saturday).Count);
+
+        // One Off exception for the unit and date, one Working exception per interval, each audited.
+        Assert.Equal(1, w.Fixture.Db.Query("SELECT Id FROM CalendarExceptions WHERE Kind = 1 AND ProductionUnitId = " + unit).Count);
+        Assert.Equal(2, w.Fixture.Db.Query("SELECT Id FROM CalendarExceptions WHERE Kind = 2 AND ProductionUnitId = " + unit).Count);
+        Assert.Equal(2, w.Fixture.Db.Query("SELECT Id FROM AuditLog WHERE ActionCode = 'CalendarExceptionAdded'").Count);
+    }
 }
