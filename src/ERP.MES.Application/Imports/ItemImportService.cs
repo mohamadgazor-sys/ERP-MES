@@ -331,6 +331,7 @@ public sealed class ItemImportService(
         var lookups = await BuildLookupsAsync(cancellationToken);
         var parsed = ItemImportParser.Parse(reader.Read(content), current.Value.WorkType, lookups, current.Value.RequestDate, technicalOnly);
         var rows = parsed.Rows.Select(r => Classify(r, current.Value, parsed.Rows, technicalOnly)).ToList();
+        await AddDuplicateWarehouseWarningsAsync(rows, parsed.Rows, current.Value, cancellationToken);
         var preview = new ImportPreview(fileName.Trim(), DocumentHash.Sha256Hex(content), current.Version, parsed.FileMessages, rows);
         return new Loaded(preview, parsed, null);
     }
@@ -343,6 +344,34 @@ public sealed class ItemImportService(
         var machines = (await planning.ListMachinesAsync(cancellationToken)).Where(m => m.Value.IsActive).ToDictionary(m => m.Value.Code, m => (m.Value.Id, m.Value.ProductionUnitId), StringComparer.Ordinal);
         var titles = (await planning.ListStageTitlesAsync(cancellationToken)).Where(t => t.Value.IsActive).Select(t => t.Value.Title).ToHashSet(StringComparer.Ordinal);
         return new ImportLookups(types, mats, units, machines, titles);
+    }
+
+    /// <summary>
+    /// A warehouse item code that other items already carry is allowed, but the row gets a warning naming those items (Decision Log #124 B5). The item the row would update does not count against itself.
+    /// </summary>
+    private async Task AddDuplicateWarehouseWarningsAsync(List<ImportRowPreview> rows, IReadOnlyList<ParsedImportRow> parsedRows, Request request, CancellationToken cancellationToken)
+    {
+        var cache = new Dictionary<string, IReadOnlyList<string>>(StringComparer.Ordinal);
+        for (var i = 0; i < rows.Count; i++)
+        {
+            if (parsedRows[i].Data is not { Specification.WarehouseItemCode: { } code } data)
+            {
+                continue;
+            }
+
+            if (!cache.TryGetValue(code, out var holders))
+            {
+                holders = await requests.FindItemNosByWarehouseCodeAsync(code, cancellationToken);
+                cache[code] = holders;
+            }
+
+            var own = request.FindByCustomerItemRef(data.ItemNo)?.ItemNo;
+            var others = holders.Where(n => n != own).ToList();
+            if (others.Count > 0)
+            {
+                rows[i] = rows[i] with { Messages = [.. rows[i].Messages, new ImportMessage(parsedRows[i].SheetRowNo, ImportIssue.WarehouseCodeDuplicate, string.Join("، ", others), false)] };
+            }
+        }
     }
 
     private static ImportRowPreview Classify(ParsedImportRow row, Request request, IReadOnlyList<ParsedImportRow> fileRows, bool technicalOnly)

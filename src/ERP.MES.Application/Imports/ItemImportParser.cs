@@ -72,6 +72,9 @@ public enum ImportIssue
 
     /// <summary>The warehouse item code is longer than 40 characters or has surrounding white space.</summary>
     WarehouseCodeInvalid,
+
+    /// <summary>Other items already carry this warehouse item code; allowed, only a warning (Decision Log #124 B5).</summary>
+    WarehouseCodeDuplicate,
     PriorityUnknown,
     StageIncomplete,
 

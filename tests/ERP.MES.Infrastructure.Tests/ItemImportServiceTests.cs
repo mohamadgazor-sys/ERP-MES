@@ -840,4 +840,27 @@ public class ItemImportServiceTests
         var planning = await CommitAsync(w, id, file);
         Assert.True(planning.Succeeded, planning.Status + " " + planning.Issue);
     }
+
+    [Fact]
+    public async Task A_warehouse_code_that_other_items_already_carry_is_only_a_warning_in_the_preview_and_does_not_block_the_import()
+    {
+        var (w, id, _) = await ReadyWorldAsync(WorkType.Repair);
+        using var disposeWorld = w;
+        string[] header = [ItemImportTemplate.WorkType, ItemImportTemplate.CustomerItemRef, ItemImportTemplate.PartName, ItemImportTemplate.Quantity, ItemImportTemplate.DeliveryDate, ItemImportTemplate.WarehouseCode];
+        var first = Writer.Write("S", header, [["تعمیر", "R-1", "Shaft", "3", "1450/01/01", "WH-SHARED"]]);
+        var preview1 = await PreviewOkAsync(w, id, first);
+        Assert.DoesNotContain(preview1.Rows.Single().Messages, m => m.Issue == ImportIssue.WarehouseCodeDuplicate);
+        Assert.True((await CommitAsync(w, id, first)).Succeeded);
+
+        // A second item with the same warehouse code: a warning naming the first item; the file can still be committed.
+        var second = Writer.Write("S", header, [["تعمیر", "R-1", "Shaft", "3", "1450/01/01", "WH-SHARED"], ["", "R-2", "Gear", "1", "1450/01/02", "WH-SHARED"]]);
+        var preview2 = await PreviewOkAsync(w, id, second);
+        Assert.DoesNotContain(preview2.Rows[0].Messages, m => m.Issue == ImportIssue.WarehouseCodeDuplicate);
+        var warning = Assert.Single(preview2.Rows[1].Messages, m => m.Issue == ImportIssue.WarehouseCodeDuplicate);
+        Assert.False(warning.IsError);
+        Assert.Equal("D-1-001", warning.Detail);
+        Assert.True(preview2.CanCommit);
+        Assert.True((await CommitAsync(w, id, second)).Succeeded);
+        Assert.Equal(2, (await LoadAsync(w, id)).Items.Count);
+    }
 }
