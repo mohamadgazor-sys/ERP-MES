@@ -1,0 +1,248 @@
+# HANDOFF.md — ERP-MES project hand-off
+
+Written 2026-11-02 for a brand-new Claude session that has no access to the previous account, conversation, memory or temp files. Everything here was verified against GitHub and the repository on that date unless marked **UNVERIFIED**. Where this file and the live repository disagree, **the live repository and GitHub win**; reconcile and say so.
+
+Repository: `mohamadgazor-sys/ERP-MES` (https://github.com/mohamadgazor-sys/ERP-MES). Default branch `main`. Working branch used for all feature PRs: `claude/dazzling-goldberg-wdzbdp` (every PR head used this same branch name; each PR was merged with a merge commit, then the branch was fast-forwarded to the next work).
+
+---
+
+## 0. Verified state at hand-off (2026-11-02)
+
+| Item | Value |
+|---|---|
+| `origin/main` | `8e737b73639c952f0d6780ba7b440806e1f43412` (merge of PR #72) |
+| Open PR | **#73** (demo data / docs / UI-test fix), head `claude/dazzling-goldberg-wdzbdp` @ `352fbf67d48e639461fbe27e5af37470e87d364a` — **NOT merged** |
+| PR #73 checks at last query | `sqlserver` = success; `generate-migrations` = skipped (manual-only job); `build-test`, `ui-smoke`, `offline-demo (windows-2022)`, `offline-demo (windows-latest)` = **in progress** (runs started 2026-11-02T02:14–02:15Z: CI 41376685293, UI smoke 41376685317, Offline demo 41376685360, SQL Server 41376685385) |
+| Why not merged | Merge rule is "all required checks green". They were not finished, so by the owner's rule nothing was merged and nobody waited. The PR and branch are preserved. |
+| Hand-off doc | this file, branch `claude/handoff-docs` (based on main 8e737b7) |
+
+**First action for the next session:** re-query PR #73. If all six check runs on its head are green and the head is still `352fbf6` (or a descendant you have verified), merge it (merge method `merge`, pass the full 40-character `expectedHeadSha`). If `ui-smoke` or another check failed, read the job log and fix on the same branch (see §C for the previous failure of this kind).
+
+Earlier PR #73 head `5212cc6` failed `ui-smoke` because `tools/ui-smoke/ui-interact.ps1` still asserted "expected 2 requests" while the demo data now seeds 3. Fixed in `352fbf6` (assertion changed to 3). That fix is **not yet proven on Windows** until the in-progress `ui-smoke` finishes.
+
+---
+
+## A. Project overview and architecture
+
+**Purpose.** A Windows desktop ERP/MES for IranTool (a machining / tool factory). The **Request** is the central business container: a customer's request (customer-supplied free-text request number) contains items; items are MAKE or REPAIR; items pass through production **stages** on **working units / machines**, with QC after every stage, planning/scheduling, contracts, costing, warehouse receipt and dispatch.
+
+**Factory workflow (approved model).** Customer request → Management initial approval (+ contract if required, Planning creates, Management approves) → Drawing technical doability decision / raw-material inquiry (Warehouse Yes/No) → Planning defines items and stages (stage titles from a catalog) and releases the first stage → per-unit production queues → work sessions / daily job reports («ردیف کار») → QC of each stage (quantity-level accept/reject/rework; permanent reject = scrap) → next stage released only after QC approval of the previous one → finished/sent → Warehouse dispatch. External supply is a stage with dispatch/arrival tracking and lead time.
+
+**Technology.**
+- .NET 10 (SDK pinned in `global.json`: 10.0.113, `rollForward: disable`), WPF + MVVM, Persian UI, right-to-left. Windows 10/11 x64 only.
+- EF Core 10.0.13. Dev/demo DB: **SQLite**. Production backend: **SQL Server 2022** (provider in `src/ERP.MES.Infrastructure.SqlServer`, **outside `ERP-MES.sln`**; has its own migrations and test project). Business logic must stay provider-independent.
+- Layering: `Domain` ← `Application` ← `Infrastructure` ← `Infrastructure.Sqlite` / `Infrastructure.SqlServer`; `Desktop` (WPF), `Provisioning` (CLI tool for migrate/demo seed/admin tokens). Results use `Outcome<T>` / `ValidationIssue`; Persian message text in `Messages.cs`.
+- Authorization: `AuthorizationRules` (default-deny, Department + Role); `CurrentAuthorization` reloads the user on every call. Audit-log entries are written in the same transaction as the change. Row-version concurrency. Filtered unique indexes.
+- Dates: all user-visible dates Jalali (Shamsi), 24-hour time; DB stores Gregorian/native, converted at boundaries. Currency: Iranian **Rial only** — never silently converted to Toman.
+- Projects: `src/` Application, Desktop, Domain, Infrastructure, Infrastructure.SqlServer, Infrastructure.SqlServer.Design, Infrastructure.Sqlite, Provisioning. `tests/` Application.Tests, Desktop.LocalLinux, Desktop.Tests, Domain.Tests, Infrastructure.SqlServer.Tests (CI only), Infrastructure.Tests, plus Shared/fixtures. `tools/` offline-demo, ui-smoke. `docs/` specs, Decision Log, Session Log, guides.
+
+**Commands.**
+```
+dotnet restore ERP-MES.sln
+dotnet build ERP-MES.sln -c Release          # needs Windows (WPF) for the Desktop project
+dotnet test  ERP-MES.sln -c Release
+# Linux: everything but the WPF UI is buildable/testable. Run per project:
+dotnet test tests/ERP.MES.Domain.Tests
+dotnet test tests/ERP.MES.Application.Tests
+dotnet test tests/ERP.MES.Infrastructure.Tests
+dotnet test tests/ERP.MES.Desktop.LocalLinux       # compiles Desktop view models + Desktop.Tests
+# compile the real WPF project on Linux (compile check only):
+dotnet build src/ERP.MES.Desktop -p:EnableWindowsTargeting=true
+# demo database (credentials file must live OUTSIDE the repo):
+dotnet run --project src/ERP.MES.Provisioning -- demo-init C:\erpmes\demo.db --credentials C:\erpmes\credentials.txt
+dotnet run --project src/ERP.MES.Provisioning -- demo-reset <db> --yes ; ... demo-status <db>
+$env:ERPMES_DATABASE='C:\erpmes\demo.db'; dotnet run --project src/ERP.MES.Desktop
+# EF migrations: local tool `dotnet ef` 10.0.13 (see .config/dotnet-tools.json)
+```
+The Desktop app never creates, seeds or resets a database; only the Provisioning tool does.
+
+**Migration workflow (important).** SQLite migrations are generated locally. The SQL Server project cannot restore NuGet packages in the previous sandbox (proxy 403), so SQL Server migrations are generated **in CI**: run workflow `SQL Server integration` (`sqlserver.yml`) manually (`workflow_dispatch`) with input `migration_name`; the job prints the generated files gzip+base64 in the log between `BEGIN_MIGRATIONS_B64` and `END_MIGRATIONS_B64`; decode, commit under the SQL Server project, push. This was done for PRs #64, #66, #67, #71 (titles "SQL Server migration for …"). A test asserts the SQLite and SQL Server migration/model sets stay consistent.
+
+**CI workflows (`.github/workflows`).**
+- `ci.yml` — `build-test` on Windows; on main also publishes a self-contained demo build artifact (14-day retention).
+- `offline-demo.yml` — "Offline demo package", matrix `windows-2022` and `windows-latest`; builds and tests the offline ZIP (`tools/offline-demo`), firewall-isolated test; ZIP uploaded as artifact `erp-mes-offline-demo` only for push to main / manual run (30-day retention).
+- `sqlserver.yml` — SQL Server integration tests against a throw-away container + the manual migration generator.
+- `ui-smoke.yml` — launches the real WPF app on Windows, screenshots, plus the interaction script `tools/ui-smoke/ui-interact.ps1`.
+
+---
+
+## B. Approved business requirements
+
+Source of truth order: `CLAUDE.md` (project rules, canonical decisions) → `docs/ERP_MES_CSharp_Master_Specification_Current_State.md` (business) → `docs/ERP_MES_CSharp_Domain_and_Database_Specification.md` → `docs/ERP_MES_CSharp_Architecture_Specification.md` → `docs/DECISION_LOG.md` → latest `docs/SESSION_LOG.md`. **Read `CLAUDE.md` first; its rules bind you** (stop and ask on conflicts; never invent business rules; no secrets in Git; run real builds/tests and report real results; update Session Log at the end of every substantial session).
+
+The latest owner decisions are **Decision Log #121–#127** (read them in full; they are the authority for everything below). Earlier decisions #1–#120 cover the base model.
+
+### B.1 Approved decisions (owner-approved, Decision Log #121–#126)
+- **Request numbers**: customer-supplied free text; uniqueness = Customer + RequestNo + Jalali year; case-sensitive; never silently trimmed/case-changed.
+- **Item numbering**: system item number `RequestNo-NNN` (`ItemSequence` int 1–999). The number is derived, never parsed back, never reused. Optional **customer item reference** is the only key for Excel re-import matching. Excel import: one mixed sheet, Persian headers, explicit Work Type column, ~1000 rows, preview/validation, transactional, manual conflict choice if a changed row already exists (no silent overwrite).
+- **Assemblies**: items nest up to 4 levels; child numbers `.NNN`; parent may change only before stages exist; an assembly's first stage is released only when the release gate (children done/ready per #123) passes.
+- **MAKE / REPAIR** per item (`WorkTypeID`). REPAIR requires: delivery date ≥ request date, warehouse code ≤ 40 chars; duplicate warehouse code is a **warning**, not an error; incomplete REPAIR items cannot be released.
+- **Stage-title catalog**: Planning maintains it; titles are retired, never deleted; a stage snapshots the title text.
+- **Item drawings**: PDF ≤ 20 MiB, revision history, uploaded by Drawing; explicit "open" button (no auto-open); one stored binary may be linked many times (store bytes once, explicit association rows).
+- **Import permissions**: Planning imports full item definitions; **Drawing imports only technical columns, only while the request is `UNDER_DRAWING_REVIEW`** (#125 Q15).
+- **Roles/departments**: new department **Production Manager** (`PRODUCTION_MANAGER`); Secretary label renamed (code stays `CENTRAL`). **Program Admin** administers users/accounts/master data/working-unit assignment (department/role vs working-unit assignment are separate concepts). Other permissions: QC alone inspects/corrects; Drawing alone decides technical doability; Planning creates contracts; Management alone approves/rejects contracts and initial requests; Warehouse alone receives items; Planning+Management edit priorities; Management+Planning maintain machine rates; Warehouse+Management maintain material price/kg.
+- **Overtime**: approved by Management, or Production Manager within configured limits; beyond limits Management only; no self-approval.
+- **Calendar**: recurring weekly unit schedules via `UnitShift.RegularDays` mask; dated own hours per unit; Friday normally off but **standing Friday 06:00–12:00 for chosen CNC units is an approved regular schedule**; holidays/off-days/shift patterns configurable (current 08:00–17:00 with 12:00–13:00 break; future 2 or 3 shifts) — never hard-coded as permanent.
+- **Workflow**: QC approval of the preceding stage gates every later stage; QC correction after the fact preserves history, marks the item corrected, returns it to Stage 1, downstream handled manually. Priorities exactly `عادی`، `فوری`، `خیلی فوری`; only Management may override queue order, logged with old/new order and reason.
+- **Actor history**: screens show who acted as display name + username + inactive marker (from the user id).
+- **Terminology**: daily job report rows are «ردیف کار».
+- **UI**: Latin codes rendered left-to-right inside RTL cells; buttons wrap rather than clip; Persian tooltips (164 documented in the Session Log); customer shown next to request number on screens combining requests.
+- Reward/ranking formula is **Phase 2** (not built).
+
+### B.2 Technical assumptions (made by Claude, not business decisions)
+- Weekly-pattern overlap check for null `RegularDays` masks uses the company weekly pattern.
+- Shift code length ≤ 20 characters (generated base-36 from the unit id).
+- Demo data: fictional customers/requests; the three demo requests, nine+ accounts and passwords are generated into a credentials file outside Git.
+- Timezone / Jalali conversion boundaries implemented in a date service (see `docs/`).
+
+### B.3 Unresolved / awaiting owner
+- **Overtime inside regular hours** (see §H): **ASSUMPTION recorded as Decision Log #127, NOT approved**.
+- `docs/OWNER_REVIEW_PACKET_2.md` lists other defaults awaiting owner decision. Do not treat them as approved.
+- The exact final wording of some tooltips and the screen-layout review need the owner's eyes on a real Windows screen (§F).
+
+---
+
+## C. PR history
+
+Titles reflect the last commit of each PR; the feature scope per PR is approximate — use `git log` for exact contents. Merge SHA = the merge commit on `main`; "head" = last commit of the PR branch when merged. All of #65–#72 were merged only after all six checks were green on the **PR head** (`build-test`, `ui-smoke`, `sqlserver`, `offline-demo (windows-2022)`, `offline-demo (windows-latest)`, and the skipped `generate-migrations`). After merging, the main push re-ran CI/UI smoke/SQL Server/Offline demo; those were verified green for main 8e737b7 (distinct from PR-head evidence). Titles below are the last commit of each PR.
+
+| PR | Merge SHA | Head SHA | Purpose |
+|---|---|---|---|
+| #62 | 79db558 | 5d982fe | Session log, offline demo package, interaction tests |
+| #63 | 5704844 | da549e6 | Decision Log #121–#126, lifecycle/import-status docs |
+| #64 | 4cecea8 | db282ba | SQL Server migration: Secretary label + Production Manager dept |
+| #65 | 9f4c545 | 780662d | Users page, change-department, user directory, permission-aware navigation (#122) |
+| #66 | 522c9f1 | fa166b0 | Item numbering, customer reference, assemblies (incl. SQL Server migration) |
+| #67 | 60cf9d2 | eabad00 | REPAIR item fields (incl. SQL Server migration) |
+| #68 | 5915b6f | 4739403 | Stage-title catalog, item drawings/revisions; SQL Server pass test registers stage title first |
+| #69 | f8f8199 | 05b59bc | Drawings view model `System.IO` using fix (WPF compile) |
+| #70 | 34342f7 | 0d5e24e | Import role split: Drawing technical columns only under Drawing review (#125 Q15) |
+| #71 | 65809ff | 3c1c25c | SQL Server migration for unit-shift weekdays (calendar, Friday hours) |
+| #72 | 8e737b7 | df9ff6b | Customer shown beside request number on combined screens; actor history |
+| **#73** | **not merged** | 352fbf6 | Demo seed (3 requests, drawings, Friday shift), docs, ui-interact assertion fix |
+
+PRs #1–#61 (earlier phases: skeleton, domain, persistence, request lifecycle, QC masters, machines, operators, materials, inquiries, items/stages, queues, calendar, QC rework, job reports, overtime, costing, warehouse, metrics, e2e acceptance, demo shell, UI smoke) are listed in `git log --first-parent main`.
+
+Failures encountered and fixed (history, so you do not repeat them):
+- #68 first `sqlserver` run failed: SQL Server pass test defined stage "فرز" with no catalog title → register via `PlanningMaster.AddStageTitleAsync` first. (Could not compile that project locally; verified by CI.)
+- #69 first Windows run failed: handler placed in static `PromptWindow` (CS0708) → moved into `UnitQueueView`; missing `using System.IO;` in `ItemDrawingsViewModel` (WPF has no implicit usings) → added.
+- `DemoGuardTests` matched the member name `Supersede` → renamed `ItemDrawing.MarkSuperseded`.
+- Misc test fixes: migration-count expectations (26→30), `AuthorizationRulesTests`, DemoMasterData counts, Kind enum values (Off=1, Working=2).
+- #73 `ui-smoke`: stale "2 requests" assertion → 3 (fix pushed, pending CI).
+
+---
+
+## D. Implementation status (12 areas)
+
+| # | Area | Status |
+|---|---|---|
+| 1 | Users page / navigation (#65) | **Merged** (CI green on head; physical UI review pending) |
+| 2 | Item numbering & assemblies (#66) | **Merged**; SQLite + SQL Server migrations merged; domain/infra tests passed |
+| 3 | REPAIR fields & release validation (#67) | **Merged** |
+| 4 | Stage-title catalog (#68) | **Merged** |
+| 5 | Item drawings & revisions (#68/#69) | **Merged**; open-button behaviour needs physical Windows confirmation |
+| 6 | Drawing vs Planning import separation (#70) | **Merged** |
+| 7 | Working calendar / unit shifts / Friday (#71, earlier calendar PRs) | **Merged**; overtime-in-regular-hours interpretation unconfirmed (§H) |
+| 8 | Production Manager / Program Admin permissions (#64–#65) | **Merged** |
+| 9 | Workflow actor identification (#72) | **Merged** |
+| 10 | Tooltips / LTR / layout / terminology | Mostly merged; **layout and tooltip wording not reviewed on a real screen** |
+| 11 | Demo data & accounts | **Unmerged — in PR #73** (main still has the older 2-request demo seed) |
+| 12 | Offline package | Package exists for main 8e737b7 but **predates #73's demo data**; a fresh package is needed after #73 merges (§G) |
+
+Other original requirements not rechecked in this hand-off: a requirement-by-requirement audit against the Master Specification has **not** been done in this session; do it (§F).
+
+---
+
+## E. Test evidence
+
+Honest summary — separate automated from physical.
+
+Local Linux runs (sandbox; counts are as recorded during the sessions, historical, **not rerun after every later change**):
+- P3 (numbering/assemblies): Domain 562, Application 41, Infrastructure 729, Desktop.LocalLinux 144.
+- P4a: Domain 562, Application 41, Infrastructure 735, LocalLinux 144.
+- P5: Domain 568, Application 41, Infrastructure 748.
+- P6: Desktop.LocalLinux 150.
+- P7 (demo): Infrastructure demo tests 45/45.
+These were green at those points. Later changes were validated by CI on each PR head (all green), not by re-running every count locally.
+
+CI evidence: every PR #65–#72 head had build-test, ui-smoke, sqlserver, offline-demo (×2) green before merge; main 8e737b7 push runs: CI 41355359213, Offline demo 41355359051 — both green; UI smoke and SQL Server runs for main also green.
+
+**Caveats (do not hide):**
+- An earlier P3 summary mentioned "nine failures"; that list could not be reconstructed. The final P3 and later Infrastructure runs were green.
+- SQL Server tests cannot run in the previous sandbox; CI is the only evidence (first failure fixed in #68).
+- WPF compile errors on #69 were found by Windows CI/local WPF compile, then fixed.
+- WPF UI cannot be executed on Linux; `ui-smoke` (Windows CI) is the only automated UI evidence, plus the user's personal test (§G).
+- No evidence exists for PR #73's head yet (checks running).
+- Post-merge CI evidence exists for main 8e737b7; it will need repeating after #73.
+
+---
+
+## F. Roadmap (priority order)
+
+1. Settle PR #73 (see §0). Merge only if all required checks are green.
+2. Verify `main` after the merge: CI, UI smoke, SQL Server, Offline demo package workflows all green on the new main SHA.
+3. Obtain the final offline package from the main run of `Offline demo package` (artifact `erp-mes-offline-demo`, ZIP `ERP-MES-OfflineDemo-<date>-<sha7>-win-x64.zip`). Record filename, SHA-256, commit SHA, artifact ID, run ID, size, expiry, download location. Artifacts expire in 30 days.
+4. Physical Windows-client / offline validation on a real machine (second disconnected launch; Ethernet disconnected; fresh machine without .NET runtime).
+5. Screen-layout and tooltip review by the owner (RTL, wrapping buttons, LTR codes, Persian wording).
+6. Audit remaining original requirements (Master Specification) against the code; list gaps; propose focused PRs.
+7. Obtain the owner's answer on the overtime interpretation (§H) and the open items in `docs/OWNER_REVIEW_PACKET_2.md`.
+Keep PRs small and sequential; update the Decision Log and Session Log.
+
+---
+
+## G. Offline deployment evidence
+
+Latest offline package (built from **main 8e737b7**, workflow run 41355359051, artifact `erp-mes-offline-demo` id 13103640562):
+- File: `ERP-MES-OfflineDemo-2026.11.01-8e737b7-win-x64.zip`
+- SHA-256 of ZIP: `bcfea647381dc564cc589a580f6f1e5528b240347709272b567f539cf27238b0`
+- Size: 106.0 MB (653 files); artifact bytes 110,740,355; artifact digest `sha256:29a836abd32597f00bc63c7fc39318c10010aa36781600a94c21b1c4fcb1370c`
+- Expires 2026-12-01T22:14:01Z. Download: GitHub → Actions → "Offline demo package" run 41355359051 → artifacts (needs repo access), or via the Artifacts API.
+- Also: CI run 41355359213 published demo-build artifact 13104550211 (digest `1df440e8a3edb8a6ea1c7474081512e2ca90815591221501c918aef6f4f36488`, expires 2026-11-15).
+- This package **predates PR #73**: it has the older demo data (2 sample requests; no Friday shift/drawing samples). After #73 merges, a new package must be taken from the new main run; the old one is superseded.
+
+Automated offline evidence: the `offline-demo` workflow builds the ZIP, unpacks it, and runs it with network isolation (firewall) on windows-2022 and windows-latest. That is automated, not physical.
+
+**Owner's personal physical test (verbatim):** "I personally tested the application on Windows 11 Pro 25H2 x64. It successfully launched and operated while Wi-Fi was disabled. I then enabled Wi-Fi, continued using the application, closed it, and relaunched it while connected."
+
+What this proves: Windows 11 Pro 25H2 x64 initial disconnected launch and operation. What it does **not** prove: a second disconnected launch, an Ethernet-disconnected test, or behaviour on a machine without the .NET runtime / on Windows 10. It is also a test of an earlier package, not necessarily the latest.
+
+---
+
+## H. Overtime vs regular hours (open interpretation)
+
+- **Approved**: a standing Friday 06:00–12:00 **regular** schedule for chosen CNC units.
+- **Claude's interpretation, recorded in Decision Log #127, awaiting owner confirmation, NOT approved**: the system rejects an overtime assignment that falls inside a unit's regular hours (overtime applies only outside regular hours). The check runs after the operator/machine overlap rules.
+- Do **not** mark it approved and do not change the behaviour. Ask the owner (the question is already framed in #127) before altering it.
+
+---
+
+## I. Technical risks and recovery
+
+- **Branch dependencies**: every PR used the single branch `claude/dazzling-goldberg-wdzbdp`. Merges are merge-commits, so main contains all branch heads. `origin/claude/dazzling-goldberg-wdzbdp` = 352fbf6 = PR #73 head, a descendant of main 8e737b7. A pre-existing local copy of that branch in the original checkout is stale (f813de6) — ignore it, use `origin/...`.
+- **Branch inventory**: remote branches are `main`, `claude/dazzling-goldberg-wdzbdp`, this `claude/handoff-docs`, and old merged feature branches (`claude/domain-model`, `claude/persistence-services`, `claude/m1-*`, `claude/phase-0-*`, etc.). All earlier feature work is in main. No stashes existed; the working tree was clean. A local-only branch `local/phase-10d-metrics` was patch-identical to main commit 78da047 (nothing lost). `local/p7` = pushed as the PR #73 head. Nothing valuable remained local-only at hand-off.
+- **No force-push, history rewrite or branch deletion** was done in this hand-off. Do not delete old branches.
+- **SQLite vs SQL Server model consistency**: any model change needs both migrations; SQL Server's must be generated by the CI manual job (§A). A consistency test fails if they drift.
+- **PR-head vs merge-commit validation**: PR checks run on the PR head; the merge commit is only validated by the post-merge main run. Always verify main after merging.
+- **Linux vs Windows**: WPF cannot run on Linux; only compile-checks (`EnableWindowsTargeting`). XAML/runtime issues show up only in Windows CI (`ui-smoke`) or on a real PC.
+- **Offline-package provenance**: record SHA-256 + commit SHA + run ID; artifacts expire (30 days). Rebuild from main if expired.
+- **Incomplete tests**: see §E caveats. No full-suite local rerun exists for the final state of main in this hand-off session; CI is the evidence.
+- **Tooling quirks**: GitHub MCP server may disconnect (re-find tools with ToolSearch); `expectedHeadSha` must be 40 chars; avoid `pkill` of test hosts; use `git push` without force; `dotnet test` projects individually on Linux.
+- **Recovery** if branches vanish: main (8e737b7) contains #65–#72. PR #73 content: `git fetch origin pull/73/head` (GitHub keeps PR refs even if the branch is deleted).
+- Never commit credentials, real passwords, customer PDFs, production DB backups.
+
+---
+
+## FRESH-SESSION STARTUP PROMPT (copy everything in the block)
+
+```
+You are continuing the ERP-MES project (repo mohamadgazor-sys/ERP-MES, WPF/.NET 10, Persian RTL, SQLite demo + SQL Server). You have no memory of earlier sessions.
+
+1. Read HANDOFF.md completely (it is on branch claude/handoff-docs and, once merged, on main). Then read CLAUDE.md, docs/DECISION_LOG.md (especially #121-#127), the latest docs/SESSION_LOG.md entry, and the three specifications in docs/.
+2. Inspect GitHub and the repository directly: main SHA, open PRs (especially #73), check runs, branches, worktrees, stashes. Reconcile HANDOFF.md with the actual state and state any differences.
+3. Preserve all branches and work: no force-push, no history rewrite, no deleting branches, no discarding work.
+4. Identify the next safe task per the HANDOFF.md roadmap (settle PR #73 first; merge it only if all required checks are green on its head).
+5. Continue with focused, sequential PRs. Implement, run automated tests (per-project dotnet test; SQL Server tests run in CI), debug failures, validate acceptance criteria, and report real results. Distinguish automated results from physical Windows/offline checks, and do not assign routine manual testing to the owner.
+6. When all required checks pass on a PR head, merge autonomously (merge method merge, full 40-char expectedHeadSha), then verify main.
+7. Do not ask questions already answered in the docs or Decision Log. Ask only for genuinely new business decisions. Treat Decision Log #127 (overtime inside regular hours) as an unconfirmed assumption.
+8. Never commit secrets; update docs/DECISION_LOG.md and docs/SESSION_LOG.md as you work.
+```
