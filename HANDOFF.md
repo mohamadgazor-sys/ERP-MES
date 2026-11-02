@@ -12,13 +12,13 @@ Repository: `mohamadgazor-sys/ERP-MES` (https://github.com/mohamadgazor-sys/ERP-
 |---|---|
 | `origin/main` | `8e737b73639c952f0d6780ba7b440806e1f43412` (merge of PR #72) |
 | Open PR | **#73** (demo data / docs / UI-test fix), head `claude/dazzling-goldberg-wdzbdp` @ `352fbf67d48e639461fbe27e5af37470e87d364a` — **NOT merged** |
-| PR #73 checks at last query | `sqlserver` = success; `generate-migrations` = skipped (manual-only job); `build-test`, `ui-smoke`, `offline-demo (windows-2022)`, `offline-demo (windows-latest)` = **in progress** (runs started 2026-11-02T02:14–02:15Z: CI 41376685293, UI smoke 41376685317, Offline demo 41376685360, SQL Server 41376685385) |
+| PR #73 checks at last query | `sqlserver` = success; `ui-smoke` = success (completed 02:21Z, so the ui-interact fix works on Windows); `generate-migrations` = skipped (manual-only job); `build-test`, `offline-demo (windows-2022)`, `offline-demo (windows-latest)` = **in progress at last query** (runs started 2026-11-02T02:14–02:15Z: CI 41376685293, UI smoke 41376685317, Offline demo 41376685360, SQL Server 41376685385) |
 | Why not merged | Merge rule is "all required checks green". They were not finished, so by the owner's rule nothing was merged and nobody waited. The PR and branch are preserved. |
 | Hand-off doc | this file, branch `claude/handoff-docs` (based on main 8e737b7) |
 
 **First action for the next session:** re-query PR #73. If all six check runs on its head are green and the head is still `352fbf6` (or a descendant you have verified), merge it (merge method `merge`, pass the full 40-character `expectedHeadSha`). If `ui-smoke` or another check failed, read the job log and fix on the same branch (see §C for the previous failure of this kind).
 
-Earlier PR #73 head `5212cc6` failed `ui-smoke` because `tools/ui-smoke/ui-interact.ps1` still asserted "expected 2 requests" while the demo data now seeds 3. Fixed in `352fbf6` (assertion changed to 3). That fix is **not yet proven on Windows** until the in-progress `ui-smoke` finishes.
+Earlier PR #73 head `5212cc6` failed `ui-smoke` because `tools/ui-smoke/ui-interact.ps1` still asserted "expected 2 requests" while the demo data now seeds 3. Fixed in `352fbf6` (assertion changed to 3). The `ui-smoke` run on 352fbf6 then passed.
 
 ---
 
