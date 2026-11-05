@@ -175,7 +175,8 @@ public partial class App : System.Windows.Application
             new WorkBoardViewModel(workflow.UnitQueue, workflow.WorkSessions, workflow.StageWork, dates, DigitStyle.Persian, () => DateTime.UtcNow, CurrentUser),
             new UsersViewModel(_services.Accounts, workflow.Users, workflow.UnitDesignations, workflow.PlanningMaster, dates, CurrentUser),
             new StageTitlesViewModel(workflow.PlanningMaster, CurrentUser),
-            new ItemDrawingsViewModel(workflow.Requests, workflow.Drawings, dates, CurrentUser, workflow.Users));
+            new ItemDrawingsViewModel(workflow.Requests, workflow.Drawings, dates, CurrentUser, workflow.Users),
+            new DowntimeViewModel(workflow.Downtime, dates, DigitStyle.Persian, () => DateTime.UtcNow, CurrentUser, workflow.Users));
         DrawingLauncher.Configure(workflow.Drawings, CurrentUser);
 
         _mainWindow = new MainWindow(shell, session, pages);

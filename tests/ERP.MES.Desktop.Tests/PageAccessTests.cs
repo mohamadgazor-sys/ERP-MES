@@ -41,6 +41,18 @@ public class PageAccessTests
         Assert.Contains(ShellViewModel.QcInspectionKey, qc);
         Assert.DoesNotContain(ShellViewModel.UnitQueueKey, qc);
         Assert.DoesNotContain(ShellViewModel.OvertimeKey, qc);
+        Assert.DoesNotContain(ShellViewModel.DowntimeKey, qc);
+        Assert.DoesNotContain(ShellViewModel.DowntimeKey, production);
+
+        // Machine downtime (Decision Log #128): Maintenance/PM reports, Planning decides, Management and the Production Manager read.
+        foreach (var user in new[] { h.Maintenance, h.Planning, h.Management, h.ProductionManager })
+        {
+            Assert.Contains(ShellViewModel.DowntimeKey, await VisibleAsync(h, user));
+        }
+
+        var maintenance = await VisibleAsync(h, h.Maintenance);
+        Assert.DoesNotContain(ShellViewModel.UnitQueueKey, maintenance);
+        Assert.DoesNotContain(ShellViewModel.UsersKey, maintenance);
     }
 
     [Fact]

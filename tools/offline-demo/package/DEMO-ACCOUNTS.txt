@@ -1,7 +1,7 @@
 ﻿ERP/MES OFFLINE DEMO - FICTIONAL ACCOUNTS
 ========================================
 These accounts exist ONLY in the local demonstration database of this package. All data is fictional.
-The passphrase below is a demo-only value shared by all ten accounts; it protects nothing real. Do not reuse it anywhere, and do not leave this package on a shared or production computer.
+The passphrase below is a demo-only value shared by all eleven accounts; it protects nothing real. Do not reuse it anywhere, and do not leave this package on a shared or production computer.
 (The application normally forces a new password at the first sign-in; the launcher performs that step for you through the real password-change function, so you can sign in directly.)
 
 PASSPHRASE: DemoMes-2026-Show
@@ -17,6 +17,7 @@ demo.warehouse    Warehouse (staff)                          receive the item, c
 demo.production   Production (operator)                      work as the operator of a work session
 demo.supervisor   Production (milling-unit supervisor)      dispatch, start, pause, finish work sessions on the work board
 demo.productionmanager  Production Manager (manager)      all production units: queue order, holds, supervisors, overtime within limits
+demo.maintenance  Maintenance/PM (staff)                    report machine downtime (reason, start, end); Planning reviews it
 demo.admin        Program Admin                              user accounts, production units, machines, operators, working units
 
 Sign-in names are case-sensitive and written exactly as above (lower case).

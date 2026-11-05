@@ -22,6 +22,7 @@ public static class PageAccess
         [ShellViewModel.CompletionKey] = [Permission.ViewWarehouseCompletion, Permission.RecordWarehouseReceipt],
         [ShellViewModel.KpiKey] = [Permission.ViewKpi],
         [ShellViewModel.CalendarKey] = [Permission.ViewCalendar, Permission.MaintainHolidayCalendar],
+        [ShellViewModel.DowntimeKey] = [Permission.ViewDowntime, Permission.RegisterDowntime, Permission.DecideDowntime],
         [ShellViewModel.DefinitionsKey] = [Permission.MaintainUnitsOfMeasure, Permission.DefineMakeItems, Permission.DefineRepairItemsAndEditAnyItem],
         [ShellViewModel.MachinesKey] = [Permission.MaintainProductionResources, Permission.ChangeMachineHourlyRates, Permission.ViewMachineRates],
         [ShellViewModel.OperatorsKey] = [Permission.ViewOperators, Permission.MaintainProductionResources],

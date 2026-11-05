@@ -16,6 +16,7 @@ public sealed class ShellViewModel : ObservableObject
     public const string UnitQueueKey = "unitqueue";
     public const string WorkBoardKey = "workboard";
     public const string CalendarKey = "calendar";
+    public const string DowntimeKey = "downtime";
     public const string QcInspectionKey = "qcinspection";
     public const string JobReportsKey = "jobreports";
     public const string OvertimeKey = "overtime";
@@ -62,6 +63,7 @@ public sealed class ShellViewModel : ObservableObject
             new NavigationItem(CompletionKey, "دریافت انبار و تکمیل", true),
             new NavigationItem(KpiKey, "شاخص‌های واحدها", true),
             new NavigationItem(CalendarKey, "تقویم و شیفت‌ها", true),
+            new NavigationItem(DowntimeKey, "توقف ماشین‌ها", true),
             new NavigationItem(DefinitionsKey, "واحدها و انواع مقدار", true),
             new NavigationItem(MachinesKey, "ماشین‌ها و نرخ‌ها", true),
             new NavigationItem(OperatorsKey, "اپراتورها", true),
