@@ -15,6 +15,12 @@ public sealed record ExternalWorkEntry(
     long InputBaseUnits, long DispatchedBaseUnits, long ReturnedBaseUnits, long AtContractorBaseUnits, long StillToSendBaseUnits, long AwaitingQcBaseUnits, long AcceptedBaseUnits,
     long ReworkBaseUnits, long ScrapBaseUnits, IReadOnlyList<OpenDispatch> OpenDispatches, IReadOnlyList<ExternalShipment> History)
 {
+    /// <summary>
+    /// When the stage is expected back from the external route (Decision Log #129, #135): while units are still to send, now + the lead time in calendar days (they could leave today at the
+    /// earliest); otherwise the latest expected return of the open dispatches; null when nothing is outstanding. A forecast, never a commitment.
+    /// </summary>
+    public DateTime? ExpectedCompletionUtc { get; init; }
+
     public long RequestVersion { get; init; }
 
     public long ItemVersion { get; init; }
@@ -87,6 +93,9 @@ public sealed class ExternalWorkService(
                     f.Stage.InputBaseUnits ?? 0, f.Stage.ExternalDispatchedBaseUnits, f.Stage.ExternalReturnedBaseUnits, f.Stage.AtContractorBaseUnits, f.Stage.StillToSendBaseUnits ?? 0,
                     f.Stage.AwaitingQcBaseUnits, f.Stage.AcceptedBaseUnits, f.Stage.ReworkBaseUnits, f.Stage.ScrapBaseUnits, open, history)
                 {
+                    ExpectedCompletionUtc = (f.Stage.StillToSendBaseUnits ?? 0) > 0 && f.Stage.Status is ItemStageStatus.WaitingExternalSend or ItemStageStatus.ExternalSent or ItemStageStatus.WaitingQc
+                        ? now.AddDays(f.Stage.ExpectedLeadTimeDays!.Value)
+                        : open.Count > 0 ? open.Max(d => d.ExpectedReturnUtc) : null,
                     RequestVersion = f.Loaded.Versions.Request,
                     ItemVersion = f.Loaded.Versions.ItemVersion(f.Item.Id),
                     StageVersions = f.Item.Stages.ToDictionary(s => s.StageNo, s => f.Loaded.Versions.StageVersion(f.Item.Id, s.StageNo)),

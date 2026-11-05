@@ -778,6 +778,7 @@ public class SchedulingServiceTests
         var first = await EntryAsync();
         Assert.True((await external.LoadAsync(w.Warehouse, cancellationToken: Token)).Value!.CanRecord);
         Assert.Equal((ItemStageStatus.WaitingExternalSend, 10L, 0L, "EXTERNAL_PLATING", 7), (first.Status, first.StillToSendBaseUnits, first.DispatchedBaseUnits, first.UnitCategory, first.ExpectedLeadTimeDays));
+        Assert.Equal(w.Fixture.Clock.UtcNow.AddDays(7), first.ExpectedCompletionUtc); // nothing sent yet: today + lead time in calendar days
         foreach (var reader in new[] { w.Planning, w.Manager, w.Qc })
         {
             Assert.False((await external.LoadAsync(reader, cancellationToken: Token)).Value!.CanRecord);
@@ -796,6 +797,7 @@ public class SchedulingServiceTests
         Assert.Equal(2, sent.OpenDispatches.Count);
         Assert.Equal(a.RecordedAtUtc.AddDays(7), sent.OpenDispatches.Single(d => d.Dispatch.Id == a.Id).ExpectedReturnUtc);
         Assert.False(sent.OpenDispatches.Any(d => d.Overdue));
+        Assert.Equal(sent.OpenDispatches.Max(d => d.ExpectedReturnUtc), sent.ExpectedCompletionUtc); // everything sent: the latest expected return
 
         // A return names its dispatch and never exceeds what it has outstanding; returned units go to the existing QC worklist.
         Assert.Equal(ValidationIssue.ExternalQuantityInvalid, (await external.ReturnAsync(w.Warehouse, sent.ToStageTarget(), b.Id, 5, null, Token)).Issue);

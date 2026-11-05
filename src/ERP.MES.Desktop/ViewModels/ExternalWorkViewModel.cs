@@ -178,7 +178,8 @@ public sealed class ExternalWorkViewModel(ExternalWorkService service, IJalaliDa
                 e.UnitName + " — " + PlanningMasterViewModel.CategoryText(e.UnitCategory),
                 StatusText(e.Status) + (overdue ? " — دیرکرد" : string.Empty),
                 $"ورودی {Digits(e.InputBaseUnits)}، ارسال {Digits(e.DispatchedBaseUnits)}، برگشت {Digits(e.ReturnedBaseUnits)}، نزد پیمانکار {Digits(e.AtContractorBaseUnits)}، مانده برای ارسال {Digits(e.StillToSendBaseUnits)}، در انتظار کنترل کیفیت {Digits(e.AwaitingQcBaseUnits)}، پذیرفته {Digits(e.AcceptedBaseUnits)}، ضایعات {Digits(e.ScrapBaseUnits)}",
-                string.Join("؛ ", e.OpenDispatches.Select(d => $"ارسال {Digits(d.Dispatch.Id)}: مانده {Digits(d.OutstandingBaseUnits)}، برگشت مورد انتظار {dates.FormatDateTime(d.ExpectedReturnUtc)}" + (d.Overdue ? " (دیرکرد)" : string.Empty))),
+                (e.ExpectedCompletionUtc is { } done ? $"پایان پیش‌بینی‌شدهٔ مرحله: {dates.FormatDateTime(done)}" + (e.OpenDispatches.Count > 0 ? "؛ " : string.Empty) : string.Empty)
+                    + string.Join("؛ ", e.OpenDispatches.Select(d => $"ارسال {Digits(d.Dispatch.Id)}: مانده {Digits(d.OutstandingBaseUnits)}، برگشت مورد انتظار {dates.FormatDateTime(d.ExpectedReturnUtc)}" + (d.Overdue ? " (دیرکرد)" : string.Empty))),
                 overdue));
         }
 
