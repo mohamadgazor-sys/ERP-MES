@@ -2294,3 +2294,33 @@ Append one dated entry after every substantial session. Do not replace prior ent
 
 ### Recommended exact next action
 - (Done: the screen PR was merged and main verified.) then take the owner's answers to `docs/EXTERNAL_STAGES_DESIGN.md` section 3 (or the instruction to use the defaults) and build external stages in the four PRs of its section 4.
+
+---
+
+### Date / session
+- Date: 2026-11-05 (continued after the owner's decisions of the same day)
+- Claude Code session ID (if useful): session_019XN8Y2XqVmsAWCWSyu8RqA, branch `claude/admiring-mccarthy-mq8l0v`
+
+### Goal
+- Verify main and the packages, record the owner's decisions (#129-#131), meet the downtime clarifications, then implement external supply stages in sequential PRs.
+
+### Verification (before any new feature work)
+- `origin/main` = `b8a373e00f0084d37fae94c2633155d7beaa05f2`; PRs #73-#76 merged and their heads (`352fbf6`, `0dd56b1`, `837f74b`, `feb9c30`) are ancestors of main; every remote work branch is contained in main; nothing unpushed; no stashes.
+- Post-merge on `b8a373e`: SQL Server 42060721297, UI smoke 42060721191, Offline demo package 42060721266 success; CI 42060721221 running at the time of writing (result recorded in the PR of this entry).
+- Package for `b8a373e` (the push to main rebuilds it; it is the current one, the `36b93d6` one is superseded): `ERP-MES-OfflineDemo-2026.11.05-b8a373e-win-x64.zip`, 106.1 MB, SHA-256 `8359e77cb75495b9a66e7a6ad212c61faa2fc1759db43141f58b01ceac924b4e`, run 42060721266, artifact 13431117762 (110,815,199 bytes, digest `sha256:f25518d705f9d9398219592d4840a8b994ba6e2ebb06efb0b540a1c4f2ee79c3`, expires 2026-12-05T16:08:59Z). Offline proof from the ZIP passed on windows-2022 and windows-latest; all eleven accounts signed in. HANDOFF.md now keeps a package history table.
+
+### Decisions newly approved (owner, 2026-11-05)
+- #129 external supply stages (Warehouse records dispatch and return; partial shipments; calendar-day lead time; release does not mean sent; the nine Access category codes). #130 the downtime defaults of #128 with clarifications. #131 overtime never inside the effective regular hours (#127 point 5 confirmed).
+
+### Completed in this PR (docs + clarifications)
+- Downtime: a planned end moved by a report that Planning has not reviewed is marked provisional («موقت») in the unit queue (computed by comparing with the forecast that uses accepted downtime only); the downtime page shows how many reports wait for review and says their effect is provisional; tests for downtime outside working hours (no effect) and for the provisional flag.
+- Overtime: a test that the regular-time check covers a partial overlap, a company holiday, dated own hours of the unit and the re-check at approval.
+- `docs/EXTERNAL_STAGES_DESIGN.md` rewritten as the approved design reconciled with Master Specification §16 (correction: the Access list has nine codes in total, `INTERNAL_PRODUCTION` plus eight external ones; reuse table; quantity and status rules; one remaining open point: pieces never returned by a contractor).
+- HANDOFF.md: current-state section, package history, test evidence per commit, the SDK pin and the Desktop test harness corrected (the Linux Desktop harness was a temporary scratch project, not committed).
+
+### Commands/tests actually run and results
+- Local Linux (SDK 10.0.114, outside the repository) on this PR's working tree: Domain 576, Application 41, Infrastructure 755 passed (+1 overtime test; the downtime forecast test extended); WPF project compiles (`-p:EnableWindowsTargeting=true`, 0 errors); temporary scratch harness (not committed) for the Desktop view-model tests: 151 passed.
+- Windows CI on this PR's head: see the pull request (authoritative).
+
+### Recommended exact next action
+- External stages PR 1 (unit category, stage lead time and external flag, the two statuses, migrations), then PR 2-4 of the design's section 6.

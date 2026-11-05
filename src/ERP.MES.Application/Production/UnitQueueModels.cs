@@ -88,6 +88,9 @@ public sealed record UnitQueueEntry(
 
     public DateTime? PlannedEndUtc { get; init; }
 
+    /// <summary>True when downtime still waiting for Planning's review moved <see cref="PlannedEndUtc"/> (Decision Log #130): the date is provisional.</summary>
+    public bool PlannedEndProvisional { get; init; }
+
     /// <summary>Base units QC sent to rework that production has to redo and resubmit (0 when none).</summary>
     public long ReworkBaseUnits { get; init; }
 

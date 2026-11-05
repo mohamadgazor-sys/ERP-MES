@@ -456,4 +456,35 @@ public class OvertimeTests
         var afternoon = await w.Overtime.ProposeAsync(w.Supervisor, s.SecondOperatorId, s.Unit, s.SecondMachine, At(-1, 13), At(-1, 15), "سفارش فوری", Token);
         Assert.True(afternoon.Succeeded, afternoon.Status + " " + afternoon.Issue);
     }
+
+    [Fact]
+    public async Task The_regular_time_check_uses_the_effective_calendar_of_the_unit_and_date_and_is_repeated_at_approval()
+    {
+        // Decision Log #127 point 5, confirmed by the owner (#131): overtime never overlaps the unit's effective regular hours on that date.
+        using var w = await StartAsync();
+        var s = await SetupAsync(w, plan: false);
+        await LimitsAsync(w, 240, 960);
+        var sunday = DateOnly.FromDateTime(At(1, 0));
+        var monday = DateOnly.FromDateTime(At(2, 0));
+
+        // A partial overlap with the end of the regular shift (16:30-18:00 against 08:00-17:00) is refused; starting exactly at 17:00 is not.
+        Assert.Equal(ValidationIssue.OvertimeInsideRegularTime, (await w.Overtime.ProposeAsync(w.Supervisor, s.SecondOperatorId, s.Unit, s.Machine, At(0, 16, 30), At(0, 18), "سفارش", Token)).Issue);
+        Assert.True((await w.Overtime.ProposeAsync(w.Supervisor, s.SecondOperatorId, s.Unit, s.Machine, At(0, 17), At(0, 18), "سفارش", Token)).Succeeded);
+
+        // A company holiday makes the whole day non-regular: overtime is possible inside the usual shift hours.
+        Assert.True((await w.Services.Calendar.AddExceptionAsync(w.Planning, sunday, CalendarExceptionKind.Off, null, null, "تعطیل رسمی", Token)).Succeeded);
+        var holiday = await w.Overtime.ProposeAsync(w.Supervisor, s.SecondOperatorId, s.Unit, s.Machine, At(1, 9), At(1, 11), "سفارش", Token);
+        Assert.True(holiday.Succeeded, holiday.Status + " " + holiday.Issue);
+
+        // A dated own-hours exception (Monday 18:00-20:00 for this unit) is regular time for that unit and date: overtime there is refused, after it is allowed.
+        Assert.True((await w.Services.Calendar.AddUnitDateHoursAsync(w.Planning, s.Unit, monday, new TimeOnly(18, 0), new TimeOnly(20, 0), 3, "سفارش ویژه", Token)).Succeeded);
+        Assert.Equal(ValidationIssue.OvertimeInsideRegularTime, (await w.Overtime.ProposeAsync(w.Supervisor, s.SecondOperatorId, s.Unit, s.Machine, At(2, 19), At(2, 21), "سفارش", Token)).Issue);
+        Assert.True((await w.Overtime.ProposeAsync(w.Supervisor, s.SecondOperatorId, s.Unit, s.Machine, At(2, 20), At(2, 21), "سفارش", Token)).Succeeded);
+
+        // A proposal made while Tuesday evening was free becomes regular time when Planning adds own hours; the approval re-checks the calendar and refuses it.
+        var tuesday = DateOnly.FromDateTime(At(3, 0));
+        var proposed = (await w.Overtime.ProposeAsync(w.Supervisor, s.SecondOperatorId, s.Unit, s.Machine, At(3, 18), At(3, 19), "سفارش", Token)).Value!;
+        Assert.True((await w.Services.Calendar.AddUnitDateHoursAsync(w.Planning, s.Unit, tuesday, new TimeOnly(18, 0), new TimeOnly(20, 0), 3, "سفارش ویژه", Token)).Succeeded);
+        Assert.Equal(ValidationIssue.OvertimeInsideRegularTime, (await w.Overtime.DecideAsync(w.ProductionManager, proposed.Value.Id, proposed.Version, true, null, Token)).Issue);
+    }
 }
