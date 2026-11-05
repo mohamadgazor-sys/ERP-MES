@@ -239,6 +239,12 @@ public enum Permission
 
     /// <summary>See the machine-downtime register: Maintenance/PM, Planning, Management and the Production Manager (Decision Log #128, a labelled default).</summary>
     ViewDowntime,
+
+    /// <summary>Record dispatches to and returns from an external route, and cancel a mistaken one with a reason: the Warehouse (Decision Log #129 Q1).</summary>
+    RecordExternalShipment,
+
+    /// <summary>See the external-work view (status, outstanding quantities, history): Warehouse, Planning, Management, the Production Manager and QC (Decision Log #129, #133).</summary>
+    ViewExternalWork,
 }
 
 /// <summary>
@@ -272,6 +278,8 @@ public static class AuthorizationRules
         [Permission.RegisterDowntime] = new([DepartmentCodes.MaintenancePm], null),
         [Permission.DecideDowntime] = new([DepartmentCodes.Planning], null),
         [Permission.ViewDowntime] = new([DepartmentCodes.MaintenancePm, DepartmentCodes.Planning, DepartmentCodes.Management, DepartmentCodes.ProductionManager], null),
+        [Permission.RecordExternalShipment] = new([DepartmentCodes.Warehouse], null),
+        [Permission.ViewExternalWork] = new([DepartmentCodes.Warehouse, DepartmentCodes.Planning, DepartmentCodes.Management, DepartmentCodes.ProductionManager, DepartmentCodes.Qc], null),
         [Permission.CreateAndSubmitRequest] = new([DepartmentCodes.Central], null),
         [Permission.ReceiveAndEditRequestDetails] = new([DepartmentCodes.Planning], null),
         [Permission.ReopenRejectedRequest] = new([DepartmentCodes.Planning, DepartmentCodes.Management], null),

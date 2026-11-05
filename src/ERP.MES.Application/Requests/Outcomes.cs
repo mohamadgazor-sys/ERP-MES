@@ -589,6 +589,15 @@ public enum ValidationIssue
 
     /// <summary>An expected external lead time was given for a stage on an internal unit.</summary>
     ExternalLeadTimeNotAllowed,
+
+    /// <summary>
+    /// An external dispatch, return or cancellation breaks a quantity rule: more than still to send, more than the dispatch has outstanding, a dispatch that already has returns, or a return
+    /// whose units QC has already decided (Decision Log #129).
+    /// </summary>
+    ExternalQuantityInvalid,
+
+    /// <summary>A note, piece description or cancellation reason is missing where required or longer than 300 characters.</summary>
+    ExternalTextInvalid,
 }
 
 /// <summary>The result of a command or query: a status, the value on success, and the details of a refusal.</summary>

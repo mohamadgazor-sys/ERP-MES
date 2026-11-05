@@ -86,6 +86,9 @@ public static class AuditActions
     public const string DowntimeEndChanged = "DowntimeEndChanged";
     public const string DowntimeCancelled = "DowntimeCancelled";
     public const string ProductionUnitCategoryChanged = "ProductionUnitCategoryChanged";
+    public const string ExternalDispatchRecorded = "ExternalDispatchRecorded";
+    public const string ExternalReturnRecorded = "ExternalReturnRecorded";
+    public const string ExternalShipmentCancelled = "ExternalShipmentCancelled";
     public const string UnitSupervisorChanged = "UnitSupervisorChanged";
     public const string QcInspectionRecorded = "QcInspectionRecorded";
     public const string ShortfallDecided = "ShortfallDecided";

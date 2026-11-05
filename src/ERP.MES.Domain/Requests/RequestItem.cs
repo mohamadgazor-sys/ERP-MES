@@ -459,7 +459,12 @@ public sealed class RequestItem
         stage.AwaitingQcBaseUnits -= total;
         UpdatedAtUtc = utc;
         var completed = false;
-        if (stage.AwaitingQcBaseUnits == 0)
+        if (stage.IsExternal)
+        {
+            // An external stage is complete only when nothing is left to send, at the contractor or awaiting QC (Decision Log #129 (6)); rework units must be sent again.
+            completed = SettleExternal(stage, decidedByUserId, utc);
+        }
+        else if (stage.AwaitingQcBaseUnits == 0)
         {
             if (stage.ReworkBaseUnits > 0)
             {
@@ -503,6 +508,139 @@ public sealed class RequestItem
         CompleteStage(stage, (decimal)stage.AcceptedBaseUnits / BaseUnitsPerUnit, decidedByUserId, utc);
         UpdatedAtUtc = utc;
         return decision;
+    }
+
+    /// <summary>
+    /// The Warehouse sends base units of an executable external stage to its external route (Decision Log #129): at most what is still to send (rework units first), the previous stage being
+    /// QC approved. Returns the new dispatch row; the stage becomes EXTERNAL_SENT unless units are still awaiting QC.
+    /// </summary>
+    public ExternalShipment DispatchExternal(int stageNo, long baseUnits, string? pieceDescription, string? note, long userId, DateTime atUtc)
+    {
+        var stage = RequireExternalInProgress(stageNo, "dispatched");
+        if (baseUnits <= 0 || baseUnits > stage.StillToSendBaseUnits)
+        {
+            throw new ExternalQuantityException("Stage " + stageNo + " has " + stage.StillToSendBaseUnits + " base units still to send; " + baseUnits + " cannot be dispatched.");
+        }
+
+        var shipment = new ExternalShipment(Id, stageNo, ExternalShipmentKind.Dispatch, null, baseUnits, pieceDescription, note, userId, atUtc);
+        stage.ExternalDispatchedBaseUnits += baseUnits;
+        stage.ReworkBaseUnits = Math.Max(0, stage.ReworkBaseUnits - baseUnits);
+        SettleExternal(stage, userId, shipment.RecordedAtUtc);
+        return shipment;
+    }
+
+    /// <summary>
+    /// The Warehouse records units back from one dispatch (§16.6): never more than that dispatch still has outstanding (<paramref name="returnsOfDispatch"/> are its earlier returns). The units
+    /// go to QC exactly like a production submission (#101); the time is the transaction time.
+    /// </summary>
+    public ExternalShipment ReturnExternal(int stageNo, ExternalShipment dispatch, IReadOnlyList<ExternalShipment> returnsOfDispatch, long baseUnits, string? note, long userId, DateTime atUtc)
+    {
+        ArgumentNullException.ThrowIfNull(dispatch);
+        ArgumentNullException.ThrowIfNull(returnsOfDispatch);
+        var stage = RequireExternalInProgress(stageNo, "returned");
+        RequireShipmentOf(stage, dispatch, ExternalShipmentKind.Dispatch);
+        var outstanding = dispatch.BaseUnits - returnsOfDispatch.Where(r => r.IsActive && r.Kind == ExternalShipmentKind.Return && r.DispatchId == dispatch.Id).Sum(r => r.BaseUnits);
+        if (baseUnits <= 0 || baseUnits > outstanding)
+        {
+            throw new ExternalQuantityException("Dispatch " + dispatch.Id + " has " + outstanding + " base units outstanding; " + baseUnits + " cannot be returned.");
+        }
+
+        var shipment = new ExternalShipment(Id, stageNo, ExternalShipmentKind.Return, dispatch.Id, baseUnits, null, note, userId, atUtc);
+        stage.ExternalReturnedBaseUnits += baseUnits;
+        stage.AwaitingQcBaseUnits += baseUnits;
+        SettleExternal(stage, userId, shipment.RecordedAtUtc);
+        return shipment;
+    }
+
+    /// <summary>A mistaken dispatch is cancelled with a reason, only while nothing has been returned against it; its units are still to send again.</summary>
+    public void CancelExternalDispatch(int stageNo, ExternalShipment dispatch, IReadOnlyList<ExternalShipment> returnsOfDispatch, string? reason, long userId, DateTime atUtc)
+    {
+        ArgumentNullException.ThrowIfNull(dispatch);
+        ArgumentNullException.ThrowIfNull(returnsOfDispatch);
+        var stage = RequireExternalInProgress(stageNo, "corrected");
+        RequireShipmentOf(stage, dispatch, ExternalShipmentKind.Dispatch);
+        if (returnsOfDispatch.Any(r => r.IsActive && r.Kind == ExternalShipmentKind.Return && r.DispatchId == dispatch.Id))
+        {
+            throw new ExternalQuantityException("Dispatch " + dispatch.Id + " has returns; cancel those first.");
+        }
+
+        dispatch.MarkCancelled(reason, userId, atUtc);
+        stage.ExternalDispatchedBaseUnits -= dispatch.BaseUnits;
+        SettleExternal(stage, userId, dispatch.CancelledAtUtc!.Value);
+    }
+
+    /// <summary>A mistaken return is cancelled with a reason, only while QC has not decided its units yet (they are still awaiting QC); the units count as at the contractor again.</summary>
+    public void CancelExternalReturn(int stageNo, ExternalShipment returned, string? reason, long userId, DateTime atUtc)
+    {
+        ArgumentNullException.ThrowIfNull(returned);
+        var stage = RequireExternalInProgress(stageNo, "corrected");
+        RequireShipmentOf(stage, returned, ExternalShipmentKind.Return);
+        if (stage.AwaitingQcBaseUnits < returned.BaseUnits)
+        {
+            throw new ExternalQuantityException("QC has already decided units of this return; it cannot be cancelled.");
+        }
+
+        returned.MarkCancelled(reason, userId, atUtc);
+        stage.ExternalReturnedBaseUnits -= returned.BaseUnits;
+        stage.AwaitingQcBaseUnits -= returned.BaseUnits;
+        SettleExternal(stage, userId, returned.CancelledAtUtc!.Value);
+    }
+
+    private ItemStage RequireExternalInProgress(int stageNo, string action)
+    {
+        var stage = GetStage(stageNo);
+        if (!stage.IsExternal)
+        {
+            throw new InvalidOperationException("Stage " + stageNo + " is not an external stage.");
+        }
+
+        if (stage.Status is not (ItemStageStatus.WaitingExternalSend or ItemStageStatus.ExternalSent or ItemStageStatus.WaitingQc) || stage.InputBaseUnits is null)
+        {
+            throw new InvalidOperationException("Stage " + stageNo + " is " + stage.Status.Code() + " and cannot be " + action + ".");
+        }
+
+        RequirePreviousApproved(stage);
+        return stage;
+    }
+
+    private void RequireShipmentOf(ItemStage stage, ExternalShipment shipment, ExternalShipmentKind kind)
+    {
+        if (shipment.RequestItemId != Id || shipment.StageNo != stage.StageNo || shipment.Kind != kind || !shipment.IsActive)
+        {
+            throw new InvalidOperationException("The shipment is not an active " + kind + " of stage " + stage.StageNo + ".");
+        }
+    }
+
+    /// <summary>
+    /// The status of an external stage after a change (Decision Log #129): units awaiting QC -> WAITING_QC; else units at the contractor -> EXTERNAL_SENT; else units still to send (rework
+    /// included) -> WAITING_EXTERNAL_SEND; else scrap -> the shortfall decision; else QC approved and the next stage unlocked. Returns true when the stage was completed.
+    /// </summary>
+    private bool SettleExternal(ItemStage stage, long userId, DateTime utc)
+    {
+        if (stage.AwaitingQcBaseUnits > 0)
+        {
+            stage.Status = ItemStageStatus.WaitingQc;
+        }
+        else if (stage.AtContractorBaseUnits > 0)
+        {
+            stage.Status = ItemStageStatus.ExternalSent;
+        }
+        else if (stage.StillToSendBaseUnits > 0)
+        {
+            stage.Status = ItemStageStatus.WaitingExternalSend;
+        }
+        else if (stage.ScrapBaseUnits > 0)
+        {
+            stage.Status = ItemStageStatus.WaitingShortfallDecision;
+        }
+        else
+        {
+            CompleteStage(stage, (decimal)stage.AcceptedBaseUnits / BaseUnitsPerUnit, userId, utc);
+            return true;
+        }
+
+        UpdatedAtUtc = utc;
+        return false;
     }
 
     // The stage is QC approved: the append-only approval, and the next stage becomes executable with the accepted base units (nothing when none were accepted).

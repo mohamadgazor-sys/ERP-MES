@@ -134,6 +134,18 @@ public sealed class ItemStage
     /// <summary>Base units QC scrapped (cumulative, permanent).</summary>
     public long ScrapBaseUnits { get; internal set; }
 
+    /// <summary>External stage: base units of the active dispatches (Decision Log #129).</summary>
+    public long ExternalDispatchedBaseUnits { get; internal set; }
+
+    /// <summary>External stage: base units of the active returns (never more than dispatched).</summary>
+    public long ExternalReturnedBaseUnits { get; internal set; }
+
+    /// <summary>External stage: base units dispatched and not yet returned (at the external route).</summary>
+    public long AtContractorBaseUnits => ExternalDispatchedBaseUnits - ExternalReturnedBaseUnits;
+
+    /// <summary>External stage: base units still to send (rework included): input minus accepted, scrapped, awaiting QC and at the contractor. Null when the input is not known.</summary>
+    public long? StillToSendBaseUnits => InputBaseUnits is { } input ? input - AcceptedBaseUnits - ScrapBaseUnits - AwaitingQcBaseUnits - AtContractorBaseUnits : null;
+
     /// <summary>Base units neither accepted, scrapped nor awaiting QC: still to be produced or reworked. Null when the input is not known.</summary>
     public long? RemainingBaseUnits => InputBaseUnits is { } input ? input - AcceptedBaseUnits - ScrapBaseUnits - AwaitingQcBaseUnits : null;
 }

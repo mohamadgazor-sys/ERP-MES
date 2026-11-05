@@ -2657,6 +2657,71 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
                     b.ToTable("Customers", (string)null);
                 });
 
+            modelBuilder.Entity("ERP.MES.Domain.Requests.ExternalShipment", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("BaseUnits")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("CancelReason")
+                        .HasMaxLength(300)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("CancelledAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long?>("CancelledByUserId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long?>("DispatchId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Kind")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(300)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PieceDescription")
+                        .HasMaxLength(300)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("RecordedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("RecordedByUserId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("RequestItemId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("StageNo")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CancelledByUserId");
+
+                    b.HasIndex("DispatchId");
+
+                    b.HasIndex("RecordedByUserId");
+
+                    b.HasIndex("RequestItemId", "StageNo");
+
+                    b.ToTable("ExternalShipments", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_ExternalShipments_BaseUnits", "\"BaseUnits\" > 0");
+                        });
+                });
+
             modelBuilder.Entity("ERP.MES.Domain.Requests.ItemStage", b =>
                 {
                     b.Property<long>("Id")
@@ -2678,6 +2743,16 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
 
                     b.Property<int?>("ExpectedLeadTimeDays")
                         .HasColumnType("INTEGER");
+
+                    b.Property<long>("ExternalDispatchedBaseUnits")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(0L);
+
+                    b.Property<long>("ExternalReturnedBaseUnits")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(0L);
 
                     b.Property<long?>("InputBaseUnits")
                         .HasColumnType("INTEGER");
@@ -4645,6 +4720,32 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
                     b.HasOne("ERP.MES.Domain.Identity.User", null)
                         .WithMany()
                         .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Requests.ExternalShipment", b =>
+                {
+                    b.HasOne("ERP.MES.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("CancelledByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("ERP.MES.Domain.Requests.ExternalShipment", null)
+                        .WithMany()
+                        .HasForeignKey("DispatchId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("ERP.MES.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("RecordedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ERP.MES.Domain.Requests.ItemStage", null)
+                        .WithMany()
+                        .HasForeignKey("RequestItemId", "StageNo")
+                        .HasPrincipalKey("RequestItemId", "StageNo")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });

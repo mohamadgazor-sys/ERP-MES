@@ -47,6 +47,12 @@ public sealed class ItemStageConfiguration : IEntityTypeConfiguration<ItemStage>
         builder.Property(s => s.ScrapBaseUnits).IsRequired().HasDefaultValue(0L);
         builder.Ignore(s => s.RemainingBaseUnits);
 
+        // External-stage quantities (Decision Log #129): the sums of the active dispatches and returns; the rest is derived.
+        builder.Property(s => s.ExternalDispatchedBaseUnits).IsRequired().HasDefaultValue(0L);
+        builder.Property(s => s.ExternalReturnedBaseUnits).IsRequired().HasDefaultValue(0L);
+        builder.Ignore(s => s.AtContractorBaseUnits);
+        builder.Ignore(s => s.StillToSendBaseUnits);
+
         // Derived from minutes per piece x quantity; not stored.
         builder.Ignore(s => s.PlannedTotalMinutes);
 
@@ -58,5 +64,9 @@ public sealed class ItemStageConfiguration : IEntityTypeConfiguration<ItemStage>
         // (RequestItemId, StageNo) is unique (Domain and Database Specification 26) and is the target of the QC approval's composite
         // foreign key, so it is declared as an alternate key (a UNIQUE constraint); the surrogate primary key is unchanged.
         builder.HasAlternateKey("RequestItemId", nameof(ItemStage.StageNo));
+
+        // External shipments belong to one stage (Decision Log #129); declared here because this configuration defines the shadow key.
+        builder.HasMany<ExternalShipment>().WithOne().HasForeignKey(nameof(ExternalShipment.RequestItemId), nameof(ExternalShipment.StageNo))
+            .HasPrincipalKey("RequestItemId", nameof(ItemStage.StageNo)).IsRequired().OnDelete(DeleteBehavior.Restrict);
     }
 }
