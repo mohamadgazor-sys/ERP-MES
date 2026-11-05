@@ -96,6 +96,8 @@ public sealed class ErpMesDbContext(DbContextOptions<ErpMesDbContext> options) :
 
     public DbSet<OvertimeAssignment> OvertimeAssignments => Set<OvertimeAssignment>();
 
+    public DbSet<MachineDowntime> MachineDowntimes => Set<MachineDowntime>();
+
     public DbSet<ItemCostCalculation> ItemCostCalculations => Set<ItemCostCalculation>();
 
     public DbSet<ItemCostLine> ItemCostLines => Set<ItemCostLine>();
@@ -167,7 +169,7 @@ public sealed class ErpMesDbContext(DbContextOptions<ErpMesDbContext> options) :
     /// <summary>Name of the shadow property that holds the application-managed row version (Decision Log #23).</summary>
     public const string RowVersionPropertyName = "Version";
 
-    private static readonly HashSet<Type> VersionedTypes = [typeof(Customer), typeof(Request), typeof(RequestItem), typeof(ItemStage), typeof(User), typeof(UserCredential), typeof(SystemSetup), typeof(UnitOfMeasure), typeof(UnitConversion), typeof(QuantityType), typeof(ProductionUnit), typeof(Machine), typeof(RawMaterialInquiry), typeof(DrawingClarification), typeof(RequestContract), typeof(ContractVersion), typeof(Material), typeof(Operator), typeof(OperatorMachineAssignment), typeof(OperatorMachineQualification), typeof(QueueOverride), typeof(UserUnitDesignation), typeof(ShiftTemplate), typeof(WeeklyWorkday), typeof(CalendarException), typeof(UnitShift), typeof(OperatorOffDay), typeof(WorkerSchedule), typeof(DailyJobReport), typeof(OvertimeLimits), typeof(OvertimeAssignment), typeof(ItemPriceDecision), typeof(PauseReason), typeof(OutageEvent), typeof(WorkSession)];
+    private static readonly HashSet<Type> VersionedTypes = [typeof(Customer), typeof(Request), typeof(RequestItem), typeof(ItemStage), typeof(User), typeof(UserCredential), typeof(SystemSetup), typeof(UnitOfMeasure), typeof(UnitConversion), typeof(QuantityType), typeof(ProductionUnit), typeof(Machine), typeof(RawMaterialInquiry), typeof(DrawingClarification), typeof(RequestContract), typeof(ContractVersion), typeof(Material), typeof(Operator), typeof(OperatorMachineAssignment), typeof(OperatorMachineQualification), typeof(QueueOverride), typeof(UserUnitDesignation), typeof(ShiftTemplate), typeof(WeeklyWorkday), typeof(CalendarException), typeof(UnitShift), typeof(OperatorOffDay), typeof(WorkerSchedule), typeof(DailyJobReport), typeof(OvertimeLimits), typeof(OvertimeAssignment), typeof(ItemPriceDecision), typeof(PauseReason), typeof(OutageEvent), typeof(WorkSession), typeof(MachineDowntime)];
 
     /// <summary>The row version of a tracked entity of a versioned type (customer, request, request item, item stage).</summary>
     public long GetRowVersion(object entity) => (long)Entry(entity).Property(RowVersionPropertyName).CurrentValue!;

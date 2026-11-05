@@ -42,6 +42,8 @@ public class SchedulingServiceTests
 
         public required Principal Production { get; init; }
 
+        public required Principal Maintenance { get; init; }
+
         public required WorkflowServices Services { get; init; }
 
         public InquiryService Inquiries => Services.Inquiries;
@@ -91,6 +93,7 @@ public class SchedulingServiceTests
             Warehouse = await UserAsync(fixture, admin, "warehouse.one", DepartmentCodes.Warehouse, RoleCodes.Staff),
             Qc = await UserAsync(fixture, admin, "qc.one", DepartmentCodes.Qc, RoleCodes.Staff),
             Production = await UserAsync(fixture, admin, "production.one", DepartmentCodes.Production, RoleCodes.Staff),
+            Maintenance = await UserAsync(fixture, admin, "maintenance.one", DepartmentCodes.MaintenancePm, RoleCodes.Staff),
             Services = WorkflowServices.Create(fixture.Db.ContextFactory, fixture.Services.Authorization, PersistenceTestData.Dates, fixture.Clock),
         };
     }
@@ -204,7 +207,7 @@ public class SchedulingServiceTests
     }
 
     /// <summary>A request through every gate with one item whose route has the given stages (all planned in the given units), the first stage optionally released.</summary>
-    private static async Task<(long RequestId, long ItemId)> ItemAsync(World w, string requestNo, string itemNo, long[] stageUnits, Priority priority = Priority.Normal, bool release = true)
+    private static async Task<(long RequestId, long ItemId)> ItemAsync(World w, string requestNo, string itemNo, long[] stageUnits, Priority priority = Priority.Normal, bool release = true, long? machine = null)
     {
         var (id, version) = await ReadyAsync(w, WorkType.Make, requestNo);
         var (piece, _) = await TypesAsync(w);
@@ -215,7 +218,7 @@ public class SchedulingServiceTests
         for (var i = 0; i < stageUnits.Length; i++)
         {
             var current = (await w.Services.Requests.GetAsync(w.Planning, id, Token)).Value!;
-            var staged = await w.Items.DefineStageAsync(w.Planning, id, current.Request.Version, itemId, current.Versions.ItemVersion(itemId), new DefineStageCommand("مرحله " + (i + 1), 2m, stageUnits[i], null), Token);
+            var staged = await w.Items.DefineStageAsync(w.Planning, id, current.Request.Version, itemId, current.Versions.ItemVersion(itemId), new DefineStageCommand("مرحله " + (i + 1), 2m, stageUnits[i], machine), Token);
             Assert.True(staged.Succeeded, staged.Status + " " + staged.Issue);
         }
 
@@ -516,6 +519,49 @@ public class SchedulingServiceTests
         // Making Saturday a company holiday moves the forecast to Sunday.
         Assert.True((await w.Calendar.AddExceptionAsync(w.Planning, Saturday, CalendarExceptionKind.Off, null, null, "تعطیل", Token)).Succeeded);
         Assert.Equal(new DateTime(2026, 10, 25, 8, 20, 0, DateTimeKind.Utc), (await LoadAsync(w, w.Planning, milling)).Queue.Single(e => e.Block == QueueBlock.None).PlannedEndUtc);
+    }
+
+    [Fact]
+    public async Task Machine_downtime_removes_time_from_the_forecast_of_its_machine_and_of_the_unit_when_every_machine_is_down()
+    {
+        using var w = await StartAsync();
+        var milling = await AddUnitAsync(w, "MILLING");
+        var m1 = (await w.Services.PlanningMaster.AddMachineAsync(w.Admin, "FCC-01", "فرز ۱", milling, Token)).Value!.Value.Id;
+        var m2 = (await w.Services.PlanningMaster.AddMachineAsync(w.Admin, "FCC-02", "فرز ۲", milling, Token)).Value!.Value.Id;
+        await MaterialAsync(w);
+        var d = await TemplateAsync(w, "D", "08:00", "17:00", "12:00", "13:00");
+        await RunUnitShiftAsync(w, milling, d);
+        await ItemAsync(w, "R-1", "A", [milling], Priority.Normal, machine: m1);
+        await ItemAsync(w, "R-2", "B", [milling], Priority.Urgent);
+
+        // Saturday 07:00 (display zone = UTC in the tests); 20 minutes of work each; B (urgent, no planned machine) goes first, then A on FCC-01.
+        w.Fixture.Clock.UtcNow = new DateTime(2026, 10, 24, 7, 0, 0, DateTimeKind.Utc);
+        async Task<(DateTime? B, DateTime? A)> EndsAsync()
+        {
+            var queue = await LoadAsync(w, w.Planning, milling);
+            return (queue.Queue.Single(e => e.CustomerItemRef == "B").PlannedEndUtc, queue.Queue.Single(e => e.CustomerItemRef == "A").PlannedEndUtc);
+        }
+
+        DateTime At(int hour, int minute = 0) => new(2026, 10, 24, hour, minute, 0, DateTimeKind.Utc);
+        DateTime Local(int hour) => new(2026, 10, 24, hour, 0, 0);
+        Assert.Equal((At(8, 20), At(8, 40)), await EndsAsync());
+        Assert.Equal(m1, (await LoadAsync(w, w.Planning, milling)).Queue.Single(e => e.CustomerItemRef == "A").PlannedMachineId);
+
+        // FCC-01 down 08:00-09:00: A waits for its machine; B has no planned machine and FCC-02 still works, so B is unchanged.
+        var first = await w.Services.Downtime.ReportAsync(w.Maintenance, m1, DowntimeReason.Breakdown, Local(8), Local(9), null, Token);
+        Assert.True(first.Succeeded, first.Status + " " + first.Issue);
+        Assert.Equal((At(8, 20), At(9, 20)), await EndsAsync());
+
+        // FCC-02 down 08:00-10:00 as well: the whole unit is down 08:00-09:00, which delays B; A then follows B on its free machine.
+        Assert.True((await w.Services.Downtime.ReportAsync(w.Maintenance, m2, DowntimeReason.PowerOutage, Local(8), Local(10), null, Token)).Succeeded);
+        Assert.Equal((At(9, 20), At(9, 40)), await EndsAsync());
+
+        // Accepted downtime keeps counting; rejected downtime no longer does.
+        Assert.True((await w.Services.Downtime.DecideAsync(w.Planning, first.Value!.Value.Id, first.Value.Version, true, null, Token)).Succeeded);
+        Assert.Equal((At(9, 20), At(9, 40)), await EndsAsync());
+        var accepted = (await w.Services.Downtime.LoadAsync(w.Planning, Saturday, Saturday, Token)).Value!.Items.Single(i => i.Downtime.Value.MachineId == m1).Downtime;
+        Assert.True((await w.Services.Downtime.CancelAsync(w.Maintenance, accepted.Value.Id, accepted.Version, "گزارش اشتباه", Token)).Succeeded);
+        Assert.Equal((At(8, 20), At(8, 40)), await EndsAsync());
     }
 
     // ---- recurring unit schedules and dated own hours (Decision Log #123 Q13, Q17, Q18) ----------------------------------------------------------------------------------

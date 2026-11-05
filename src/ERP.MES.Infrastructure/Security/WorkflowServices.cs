@@ -17,7 +17,7 @@ namespace ERP.MES.Infrastructure.Security;
 
 /// <summary>The customer and request use cases wired to the real repositories, the current-authorization check and the clock. Composition roots (Desktop) and tests create it once per database.</summary>
 public sealed record WorkflowServices(
-    CustomerService Customers, RequestService Requests, ProductionQueueService Queue, StageWorkService StageWork, RequestDocumentService Documents, RequestWorkflowService Lifecycle, QcMasterService QcMaster, PlanningMasterService PlanningMaster, OperatorService Operators, MaterialService Materials, ContractService Contracts, InquiryService Inquiries, ClarificationService Clarifications, RequestGateService Gates, ItemDefinitionService ItemDefinition, ItemImportService ItemImport, UnitQueueService UnitQueue, UnitDesignationService UnitDesignations, IUnitQueueRepository UnitQueueStore, CalendarService Calendar, WorkerScheduleService WorkerSchedule, QcInspectionService QcInspection, JobReportService JobReports, OvertimeService Overtime, CostingService Costing, WarehouseCompletionService Completion, KpiService Kpi, WorkSessionService WorkSessions, UserDirectoryService Users, ItemDrawingService Drawings)
+    CustomerService Customers, RequestService Requests, ProductionQueueService Queue, StageWorkService StageWork, RequestDocumentService Documents, RequestWorkflowService Lifecycle, QcMasterService QcMaster, PlanningMasterService PlanningMaster, OperatorService Operators, MaterialService Materials, ContractService Contracts, InquiryService Inquiries, ClarificationService Clarifications, RequestGateService Gates, ItemDefinitionService ItemDefinition, ItemImportService ItemImport, UnitQueueService UnitQueue, UnitDesignationService UnitDesignations, IUnitQueueRepository UnitQueueStore, CalendarService Calendar, WorkerScheduleService WorkerSchedule, QcInspectionService QcInspection, JobReportService JobReports, OvertimeService Overtime, CostingService Costing, WarehouseCompletionService Completion, KpiService Kpi, WorkSessionService WorkSessions, UserDirectoryService Users, ItemDrawingService Drawings, MachineDowntimeService Downtime)
 {
     public static WorkflowServices Create(
         IDbContextFactory<ErpMesDbContext> contexts, CurrentAuthorization authorization, IJalaliDateService dates, IClock? clock = null, IAuditContext? auditContext = null, DocumentPolicy? documentPolicy = null)
@@ -50,7 +50,7 @@ public sealed record WorkflowServices(
             gates,
             new ItemDefinitionService(requests, new EfQcMasterRepository(contexts), new EfMaterialRepository(contexts), new EfPlanningMasterRepository(contexts), gates, authorization, effectiveClock, auditContext ?? new EnvironmentAuditContext()),
             new ItemImportService(requests, new EfItemImportRepository(contexts), new EfQcMasterRepository(contexts), new EfMaterialRepository(contexts), new EfPlanningMasterRepository(contexts), new XlsxWorkbookReader(), gates, authorization, effectiveClock, auditContext ?? new EnvironmentAuditContext()),
-            new UnitQueueService(requests, unitQueue, new EfPlanningMasterRepository(contexts), gates, scheduling, dates, authorization, effectiveClock, auditContext ?? new EnvironmentAuditContext()),
+            new UnitQueueService(requests, unitQueue, new EfPlanningMasterRepository(contexts), gates, scheduling, dates, authorization, effectiveClock, auditContext ?? new EnvironmentAuditContext(), new EfMachineDowntimeRepository(contexts)),
             new UnitDesignationService(unitQueue, new EfPlanningMasterRepository(contexts), authorization, effectiveClock, auditContext ?? new EnvironmentAuditContext()),
             unitQueue,
             new CalendarService(scheduling, new EfPlanningMasterRepository(contexts), authorization, effectiveClock, auditContext ?? new EnvironmentAuditContext()),
@@ -63,6 +63,7 @@ public sealed record WorkflowServices(
             new KpiService(new EfKpiRepository(contexts), unitQueue, dates, authorization, effectiveClock),
             new WorkSessionService(workSessions, new EfPlanningMasterRepository(contexts), unitQueue, new EfOperatorRepository(contexts), scheduling, new EfOvertimeRepository(contexts), gates, authorization, effectiveClock, dates, auditContext ?? new EnvironmentAuditContext()),
             new UserDirectoryService(new EfUserDirectoryRepository(contexts), authorization),
-            new ItemDrawingService(new EfItemDrawingRepository(contexts), authorization, effectiveClock, auditContext ?? new EnvironmentAuditContext(), documentPolicy ?? DocumentPolicy.Default));
+            new ItemDrawingService(new EfItemDrawingRepository(contexts), authorization, effectiveClock, auditContext ?? new EnvironmentAuditContext(), documentPolicy ?? DocumentPolicy.Default),
+            new MachineDowntimeService(new EfMachineDowntimeRepository(contexts), new EfPlanningMasterRepository(contexts), authorization, effectiveClock, auditContext ?? new EnvironmentAuditContext()));
     }
 }

@@ -5,6 +5,7 @@ using ERP.MES.Domain.Calendar;
 using ERP.MES.Domain.Identity;
 using ERP.MES.Domain.Production;
 using ERP.MES.Domain.Requests;
+using ERP.MES.Domain.Scheduling;
 
 namespace ERP.MES.Application.Production;
 
@@ -29,7 +30,8 @@ public sealed class UnitQueueService(
     IJalaliDateService dates,
     CurrentAuthorization authorization,
     IClock clock,
-    IAuditContext auditContext)
+    IAuditContext auditContext,
+    IMachineDowntimeRepository? downtime = null)
 {
     private static readonly Permission[] AllPermissions =
     [
@@ -552,6 +554,7 @@ public sealed class UnitQueueService(
                         active?.Rank, active?.NeedsReview ?? false, active?.Reason, active?.ReviewNote)
                     {
                         CustomerItemRef = item.CustomerItemRef,
+                        PlannedMachineId = stage.MachineId,
                         RequestVersion = loaded.Versions.Request,
                         ItemVersion = loaded.Versions.ItemVersion(item.Id),
                         StageVersion = versions[stage.StageNo],
@@ -574,8 +577,9 @@ public sealed class UnitQueueService(
     /// <summary>
     /// PLANNED END (a forecast, Decision Log #100): the unit works through its actionable queue entries one after another in queue order, starting now, only in its working intervals (weekly pattern,
     /// holidays, the shifts the unit runs, breaks excluded). An entry's duration is its planned minutes per piece x quantity; progress already made is not known (job reports come with 6b), so a
-    /// stage in progress counts in full. Stopped, blocked and closed entries get no planned end and do not hold up the others. Capacity is not multiplied (how headcount scales throughput is not decided),
-    /// downtime and external lead time are not yet part of the forecast. Null when the unit runs no shift or the work does not fit a year.
+    /// stage in progress counts in full. Stopped, blocked and closed entries get no planned end and do not hold up the others. Capacity is not multiplied (how headcount scales throughput is not decided).
+    /// MACHINE DOWNTIME (Decision Log #128) that counts (reported or accepted) removes time: an entry whose stage has a planned machine skips that machine's downtime; an entry without one skips
+    /// only the time in which every active machine of the unit is down. External lead time is not yet part of the forecast. Null when the unit runs no shift or the work does not fit a year.
     /// </summary>
     private async Task<IReadOnlyList<UnitQueueEntry>> ForecastAsync(long unitId, IReadOnlyList<UnitQueueEntry> ordered, CancellationToken cancellationToken)
     {
@@ -587,6 +591,7 @@ public sealed class UnitQueueService(
 
         var (date, time) = dates.UtcToLocal(clock.UtcNow);
         var cursor = date.ToDateTime(time);
+        var unavailable = await DowntimeAsync(unitId, ordered, cursor, cancellationToken);
         var result = new List<UnitQueueEntry>(ordered.Count);
         var exhausted = false;
         foreach (var entry in ordered)
@@ -597,7 +602,8 @@ public sealed class UnitQueueService(
                 continue;
             }
 
-            var end = calendar.AddWorkingMinutes(unitId, cursor, entry.EstimatedMinutes);
+            var blocked = entry.PlannedMachineId is { } machine ? unavailable.ByMachine.GetValueOrDefault(machine) : unavailable.WholeUnit;
+            var end = calendar.AddWorkingMinutes(unitId, cursor, entry.EstimatedMinutes, unavailable: blocked);
             if (end is not { } finished)
             {
                 exhausted = true;
@@ -617,6 +623,27 @@ public sealed class UnitQueueService(
         }
 
         return result;
+    }
+
+    private sealed record Unavailable(IReadOnlyDictionary<long, IReadOnlyList<(DateTime Start, DateTime End)>> ByMachine, IReadOnlyList<(DateTime Start, DateTime End)> WholeUnit);
+
+    /// <summary>The counting downtime from <paramref name="fromLocal"/> on, per machine (the unit's machines and every planned machine of the entries) and for the whole unit.</summary>
+    private async Task<Unavailable> DowntimeAsync(long unitId, IReadOnlyList<UnitQueueEntry> ordered, DateTime fromLocal, CancellationToken cancellationToken)
+    {
+        if (downtime is null)
+        {
+            return new Unavailable(new Dictionary<long, IReadOnlyList<(DateTime Start, DateTime End)>>(), []);
+        }
+
+        var unitMachines = (await planning.ListMachinesAsync(cancellationToken)).Select(m => m.Value).Where(m => m.ProductionUnitId == unitId && m.IsActive).Select(m => m.Id).ToList();
+        var relevant = unitMachines.Concat(ordered.Where(e => e.PlannedMachineId is not null).Select(e => e.PlannedMachineId!.Value)).ToHashSet();
+        var rows = (await downtime.ListAsync(fromLocal, fromLocal.AddDays(400), cancellationToken)).Select(d => d.Value).Where(d => d.Counts && relevant.Contains(d.MachineId)).ToList();
+        var byMachine = rows.GroupBy(d => d.MachineId)
+            .ToDictionary(g => g.Key, g => WorkingCalendar.Merge(g.Select(d => (d.StartLocal, d.EndLocal))));
+        var whole = unitMachines.Count > 0 && unitMachines.All(byMachine.ContainsKey)
+            ? WorkingCalendar.Intersect(unitMachines.Select(m => byMachine[m]).ToList())
+            : [];
+        return new Unavailable(byMachine, whole);
     }
 
     private async Task<IReadOnlyList<UnitInfo>> VisibleUnitsAsync(Principal user, CancellationToken cancellationToken)

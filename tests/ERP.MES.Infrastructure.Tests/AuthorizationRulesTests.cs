@@ -95,6 +95,8 @@ public class AuthorizationRulesTests
         [Permission.ManageItemDrawings] = (["DRAWING"], null),
         [Permission.ImportTechnicalItems] = (["DRAWING"], null),
         [Permission.ViewItemDrawings] = ([], null),
+        [Permission.DecideDowntime] = (["PLANNING"], null),
+        [Permission.ViewDowntime] = (["MAINTENANCE_PM", "PLANNING", "MANAGEMENT", "PRODUCTION_MANAGER"], null),
     };
 
     [Fact]

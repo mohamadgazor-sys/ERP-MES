@@ -248,6 +248,9 @@ public static class Messages
         ValidationIssue.OvertimeOperatorOverlap => "اضافه‌کاری باید بیرون از شیفت عادی باشد و با شیفت برنامه‌ریزی‌شده یا اضافه‌کاری دیگر همین اپراتور هم‌پوشانی ندارد.",
         ValidationIssue.OvertimeMachineBusy => "ماشین در این زمان برای اپراتور دیگری (شیفت یا اضافه‌کاری) رزرو است.",
         ValidationIssue.DesignationUserInvalid => "کاربر انتخاب‌شده وجود ندارد، فعال نیست یا کاربر تولید نیست.",
+        ValidationIssue.DowntimeInvalid => "توقف ماشین معتبر نیست (علت، شروع و پایان از ۱ دقیقه تا ۹۰ روز به دقیقهٔ کامل؛ برای علت «سایر» توضیح الزامی است؛ دلیل رد یا لغو الزامی و حداکثر ۳۰۰ نویسه است).",
+        ValidationIssue.DowntimeMachineNotUsable => "ماشین انتخاب‌شده وجود ندارد یا غیرفعال است.",
+        ValidationIssue.DowntimeOverlap => "برای این ماشین در این بازه توقف دیگری ثبت شده است؛ به‌جای ثبت دوباره، همان توقف را اصلاح کنید.",
         _ => Failed,
     };
 

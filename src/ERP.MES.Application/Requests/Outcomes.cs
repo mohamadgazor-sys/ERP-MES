@@ -565,6 +565,15 @@ public enum ValidationIssue
 
     /// <summary>The machine is booked in that time by another operator's shift or overtime.</summary>
     OvertimeMachineBusy,
+
+    /// <summary>The downtime is not valid (machine, reason, times from 1 minute to 90 days in whole minutes, a note for "other", notes up to 300 characters, a reason for a rejection or cancellation).</summary>
+    DowntimeInvalid,
+
+    /// <summary>The machine is unknown or inactive.</summary>
+    DowntimeMachineNotUsable,
+
+    /// <summary>The machine already has reported or accepted downtime in that time; correct that record instead of adding a second one.</summary>
+    DowntimeOverlap,
 }
 
 /// <summary>The result of a command or query: a status, the value on success, and the details of a refusal.</summary>
