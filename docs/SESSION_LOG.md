@@ -2287,5 +2287,10 @@ Append one dated entry after every substantial session. Do not replace prior ent
 - Page «توقف ماشین‌ها» (`DowntimeViewModel`, `DowntimeView`), navigation entry guarded by the downtime permissions, `demo.maintenance` account (eleven demonstration accounts; tests, UI smoke, `DEMO-ACCOUNTS.txt`, guides updated), the «محدودیت‌های نسخه نمایشی» page rewritten to list only what is missing, `docs/EXTERNAL_STAGES_DESIGN.md` (proposal with five owner questions; nothing implemented).
 - Local results: the Desktop view-model tests compiled for `net10.0` by a scratch-only harness outside the repository (the view models, `SessionAbstractions.cs`, every Desktop test except `UserSessionTests`, which needs `Microsoft.Win32`): 151 passed, including the new `DowntimeViewModelTests`; Infrastructure demo/actor tests 52 run, one expected count (9 -> 10 created users) fixed, then passed; WPF project and `Desktop.Tests` compile with `-p:EnableWindowsTargeting=true` (0 errors).
 
+### Final state at the end of the session
+- PR #74 merged as `00331c8` (Windows CI on its head: Domain 576, Application 41, Desktop 193, Infrastructure 754 = 1564 passed, 0 failed; sqlserver, ui-smoke, both offline-demo green). Main `00331c8`: all four post-merge workflows green.
+- PR #75 merged as `36b93d69be5480499c05b2ac8e8ff5f2c4ea4834` (all six checks green on head `837f74b`; the provisioning smoke created 11 accounts; ui-smoke walked `demo.maintenance` and the new page). Main `36b93d6`: all four post-merge workflows green (CI 42049191890, SQL Server 42049191973, UI smoke 42049191880, Offline demo package 42049192821).
+- Offline package from main `36b93d6`: `ERP-MES-OfflineDemo-2026.11.05-36b93d6-win-x64.zip`, SHA-256 `f058a65c26fc65415ddc5436b5de9fd8bf095b8a574f41885714e28a9c4fd67f`, run 42049192821, artifact 13426716386 (expires 2026-12-05).
+
 ### Recommended exact next action
-- Merge the screen PR when every required check is green on its head and verify main; then take the owner's answers to `docs/EXTERNAL_STAGES_DESIGN.md` section 3 (or the instruction to use the defaults) and build external stages in the four PRs of its section 4.
+- (Done: the screen PR was merged and main verified.) then take the owner's answers to `docs/EXTERNAL_STAGES_DESIGN.md` section 3 (or the instruction to use the defaults) and build external stages in the four PRs of its section 4.
