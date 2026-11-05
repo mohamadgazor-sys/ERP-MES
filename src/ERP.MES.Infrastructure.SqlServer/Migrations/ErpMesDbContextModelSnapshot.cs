@@ -3263,6 +3263,82 @@ namespace ERP.MES.Infrastructure.SqlServer.Migrations
                     b.ToTable("CalendarExceptions", (string)null);
                 });
 
+            modelBuilder.Entity("ERP.MES.Domain.Scheduling.MachineDowntime", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime?>("CancelledAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<long?>("CancelledByUserId")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime?>("DecidedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<long?>("DecidedByUserId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("DecisionNote")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<DateTime>("EndLocal")
+                        .HasColumnType("datetime2");
+
+                    b.Property<long>("MachineId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<long>("ProductionUnitId")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("Reason")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("ReportedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<long>("ReportedByUserId")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime>("StartLocal")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CancelledByUserId");
+
+                    b.HasIndex("DecidedByUserId");
+
+                    b.HasIndex("ProductionUnitId");
+
+                    b.HasIndex("ReportedByUserId");
+
+                    b.HasIndex("StartLocal");
+
+                    b.HasIndex("MachineId", "StartLocal");
+
+                    b.ToTable("MachineDowntimes", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_MachineDowntimes_EndAfterStart", "\"EndLocal\" > \"StartLocal\"");
+                        });
+                });
+
             modelBuilder.Entity("ERP.MES.Domain.Scheduling.OperatorOffDay", b =>
                 {
                     b.Property<long>("Id")
@@ -4878,6 +4954,37 @@ namespace ERP.MES.Infrastructure.SqlServer.Migrations
                         .WithMany()
                         .HasForeignKey("ShiftTemplateId")
                         .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Scheduling.MachineDowntime", b =>
+                {
+                    b.HasOne("ERP.MES.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("CancelledByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("ERP.MES.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("DecidedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("ERP.MES.Domain.Planning.Machine", null)
+                        .WithMany()
+                        .HasForeignKey("MachineId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ERP.MES.Domain.Planning.ProductionUnit", null)
+                        .WithMany()
+                        .HasForeignKey("ProductionUnitId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ERP.MES.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("ReportedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("ERP.MES.Domain.Scheduling.OperatorOffDay", b =>

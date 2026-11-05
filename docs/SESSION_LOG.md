@@ -2242,3 +2242,46 @@ Append one dated entry after every substantial session. Do not replace prior ent
 
 ### Recommended exact next action
 - After the last PR is merged, take the package from the main-branch "Offline demo package" run (its commit and SHA-256 are in the run summary), then run `Check-Demo.cmd` on the presentation computer and rehearse once offline; confirm Decision Log #127 point 5 with the owner.
+
+---
+
+### Date / session
+- Date: 2026-11-05
+- Claude Code session ID (if useful): session_019XN8Y2XqVmsAWCWSyu8RqA (fresh session from HANDOFF.md; branch `claude/admiring-mccarthy-mq8l0v`)
+
+### Goal
+- Reconcile HANDOFF.md with GitHub, settle PR #73, verify main, record the new offline package, then continue with the next gap against the Master Specification in focused, sequential pull requests.
+
+### Completed
+- PR #73 (demo data, import duplicate-code warning, ui-interact fix): all six checks on head `352fbf67d48e639461fbe27e5af37470e87d364a` were complete and green (5 success, `generate-migrations` skipped as manual-only; the SQL Server job ran 3/3 tests against a SQL Server 2022 container). Merged with a merge commit: main `715d6a659de6a6b721a5626abc54308e66ee4b49`.
+- Post-merge main runs on `715d6a6`: SQL Server integration, UI smoke, Offline demo package = success (CI build-test still running when this entry was first written; see the pull request of this session).
+- New offline package from main `715d6a6`: `ERP-MES-OfflineDemo-2026.11.05-715d6a6-win-x64.zip`, SHA-256 `22b0f552cb8bc4ca49e6c2385256d845fe3b20f6203e520e25e67c90e7704fe9`, run 42018791380, artifact 13411072050 (expires 2026-12-05). Supersedes the `8e737b7` package.
+- HANDOFF.md brought onto this branch by a merge of `claude/handoff-docs` (its commits preserved) with a reconciliation section: SDK pin is 10.0.401 (not 10.0.113), old feature branches are the merged PRs #1-#17 (not lost work), `revert-7-...` is the closed PR #8, `tests/ERP.MES.Desktop.LocalLinux` does not exist (README corrected), the "Limitations" page text is stale.
+- Requirement gaps found by a first pass over the Master Specification: machine downtime (§21; CLAUDE.md canonical rule; #14) had only a permission; external supply/processing stages (§16) are not modelled.
+- **Machine downtime (Decision Log #128):** `MachineDowntime` entity (stop reasons of §21, local start/end, reporter, Planning decision, cancellation), `MachineDowntimeService` (Maintenance/PM reports, corrects the end, cancels; Planning accepts/rejects; register visible to Maintenance/PM, Planning, Management, Production Manager), EF configuration and repository (context read inside the transaction; audit entry built from the row as loaded), SQLite migration and SQL Server migration `MachineDowntime` (both generated with the pinned `dotnet-ef` 10.0.13; the SQL Server one locally this time, because NuGet is reachable from this sandbox), the forecast skips counting downtime (`WorkingCalendar.Merge/Subtract/Intersect`, `AddWorkingMinutes(..., unavailable)`), Persian messages for the three new validation issues. No screen yet (next PR).
+
+### Files changed
+- Domain: `Scheduling/MachineDowntime.cs` (new), `Scheduling/WorkingCalendar.cs`.
+- Application: `Persistence/IMachineDowntimeRepository.cs`, `Scheduling/MachineDowntimeService.cs` (new), `Production/UnitQueueService.cs`, `Production/UnitQueueModels.cs`, `Requests/Outcomes.cs`, `Security/Authorization.cs`, `Security/SecurityCodes.cs`.
+- Infrastructure: `Persistence/Configurations/MachineDowntimeConfiguration.cs`, `Persistence/EfMachineDowntimeRepository.cs` (new), `Persistence/ErpMesDbContext.cs`, `Security/WorkflowServices.cs`; migrations `20261105113407_MachineDowntime` (SQLite) and `20261105114049_MachineDowntime` (SQL Server) with their snapshots.
+- Desktop: `ViewModels/Messages.cs` (three messages).
+- Tests: Domain `MachineDowntimeTests`, `DowntimeCalendarTests` (new); Infrastructure `MachineDowntimeServiceTests` (new), a forecast test in `SchedulingServiceTests`, `AuthorizationRulesTests`, migration counts 30 -> 31 in the migration tests, table list in `MigrationTests`.
+- Docs: `HANDOFF.md`, `README.md`, `docs/DECISION_LOG.md` (#128), `docs/OWNER_REVIEW_PACKET_2.md` (B13, B15), `docs/PLANNING_RESOURCES_AND_SCHEDULING_DESIGN.md`, this entry.
+
+### Decisions newly approved
+- None by the owner. #128 records how #14 / §21 were implemented, with labelled DEFAULTs and two ASSUMPTIONs for the owner (reported downtime counts before Planning accepts it; the per-machine / whole-unit mapping onto the one-lane forecast). #127 point 5 (overtime inside regular hours) stays an unconfirmed ASSUMPTION; nothing about it was changed.
+
+### Unresolved questions / risks
+- Owner: confirm or change #128 (who reviews downtime, whether unreviewed downtime counts, the forecast mapping) - `docs/OWNER_REVIEW_PACKET_2.md` B15; #127 point 5; the open rows of packet sections A, B, E.
+- Machine downtime has no screen yet; until the next PR it can only be recorded through the service.
+- External supply/processing stages (§16) and external lead time in the forecast are not built; this is the next large gap and touches the stage model, QC and the forecast - it needs a design note before code.
+- This sandbox has SDK 10.0.114 (the Ubuntu package); the repository pins 10.0.401 and Windows CI uses it. Local results are therefore from 10.0.114; CI is the authority.
+- Not verified by anything automated: the real Windows client screens, a physically disconnected computer, a fresh machine without .NET, Windows 10.
+
+### Commands/tests actually run and results
+- Main `715d6a6`, local Linux (SDK 10.0.114, run from the scratchpad so the repository pin is untouched): `dotnet test tests/ERP.MES.Domain.Tests` 568 passed; `dotnet test tests/ERP.MES.Application.Tests` 41 passed; `dotnet test tests/ERP.MES.Infrastructure.Tests` 750 passed; `dotnet build src/ERP.MES.Desktop -p:EnableWindowsTargeting=true` 0 errors.
+- With the downtime change: Domain 576 passed; Application 41 passed; Infrastructure: see the pull request description (filtered runs of the downtime, scheduling, migration and authorization tests: 64 run, 1 failure found and fixed - the overlap check of a changed end read its context with the old end; then all passed).
+- `dotnet-ef migrations add MachineDowntime` for SQLite (startup project Provisioning) and SQL Server (startup project SqlServer.Design): each adds only the `MachineDowntimes` table, its keys, indexes and check constraint.
+
+### Recommended exact next action
+- Merge the downtime PR when every required check is green on its head; then the downtime screen PR (Maintenance/PM page, Planning decisions, a demonstration Maintenance/PM account, UI smoke walk), then the stale "Limitations" page, then a design note for external supply stages (§16).

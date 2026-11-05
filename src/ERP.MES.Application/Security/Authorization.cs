@@ -233,6 +233,12 @@ public enum Permission
 
     /// <summary>Open the technical drawing of an item: every signed-in user who works with items (Decision Log #125 Q14).</summary>
     ViewItemDrawings,
+
+    /// <summary>Planning accepts or rejects machine downtime reported by Maintenance/PM (Decision Log #14, #128; the reviewer is a labelled default).</summary>
+    DecideDowntime,
+
+    /// <summary>See the machine-downtime register: Maintenance/PM, Planning, Management and the Production Manager (Decision Log #128, a labelled default).</summary>
+    ViewDowntime,
 }
 
 /// <summary>
@@ -264,6 +270,8 @@ public static class AuthorizationRules
         [Permission.ViewItemDrawings] = new([], null),
         [Permission.MaintainHolidayCalendar] = new([DepartmentCodes.Planning, DepartmentCodes.ProductionManager], null),
         [Permission.RegisterDowntime] = new([DepartmentCodes.MaintenancePm], null),
+        [Permission.DecideDowntime] = new([DepartmentCodes.Planning], null),
+        [Permission.ViewDowntime] = new([DepartmentCodes.MaintenancePm, DepartmentCodes.Planning, DepartmentCodes.Management, DepartmentCodes.ProductionManager], null),
         [Permission.CreateAndSubmitRequest] = new([DepartmentCodes.Central], null),
         [Permission.ReceiveAndEditRequestDetails] = new([DepartmentCodes.Planning], null),
         [Permission.ReopenRejectedRequest] = new([DepartmentCodes.Planning, DepartmentCodes.Management], null),

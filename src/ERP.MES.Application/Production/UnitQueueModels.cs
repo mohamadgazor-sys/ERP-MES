@@ -80,6 +80,9 @@ public sealed record UnitQueueEntry(
     /// <summary>Position in the unit queue (1 = first); 0 for entries of the pending list, which have no queue position.</summary>
     public int Order { get; init; }
 
+    /// <summary>The machine Planning assigned to the stage, if any; the forecast then uses that machine's downtime (Decision Log #128).</summary>
+    public long? PlannedMachineId { get; init; }
+
     /// <summary>The customer's own item number, when the item has one (the system number is <see cref="ItemNo"/>).</summary>
     public string? CustomerItemRef { get; init; }
 

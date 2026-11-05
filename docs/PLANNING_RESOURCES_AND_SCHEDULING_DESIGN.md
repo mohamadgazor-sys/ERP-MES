@@ -95,3 +95,5 @@ There is **no hard-coded Monday-Friday week**; regular workdays (Saturday-Thursd
 ## 6. Interaction with the queue and forecast
 
 Estimated processing time stays minutes-per-piece x planned quantity ([EXISTING] #12); the forecast walks the working calendar (shift occurrences marked WORKING), machine downtime and external lead time. The per-unit queue ordering of Decision Log #78 is unchanged. Staffing capacity limits parallel capacity per unit; how capacity multiplies forecast throughput is U-36 follow-up and not assumed.
+
+> **Implemented (Decision Log #128, 2026-11-05):** machine downtime reported by Maintenance/PM (and not rejected or cancelled by Planning/PM) is removed from the forecast: a stage with a planned machine skips that machine's downtime; a stage without one skips only time in which every active machine of the unit is down. External lead time is not yet part of the forecast.

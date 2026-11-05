@@ -117,10 +117,11 @@ public sealed class WorkingCalendar
     }
 
     /// <summary>
-    /// The local time at which <paramref name="minutes"/> of work, started at <paramref name="startLocal"/>, are done if the unit works only in its working intervals. Null when the unit has
-    /// no shifts or the work does not fit into <paramref name="horizonDays"/>. Zero minutes end at the start.
+    /// The local time at which <paramref name="minutes"/> of work, started at <paramref name="startLocal"/>, are done if the unit works only in its working intervals, minus the
+    /// <paramref name="unavailable"/> local intervals (machine downtime, Decision Log #128). Null when the unit has no shifts or the work does not fit into <paramref name="horizonDays"/>.
+    /// Zero minutes end at the start.
     /// </summary>
-    public DateTime? AddWorkingMinutes(long unitId, DateTime startLocal, decimal minutes, int horizonDays = 366)
+    public DateTime? AddWorkingMinutes(long unitId, DateTime startLocal, decimal minutes, int horizonDays = 366, IReadOnlyList<(DateTime Start, DateTime End)>? unavailable = null)
     {
         if (minutes < 0)
         {
@@ -138,7 +139,13 @@ public sealed class WorkingCalendar
         }
 
         var remaining = minutes;
-        foreach (var (start, end) in WorkingIntervals(unitId, startLocal, horizonDays))
+        var intervals = WorkingIntervals(unitId, startLocal, horizonDays);
+        if (unavailable is { Count: > 0 })
+        {
+            intervals = Subtract(intervals, unavailable);
+        }
+
+        foreach (var (start, end) in intervals)
         {
             var from = start > startLocal ? start : startLocal;
             var available = (decimal)(end - from).TotalMinutes;
@@ -156,5 +163,98 @@ public sealed class WorkingCalendar
         }
 
         return null;
+    }
+
+    /// <summary>Merges overlapping or touching local intervals into an ordered list of disjoint ones.</summary>
+    public static IReadOnlyList<(DateTime Start, DateTime End)> Merge(IEnumerable<(DateTime Start, DateTime End)> intervals)
+    {
+        ArgumentNullException.ThrowIfNull(intervals);
+        var merged = new List<(DateTime Start, DateTime End)>();
+        foreach (var piece in intervals.Where(p => p.End > p.Start).OrderBy(p => p.Start).ThenBy(p => p.End))
+        {
+            if (merged.Count > 0 && piece.Start <= merged[^1].End)
+            {
+                if (piece.End > merged[^1].End)
+                {
+                    merged[^1] = (merged[^1].Start, piece.End);
+                }
+            }
+            else
+            {
+                merged.Add(piece);
+            }
+        }
+
+        return merged;
+    }
+
+    /// <summary>The parts of the ordered, disjoint <paramref name="intervals"/> that lie outside every one of <paramref name="removed"/>.</summary>
+    public static IReadOnlyList<(DateTime Start, DateTime End)> Subtract(IReadOnlyList<(DateTime Start, DateTime End)> intervals, IEnumerable<(DateTime Start, DateTime End)> removed)
+    {
+        ArgumentNullException.ThrowIfNull(intervals);
+        var cuts = Merge(removed);
+        var result = new List<(DateTime Start, DateTime End)>();
+        foreach (var (start, end) in intervals)
+        {
+            var from = start;
+            foreach (var cut in cuts)
+            {
+                if (cut.End <= from || cut.Start >= end)
+                {
+                    continue;
+                }
+
+                if (cut.Start > from)
+                {
+                    result.Add((from, cut.Start));
+                }
+
+                from = cut.End > from ? cut.End : from;
+                if (from >= end)
+                {
+                    break;
+                }
+            }
+
+            if (from < end)
+            {
+                result.Add((from, end));
+            }
+        }
+
+        return result;
+    }
+
+    /// <summary>The parts of time that lie inside EVERY one of the given interval lists (each a set of intervals): for example the time in which all machines of a unit are down.</summary>
+    public static IReadOnlyList<(DateTime Start, DateTime End)> Intersect(IReadOnlyList<IReadOnlyList<(DateTime Start, DateTime End)>> lists)
+    {
+        ArgumentNullException.ThrowIfNull(lists);
+        if (lists.Count == 0)
+        {
+            return [];
+        }
+
+        IReadOnlyList<(DateTime Start, DateTime End)> common = Merge(lists[0]);
+        foreach (var next in lists.Skip(1))
+        {
+            var other = Merge(next);
+            var both = new List<(DateTime Start, DateTime End)>();
+            foreach (var a in common)
+            {
+                foreach (var b in other)
+                {
+                    var from = a.Start > b.Start ? a.Start : b.Start;
+                    var to = a.End < b.End ? a.End : b.End;
+                    if (to > from)
+                    {
+                        both.Add((from, to));
+                    }
+                }
+            }
+
+            common = Merge(both);
+        }
+
+        return common;
     }
 }

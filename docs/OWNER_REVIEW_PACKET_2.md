@@ -31,8 +31,9 @@
 | B10 | #105 | Request status | Not closed automatically when all items are finished/sent |
 | B11 | #106 | Unit metrics | Rates count every QC decision of the period (re-inspected rework is decided again); a stage's completion is its last QC decision; days are Iran local days; only reports waiting for approval are counted as pending (not drafts); no export or drill-down |
 | B12 | #101 | Quantity QC | Submission is always of everything still to be produced or reworked; a stage whose quantity is not a whole number of base units cannot be inspected by quantity; QC correction of an earlier decision is not built |
-| B13 | #100 | Planned end forecast | One lane per unit (capacity does not multiply throughput); no downtime or external lead time yet; regular week not effective-dated; "supervisor approval" of an extra working day is a mandatory reason text |
+| B13 | #100, #128 | Planned end forecast | One lane per unit (capacity does not multiply throughput); machine downtime is included since #128 (see B15); no external lead time yet; regular week not effective-dated; "supervisor approval" of an extra working day is a mandatory reason text |
 | B14 | #98 | Excel import | At most 20 stages per item; the template shows 6 stage columns |
+| B15 | #128 | Machine downtime | Maintenance/PM reports, corrects the end and cancels; **Planning** accepts or rejects; Maintenance/PM, Planning, Management and the Production Manager see the register. Reported downtime counts in the forecast **before** Planning accepts it (rejected/cancelled does not). A stage with a planned machine waits for that machine; a stage without one waits only when every active machine of its unit is down. One record lasts 1 minute to 90 days; two counting records of one machine may not overlap |
 
 ## C. Things only a person can do
 
