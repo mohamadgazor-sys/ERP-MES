@@ -286,7 +286,7 @@ try {
     Sign-In 'demo.secretary' | Out-Null
     Open-Page 'درخواست‌ها'
     $grid = Find-ById $script:Main 'RequestGrid'
-    Check ((Get-GridRows $grid).Count -eq 2) 'Central sees the two seeded sample requests' ('expected 2 requests, saw ' + (Get-GridRows $grid).Count)
+    Check ((Get-GridRows $grid).Count -eq 3) 'Central sees the three seeded sample requests' ('expected 3 requests, saw ' + (Get-GridRows $grid).Count)
     Select-GridRow $grid $R15 | Out-Null
     $submit = Find-Btn 'ارسال به مدیریت'
     Check ($submit -and -not $submit.Current.IsEnabled) 'PREMATURE ACTION: "send to Management" is disabled for the request that has no PDF yet' 'the submit button is missing or enabled for a request without a PDF'

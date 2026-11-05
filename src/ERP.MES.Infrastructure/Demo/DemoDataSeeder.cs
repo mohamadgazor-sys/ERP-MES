@@ -1,3 +1,4 @@
+using ERP.MES.Application.Security;
 using ERP.MES.Application.Requests;
 using ERP.MES.Domain.Documents;
 using ERP.MES.Application.Persistence;
@@ -10,7 +11,7 @@ namespace ERP.MES.Infrastructure.Demo;
 /// The real demonstration accounts that the sample records are attributed to: the Central user who "created" the customers, requests and items (the QC user is resolved too, for the walkthrough's QC step). They are provisioned (through the production bootstrap and account use cases) before the seed runs, so every created-by / approved-by value in the sample data refers to an
 /// existing user row.
 /// </summary>
-public sealed record DemoSeedActors(long CreatedByUserId, long QcApproverUserId);
+public sealed record DemoSeedActors(long CreatedByUserId, long QcApproverUserId, long DrawingUserId = 0);
 
 /// <summary>What one seeding run did. Running the seed again on a seeded database adds nothing.</summary>
 public sealed record DemoSeedSummary(int CustomersAdded, int CustomersExisting, int RequestsAdded, int RequestsExisting);
@@ -28,7 +29,7 @@ public sealed record DemoSeedSummary(int CustomersAdded, int CustomersExisting, 
 /// The seed does not know whether the database it is given is a demonstration database. Marking and the safe-reset guard belong to the
 /// provider project (the demo-database class in ERP.MES.Infrastructure.Sqlite), and only that entry point should be used on a real file.
 /// </summary>
-public sealed class DemoDataSeeder(ICustomerRepository customers, IRequestRepository requests, IJalaliDateService dates, DemoSeedActors actors)
+public sealed class DemoDataSeeder(ICustomerRepository customers, IRequestRepository requests, IJalaliDateService dates, DemoSeedActors actors, IItemDrawingRepository? drawings = null)
 {
     public const string DemoNameSuffix = "(نمونه آزمایشی)";
 
@@ -36,7 +37,8 @@ public sealed class DemoDataSeeder(ICustomerRepository customers, IRequestReposi
 
     public const string TitlePrefix = "[نمونه] ";
 
-    private sealed record ItemDef(string ItemNo, string PartName, decimal Quantity, Priority Priority);
+    /// <summary>An item of a sample request. <c>ParentRef</c> names the customer reference of its assembly (the parent comes first in the list); a REPAIR item carries its delivery date (Jalali year, month, day) and warehouse code; <c>Drawing</c> gives it a fictional drawing.</summary>
+    private sealed record ItemDef(string ItemNo, string PartName, decimal Quantity, Priority Priority, string? ParentRef = null, bool Assembly = false, (int Year, int Month, int Day)? Delivery = null, string? WarehouseCode = null, bool Drawing = false);
 
     private sealed record RequestDef(int CustomerIndex, string RequestNo, WorkType Type, int Year, int Month, int Day, string Title, string Description, RequestStatus Status, ItemDef[] Items)
     {
@@ -63,8 +65,18 @@ public sealed class DemoDataSeeder(ICustomerRepository customers, IRequestReposi
         ]),
         new(1, RequestNoPrefix + "1405-015", WorkType.Repair, 1405, 7, 18, TitlePrefix + "تعمیر گلند و میل‌لنگ (تازه ثبت‌شده)", "داده فرضی برای نمایش؛ تازه ثبت شده است.", RequestStatus.Created,
         [
-            new("4.10", "گلند آب‌بندی", 200m, Priority.Urgent),
-            new("4.20", "میل‌لنگ", 1m, Priority.Normal),
+            new("4.10", "گلند آب‌بندی", 200m, Priority.Urgent, Delivery: (1405, 8, 20), WarehouseCode: "WH-DEMO-GL-200", Drawing: true),
+            new("4.20", "میل‌لنگ", 1m, Priority.Normal, Delivery: (1405, 8, 25), WarehouseCode: "WH-DEMO-CR-001"),
+        ]),
+
+        // A nested assembly (Decision Log #121): the gearbox contains a housing and a shaft sub-assembly that contains two parts. The system numbers read DEMO-1405-016-001, -001.001, -001.002, -001.002.001 and -001.002.002.
+        new(2, RequestNoPrefix + "1405-016", WorkType.Make, 1405, 7, 20, TitlePrefix + "ساخت مجموعهٔ گیربکس (مونتاژ تو در تو، در انتظار مدیریت)", "داده فرضی برای نمایش ساختار مونتاژ؛ هنوز تأیید مدیریت ندارد.", RequestStatus.SentToManagement,
+        [
+            new("A.00", "مجموعهٔ گیربکس", 2m, Priority.Normal, Assembly: true, Drawing: true),
+            new("A.10", "پوستهٔ گیربکس", 2m, Priority.Normal, ParentRef: "A.00", Drawing: true),
+            new("A.20", "مجموعهٔ شفت", 2m, Priority.Urgent, ParentRef: "A.00", Assembly: true),
+            new("A.21", "شفت اصلی", 2m, Priority.Normal, ParentRef: "A.20"),
+            new("A.22", "چرخ‌دنده مارپیچ", 2m, Priority.Normal, ParentRef: "A.20", Drawing: true),
         ]),
     ];
 
@@ -104,7 +116,8 @@ public sealed class DemoDataSeeder(ICustomerRepository customers, IRequestReposi
 
             var customer = (await customers.FindAsync(customerId, cancellationToken))?.Value
                 ?? throw new RecordNotFoundException("customer", customerId);
-            await requests.AddAsync(Build(definition, customer, requestDate), cancellationToken);
+            var saved = await requests.AddAsync(Build(definition, customer, requestDate), cancellationToken);
+            await AddDrawingsAsync(definition, saved.Value, cancellationToken);
             requestsAdded++;
         }
 
@@ -131,11 +144,49 @@ public sealed class DemoDataSeeder(ICustomerRepository customers, IRequestReposi
 
         foreach (var itemDefinition in definition.Items)
         {
-            request.AddItem(0, itemDefinition.ItemNo, itemDefinition.PartName, itemDefinition.Quantity, actors.CreatedByUserId, createdAt, itemDefinition.Priority);
+            var parent = itemDefinition.ParentRef is null ? null : request.FindByCustomerItemRef(itemDefinition.ParentRef) ?? throw new InvalidOperationException("The demonstration parent item '" + itemDefinition.ParentRef + "' does not exist.");
+            if (definition.Type == WorkType.Repair)
+            {
+                // A REPAIR item carries its delivery date and the warehouse's code (Decision Log #124 B5): the sample repair items are valid, complete items.
+                var delivery = itemDefinition.Delivery ?? throw new InvalidOperationException("A demonstration REPAIR item needs a delivery date.");
+                request.DefineItem(
+                    0, itemDefinition.ItemNo, itemDefinition.PartName, itemDefinition.Quantity, new ItemSpecification(null, null, null, null, null, 1, GregorianDate(delivery.Year, delivery.Month, delivery.Day), itemDefinition.WarehouseCode),
+                    actors.CreatedByUserId, createdAt, itemDefinition.Priority, parent, itemDefinition.Assembly);
+            }
+            else
+            {
+                request.AddItem(0, itemDefinition.ItemNo, itemDefinition.PartName, itemDefinition.Quantity, actors.CreatedByUserId, createdAt, itemDefinition.Priority, parent, itemDefinition.Assembly);
+            }
         }
 
         request.PlaceInStatusForDemonstration(definition.Status, createdAt.AddDays(1));
         return request;
+    }
+
+    // Fictional technical drawings (Decision Log #125 Q14) for the items marked with a drawing, attributed to the Drawing account; nothing is seeded when the repository or the account is not given.
+    private async Task AddDrawingsAsync(RequestDef definition, Request saved, CancellationToken cancellationToken)
+    {
+        if (drawings is null || actors.DrawingUserId == 0)
+        {
+            return;
+        }
+
+        var at = AtUtc(definition.Year, definition.Month, definition.Day, 2);
+        foreach (var itemDefinition in definition.Items.Where(i => i.Drawing))
+        {
+            var item = saved.FindByCustomerItemRef(itemDefinition.ItemNo) ?? throw new InvalidOperationException("The demonstration item '" + itemDefinition.ItemNo + "' was not saved.");
+            var bytes = FictionalPdf("drawing " + item.ItemNo);
+            if (!StoredDocument.TryCreateItemDrawing(item.ItemNo + ".pdf", bytes, DocumentHash.Sha256Hex(bytes), long.MaxValue, actors.DrawingUserId, at, out var document, out var error))
+            {
+                throw new InvalidOperationException("The fictional demonstration drawing was refused: " + error);
+            }
+
+            await drawings.AddRevisionAsync(
+                item.Id, document!, actors.DrawingUserId, at,
+                (added, _) => new AuditLogEntry(at, actors.DrawingUserId, "DEMO-SEED", "demo.seed", null, AuditActions.ItemDrawingUploaded, "RequestItem", item.Id.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                    $"Item {item.ItemNo}: fictional drawing '{added.FileName}' revision {added.Revision} (demonstration)"),
+                cancellationToken);
+        }
     }
 
     // A tiny, valid, FICTIONAL one-page PDF (no customer data): the text only says that it is a demonstration document.

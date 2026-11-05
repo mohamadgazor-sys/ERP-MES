@@ -64,7 +64,7 @@ public class DemoDatabaseTests
 
         var summary = await Init(db);
 
-        Assert.Equal(new DemoSeedSummary(3, 0, 2, 0), summary.Seed);
+        Assert.Equal(new DemoSeedSummary(3, 0, 3, 0), summary.Seed);
         Assert.Equal(DemoDatabaseState.Demo, DemoDatabase.Inspect(db.Path));
         Assert.Equal(new[] { DemoDatabase.ApplicationId.ToString(System.Globalization.CultureInfo.InvariantCulture) }, db.Query("PRAGMA application_id"));
         Assert.NotEmpty(db.Query("SELECT MigrationId FROM __EFMigrationsHistory"));
@@ -109,7 +109,7 @@ public class DemoDatabaseTests
 
         var second = await Init(db);
 
-        Assert.Equal(new DemoSeedSummary(0, 3, 0, 2), second.Seed);
+        Assert.Equal(new DemoSeedSummary(0, 3, 0, 3), second.Seed);
         Assert.Equal(0, second.AccountsCreated);
         Assert.Null(second.CredentialFile);
         Assert.Equal(before, Snapshot(db));
@@ -128,10 +128,10 @@ public class DemoDatabaseTests
         var first = await new DemoDataSeeder(db.Customers(), db.Requests(), Dates, actors).SeedAsync(Token);
         var second = await new DemoDataSeeder(db.Customers(), db.Requests(), Dates, actors).SeedAsync(Token);
 
-        Assert.Equal(new DemoSeedSummary(3, 0, 2, 0), first);
-        Assert.Equal(new DemoSeedSummary(0, 3, 0, 2), second);
+        Assert.Equal(new DemoSeedSummary(3, 0, 3, 0), first);
+        Assert.Equal(new DemoSeedSummary(0, 3, 0, 3), second);
         Assert.Equal(3, Count(db, "Customers"));
-        Assert.Equal(2, Count(db, "Requests"));
+        Assert.Equal(3, Count(db, "Requests"));
     }
 
     // ---- the safe-reset guard ----
@@ -242,7 +242,7 @@ public class DemoDatabaseTests
 
         var summary = await Reset(db);
 
-        Assert.Equal(new DemoSeedSummary(3, 0, 2, 0), summary.Seed);
+        Assert.Equal(new DemoSeedSummary(3, 0, 3, 0), summary.Seed);
         Assert.Equal(original, Snapshot(db));
         Assert.Equal(DemoDatabaseState.Demo, DemoDatabase.Inspect(db.Path));
         Assert.Empty(TemporaryFilesNextTo(db));
@@ -260,8 +260,8 @@ public class DemoDatabaseTests
 
         Assert.Equal(afterFirst, Snapshot(db));
         Assert.Equal(3, Count(db, "Customers"));
-        Assert.Equal(2, Count(db, "Requests"));
-        Assert.Equal(4, Count(db, "RequestItems"));
+        Assert.Equal(3, Count(db, "Requests"));
+        Assert.Equal(9, Count(db, "RequestItems"));
         Assert.Equal(0, Count(db, "ItemStages"));
         Assert.Equal(0, Count(db, "QcApprovals"));
     }
@@ -280,19 +280,19 @@ public class DemoDatabaseTests
 
         Assert.Equal(3, customers.Count);
         Assert.Equal(3, customers.Select(c => c.Value.Name).Distinct(StringComparer.Ordinal).Count());
-        Assert.Equal(2, requests.Count);
-        Assert.Equal(2, requests.Select(r => r.Key).Distinct().Count());
-        Assert.All(requests, r => Assert.Equal(2, r.Items.Count));
-        // Every request has exactly one work type that its items inherit (Decision Log #84); the sample has one MAKE and one REPAIR request.
-        Assert.Equal(1, requests.Count(r => r.WorkType == WorkType.Make));
+        Assert.Equal(3, requests.Count);
+        Assert.Equal(3, requests.Select(r => r.Key).Distinct().Count());
+        Assert.Equal(new[] { 2, 2, 5 }, requests.Select(r => r.Items.Count).Order().ToArray());
+        // Every request has exactly one work type that its items inherit (Decision Log #84); the sample has two MAKE requests (one with a nested assembly) and one REPAIR request.
+        Assert.Equal(2, requests.Count(r => r.WorkType == WorkType.Make));
         Assert.Equal(1, requests.Count(r => r.WorkType == WorkType.Repair));
-        Assert.Equal(4, items.Count);
+        Assert.Equal(9, items.Count);
 
-        // The request waiting for Management carries a fictional PDF; the freshly created one has none, which shows the rule "attach the PDF before submitting" (Decision Log #87).
-        Assert.Equal(1, requests.Count(r => r.HasRequestPdf));
+        // The requests waiting for Management carry a fictional PDF; the freshly created one has none, which shows the rule "attach the PDF before submitting" (Decision Log #87).
+        Assert.Equal(2, requests.Count(r => r.HasRequestPdf));
         Assert.Equal(new[] { RequestStatus.Created }, requests.Where(r => !r.HasRequestPdf).Select(r => r.Status).ToArray());
         Assert.All(requests.Where(r => r.HasRequestPdf), r => Assert.EndsWith(".pdf", r.CurrentRequestPdf!.FileName, StringComparison.Ordinal));
-        Assert.Equal(4, items.Select(i => i.Id).Distinct().Count());
+        Assert.Equal(9, items.Select(i => i.Id).Distinct().Count());
     }
 
     [Fact]
@@ -337,6 +337,40 @@ public class DemoDatabaseTests
         Assert.Contains(requests, r => r.Items.Any(i => i.PartName == "چرخ‌دنده مارپیچ"));
         Assert.All(requests, r => Assert.Equal(Dates.GetJalaliYear(r.RequestDate), r.JalaliRequestYear));
         Assert.Equal(new[] { 1405 }, requests.Select(r => r.JalaliRequestYear).Distinct().OrderBy(y => y).ToArray());
-        Assert.Equal(new[] { "1405/07/15", "1405/07/18" }, requests.OrderBy(r => r.RequestDate).Select(r => Dates.FormatDate(r.RequestDate)).ToArray());
+        Assert.Equal(new[] { "1405/07/15", "1405/07/18", "1405/07/20" }, requests.OrderBy(r => r.RequestDate).Select(r => Dates.FormatDate(r.RequestDate)).ToArray());
+    }
+
+    [Fact]
+    public async Task The_sample_data_shows_a_nested_assembly_valid_repair_items_and_fictional_drawings()
+    {
+        using var db = new TempDatabase();
+        await Init(db);
+        var requests = await LoadAllAsync(db);
+
+        // The assembly request: system numbers derive from the request number (Decision Log #121), nested to the third level, children numbered per parent.
+        var assembly = requests.Single(r => r.RequestNo.Value.EndsWith("1405-016", StringComparison.Ordinal));
+        Assert.Equal(
+            new[] { "DEMO-1405-016-001", "DEMO-1405-016-001.001", "DEMO-1405-016-001.002", "DEMO-1405-016-001.002.001", "DEMO-1405-016-001.002.002" },
+            assembly.Items.Select(i => i.ItemNo).Order(StringComparer.Ordinal).ToArray());
+        Assert.Equal(new[] { "A.00", "A.20" }, assembly.Items.Where(i => i.IsAssembly).Select(i => i.CustomerItemRef!).Order(StringComparer.Ordinal).ToArray());
+        var shaft = assembly.Items.Single(i => i.CustomerItemRef == "A.21");
+        Assert.Equal("DEMO-1405-016-001.002.001", shaft.ItemNo);
+        Assert.Equal("DEMO-1405-016-001.002", assembly.Items.Single(i => i.Id == shaft.ParentItemId).ItemNo);
+
+        // The sample REPAIR items are complete: a delivery date on or after the request date and a warehouse code, so they can be released (Decision Log #124 B5).
+        var repair = requests.Single(r => r.WorkType == WorkType.Repair);
+        Assert.All(repair.Items, i =>
+        {
+            Assert.False(i.IsRepairIncomplete(WorkType.Repair));
+            Assert.True(i.DeliveryDate >= repair.RequestDate);
+            Assert.StartsWith("WH-DEMO-", i.WarehouseItemCode, StringComparison.Ordinal);
+        });
+
+        // Four fictional drawings uploaded by the Drawing account, one current revision each.
+        Assert.Equal(4, Count(db, "ItemDrawings"));
+        Assert.Equal(4, Count(db, "ItemDrawings WHERE SupersededAtUtc IS NULL"));
+        Assert.Equal(4, Count(db, "Documents WHERE Type = 3"));
+        Assert.Equal(new[] { "demo.drawing" }, db.Query("SELECT DISTINCT u.Username FROM ItemDrawings d JOIN Users u ON u.Id = d.UploadedByUserId"));
+        Assert.All(db.Query("SELECT FileName FROM ItemDrawings"), name => Assert.StartsWith("DEMO-1405-", name, StringComparison.Ordinal));
     }
 }

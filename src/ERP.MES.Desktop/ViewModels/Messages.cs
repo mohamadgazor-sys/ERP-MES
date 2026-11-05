@@ -393,6 +393,7 @@ public static class Messages
             ERP.MES.Application.Imports.ImportIssue.RepairFieldsMissing => "برای آیتم تعمیر، تاریخ تحویل و کد کالای انبار الزامی است.",
             ERP.MES.Application.Imports.ImportIssue.DeliveryDateInvalid => "تاریخ تحویل آیتم شمسی معتبر نیست" + detail + ".",
             ERP.MES.Application.Imports.ImportIssue.DeliveryBeforeRequest => "تاریخ تحویل آیتم پیش از تاریخ درخواست است" + detail + ".",
+            ERP.MES.Application.Imports.ImportIssue.WarehouseCodeDuplicate => "هشدار: این کد کالای انبار برای آیتم‌های دیگر هم ثبت شده است" + detail + "؛ فقط هشدار است و ورود مانعی ندارد.",
             ERP.MES.Application.Imports.ImportIssue.WarehouseCodeInvalid => "کد کالای انبار باید حداکثر ۴۰ نویسه و بدون فاصلهٔ ابتدا یا انتها باشد" + detail + ".",
             ERP.MES.Application.Imports.ImportIssue.PlanningColumnNotAllowed => "ستون مخصوص برنامه‌ریزی (اولویت، مرحله، واحد یا ماشین) در ورود نقشه‌کشی باید خالی باشد" + detail + ".",
             ERP.MES.Application.Imports.ImportIssue.StageTitleUnknown => "عنوان مرحله در فهرست عنوان‌های فعال نیست" + detail + ".",

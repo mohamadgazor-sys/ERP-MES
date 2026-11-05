@@ -51,7 +51,7 @@ The application locks itself after 15 minutes without activity (Ctrl+L locks it 
 
 * Close the application, then double-click **`Reset-Demo.cmd`**, type `YES`. It replaces the contents of **`data\erpmes.demo.db`** with the fictional starting data (20-60 seconds). That one file is all it touches: it refuses any file that is not a marked demonstration database, it needs the application to be closed, and it keeps the old database if anything fails. It does not delete the program, your other files or the logs.
 * A reset is **not** the same as deleting the package: to remove everything, delete the extracted folder.
-* After a reset the starting state is exactly: 3 fictional customers, 2 sample requests, the master data (milling and turning units, machines FCC-06 and TCC-12 with rates, shift D, material ST37-R30, operator OP-DEMO), ten accounts, no work sessions.
+* After a reset the starting state is exactly: 3 fictional customers, 3 sample requests (one with a nested assembly, one REPAIR request with complete repair fields), four fictional drawings, the stage-title catalog, the master data (milling and turning units, machines FCC-06 and TCC-12 with rates, shift D and the standing Friday shift F, material ST37-R30, operator OP-DEMO), ten accounts, no work sessions.
 
 ## 6. How to check that it is running on local demo data
 
@@ -137,6 +137,6 @@ Double-click **`Collect-Diagnostics.cmd`**. It writes `erpmes-diagnostics-<date>
 - [ ] At least 1 GB free on the drive; the folder is local (for example `C:\ERP-MES-Demo`), you can create files in it.
 - [ ] `Check-Demo.cmd` shows no FAIL (read the WARN lines).
 - [ ] Switch off Wi-Fi/Ethernet, run `Start-Demo.cmd`, sign in as `demo.management` and `demo.planning`, open two or three pages, sign out, close.
-- [ ] `Reset-Demo.cmd` then `Start-Demo.cmd` once more: the customers page shows 3 customers and the requests page shows `DEMO-1405-014` and `DEMO-1405-015`.
+- [ ] `Reset-Demo.cmd` then `Start-Demo.cmd` once more: the customers page shows 3 customers and the requests page shows `DEMO-1405-014`, `DEMO-1405-015` and `DEMO-1405-016`.
 - [ ] Do one full rehearsal of the steps you will show, then **run `Reset-Demo.cmd` again** so the presentation starts from the known state.
 - [ ] Keep a second copy of the ZIP and its `.sha256` on a USB stick.

@@ -96,7 +96,7 @@ public sealed class DemoAccountProvisioner(
 
     /// <summary>The user rows the sample records are attributed to. Throws when the demonstration accounts do not exist.</summary>
     public async Task<DemoSeedActors> ResolveActorsAsync(CancellationToken cancellationToken = default) =>
-        new(await FindUserIdAsync(SecretaryUsername, cancellationToken), await FindUserIdAsync(QcUsername, cancellationToken));
+        new(await FindUserIdAsync(SecretaryUsername, cancellationToken), await FindUserIdAsync(QcUsername, cancellationToken), await FindUserIdAsync("demo.drawing", cancellationToken));
 
     /// <summary>The demonstration accounts the master data (units, machines, material, operator) is attributed to. Throws when they do not exist.</summary>
     public async Task<DemoMasterActors> ResolveMasterActorsAsync(CancellationToken cancellationToken = default) =>

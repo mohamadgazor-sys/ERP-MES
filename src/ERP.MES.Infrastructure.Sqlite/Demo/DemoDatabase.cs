@@ -249,7 +249,7 @@ public static class DemoDatabase
         IDbContextFactory<ErpMesDbContext> contexts, DemoAccountProvisioner provisioner, IJalaliDateService dates, CancellationToken cancellationToken)
     {
         var actors = await provisioner.ResolveActorsAsync(cancellationToken);
-        var seeder = new DemoDataSeeder(new EfCustomerRepository(contexts), new EfRequestRepository(contexts), dates, actors);
+        var seeder = new DemoDataSeeder(new EfCustomerRepository(contexts), new EfRequestRepository(contexts), dates, actors, new EfItemDrawingRepository(contexts));
         var summary = await seeder.SeedAsync(cancellationToken);
 
         // Master data for the end-to-end walkthrough, written like the sample requests (docs/DEMO_WALKTHROUGH.md); the time is fixed so a reset gives the same rows.
