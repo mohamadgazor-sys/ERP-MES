@@ -254,20 +254,21 @@ if ($AccountsFile) {
     $pass = ($line -replace '^PASSPHRASE:\s*', '').Trim()
     Write-Host "::add-mask::$pass"
     $passwords = @{}
-    foreach ($u in @('demo.admin', 'demo.secretary', 'demo.management', 'demo.planning', 'demo.drawing', 'demo.qc', 'demo.warehouse', 'demo.production', 'demo.supervisor', 'demo.productionmanager')) { $passwords[$u] = $pass }
+    foreach ($u in @('demo.admin', 'demo.secretary', 'demo.management', 'demo.planning', 'demo.drawing', 'demo.qc', 'demo.warehouse', 'demo.production', 'demo.supervisor', 'demo.productionmanager', 'demo.maintenance')) { $passwords[$u] = $pass }
 } else {
     $passwords = Get-Passwords $CredentialsPath
 }
 Note "Accounts available: $($passwords.Keys.Count)"
-if ($passwords.Keys.Count -ne 10) { Fail "expected ten accounts, found $($passwords.Keys.Count)" }
+if ($passwords.Keys.Count -ne 11) { Fail "expected eleven accounts, found $($passwords.Keys.Count)" }
 
 if (-not $SkipWalk) {
-    Invoke-Session 'demo.supervisor' $passwords['demo.supervisor'] @('نوبت‌های کاری') -mustNotSee @('کاربران و حساب‌ها', 'هزینه و قیمت', 'ورود آیتم‌ها از اکسل', 'قراردادها') | Out-Null
-    Invoke-Session 'demo.planning' $passwords['demo.planning'] @('صف واحدهای تولید', 'قراردادها', 'تعریف آیتم‌ها و مرحله‌ها', 'فهرست عنوان مرحله‌ها', 'نقشه‌های آیتم‌ها') -mustNotSee @('کاربران و حساب‌ها') | Out-Null
+    Invoke-Session 'demo.supervisor' $passwords['demo.supervisor'] @('نوبت‌های کاری') -mustNotSee @('کاربران و حساب‌ها', 'هزینه و قیمت', 'ورود آیتم‌ها از اکسل', 'قراردادها', 'توقف ماشین‌ها') | Out-Null
+    Invoke-Session 'demo.planning' $passwords['demo.planning'] @('صف واحدهای تولید', 'قراردادها', 'تعریف آیتم‌ها و مرحله‌ها', 'فهرست عنوان مرحله‌ها', 'نقشه‌های آیتم‌ها', 'توقف ماشین‌ها') -mustNotSee @('کاربران و حساب‌ها') | Out-Null
     Invoke-Session 'demo.drawing' $passwords['demo.drawing'] @('نقشه‌های آیتم‌ها', 'ورود آیتم‌ها از اکسل', 'پرسش‌های نقشه‌کشی') -mustNotSee @('کاربران و حساب‌ها', 'هزینه و قیمت', 'فهرست عنوان مرحله‌ها') | Out-Null
     Invoke-Session 'demo.secretary' $passwords['demo.secretary'] @('درخواست‌ها') -mustNotSee @('کاربران و حساب‌ها', 'هزینه و قیمت', 'صف واحدهای تولید') | Out-Null
     Invoke-Session 'demo.admin' $passwords['demo.admin'] @('کاربران و حساب‌ها', 'اپراتورها', 'ماشین‌ها و نرخ‌ها') -mustNotSee @('هزینه و قیمت', 'ورود آیتم‌ها از اکسل', 'صف واحدهای تولید') | Out-Null
-    Invoke-Session 'demo.productionmanager' $passwords['demo.productionmanager'] @('صف واحدهای تولید', 'اضافه‌کاری', 'شاخص‌های واحدها') -mustNotSee @('کاربران و حساب‌ها', 'هزینه و قیمت') | Out-Null
+    Invoke-Session 'demo.productionmanager' $passwords['demo.productionmanager'] @('صف واحدهای تولید', 'اضافه‌کاری', 'شاخص‌های واحدها', 'توقف ماشین‌ها') -mustNotSee @('کاربران و حساب‌ها', 'هزینه و قیمت') | Out-Null
+    Invoke-Session 'demo.maintenance' $passwords['demo.maintenance'] @('توقف ماشین‌ها') -mustNotSee @('کاربران و حساب‌ها', 'هزینه و قیمت', 'صف واحدهای تولید') | Out-Null
 }
 foreach ($u in $SignInOnly) { Invoke-Session $u $passwords[$u] @() -QuickOnly | Out-Null }
 

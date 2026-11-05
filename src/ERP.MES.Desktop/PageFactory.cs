@@ -28,6 +28,7 @@ internal static class PageFactory
             ShellViewModel.UnitQueueKey => new UnitQueueView(pages.UnitQueue),
             ShellViewModel.WorkBoardKey => new WorkBoardView(pages.WorkBoard),
             ShellViewModel.CalendarKey => new CalendarView(pages.Calendar),
+            ShellViewModel.DowntimeKey => new DowntimeView(pages.Downtime),
             ShellViewModel.QcInspectionKey => new QcInspectionView(pages.QcInspection),
             ShellViewModel.JobReportsKey => new JobReportsView(pages.JobReports),
             ShellViewModel.OvertimeKey => new OvertimeView(pages.Overtime),

@@ -62,6 +62,9 @@ internal sealed class WorkflowHarness : IDisposable
     /// <summary>A Management user with the Manager role: the only one who may approve or reject a request (Decision Log #30).</summary>
     public Principal Manager { get; private set; } = null!;
 
+    /// <summary>A Maintenance/PM user: reports machine downtime (Decision Log #128).</summary>
+    public Principal Maintenance { get; private set; } = null!;
+
     /// <summary>A repository over the harness database, to prepare routes and stage states that no screen creates yet.</summary>
     public EfRequestRepository RequestRepository { get; private set; } = null!;
 
@@ -85,6 +88,7 @@ internal sealed class WorkflowHarness : IDisposable
         h.Production = await h.UserAsync("production.one", DepartmentCodes.Production, cancellationToken);
         h.Warehouse = await h.UserAsync("warehouse.one", DepartmentCodes.Warehouse, cancellationToken);
         h.Manager = await h.UserAsync("manager.one", DepartmentCodes.Management, cancellationToken, RoleCodes.Manager);
+        h.Maintenance = await h.UserAsync("maintenance.one", DepartmentCodes.MaintenancePm, cancellationToken);
         h.RequestRepository = new EfRequestRepository(factory);
 
         // Stage definition requires an active catalog title (Decision Log #124 B4); Planning registers the titles the screens' tests use.

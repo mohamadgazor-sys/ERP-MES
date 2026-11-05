@@ -23,6 +23,7 @@ public sealed class DemoAccountProvisioner(
     public const string ProductionManagerUsername = "demo.productionmanager";
     public const string QcUsername = "demo.qc";
     public const string SupervisorUsername = "demo.supervisor";
+    public const string MaintenanceUsername = "demo.maintenance";
 
     private const string PasswordAlphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
     private const int PasswordLength = 20;
@@ -42,6 +43,7 @@ public sealed class DemoAccountProvisioner(
         new("demo.production", "کاربر تولید" + Fictional, DepartmentCodes.Production, RoleCodes.Staff),
         new(SupervisorUsername, "سرپرست واحد فرزکاری" + Fictional, DepartmentCodes.Production, RoleCodes.Staff),
         new(ProductionManagerUsername, "مدیر تولید" + Fictional, DepartmentCodes.ProductionManager, RoleCodes.Manager),
+        new(MaintenanceUsername, "کاربر نگهداری و تعمیرات" + Fictional, DepartmentCodes.MaintenancePm, RoleCodes.Staff),
     ];
 
     /// <summary>A random password of <see cref="PasswordLength"/> characters from an alphabet without look-alike characters.</summary>
