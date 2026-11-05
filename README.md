@@ -17,7 +17,7 @@ dotnet run --project src/ERP.MES.Provisioning -- demo-init C:\erpmes\demo.db --c
 $env:ERPMES_DATABASE = 'C:\erpmes\demo.db'
 dotnet run --project src/ERP.MES.Desktop
 ```
-The Desktop application never creates, seeds or resets a database; the provisioning tool does (`demo-init`, `demo-reset ... --yes`, `demo-status`). Linux can build and test everything except the WPF project (`tests/ERP.MES.Desktop.LocalLinux`).
+The Desktop application never creates, seeds or resets a database; the provisioning tool does (`demo-init`, `demo-reset ... --yes`, `demo-status`). Linux can build and test everything except the WPF project and its view-model tests (`tests/ERP.MES.Desktop.Tests` targets `net10.0-windows` and runs on the Windows CI runner); on Linux the WPF project and that test project can be compile-checked with `-p:EnableWindowsTargeting=true`. (An earlier local-only `Desktop.LocalLinux` harness was never committed.)
 The SQL Server provider (`src/ERP.MES.Infrastructure.SqlServer`) and its tests are outside `ERP-MES.sln` and run in the `SQL Server integration` workflow against a throw-away container.
 
 ## Safety

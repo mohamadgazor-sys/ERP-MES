@@ -6,6 +6,27 @@ Repository: `mohamadgazor-sys/ERP-MES` (https://github.com/mohamadgazor-sys/ERP-
 
 ---
 
+## Reconciliation by the next session (2026-11-05)
+
+Checked against GitHub and the repository on 2026-11-05. Where this differs from the sections below, this section is the current state; the sections below are kept as written on 2026-11-02.
+
+| Item | Hand-off said | Found on 2026-11-05 |
+|---|---|---|
+| PR #73 | open, head `352fbf6`, three checks still running | Head still `352fbf67d48e639461fbe27e5af37470e87d364a`; all six check runs completed: `build-test`, `ui-smoke`, `sqlserver` (3/3 tests against a SQL Server 2022 container), `offline-demo (windows-2022)`, `offline-demo (windows-latest)` = success, `generate-migrations` = skipped (manual-only). **Merged** with a merge commit on 2026-11-05: main is now `715d6a659de6a6b721a5626abc54308e66ee4b49`. |
+| SDK pin | `global.json` 10.0.113 | `global.json` pins **10.0.401** (`rollForward: disable`) and has since PR #6; Windows CI uses 10.0.401. 10.0.113 was presumably the previous sandbox's SDK. In this sandbox only Ubuntu's `dotnet-sdk-10.0` 10.0.114 is installable (the Microsoft download host is blocked by the proxy), so local tests are run from a directory outside the repository, which leaves the repository's pin untouched. |
+| Old branches | "all earlier feature work is in main" | True. `claude/domain-model`, `claude/persistence-services`, `claude/m1-*`, `claude/phase-0-*`, `claude/ci-demo-artifact`, `claude/demo-shell`, `claude/four-day-demo-plan`, `claude/pdf-limit-20mib`, `claude/pkg-efcore-sqlite`, `claude/tooling-ef-design`, `claude/migration-initial`, `claude/erp-mes-phase-0-audit-6y4z44` are the heads of PRs #1-#17, all merged; their commits are not ancestors of main because those PRs were not merged with merge commits, so `git rev-list main..branch` counts are not a sign of lost work. `revert-7-claude/m1-2a-jalali-date-service` is PR #8, closed without merging (intended). Nothing was deleted. |
+| Offline package | latest = `8e737b7` package (pre-#73 demo data) | **Superseded.** New package from main `715d6a6` (includes PR #73's demo data): workflow "Offline demo package" run 42018791380 (both jobs success, offline proof from the ZIP passed on windows-2022 and windows-latest), artifact `erp-mes-offline-demo` id 13411072050, artifact size 110,747,858 bytes, artifact digest `sha256:70fdc9f2b2c221eb1c3b34263b93533f13ae42b03159dfccd3c16a9ff8ff568a`, expires 2026-12-05T11:33:26Z. Inside: `ERP-MES-OfflineDemo-2026.11.05-715d6a6-win-x64.zip`, 106.0 MB, SHA-256 `22b0f552cb8bc4ca49e6c2385256d845fe3b20f6203e520e25e67c90e7704fe9`. Download: GitHub, Actions, run 42018791380, Artifacts (repository access needed). The owner's earlier physical test (Windows 11 Pro 25H2) was of an older package. |
+| Main post-merge runs (`715d6a6`) | to be verified | SQL Server integration 42018791379, UI smoke 42018791490, Offline demo package 42018791380: success. CI 42018791324: see the Session Log entry of 2026-11-05. |
+| Session branch | — | This session works on `claude/admiring-mccarthy-mq8l0v` (created from main `8e737b7`, fast-forwarded to `715d6a6`). `claude/handoff-docs` was merged into it (merge commit, its two commits preserved) so that HANDOFF.md reaches main through this session's PR. |
+| Worktrees / stashes | none | One worktree (the checkout), no stashes, clean tree. |
+| `tests/ERP.MES.Desktop.LocalLinux` | listed as a project and a test command | Not in the repository (never committed; it was a local harness of the previous sandbox). `tests/ERP.MES.Desktop.Tests` targets `net10.0-windows`: on Linux it can only be compile-checked with `-p:EnableWindowsTargeting=true`; it runs on the Windows CI runner. README corrected. |
+| "Limitations" page | not mentioned | The always-visible page «محدودیت‌های نسخه نمایشی» still says Excel import, contracts, Drawing, warehouse, PDF upload, calendar and costing are absent; all of these now exist. Stale text, to be corrected in a small PR. |
+| Requirement gaps found so far | audit not done | **Machine downtime** (Master Specification §21; CLAUDE.md "PM reports machine downtime to Planning; downtime must affect the scheduling forecast and be auditable"; Decision Log #14) has a permission (`RegisterDowntime`, Maintenance/PM) but no entity, service, screen or forecast effect. **External supply / external processing stages** (§16) are not modelled (`ItemStage` says external-supply states are deliberately not present). Both are listed in the Session Log entry of 2026-11-05 with the proposed order of work. |
+
+Local test runs on main `715d6a6` in this sandbox (SDK 10.0.114, Linux): see the Session Log entry of 2026-11-05.
+
+---
+
 ## 0. Verified state at hand-off (2026-11-02)
 
 | Item | Value |
