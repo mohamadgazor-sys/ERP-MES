@@ -751,4 +751,94 @@ public class SchedulingServiceTests
         Assert.Equal(OperationStatus.NotFound, (await w.Queue.LoadAsync(w.Planning, heat.Value.Value.Id, Token)).Status);
         Assert.Empty((await LoadAsync(w, w.Planning, milling)).Queue);
     }
+
+    [Fact]
+    public async Task The_warehouse_records_partial_dispatches_and_returns_qc_decides_what_came_back_and_the_stage_completes_only_when_all_is_back()
+    {
+        // Decision Log #129: separate historical transactions, quantities tracked, returns never above the dispatch, cancellation with a reason, completion only after everything is back and decided.
+        using var w = await StartAsync();
+        var milling = await AddUnitAsync(w, "MILLING");
+        var plating = (await w.Services.PlanningMaster.AddUnitAsync(w.Admin, "PLATING-CO", "آبکاری بیرونی", Token, ProductionUnitCategory.ExternalPlating)).Value!.Value.Id;
+        await MaterialAsync(w);
+        var (id, version) = await ReadyAsync(w, WorkType.Make, "EXT-2");
+        var (piece, _) = await TypesAsync(w);
+        var material = long.Parse(w.Fixture.Db.Query("SELECT Id FROM Materials LIMIT 1").Single(), System.Globalization.CultureInfo.InvariantCulture);
+        var itemId = (await w.Items.DefineItemAsync(w.Planning, id, version, new DefineItemCommand("E2", "Ring", 10m, Priority.Normal, piece, material, 1m, null, null), Token)).Value!.Value.Items.Single().Id;
+        foreach (var command in new[] { new DefineStageCommand("مرحله 1", 0m, plating, null, null, 7), new DefineStageCommand("مرحله 2", 2m, milling, null) })
+        {
+            var current = (await w.Services.Requests.GetAsync(w.Planning, id, Token)).Value!;
+            Assert.True((await w.Items.DefineStageAsync(w.Planning, id, current.Request.Version, itemId, current.Versions.ItemVersion(itemId), command, Token)).Succeeded);
+        }
+
+        Assert.True((await w.Work.PerformAsync(w.Planning, StageAction.Release, await TargetAsync(w, id, itemId, 1), Token)).Succeeded);
+        var external = w.Services.ExternalWork;
+        async Task<ExternalWorkEntry> EntryAsync(Principal? user = null) => (await external.LoadAsync(user ?? w.Warehouse, cancellationToken: Token)).Value!.Entries.Single();
+
+        // Who sees and who records.
+        var first = await EntryAsync();
+        Assert.True((await external.LoadAsync(w.Warehouse, cancellationToken: Token)).Value!.CanRecord);
+        Assert.Equal((ItemStageStatus.WaitingExternalSend, 10L, 0L, "EXTERNAL_PLATING", 7), (first.Status, first.StillToSendBaseUnits, first.DispatchedBaseUnits, first.UnitCategory, first.ExpectedLeadTimeDays));
+        foreach (var reader in new[] { w.Planning, w.Manager, w.Qc })
+        {
+            Assert.False((await external.LoadAsync(reader, cancellationToken: Token)).Value!.CanRecord);
+        }
+
+        Assert.Equal(OperationStatus.NotAuthorized, (await external.LoadAsync(w.Production, cancellationToken: Token)).Status);
+        Assert.Equal(OperationStatus.NotAuthorized, (await external.DispatchAsync(w.Planning, first.ToStageTarget(), 6, null, null, Token)).Status);
+
+        // Two partial dispatches; more than still to send and a stale version are refused.
+        Assert.Equal(ValidationIssue.ExternalQuantityInvalid, (await external.DispatchAsync(w.Warehouse, first.ToStageTarget(), 11, null, null, Token)).Issue);
+        var a = (await external.DispatchAsync(w.Warehouse, first.ToStageTarget(), 6, "۶ رینگ", "ارسال اول", Token)).Value!;
+        Assert.Equal(OperationStatus.ConcurrencyConflict, (await external.DispatchAsync(w.Warehouse, first.ToStageTarget(), 4, null, null, Token)).Status);
+        var b = (await external.DispatchAsync(w.Warehouse, (await EntryAsync()).ToStageTarget(), 4, null, null, Token)).Value!;
+        var sent = await EntryAsync();
+        Assert.Equal((ItemStageStatus.ExternalSent, 10L, 10L, 0L), (sent.Status, sent.DispatchedBaseUnits, sent.AtContractorBaseUnits, sent.StillToSendBaseUnits));
+        Assert.Equal(2, sent.OpenDispatches.Count);
+        Assert.Equal(a.RecordedAtUtc.AddDays(7), sent.OpenDispatches.Single(d => d.Dispatch.Id == a.Id).ExpectedReturnUtc);
+        Assert.False(sent.OpenDispatches.Any(d => d.Overdue));
+
+        // A return names its dispatch and never exceeds what it has outstanding; returned units go to the existing QC worklist.
+        Assert.Equal(ValidationIssue.ExternalQuantityInvalid, (await external.ReturnAsync(w.Warehouse, sent.ToStageTarget(), b.Id, 5, null, Token)).Issue);
+        var backA = (await external.ReturnAsync(w.Warehouse, sent.ToStageTarget(), a.Id, 4, "برگشت جزئی", Token)).Value!;
+        var returned = await EntryAsync();
+        Assert.Equal((ItemStageStatus.WaitingQc, 4L, 6L, 4L), (returned.Status, returned.ReturnedBaseUnits, returned.AtContractorBaseUnits, returned.AwaitingQcBaseUnits));
+        Assert.Equal(2, returned.OpenDispatches.Single(d => d.Dispatch.Id == a.Id).OutstandingBaseUnits);
+        var worklist = (await w.Services.QcInspection.LoadAsync(w.Qc, Token)).Value!.Entries.Single(e => e.ItemId == itemId);
+        Assert.Equal(4, worklist.AwaitingQcBaseUnits);
+
+        // QC accepts the 4; the rest is still away, so the stage is not complete; the decided return cannot be cancelled any more.
+        Assert.True((await w.Services.QcInspection.RecordInspectionAsync(w.Qc, worklist.ToStageTarget(), [new InspectionEntry(InspectionDisposition.Accepted, 4, null)], Token)).Succeeded);
+        var afterQc = await EntryAsync();
+        Assert.Equal((ItemStageStatus.ExternalSent, 4L), (afterQc.Status, afterQc.AcceptedBaseUnits));
+        Assert.Equal(ValidationIssue.ExternalQuantityInvalid, (await external.CancelAsync(w.Warehouse, afterQc.ToStageTarget(), backA.Id, "اشتباه", Token)).Issue);
+
+        // A mistaken dispatch without returns is cancelled with a reason; it stays in the history and its units are to send again.
+        Assert.Equal(ValidationIssue.ExternalTextInvalid, (await external.CancelAsync(w.Warehouse, afterQc.ToStageTarget(), b.Id, " ", Token)).Issue);
+        Assert.True((await external.CancelAsync(w.Warehouse, afterQc.ToStageTarget(), b.Id, "ارسال نشده بود", Token)).Succeeded);
+        var corrected = await EntryAsync();
+        Assert.Equal((4L, 2L, 6L, 4L), (corrected.StillToSendBaseUnits, corrected.AtContractorBaseUnits, corrected.DispatchedBaseUnits, corrected.ReturnedBaseUnits));
+        Assert.Equal(3, corrected.History.Count);
+        Assert.Equal("ارسال نشده بود", corrected.History.Single(s => s.Id == b.Id).CancelReason);
+        Assert.False(corrected.History.Single(s => s.Id == b.Id).IsActive);
+
+        // Overdue: more than the lead time (calendar days) after the dispatch.
+        w.Fixture.Clock.Advance(TimeSpan.FromDays(8));
+        Assert.True((await EntryAsync()).OpenDispatches.Single().Overdue);
+
+        // Everything comes back and is accepted: the stage completes and the next (internal) stage enters its unit's queue with the accepted base units.
+        var c = (await external.DispatchAsync(w.Warehouse, (await EntryAsync()).ToStageTarget(), 4, null, null, Token)).Value!;
+        Assert.True((await external.ReturnAsync(w.Warehouse, (await EntryAsync()).ToStageTarget(), a.Id, 2, null, Token)).Succeeded);
+        Assert.True((await external.ReturnAsync(w.Warehouse, (await EntryAsync()).ToStageTarget(), c.Id, 4, null, Token)).Succeeded);
+        var qc = (await w.Services.QcInspection.LoadAsync(w.Qc, Token)).Value!.Entries.Single(e => e.ItemId == itemId);
+        Assert.True((await w.Services.QcInspection.RecordInspectionAsync(w.Qc, qc.ToStageTarget(), [new InspectionEntry(InspectionDisposition.Accepted, 6, null)], Token)).Succeeded);
+        Assert.Empty((await external.LoadAsync(w.Warehouse, cancellationToken: Token)).Value!.Entries);
+        Assert.Equal(ItemStageStatus.QcApproved, (await external.LoadAsync(w.Warehouse, includeCompleted: true, Token)).Value!.Entries.Single().Status);
+        var next = (await LoadAsync(w, w.Planning, milling)).Queue.Single();
+        Assert.Equal((2, ItemStageStatus.Waiting), (next.StageNo, next.Status));
+
+        Assert.Equal(3, Count(w, "AuditLog WHERE ActionCode = 'ExternalDispatchRecorded'"));
+        Assert.Equal(3, Count(w, "AuditLog WHERE ActionCode = 'ExternalReturnRecorded'"));
+        Assert.Equal(1, Count(w, "AuditLog WHERE ActionCode = 'ExternalShipmentCancelled'"));
+        Assert.Equal(6, Count(w, "ExternalShipments"));
+    }
 }
