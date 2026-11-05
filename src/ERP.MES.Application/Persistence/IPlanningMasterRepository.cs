@@ -23,6 +23,13 @@ public interface IPlanningMasterRepository
 
     Task<Stored<ProductionUnit>> UpdateUnitAsync(long unitId, long expectedVersion, Action<ProductionUnit> change, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Sets the unit's category (Decision Log #129) in one transaction with its audit entry, after reading INSIDE that transaction how many stages that are not QC approved use the unit and
+    /// how many active machines it has; <paramref name="validate"/> refuses with an issue (nothing is saved) or returns <c>ValidationIssue.None</c>.
+    /// </summary>
+    Task<(Stored<ProductionUnit>? Unit, Requests.ValidationIssue Refusal)> SetUnitCategoryAsync(
+        long unitId, long expectedVersion, string category, DateTime atUtc, Func<ProductionUnit, int, int, Requests.ValidationIssue> validate, AuditLogEntry audit, CancellationToken cancellationToken = default);
+
     Task<IReadOnlyList<Stored<Machine>>> ListMachinesAsync(CancellationToken cancellationToken = default);
 
     Task<Stored<Machine>> AddMachineAsync(Machine machine, IReadOnlyList<AuditLogEntry> audit, CancellationToken cancellationToken = default);

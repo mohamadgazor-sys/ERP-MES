@@ -24,6 +24,12 @@ public enum ItemStageStatus
 
     /// <summary>Every submitted unit was decided by QC and some were scrapped: the stage cannot be complete until Management accepts the shortfall or Planning records a replacement order (Decision Log #95 D3, #101).</summary>
     WaitingShortfallDecision = 7,
+
+    /// <summary>An external stage that is executable: units are waiting for the Warehouse to send them to the external route (Master Specification §10.4, §16.5; Decision Log #129).</summary>
+    WaitingExternalSend = 8,
+
+    /// <summary>An external stage whose dispatched units are at the external route, nothing waiting to be sent or inspected (§16.4).</summary>
+    ExternalSent = 9,
 }
 
 public static class ItemStageStatusInfo
@@ -37,6 +43,8 @@ public static class ItemStageStatusInfo
         ItemStageStatus.WaitingQc => "WAITING_QC",
         ItemStageStatus.QcApproved => "QC_APPROVED",
         ItemStageStatus.WaitingShortfallDecision => "WAITING_SHORTFALL_DECISION",
+        ItemStageStatus.WaitingExternalSend => "WAITING_EXTERNAL_SEND",
+        ItemStageStatus.ExternalSent => "EXTERNAL_SENT",
         _ => throw new ArgumentOutOfRangeException(nameof(status), status, "Unknown stage status."),
     };
 }
@@ -48,8 +56,10 @@ public static class ItemStageStatusInfo
 /// </summary>
 public sealed class ItemStage
 {
-    internal ItemStage(int stageNo, string stageTitle, decimal plannedMinutesPerPiece, decimal plannedQuantity, ItemStageStatus status, long? productionUnitId = null, long? machineId = null)
+    internal ItemStage(
+        int stageNo, string stageTitle, decimal plannedMinutesPerPiece, decimal plannedQuantity, ItemStageStatus status, long? productionUnitId = null, long? machineId = null, int? expectedLeadTimeDays = null)
     {
+        ExpectedLeadTimeDays = expectedLeadTimeDays;
         ProductionUnitId = productionUnitId;
         MachineId = machineId;
         StageNo = stageNo;
@@ -76,6 +86,15 @@ public sealed class ItemStage
 
     /// <summary>The production unit Planning planned the stage in (Decision Log #89); null for a stage of the simplified demonstration.</summary>
     public long? ProductionUnitId { get; }
+
+    /// <summary>
+    /// True when the stage is performed on an external route (its unit was external when Planning defined it; Decision Log #129): it is sent and returned by the Warehouse and never queued
+    /// or worked internally.
+    /// </summary>
+    public bool IsExternal => ExpectedLeadTimeDays is not null;
+
+    /// <summary>The expected external lead time in calendar days (Decision Log #15, #129); set exactly for an external stage.</summary>
+    public int? ExpectedLeadTimeDays { get; }
 
     /// <summary>The machine Planning planned the stage on; it belongs to <see cref="ProductionUnitId"/>. Null when only the unit is planned.</summary>
     public long? MachineId { get; }

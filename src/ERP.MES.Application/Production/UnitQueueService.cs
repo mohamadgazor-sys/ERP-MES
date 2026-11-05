@@ -668,7 +668,9 @@ public sealed class UnitQueueService(
 
     private async Task<IReadOnlyList<UnitInfo>> VisibleUnitsAsync(Principal user, CancellationToken cancellationToken)
     {
-        var units = (await planning.ListUnitsAsync(cancellationToken)).Select(u => new UnitInfo(u.Value.Id, u.Value.Code, u.Value.Name, u.Value.IsActive)).OrderBy(u => u.Code, StringComparer.Ordinal).ToList();
+        // External routes have no internal queue: their stages are sent and returned by the Warehouse (Master Specification 10.2, Decision Log #129).
+        var units = (await planning.ListUnitsAsync(cancellationToken)).Where(u => !u.Value.IsExternal)
+            .Select(u => new UnitInfo(u.Value.Id, u.Value.Code, u.Value.Name, u.Value.IsActive)).OrderBy(u => u.Code, StringComparer.Ordinal).ToList();
         if (user.DepartmentCode != DepartmentCodes.Production)
         {
             return units;

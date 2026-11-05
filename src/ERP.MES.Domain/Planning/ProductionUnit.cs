@@ -9,7 +9,13 @@ namespace ERP.MES.Domain.Planning;
 public sealed class ProductionUnit
 {
     public ProductionUnit(long id, string code, string name, long createdByUserId, DateTime createdAtUtc)
+        : this(id, code, name, createdByUserId, createdAtUtc, ProductionUnitCategory.InternalProduction)
     {
+    }
+
+    public ProductionUnit(long id, string code, string name, long createdByUserId, DateTime createdAtUtc, string category)
+    {
+        Category = RequireCategory(category);
         Id = id;
         Code = UnitOfMeasure.RequireCode(code);
         Name = UnitOfMeasure.RequireName(name);
@@ -27,6 +33,12 @@ public sealed class ProductionUnit
 
     public bool IsActive { get; private set; }
 
+    /// <summary>One of the nine codes of <see cref="ProductionUnitCategory"/> (Decision Log #129); existing units are <see cref="ProductionUnitCategory.InternalProduction"/>.</summary>
+    public string Category { get; private set; } = ProductionUnitCategory.InternalProduction;
+
+    /// <summary>An external route (contractor, plating, heat treatment...): its stages are sent and returned by the Warehouse, never queued or worked internally.</summary>
+    public bool IsExternal => ProductionUnitCategory.IsExternal(Category);
+
     public long CreatedByUserId { get; }
 
     public DateTime CreatedAtUtc { get; }
@@ -39,9 +51,19 @@ public sealed class ProductionUnit
         UpdatedAtUtc = Requirements.Utc(changedAtUtc, nameof(changedAtUtc));
     }
 
+    /// <summary>Program Admin sets the category; the Application refuses it while a stage that is not QC approved uses the unit, or while an external unit would keep machines.</summary>
+    public void SetCategory(string category, DateTime changedAtUtc)
+    {
+        Category = RequireCategory(category);
+        UpdatedAtUtc = Requirements.Utc(changedAtUtc, nameof(changedAtUtc));
+    }
+
     public void SetActive(bool isActive, DateTime changedAtUtc)
     {
         IsActive = isActive;
         UpdatedAtUtc = Requirements.Utc(changedAtUtc, nameof(changedAtUtc));
     }
+
+    private static string RequireCategory(string category) =>
+        ProductionUnitCategory.IsValid(category) ? category : throw new ArgumentException("The category must be one of the nine codes of Master Specification 16.2.", nameof(category));
 }

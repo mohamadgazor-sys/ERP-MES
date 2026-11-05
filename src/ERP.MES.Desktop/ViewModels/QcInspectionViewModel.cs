@@ -263,6 +263,7 @@ public sealed class QcInspectionViewModel(QcInspectionService service, IJalaliDa
         {
             ItemStageStatus.WaitingQc => "در انتظار تصمیم کنترل کیفیت",
             ItemStageStatus.WaitingShortfallDecision => "در انتظار تصمیم دربارهٔ کسری",
+            ItemStageStatus.WaitingExternalSend or ItemStageStatus.ExternalSent => "بیرونی: بازکاری باید دوباره ارسال شود",
             _ => "در بازکاری (تولید)",
         },
         e.BaseUnitsPerUnit == 1 ? "هر واحد = ۱ قطعهٔ پایه" : $"هر واحد = {Digits(e.BaseUnitsPerUnit)} واحد پایه",

@@ -574,6 +574,21 @@ public enum ValidationIssue
 
     /// <summary>The machine already has reported or accepted downtime in that time; correct that record instead of adding a second one.</summary>
     DowntimeOverlap,
+
+    /// <summary>The production-unit category is not one of the nine codes of Master Specification 16.2 (Decision Log #129).</summary>
+    UnitCategoryInvalid,
+
+    /// <summary>The unit's category cannot change while a stage that is not QC approved uses the unit.</summary>
+    UnitCategoryInUse,
+
+    /// <summary>An external unit has no machines: a machine cannot be added to it, and a unit with active machines cannot become external.</summary>
+    ExternalUnitMachines,
+
+    /// <summary>A stage planned on an external unit needs an expected lead time of 1 to 365 calendar days, no machine, and a quantity in whole base units (Decision Log #129).</summary>
+    ExternalStageInvalid,
+
+    /// <summary>An expected external lead time was given for a stage on an internal unit.</summary>
+    ExternalLeadTimeNotAllowed,
 }
 
 /// <summary>The result of a command or query: a status, the value on success, and the details of a refusal.</summary>

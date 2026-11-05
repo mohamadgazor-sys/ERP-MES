@@ -1598,6 +1598,13 @@ namespace ERP.MES.Infrastructure.SqlServer.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
 
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)")
+                        .HasDefaultValue("INTERNAL_PRODUCTION");
+
                     b.Property<string>("Code")
                         .IsRequired()
                         .HasColumnType("nvarchar(450)")
@@ -2769,6 +2776,9 @@ namespace ERP.MES.Infrastructure.SqlServer.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("bigint")
                         .HasDefaultValue(0L);
+
+                    b.Property<int?>("ExpectedLeadTimeDays")
+                        .HasColumnType("int");
 
                     b.Property<long?>("InputBaseUnits")
                         .HasColumnType("bigint");

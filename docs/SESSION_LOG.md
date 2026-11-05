@@ -2324,3 +2324,7 @@ Append one dated entry after every substantial session. Do not replace prior ent
 
 ### Recommended exact next action
 - External stages PR 1 (unit category, stage lead time and external flag, the two statuses, migrations), then PR 2-4 of the design's section 6.
+
+### External stages, step 1 (next pull request; Decision Log #132)
+- Unit category (the nine codes), external stage with lead time in calendar days, statuses `WAITING_EXTERNAL_SEND` / `EXTERNAL_SENT`, release and QC gate, external units excluded from the unit queues, import refusal for external units until the lead-time column exists, SQLite and SQL Server migrations `ExternalStages` (both generated locally with the pinned `dotnet-ef` 10.0.13).
+- Local Linux on its working tree: Domain 580, Application 41, Infrastructure 756 passed; WPF project and SqlServer.Tests compile (0 errors); temporary Desktop harness 151 passed. Windows CI and the SQL Server job on the PR head are the authority.

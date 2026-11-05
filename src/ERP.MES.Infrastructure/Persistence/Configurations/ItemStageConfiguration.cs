@@ -26,6 +26,10 @@ public sealed class ItemStageConfiguration : IEntityTypeConfiguration<ItemStage>
         builder.Property(s => s.MachineId);
         builder.HasOne<ERP.MES.Domain.Planning.Machine>().WithMany().HasForeignKey(s => s.MachineId).IsRequired(false).OnDelete(DeleteBehavior.Restrict);
 
+        // External route (Decision Log #129): the lead time in calendar days is set exactly for an external stage, which is what makes it external.
+        builder.Property(s => s.ExpectedLeadTimeDays);
+        builder.Ignore(s => s.IsExternal);
+
         // Operational queue state (Decision Log #78, #99): Planning position, when the stage became available (first come, first served), and a stop with its reason.
         builder.Property(s => s.PlanningPosition);
         builder.Property(s => s.AvailableSinceUtc);

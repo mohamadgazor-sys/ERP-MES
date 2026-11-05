@@ -16,6 +16,10 @@ public sealed class ProductionUnitConfiguration : IEntityTypeConfiguration<Produ
         builder.HasIndex(u => u.Code).IsUnique();
         builder.Property(u => u.Name).IsRequired();
         builder.Property(u => u.IsActive).IsRequired();
+
+        // One of the nine category codes of Master Specification 16.2, stored as written (Decision Log #129); existing units become internal.
+        builder.Property(u => u.Category).HasMaxLength(ProductionUnitCategory.MaxLength).IsRequired().HasDefaultValue(ProductionUnitCategory.InternalProduction);
+        builder.Ignore(u => u.IsExternal);
         builder.Property(u => u.CreatedByUserId).IsRequired();
         builder.HasOne<User>().WithMany().HasForeignKey(u => u.CreatedByUserId).IsRequired().OnDelete(DeleteBehavior.Restrict);
         builder.Property(u => u.CreatedAtUtc).IsRequired();
