@@ -47,6 +47,8 @@ public class DowntimeViewModelTests
         Assert.Equal(("FCC-06", "فرزکاری", "خرابی", "۱۵۰ دقیقه", "یاتاقان"), (row.MachineText, row.UnitText, row.ReasonText, row.DurationText, row.NoteText));
         Assert.Equal("۱۴۰۵/۰۸/۰۲ ۰۹:۰۰", row.StartText);
         Assert.Contains("ثبت‌شده", row.StatusText, StringComparison.Ordinal);
+        Assert.Contains("موقت", row.StatusText, StringComparison.Ordinal);
+        Assert.StartsWith("۱ توقف در انتظار بررسی", maintenance.PendingText, StringComparison.Ordinal);
         Assert.Contains("maintenance.one", row.ReporterText, StringComparison.Ordinal);
         await maintenance.ReportAsync(maintenance.Machines.Single(), Reason(DowntimeReason.PowerOutage), "۱۴۰۵/۰۸/۰۲", "۲۲:۰۰", null, "۰۲:۰۰", null);
         Assert.False(maintenance.IsErrorMessage, maintenance.Message);
@@ -68,6 +70,7 @@ public class DowntimeViewModelTests
         Assert.False(planning.IsErrorMessage, planning.Message);
         Assert.Contains("تأییدشده — ", planning.Rows.Single(r => r.ReasonText == "خرابی").StatusText, StringComparison.Ordinal);
         Assert.Contains("planning.one", planning.Rows.Single(r => r.ReasonText == "خرابی").StatusText, StringComparison.Ordinal);
+        Assert.StartsWith("۱ توقف در انتظار بررسی", planning.PendingText, StringComparison.Ordinal); // the power-outage report is still pending
 
         foreach (var user in new[] { h.Manager, h.ProductionManager })
         {

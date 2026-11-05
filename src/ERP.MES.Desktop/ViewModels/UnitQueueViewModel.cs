@@ -411,7 +411,7 @@ public sealed class UnitQueueViewModel(UnitQueueService queue, StageWorkService 
         e.OverrideRank is { } rank
             ? $"جایگزینی مدیریت (رتبهٔ {Digits(rank)}): {e.OverrideReason}" + (e.OverrideNeedsReview ? " — نیازمند بازبینی مدیریت: " + e.OverrideReviewNote : string.Empty)
             : string.Empty,
-        e.PlannedEndUtc is null ? "—" : dates.FormatDateTime(e.PlannedEndUtc.Value));
+        e.PlannedEndUtc is null ? "—" : dates.FormatDateTime(e.PlannedEndUtc.Value) + (e.PlannedEndProvisional ? " (موقت: توقف در انتظار بررسی)" : string.Empty));
 
     private string Digits(int value) => Digits(value.ToString(CultureInfo.InvariantCulture));
 

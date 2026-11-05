@@ -33,7 +33,7 @@
 | B12 | #101 | Quantity QC | Submission is always of everything still to be produced or reworked; a stage whose quantity is not a whole number of base units cannot be inspected by quantity; QC correction of an earlier decision is not built |
 | B13 | #100, #128 | Planned end forecast | One lane per unit (capacity does not multiply throughput); machine downtime is included since #128 (see B15); no external lead time yet; regular week not effective-dated; "supervisor approval" of an extra working day is a mandatory reason text |
 | B14 | #98 | Excel import | At most 20 stages per item; the template shows 6 stage columns |
-| B15 | #128 | Machine downtime | Maintenance/PM reports, corrects the end and cancels; **Planning** accepts or rejects; Maintenance/PM, Planning, Management and the Production Manager see the register. Reported downtime counts in the forecast **before** Planning accepts it (rejected/cancelled does not). A stage with a planned machine waits for that machine; a stage without one waits only when every active machine of its unit is down. One record lasts 1 minute to 90 days; two counting records of one machine may not overlap |
+| B15 | #128, **#130** | Machine downtime (**ANSWERED 2026-11-05: approved with clarifications, Decision Log #130**) | Maintenance/PM reports, corrects the end and cancels; **Planning** accepts or rejects; Maintenance/PM, Planning, Management and the Production Manager see the register. Reported downtime counts in the forecast **before** Planning accepts it (rejected/cancelled does not). A stage with a planned machine waits for that machine; a stage without one waits only when every active machine of its unit is down. One record lasts 1 minute to 90 days; two counting records of one machine may not overlap |
 
 ## C. Things only a person can do
 
@@ -66,3 +66,9 @@ Phases 1a to 9c, the test-speed work 9a and 9e, the work-session phases 10a to 1
 | F2 | The demo passphrase for the nine fictional accounts is a demo-only value in `DEMO-ACCOUNTS.txt` (Decision Log #120, a labelled default). Change it if you prefer another; it protects nothing real. | owner may change |
 | F3 | Antivirus / AppLocker / SmartScreen on the presentation computer may block an unsigned application: ask IT to allow the extracted folder, or test it on that computer early. The application and the package are not code-signed. | needs IT |
 | F4 | One real offline rehearsal on that computer: Wi-Fi off, `Check-Demo`, `Start-Demo`, the steps you will show, then `Reset-Demo` (guide section 13). | needs a person |
+
+## G. Answered on 2026-11-05
+
+- B15 machine downtime: approved with clarifications (Decision Log #130).
+- Decision Log #127 point 5 (overtime never inside the unit's effective regular hours): confirmed (Decision Log #131).
+- External supply stages: the five questions of `docs/EXTERNAL_STAGES_DESIGN.md` answered (Decision Log #129). Still open there: how pieces a contractor never returns are closed (design section 5).

@@ -579,7 +579,8 @@ public sealed class UnitQueueService(
     /// holidays, the shifts the unit runs, breaks excluded). An entry's duration is its planned minutes per piece x quantity; progress already made is not known (job reports come with 6b), so a
     /// stage in progress counts in full. Stopped, blocked and closed entries get no planned end and do not hold up the others. Capacity is not multiplied (how headcount scales throughput is not decided).
     /// MACHINE DOWNTIME (Decision Log #128) that counts (reported or accepted) removes time: an entry whose stage has a planned machine skips that machine's downtime; an entry without one skips
-    /// only the time in which every active machine of the unit is down. External lead time is not yet part of the forecast. Null when the unit runs no shift or the work does not fit a year.
+    /// only the time in which every active machine of the unit is down. Downtime only ever removes time from the effective working intervals, never adds any. An end moved by a report that
+    /// Planning has not reviewed yet is marked provisional (Decision Log #130). External lead time is not yet part of the forecast. Null when the unit runs no shift or the work does not fit a year.
     /// </summary>
     private async Task<IReadOnlyList<UnitQueueEntry>> ForecastAsync(long unitId, IReadOnlyList<UnitQueueEntry> ordered, CancellationToken cancellationToken)
     {
@@ -590,45 +591,64 @@ public sealed class UnitQueueService(
         }
 
         var (date, time) = dates.UtcToLocal(clock.UtcNow);
-        var cursor = date.ToDateTime(time);
-        var unavailable = await DowntimeAsync(unitId, ordered, cursor, cancellationToken);
+        var start = date.ToDateTime(time);
+        var all = await DowntimeAsync(unitId, ordered, start, acceptedOnly: false, cancellationToken);
+        var accepted = await DowntimeAsync(unitId, ordered, start, acceptedOnly: true, cancellationToken);
+        var ends = Walk(calendar, unitId, ordered, start, all);
+        var firm = Walk(calendar, unitId, ordered, start, accepted);
         var result = new List<UnitQueueEntry>(ordered.Count);
-        var exhausted = false;
-        foreach (var entry in ordered)
+        for (var i = 0; i < ordered.Count; i++)
         {
-            if (exhausted || entry.Block != QueueBlock.None)
+            if (ends[i] is not { } finished)
             {
-                result.Add(entry);
+                result.Add(ordered[i]);
                 continue;
             }
 
-            var blocked = entry.PlannedMachineId is { } machine ? unavailable.ByMachine.GetValueOrDefault(machine) : unavailable.WholeUnit;
-            var end = calendar.AddWorkingMinutes(unitId, cursor, entry.EstimatedMinutes, unavailable: blocked);
-            if (end is not { } finished)
-            {
-                exhausted = true;
-                result.Add(entry);
-                continue;
-            }
-
-            cursor = finished;
             try
             {
-                result.Add(entry with { PlannedEndUtc = dates.LocalToUtc(DateOnly.FromDateTime(finished), TimeOnly.FromDateTime(finished)) });
+                // Provisional (Decision Log #130): the end differs from the one computed with Planning-accepted downtime only, so a report still waiting for review moved it.
+                result.Add(ordered[i] with { PlannedEndUtc = dates.LocalToUtc(DateOnly.FromDateTime(finished), TimeOnly.FromDateTime(finished)), PlannedEndProvisional = firm[i] != finished });
             }
             catch (ArgumentException)
             {
-                result.Add(entry);
+                result.Add(ordered[i]);
             }
         }
 
         return result;
     }
 
+    /// <summary>The local planned end of each actionable entry in queue order (null for blocked entries and after the work no longer fits).</summary>
+    private static DateTime?[] Walk(WorkingCalendar calendar, long unitId, IReadOnlyList<UnitQueueEntry> ordered, DateTime start, Unavailable unavailable)
+    {
+        var ends = new DateTime?[ordered.Count];
+        var cursor = start;
+        for (var i = 0; i < ordered.Count; i++)
+        {
+            var entry = ordered[i];
+            if (entry.Block != QueueBlock.None)
+            {
+                continue;
+            }
+
+            var blocked = entry.PlannedMachineId is { } machine ? unavailable.ByMachine.GetValueOrDefault(machine) : unavailable.WholeUnit;
+            if (calendar.AddWorkingMinutes(unitId, cursor, entry.EstimatedMinutes, unavailable: blocked) is not { } finished)
+            {
+                break;
+            }
+
+            ends[i] = finished;
+            cursor = finished;
+        }
+
+        return ends;
+    }
+
     private sealed record Unavailable(IReadOnlyDictionary<long, IReadOnlyList<(DateTime Start, DateTime End)>> ByMachine, IReadOnlyList<(DateTime Start, DateTime End)> WholeUnit);
 
-    /// <summary>The counting downtime from <paramref name="fromLocal"/> on, per machine (the unit's machines and every planned machine of the entries) and for the whole unit.</summary>
-    private async Task<Unavailable> DowntimeAsync(long unitId, IReadOnlyList<UnitQueueEntry> ordered, DateTime fromLocal, CancellationToken cancellationToken)
+    /// <summary>The counting (or, with <paramref name="acceptedOnly"/>, only the Planning-accepted) downtime from <paramref name="fromLocal"/> on, per machine (the unit's machines and every planned machine of the entries) and for the whole unit.</summary>
+    private async Task<Unavailable> DowntimeAsync(long unitId, IReadOnlyList<UnitQueueEntry> ordered, DateTime fromLocal, bool acceptedOnly, CancellationToken cancellationToken)
     {
         if (downtime is null)
         {
@@ -637,7 +657,7 @@ public sealed class UnitQueueService(
 
         var unitMachines = (await planning.ListMachinesAsync(cancellationToken)).Select(m => m.Value).Where(m => m.ProductionUnitId == unitId && m.IsActive).Select(m => m.Id).ToList();
         var relevant = unitMachines.Concat(ordered.Where(e => e.PlannedMachineId is not null).Select(e => e.PlannedMachineId!.Value)).ToHashSet();
-        var rows = (await downtime.ListAsync(fromLocal, fromLocal.AddDays(400), cancellationToken)).Select(d => d.Value).Where(d => d.Counts && relevant.Contains(d.MachineId)).ToList();
+        var rows = (await downtime.ListAsync(fromLocal, fromLocal.AddDays(400), cancellationToken)).Select(d => d.Value).Where(d => (acceptedOnly ? d.Status == DowntimeStatus.Accepted : d.Counts) && relevant.Contains(d.MachineId)).ToList();
         var byMachine = rows.GroupBy(d => d.MachineId)
             .ToDictionary(g => g.Key, g => WorkingCalendar.Merge(g.Select(d => (d.StartLocal, d.EndLocal))));
         var whole = unitMachines.Count > 0 && unitMachines.All(byMachine.ContainsKey)

@@ -26,6 +26,7 @@
             <TextBlock Text="{x:Static vm:DowntimeViewModel.Heading}" FontSize="18" FontWeight="SemiBold" Foreground="{StaticResource PrimaryBrush}" />
             <TextBlock Text="{x:Static vm:DowntimeViewModel.Note}" Margin="0,2,0,8" TextWrapping="Wrap" Foreground="{StaticResource MutedTextBrush}" />
             <TextBlock Text="{Binding Message}" Style="{StaticResource MessageStyle}" />
+            <TextBlock Text="{Binding PendingText}" Margin="0,0,0,8" TextWrapping="Wrap" FontWeight="SemiBold" Foreground="#8A5A00" />
 
             <WrapPanel>
                 <TextBlock Text="{Binding RangeText}" VerticalAlignment="Center" Margin="0,0,8,0" />

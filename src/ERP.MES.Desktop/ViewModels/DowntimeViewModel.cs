@@ -43,6 +43,7 @@ public sealed class DowntimeViewModel(
     private bool _isError;
     private bool _isBusy;
     private bool _denied;
+    private string _pendingText = string.Empty;
 
     public static IReadOnlyList<DowntimeReasonOption> Reasons { get; } = Enum.GetValues<DowntimeReason>().Select(r => new DowntimeReasonOption(r, ReasonText(r))).ToList();
 
@@ -53,6 +54,13 @@ public sealed class DowntimeViewModel(
     public bool CanReport => _view?.Capabilities.CanReport ?? false;
 
     public bool CanDecide => _view?.Capabilities.CanDecide ?? false;
+
+    /// <summary>How many reports in the shown range still wait for Planning's review (Decision Log #130); empty when none.</summary>
+    public string PendingText
+    {
+        get => _pendingText;
+        private set => SetProperty(ref _pendingText, value);
+    }
 
     public bool IsDenied
     {
@@ -187,6 +195,7 @@ public sealed class DowntimeViewModel(
         if (!outcome.Succeeded)
         {
             _view = null;
+            PendingText = string.Empty;
             IsDenied = outcome.Status == OperationStatus.NotAuthorized;
             Fail(IsDenied ? "شما اجازهٔ مشاهدهٔ توقف ماشین‌ها را ندارید." : Messages.For(outcome));
             NotifyCaps();
@@ -218,6 +227,10 @@ public sealed class DowntimeViewModel(
                 UserDirectoryService.Describe(actors.GetValueOrDefault(d.ReportedByUserId))));
         }
 
+        var pending = _view.Items.Count(i => i.Downtime.Value.Status == DowntimeStatus.Reported);
+        PendingText = pending == 0
+            ? string.Empty
+            : Digits(pending.ToString(CultureInfo.InvariantCulture)) + " توقف در انتظار بررسی برنامه‌ریزی است؛ پایان‌های پیش‌بینی‌شده‌ای که این توقف‌ها جابه‌جا کرده‌اند موقت‌اند تا برنامه‌ریزی آن‌ها را تأیید یا رد کند.";
         OnPropertyChanged(nameof(RangeText));
     }
 
@@ -239,7 +252,7 @@ public sealed class DowntimeViewModel(
         string By(long? id) => id is { } user && actors.GetValueOrDefault(user) is { } entry ? " — " + UserDirectoryService.Describe(entry) : string.Empty;
         return d.Status switch
         {
-            DowntimeStatus.Reported => "ثبت‌شده (در انتظار بررسی برنامه‌ریزی؛ در پیش‌بینی اثر دارد)",
+            DowntimeStatus.Reported => "ثبت‌شده، در انتظار بررسی برنامه‌ریزی (اثر آن بر پایان پیش‌بینی‌شده موقت است)",
             DowntimeStatus.Accepted => "تأییدشده" + By(d.DecidedByUserId) + (string.IsNullOrEmpty(d.DecisionNote) ? string.Empty : ": " + d.DecisionNote),
             DowntimeStatus.Rejected => "ردشده" + By(d.DecidedByUserId) + ": " + d.DecisionNote,
             _ => "لغوشده" + By(d.CancelledByUserId) + ": " + d.DecisionNote,

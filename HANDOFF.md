@@ -6,6 +6,43 @@ Repository: `mohamadgazor-sys/ERP-MES` (https://github.com/mohamadgazor-sys/ERP-
 
 ---
 
+## Current state (updated 2026-11-05 after PR #76; read this first)
+
+| Item | Value |
+|---|---|
+| `origin/main` | `b8a373e00f0084d37fae94c2633155d7beaa05f2` (merge of PR #76), verified 2026-11-05 |
+| PRs merged on 2026-11-05 | #73 (`715d6a6`), #74 (`00331c8`), #75 (`36b93d6`), #76 (`b8a373e`). Each merged only after all six check runs were green on its PR head (`build-test`, `ui-smoke`, `sqlserver`, `offline-demo` x2; `generate-migrations` skipped as manual-only). Their head commits (`352fbf6`, `0dd56b1`, `837f74b`, `feb9c30`) are ancestors of main. |
+| Post-merge runs on main | `715d6a6`, `00331c8`, `36b93d6`: all four workflows (CI, SQL Server integration, UI smoke, Offline demo package) success. `b8a373e`: SQL Server 42060721297, UI smoke 42060721191 and Offline demo package 42060721266 success; CI 42060721221 was still running when this table was written - see the Session Log for its result. |
+| Branches | Every remote work branch (`claude/admiring-mccarthy-mq8l0v`, `claude/dazzling-goldberg-wdzbdp`, `claude/handoff-docs`) is contained in main; nothing unpushed; no stashes; one worktree. Nothing was deleted or force-pushed. |
+| Implemented | Machine downtime (register, Planning review, forecast effect: PR #74; screen, `demo.maintenance`: PR #75; Decision Log #128, approved with clarifications in #130). |
+| Approved, not yet implemented | External supply / processing stages (Decision Log #129, `docs/EXTERNAL_STAGES_DESIGN.md`). |
+| Confirmed by the owner | Overtime is never booked inside a unit's effective regular hours (#127 point 5 -> #131). |
+| Still open (owner) | How pieces a contractor never returns are closed (design section 5); rows of `docs/OWNER_REVIEW_PACKET_2.md` sections A, B (except B15), E. |
+| Remaining deliverables | The external-stage PRs; the final offline package from the final main; physical Windows-client verification (Windows 10/11 PC, a second disconnected launch, Ethernet unplugged, a machine without .NET) - none of these has been done by automation. |
+
+### Offline packages (history; each is tied to the commit it was built from - only the newest is current)
+
+| Built from main | Workflow run | Artifact id (size, expires) | ZIP and SHA-256 | Status |
+|---|---|---|---|---|
+| `8e737b7` | 41355359051 | 13103640562 (110,740,355 B, 2026-12-01) | `ERP-MES-OfflineDemo-2026.11.01-8e737b7-win-x64.zip`, `bcfea647381dc564cc589a580f6f1e5528b240347709272b567f539cf27238b0` | superseded (pre-#73 demo data) |
+| `715d6a6` | 42018791380 | 13411072050 (110,747,858 B, 2026-12-05) | `ERP-MES-OfflineDemo-2026.11.05-715d6a6-win-x64.zip`, `22b0f552cb8bc4ca49e6c2385256d845fe3b20f6203e520e25e67c90e7704fe9` | superseded (no downtime) |
+| `36b93d6` | 42049192821 | 13426716386 (110,815,360 B, 2026-12-05) | `ERP-MES-OfflineDemo-2026.11.05-36b93d6-win-x64.zip`, `f058a65c26fc65415ddc5436b5de9fd8bf095b8a574f41885714e28a9c4fd67f` | superseded (not the latest main) |
+| **`b8a373e`** | **42060721266** | **13431117762 (110,815,199 B, expires 2026-12-05T16:08:59Z; artifact digest `sha256:f25518d705f9d9398219592d4840a8b994ba6e2ebb06efb0b540a1c4f2ee79c3`)** | **`ERP-MES-OfflineDemo-2026.11.05-b8a373e-win-x64.zip`, 106.1 MB, `8359e77cb75495b9a66e7a6ad212c61faa2fc1759db43141f58b01ceac924b4e`** | **current for main `b8a373e`**; proven offline from the ZIP on windows-2022 and windows-latest (all eleven accounts signed in, no network connection held). Code identical to `36b93d6` (PR #76 changed two documentation files). A later main needs a new package. |
+
+### Test evidence (exact counts and the commit they ran on)
+
+| Commit | Where | Result |
+|---|---|---|
+| `715d6a6` (main) | Linux sandbox, SDK 10.0.114, committed test projects | Domain 568, Application 41, Infrastructure 750 passed; WPF project compiles (`-p:EnableWindowsTargeting=true`, 0 errors) |
+| `0dd56b1` (PR #74 head) | Windows CI `build-test`, SDK 10.0.401 | Domain 576, Application 41, Desktop 193, Infrastructure 754 = 1564 passed, 0 failed |
+| `0dd56b1` | Linux sandbox | Domain 576, Application 41, Infrastructure 754 passed |
+| `837f74b` (PR #75 head) | Windows CI `build-test` | all discovered tests passed (the CI step fails otherwise); counts in the run's TRX artifact 13418035623; provisioning smoke created 11 accounts |
+| PR #75 working tree | Linux sandbox, **temporary harness, not committed** | 151 Desktop view-model tests passed (see below) |
+
+**SDK and Desktop tests - corrected facts.** The repository pins SDK **10.0.401** (`global.json`, `rollForward: disable`) and Windows CI uses it. The Linux sandbox of 2026-11-05 could only install Ubuntu's 10.0.114 and ran tests from a directory outside the repository so the pin was not changed; CI is the authority. There is **no** `tests/ERP.MES.Desktop.LocalLinux` project. The committed, reproducible Desktop tests are `tests/ERP.MES.Desktop.Tests` (`net10.0-windows`), which run on the Windows CI runner and can only be compile-checked on Linux. The "151 Desktop view-model tests on Linux" were run by a throw-away scratch project outside the repository that compiled the view models and those test files for `net10.0` (excluding `UserSessionTests`, which needs `Microsoft.Win32`); it is not part of the repository and its results are supporting evidence only.
+
+---
+
 ## Reconciliation by the next session (2026-11-05)
 
 Checked against GitHub and the repository on 2026-11-05. Where this differs from the sections below, this section is the current state; the sections below are kept as written on 2026-11-02.
@@ -18,7 +55,7 @@ Checked against GitHub and the repository on 2026-11-05. Where this differs from
 | Offline package | latest = `8e737b7` package (pre-#73 demo data) | **Superseded.** New package from main `715d6a6` (includes PR #73's demo data): workflow "Offline demo package" run 42018791380 (both jobs success, offline proof from the ZIP passed on windows-2022 and windows-latest), artifact `erp-mes-offline-demo` id 13411072050, artifact size 110,747,858 bytes, artifact digest `sha256:70fdc9f2b2c221eb1c3b34263b93533f13ae42b03159dfccd3c16a9ff8ff568a`, expires 2026-12-05T11:33:26Z. Inside: `ERP-MES-OfflineDemo-2026.11.05-715d6a6-win-x64.zip`, 106.0 MB, SHA-256 `22b0f552cb8bc4ca49e6c2385256d845fe3b20f6203e520e25e67c90e7704fe9`. Download: GitHub, Actions, run 42018791380, Artifacts (repository access needed). The owner's earlier physical test (Windows 11 Pro 25H2) was of an older package. |
 | Main post-merge runs (`715d6a6`) | to be verified | SQL Server integration 42018791379, UI smoke 42018791490, Offline demo package 42018791380, CI 42018791324: all success. |
 | Work merged this session | — | PR #74 (machine downtime register and forecast effect, HANDOFF reconciliation; merge `00331c8`, all four main runs green) and PR #75 (downtime screen, `demo.maintenance`, limitations page, `docs/EXTERNAL_STAGES_DESIGN.md`; merge `36b93d69be5480499c05b2ac8e8ff5f2c4ea4834`). Both merged only after all six checks were green on the PR head. |
-| **Latest offline package** | — | From main `36b93d6` (supersedes the `715d6a6` one): run 42049192821 (offline proof from the ZIP passed on windows-2022 and windows-latest; all eleven accounts signed in), artifact `erp-mes-offline-demo` id 13426716386, 110,815,360 bytes, digest `sha256:6834c84d1448366ee51f04521534e7a3729ec9972cbfc734d2ee225c2e3d39ef`, expires 2026-12-05T15:04:20Z. Inside: `ERP-MES-OfflineDemo-2026.11.05-36b93d6-win-x64.zip`, 106.1 MB, SHA-256 `f058a65c26fc65415ddc5436b5de9fd8bf095b8a574f41885714e28a9c4fd67f`. |
+| Offline package of `36b93d6` (superseded, see the package history above) | — | From main `36b93d6` (supersedes the `715d6a6` one): run 42049192821 (offline proof from the ZIP passed on windows-2022 and windows-latest; all eleven accounts signed in), artifact `erp-mes-offline-demo` id 13426716386, 110,815,360 bytes, digest `sha256:6834c84d1448366ee51f04521534e7a3729ec9972cbfc734d2ee225c2e3d39ef`, expires 2026-12-05T15:04:20Z. Inside: `ERP-MES-OfflineDemo-2026.11.05-36b93d6-win-x64.zip`, 106.1 MB, SHA-256 `f058a65c26fc65415ddc5436b5de9fd8bf095b8a574f41885714e28a9c4fd67f`. |
 | Next task | — | External supply/processing stages (Master Specification §16): the owner's answers to the five questions of `docs/EXTERNAL_STAGES_DESIGN.md` section 3 (or "use the defaults"), then the four PRs of its section 4. Also open: Decision Log #127 point 5 and #128 (OWNER_REVIEW_PACKET_2 B15). |
 | Session branch | — | This session works on `claude/admiring-mccarthy-mq8l0v` (created from main `8e737b7`, fast-forwarded to `715d6a6`). `claude/handoff-docs` was merged into it (merge commit, its two commits preserved) so that HANDOFF.md reaches main through this session's PR. |
 | Worktrees / stashes | none | One worktree (the checkout), no stashes, clean tree. |
@@ -53,12 +90,12 @@ Earlier PR #73 head `5212cc6` failed `ui-smoke` because `tools/ui-smoke/ui-inter
 **Factory workflow (approved model).** Customer request → Management initial approval (+ contract if required, Planning creates, Management approves) → Drawing technical doability decision / raw-material inquiry (Warehouse Yes/No) → Planning defines items and stages (stage titles from a catalog) and releases the first stage → per-unit production queues → work sessions / daily job reports («ردیف کار») → QC of each stage (quantity-level accept/reject/rework; permanent reject = scrap) → next stage released only after QC approval of the previous one → finished/sent → Warehouse dispatch. External supply is a stage with dispatch/arrival tracking and lead time.
 
 **Technology.**
-- .NET 10 (SDK pinned in `global.json`: 10.0.113, `rollForward: disable`), WPF + MVVM, Persian UI, right-to-left. Windows 10/11 x64 only.
+- .NET 10 (SDK pinned in `global.json`: 10.0.113 [CORRECTED 2026-11-05: the pin is 10.0.401], `rollForward: disable`), WPF + MVVM, Persian UI, right-to-left. Windows 10/11 x64 only.
 - EF Core 10.0.13. Dev/demo DB: **SQLite**. Production backend: **SQL Server 2022** (provider in `src/ERP.MES.Infrastructure.SqlServer`, **outside `ERP-MES.sln`**; has its own migrations and test project). Business logic must stay provider-independent.
 - Layering: `Domain` ← `Application` ← `Infrastructure` ← `Infrastructure.Sqlite` / `Infrastructure.SqlServer`; `Desktop` (WPF), `Provisioning` (CLI tool for migrate/demo seed/admin tokens). Results use `Outcome<T>` / `ValidationIssue`; Persian message text in `Messages.cs`.
 - Authorization: `AuthorizationRules` (default-deny, Department + Role); `CurrentAuthorization` reloads the user on every call. Audit-log entries are written in the same transaction as the change. Row-version concurrency. Filtered unique indexes.
 - Dates: all user-visible dates Jalali (Shamsi), 24-hour time; DB stores Gregorian/native, converted at boundaries. Currency: Iranian **Rial only** — never silently converted to Toman.
-- Projects: `src/` Application, Desktop, Domain, Infrastructure, Infrastructure.SqlServer, Infrastructure.SqlServer.Design, Infrastructure.Sqlite, Provisioning. `tests/` Application.Tests, Desktop.LocalLinux, Desktop.Tests, Domain.Tests, Infrastructure.SqlServer.Tests (CI only), Infrastructure.Tests, plus Shared/fixtures. `tools/` offline-demo, ui-smoke. `docs/` specs, Decision Log, Session Log, guides.
+- Projects: `src/` Application, Desktop, Domain, Infrastructure, Infrastructure.SqlServer, Infrastructure.SqlServer.Design, Infrastructure.Sqlite, Provisioning. `tests/` Application.Tests, Desktop.LocalLinux [does not exist - corrected 2026-11-05], Desktop.Tests, Domain.Tests, Infrastructure.SqlServer.Tests (CI only), Infrastructure.Tests, plus Shared/fixtures. `tools/` offline-demo, ui-smoke. `docs/` specs, Decision Log, Session Log, guides.
 
 **Commands.**
 ```
@@ -69,7 +106,7 @@ dotnet test  ERP-MES.sln -c Release
 dotnet test tests/ERP.MES.Domain.Tests
 dotnet test tests/ERP.MES.Application.Tests
 dotnet test tests/ERP.MES.Infrastructure.Tests
-dotnet test tests/ERP.MES.Desktop.LocalLinux       # compiles Desktop view models + Desktop.Tests
+dotnet test tests/ERP.MES.Desktop.LocalLinux       # [CORRECTED 2026-11-05: this project does not exist; see 'SDK and Desktop tests - corrected facts' at the top]
 # compile the real WPF project on Linux (compile check only):
 dotnet build src/ERP.MES.Desktop -p:EnableWindowsTargeting=true
 # demo database (credentials file must live OUTSIDE the repo):

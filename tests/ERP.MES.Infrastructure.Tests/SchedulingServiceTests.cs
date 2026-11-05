@@ -547,10 +547,22 @@ public class SchedulingServiceTests
         Assert.Equal((At(8, 20), At(8, 40)), await EndsAsync());
         Assert.Equal(m1, (await LoadAsync(w, w.Planning, milling)).Queue.Single(e => e.CustomerItemRef == "A").PlannedMachineId);
 
+        // Downtime outside the unit's effective working hours (17:00 to 08:00 next morning, the break 12:00-13:00) consumes no working time (Decision Log #130).
+        var night = await w.Services.Downtime.ReportAsync(w.Maintenance, m1, DowntimeReason.PreventiveMaintenance, new DateTime(2026, 10, 23, 17, 0, 0), Local(8), null, Token);
+        Assert.True(night.Succeeded, night.Status + " " + night.Issue);
+        Assert.Equal((At(8, 20), At(8, 40)), await EndsAsync());
+        Assert.False((await LoadAsync(w, w.Planning, milling)).Queue.Any(e => e.PlannedEndProvisional));
+        Assert.True((await w.Services.Downtime.CancelAsync(w.Maintenance, night.Value!.Value.Id, night.Value.Version, "آزمون", Token)).Succeeded);
+
         // FCC-01 down 08:00-09:00: A waits for its machine; B has no planned machine and FCC-02 still works, so B is unchanged.
         var first = await w.Services.Downtime.ReportAsync(w.Maintenance, m1, DowntimeReason.Breakdown, Local(8), Local(9), null, Token);
         Assert.True(first.Succeeded, first.Status + " " + first.Issue);
         Assert.Equal((At(8, 20), At(9, 20)), await EndsAsync());
+
+        // The report is not reviewed yet, so the date it moved is provisional; B is not affected and stays firm (Decision Log #130).
+        var provisional = (await LoadAsync(w, w.Planning, milling)).Queue;
+        Assert.True(provisional.Single(e => e.CustomerItemRef == "A").PlannedEndProvisional);
+        Assert.False(provisional.Single(e => e.CustomerItemRef == "B").PlannedEndProvisional);
 
         // FCC-02 down 08:00-10:00 as well: the whole unit is down 08:00-09:00, which delays B; A then follows B on its free machine.
         Assert.True((await w.Services.Downtime.ReportAsync(w.Maintenance, m2, DowntimeReason.PowerOutage, Local(8), Local(10), null, Token)).Succeeded);
@@ -559,7 +571,11 @@ public class SchedulingServiceTests
         // Accepted downtime keeps counting; rejected downtime no longer does.
         Assert.True((await w.Services.Downtime.DecideAsync(w.Planning, first.Value!.Value.Id, first.Value.Version, true, null, Token)).Succeeded);
         Assert.Equal((At(9, 20), At(9, 40)), await EndsAsync());
-        var accepted = (await w.Services.Downtime.LoadAsync(w.Planning, Saturday, Saturday, Token)).Value!.Items.Single(i => i.Downtime.Value.MachineId == m1).Downtime;
+
+        // FCC-01's report is accepted, FCC-02's is still pending: B (delayed by the whole-unit stop, which needs FCC-02) is provisional; A follows B, so A is provisional too.
+        var mixed = (await LoadAsync(w, w.Planning, milling)).Queue;
+        Assert.True(mixed.Single(e => e.CustomerItemRef == "B").PlannedEndProvisional);
+        var accepted = (await w.Services.Downtime.LoadAsync(w.Planning, Saturday, Saturday, Token)).Value!.Items.Single(i => i.Downtime.Value.MachineId == m1 && i.Downtime.Value.Status == DowntimeStatus.Accepted).Downtime;
         Assert.True((await w.Services.Downtime.CancelAsync(w.Maintenance, accepted.Value.Id, accepted.Version, "گزارش اشتباه", Token)).Succeeded);
         Assert.Equal((At(8, 20), At(8, 40)), await EndsAsync());
     }
