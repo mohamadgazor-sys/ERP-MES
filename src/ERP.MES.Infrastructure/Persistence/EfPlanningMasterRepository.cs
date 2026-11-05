@@ -70,6 +70,28 @@ public sealed class EfPlanningMasterRepository(IDbContextFactory<ErpMesDbContext
         return new Stored<ProductionUnit>(unit, context.GetRowVersion(unit));
     }
 
+    public async Task<(Stored<ProductionUnit>? Unit, Application.Requests.ValidationIssue Refusal)> SetUnitCategoryAsync(
+        long unitId, long expectedVersion, string category, DateTime atUtc, Func<ProductionUnit, int, int, Application.Requests.ValidationIssue> validate, AuditLogEntry audit, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(validate);
+        ArgumentNullException.ThrowIfNull(audit);
+        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
+        var unit = await context.ProductionUnits.SingleOrDefaultAsync(u => u.Id == unitId, cancellationToken) ?? throw new RecordNotFoundException("production unit", unitId);
+        PersistenceSave.CheckExpectedVersion(context, unit, expectedVersion);
+        var openStages = await context.ItemStages.CountAsync(s => s.ProductionUnitId == unitId && s.Status != Domain.Requests.ItemStageStatus.QcApproved, cancellationToken);
+        var machines = await context.Machines.CountAsync(m => m.ProductionUnitId == unitId && m.IsActive, cancellationToken);
+        var refusal = validate(unit, openStages, machines);
+        if (refusal != Application.Requests.ValidationIssue.None)
+        {
+            return (null, refusal);
+        }
+
+        unit.SetCategory(category, atUtc);
+        context.AuditLog.Add(audit);
+        await PersistenceSave.SaveAsync(context, cancellationToken);
+        return (new Stored<ProductionUnit>(unit, context.GetRowVersion(unit)), Application.Requests.ValidationIssue.None);
+    }
+
     public async Task<IReadOnlyList<Stored<Machine>>> ListMachinesAsync(CancellationToken cancellationToken = default)
     {
         await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);

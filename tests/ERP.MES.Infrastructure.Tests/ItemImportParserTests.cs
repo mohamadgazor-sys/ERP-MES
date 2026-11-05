@@ -94,6 +94,12 @@ public class ItemImportParserTests
         var badUnit = ItemImportParser.Parse(Book(Row(1, header), Row(2, baseCells, "برش", "5", "NOPE", "")), WorkType.Make, Lookups).Rows.Single();
         Assert.Contains(badUnit.Messages, m => m.Issue == ImportIssue.StageUnitUnknown);
 
+        // A stage on an external route needs a lead time, which the template does not carry yet: the row is refused with its own message, never imported without it (Decision Log #129).
+        var withExternal = Lookups with { Units = new Dictionary<string, long> { ["MILL"] = 3, ["TURN"] = 4, ["PLATE"] = 9 }, ExternalUnits = new HashSet<string> { "PLATE" } };
+        var external = ItemImportParser.Parse(Book(Row(1, header), Row(2, baseCells, "آبکاری", "1", "PLATE", "")), WorkType.Make, withExternal).Rows.Single();
+        Assert.Contains(external.Messages, m => m.Issue == ImportIssue.StageUnitExternal && m.Detail == "PLATE");
+        Assert.Null(external.Data);
+
         var badMinutes = ItemImportParser.Parse(Book(Row(1, header), Row(2, baseCells, "برش", "0", "MILL", "")), WorkType.Make, Lookups).Rows.Single();
         Assert.Contains(badMinutes.Messages, m => m.Issue == ImportIssue.StageMinutesInvalid);
 

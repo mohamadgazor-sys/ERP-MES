@@ -1535,6 +1535,13 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(40)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("INTERNAL_PRODUCTION");
+
                     b.Property<string>("Code")
                         .IsRequired()
                         .HasColumnType("TEXT")
@@ -2668,6 +2675,9 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER")
                         .HasDefaultValue(0L);
+
+                    b.Property<int?>("ExpectedLeadTimeDays")
+                        .HasColumnType("INTEGER");
 
                     b.Property<long?>("InputBaseUnits")
                         .HasColumnType("INTEGER");

@@ -108,7 +108,8 @@ public sealed class PlanningMasterService(IPlanningMasterRepository repository, 
 
     // ---- production units ----
 
-    public async Task<Outcome<Stored<ProductionUnit>>> AddUnitAsync(Principal? principal, string? code, string? name, CancellationToken cancellationToken = default)
+    /// <summary>Program Admin registers a unit; <paramref name="category"/> is one of the nine codes of Master Specification 16.2 (default internal production; Decision Log #129).</summary>
+    public async Task<Outcome<Stored<ProductionUnit>>> AddUnitAsync(Principal? principal, string? code, string? name, CancellationToken cancellationToken = default, string? category = null)
     {
         var decision = await authorization.CheckAsync(principal, Permission.MaintainProductionResources, cancellationToken);
         if (!decision.IsAllowed)
@@ -126,6 +127,12 @@ public sealed class PlanningMasterService(IPlanningMasterRepository repository, 
             return Outcome<Stored<ProductionUnit>>.Invalid(ValidationIssue.NameRequired);
         }
 
+        var kind = category ?? ProductionUnitCategory.InternalProduction;
+        if (!ProductionUnitCategory.IsValid(kind))
+        {
+            return Outcome<Stored<ProductionUnit>>.Invalid(ValidationIssue.UnitCategoryInvalid);
+        }
+
         var now = clock.UtcNow;
         return await CustomerService.GuardAsync(async () =>
         {
@@ -134,8 +141,44 @@ public sealed class PlanningMasterService(IPlanningMasterRepository repository, 
                 return Outcome<Stored<ProductionUnit>>.Invalid(ValidationIssue.CodeDuplicate);
             }
 
-            var unit = new ProductionUnit(0, code!, name, decision.Current!.UserId, now);
-            return Outcome<Stored<ProductionUnit>>.Ok(await repository.AddUnitAsync(unit, [Audit(decision.Current, now, AuditActions.ProductionUnitAdded, "ProductionUnit", code!, $"Production unit {code} registered")], cancellationToken));
+            var unit = new ProductionUnit(0, code!, name, decision.Current!.UserId, now, kind);
+            return Outcome<Stored<ProductionUnit>>.Ok(await repository.AddUnitAsync(unit, [Audit(decision.Current, now, AuditActions.ProductionUnitAdded, "ProductionUnit", code!, $"Production unit {code} registered, category {kind}")], cancellationToken));
+        });
+    }
+
+    /// <summary>
+    /// Program Admin changes a unit's category (Decision Log #129). Refused while a stage that is not QC approved uses the unit (stages keep the internal/external nature they were defined
+    /// with) and, for an external category, while the unit has active machines (an external route has none).
+    /// </summary>
+    public async Task<Outcome<Stored<ProductionUnit>>> SetUnitCategoryAsync(Principal? principal, long unitId, long expectedVersion, string? category, CancellationToken cancellationToken = default)
+    {
+        var decision = await authorization.CheckAsync(principal, Permission.MaintainProductionResources, cancellationToken);
+        if (!decision.IsAllowed)
+        {
+            return Outcome<Stored<ProductionUnit>>.Fail(OperationStatus.NotAuthorized);
+        }
+
+        if (!ProductionUnitCategory.IsValid(category))
+        {
+            return Outcome<Stored<ProductionUnit>>.Invalid(ValidationIssue.UnitCategoryInvalid);
+        }
+
+        var now = clock.UtcNow;
+        return await CustomerService.GuardAsync(async () =>
+        {
+            var (unit, refusal) = await repository.SetUnitCategoryAsync(
+                unitId,
+                expectedVersion,
+                category!,
+                now,
+                (current, openStages, machines) =>
+                    string.Equals(current.Category, category, StringComparison.Ordinal) ? ValidationIssue.None
+                    : openStages > 0 ? ValidationIssue.UnitCategoryInUse
+                    : ProductionUnitCategory.IsExternal(category!) && machines > 0 ? ValidationIssue.ExternalUnitMachines
+                    : ValidationIssue.None,
+                Audit(decision.Current!, now, AuditActions.ProductionUnitCategoryChanged, "ProductionUnit", unitId.ToString(System.Globalization.CultureInfo.InvariantCulture), $"Production unit {unitId} category set to {category}"),
+                cancellationToken);
+            return refusal == ValidationIssue.None ? Outcome<Stored<ProductionUnit>>.Ok(unit!) : Outcome<Stored<ProductionUnit>>.Invalid(refusal);
         });
     }
 
@@ -193,6 +236,11 @@ public sealed class PlanningMasterService(IPlanningMasterRepository repository, 
             if (unit is null || !unit.Value.IsActive)
             {
                 return Outcome<Stored<Machine>>.Invalid(ValidationIssue.ProductionUnitInvalid);
+            }
+
+            if (unit.Value.IsExternal)
+            {
+                return Outcome<Stored<Machine>>.Invalid(ValidationIssue.ExternalUnitMachines);
             }
 
             if ((await repository.ListMachinesAsync(cancellationToken)).Any(m => string.Equals(m.Value.Code, code, StringComparison.Ordinal)))

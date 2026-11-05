@@ -5,6 +5,7 @@ using ERP.MES.Domain.Contracts;
 using ERP.MES.Domain.Identity;
 using ERP.MES.Domain.Inquiries;
 using ERP.MES.Domain.Requests;
+using ERP.MES.Domain.Planning;
 using ERP.MES.Application.Production;
 using ERP.MES.Application.Scheduling;
 using ERP.MES.Domain.Scheduling;
@@ -689,5 +690,65 @@ public class SchedulingServiceTests
         Assert.Equal(1, w.Fixture.Db.Query("SELECT Id FROM CalendarExceptions WHERE Kind = 1 AND ProductionUnitId = " + unit).Count);
         Assert.Equal(2, w.Fixture.Db.Query("SELECT Id FROM CalendarExceptions WHERE Kind = 2 AND ProductionUnitId = " + unit).Count);
         Assert.Equal(2, w.Fixture.Db.Query("SELECT Id FROM AuditLog WHERE ActionCode = 'CalendarExceptionAdded'").Count);
+    }
+
+    [Fact]
+    public async Task External_units_take_one_of_the_nine_categories_and_their_stages_wait_for_the_warehouse_outside_every_internal_queue()
+    {
+        // Decision Log #129: the Access category codes, external routes without machines or queues, lead time in calendar days, release does not mean sent.
+        using var w = await StartAsync();
+        var milling = await AddUnitAsync(w, "MILLING");
+        var plating = (await w.Services.PlanningMaster.AddUnitAsync(w.Admin, "PLATING-CO", "آبکاری بیرونی", Token, ProductionUnitCategory.ExternalPlating)).Value!;
+        Assert.True(plating.Value.IsExternal);
+        Assert.Equal(ValidationIssue.UnitCategoryInvalid, (await w.Services.PlanningMaster.AddUnitAsync(w.Admin, "PAINT", "رنگ", Token, "EXTERNAL_PAINTING")).Issue);
+        Assert.Equal(OperationStatus.NotAuthorized, (await w.Services.PlanningMaster.AddUnitAsync(w.Planning, "X1", "x", Token, ProductionUnitCategory.ExternalOther)).Status);
+
+        // An external route has no machines; a unit with active machines cannot become external; Program Admin alone changes the category, audited.
+        Assert.Equal(ValidationIssue.ExternalUnitMachines, (await w.Services.PlanningMaster.AddMachineAsync(w.Admin, "PL-01", "خط آبکاری", plating.Value.Id, Token)).Issue);
+        Assert.True((await w.Services.PlanningMaster.AddMachineAsync(w.Admin, "FCC-01", "فرز", milling, Token)).Succeeded);
+        var millingRow = (await w.Services.PlanningMaster.LoadAsync(w.Admin, Token)).Value!.Units.Single(u => u.Value.Id == milling);
+        Assert.Equal(ValidationIssue.ExternalUnitMachines, (await w.Services.PlanningMaster.SetUnitCategoryAsync(w.Admin, milling, millingRow.Version, ProductionUnitCategory.ExternalGrinding, Token)).Issue);
+        Assert.Equal(OperationStatus.NotAuthorized, (await w.Services.PlanningMaster.SetUnitCategoryAsync(w.Planning, plating.Value.Id, plating.Version, ProductionUnitCategory.ExternalHeatTreatment, Token)).Status);
+        var heat = await w.Services.PlanningMaster.SetUnitCategoryAsync(w.Admin, plating.Value.Id, plating.Version, ProductionUnitCategory.ExternalHeatTreatment, Token);
+        Assert.True(heat.Succeeded, heat.Status + " " + heat.Issue);
+        Assert.Equal(1, Count(w, "AuditLog WHERE ActionCode = 'ProductionUnitCategoryChanged'"));
+        Assert.Equal(new[] { "EXTERNAL_HEAT_TREATMENT" }, w.Fixture.Db.Query($"SELECT Category FROM ProductionUnits WHERE Id = {plating.Value.Id}"));
+        Assert.Equal(new[] { "INTERNAL_PRODUCTION" }, w.Fixture.Db.Query($"SELECT Category FROM ProductionUnits WHERE Id = {milling}"));
+
+        // Planning defines the external stage with a lead time (calendar days) and no machine; an internal stage takes no lead time.
+        await MaterialAsync(w);
+        var (id, version) = await ReadyAsync(w, WorkType.Make, "EXT-1");
+        var (piece, _) = await TypesAsync(w);
+        var material = long.Parse(w.Fixture.Db.Query("SELECT Id FROM Materials LIMIT 1").Single(), System.Globalization.CultureInfo.InvariantCulture);
+        var defined = await w.Items.DefineItemAsync(w.Planning, id, version, new DefineItemCommand("E1", "Gear", 10m, Priority.Normal, piece, material, 1m, null, null), Token);
+        var itemId = defined.Value!.Value.Items.Single().Id;
+        async Task<Outcome<Stored<Request>>> StageAsync(DefineStageCommand command)
+        {
+            var current = (await w.Services.Requests.GetAsync(w.Planning, id, Token)).Value!;
+            return await w.Items.DefineStageAsync(w.Planning, id, current.Request.Version, itemId, current.Versions.ItemVersion(itemId), command, Token);
+        }
+
+        Assert.Equal(ValidationIssue.ExternalStageInvalid, (await StageAsync(new DefineStageCommand("مرحله 1", 0m, heat.Value!.Value.Id, null))).Issue);
+        Assert.Equal(ValidationIssue.ExternalStageInvalid, (await StageAsync(new DefineStageCommand("مرحله 1", 0m, heat.Value.Value.Id, null, null, 400))).Issue);
+        Assert.Equal(ValidationIssue.ExternalLeadTimeNotAllowed, (await StageAsync(new DefineStageCommand("مرحله 1", 2m, milling, null, null, 5))).Issue);
+        Assert.Equal(ValidationIssue.StageMinutesInvalid, (await StageAsync(new DefineStageCommand("مرحله 1", 0m, milling, null))).Issue);
+        var external = await StageAsync(new DefineStageCommand("مرحله 1", 0m, heat.Value.Value.Id, null, null, 12));
+        Assert.True(external.Succeeded, external.Status + " " + external.Issue);
+        Assert.True((await StageAsync(new DefineStageCommand("مرحله 2", 2m, milling, null))).Succeeded);
+        Assert.Contains("external route, expected lead time 12 calendar days", w.Fixture.AllAuditText(), StringComparison.Ordinal);
+
+        // While its stage is not QC approved, the external unit's category is locked.
+        var heatRow = (await w.Services.PlanningMaster.LoadAsync(w.Admin, Token)).Value!.Units.Single(u => u.Value.Id == heat.Value.Value.Id);
+        Assert.Equal(ValidationIssue.UnitCategoryInUse, (await w.Services.PlanningMaster.SetUnitCategoryAsync(w.Admin, heatRow.Value.Id, heatRow.Version, ProductionUnitCategory.InternalProduction, Token)).Issue);
+
+        // Release: the external first stage waits for the Warehouse's dispatch (not "sent"); no internal queue lists the external unit or the stage.
+        var released = await w.Work.PerformAsync(w.Planning, StageAction.Release, await TargetAsync(w, id, itemId, 1), Token);
+        Assert.True(released.Succeeded, released.Status + " " + released.Issue);
+        var stages = (await w.Services.Requests.GetAsync(w.Planning, id, Token)).Value!.Request.Value.Items.Single().Stages;
+        Assert.Equal((ItemStageStatus.WaitingExternalSend, 12, 10L), (stages[0].Status, stages[0].ExpectedLeadTimeDays!.Value, stages[0].InputBaseUnits!.Value));
+        Assert.Equal(ItemStageStatus.WaitingPreviousQc, stages[1].Status);
+        Assert.DoesNotContain((await w.Queue.GetOverviewAsync(w.Planning, Token)).Value!.Units, u => u.UnitId == heat.Value.Value.Id);
+        Assert.Equal(OperationStatus.NotFound, (await w.Queue.LoadAsync(w.Planning, heat.Value.Value.Id, Token)).Status);
+        Assert.Empty((await LoadAsync(w, w.Planning, milling)).Queue);
     }
 }

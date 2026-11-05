@@ -267,17 +267,26 @@ public sealed class RequestItem
     /// record, plus rules for downstream stages that are still undecided. That operation does not exist yet; it is
     /// outside the demonstration (fixed seeded routes, no route editor) and is neither implemented nor prohibited by
     /// this method. Do not add a post-release change by relaxing the check below.
+    /// EXTERNAL STAGE (Decision Log #129): <paramref name="externalLeadTimeDays"/> is given exactly when the unit is an external route; the stage then has no machine, its minutes per piece may be
+    /// zero (the contractor's time is the lead time) and its quantity must be a whole number of base units, because dispatches and returns are counted in base units.
     /// </summary>
-    public ItemStage DefineInitialStage(string stageTitle, decimal plannedMinutesPerPiece, decimal? plannedQuantity = null, long? productionUnitId = null, long? machineId = null)
+    public ItemStage DefineInitialStage(
+        string stageTitle, decimal plannedMinutesPerPiece, decimal? plannedQuantity = null, long? productionUnitId = null, long? machineId = null, int? externalLeadTimeDays = null)
     {
         if (string.IsNullOrWhiteSpace(stageTitle))
         {
             throw new ArgumentException("A stage title is required.", nameof(stageTitle));
         }
 
-        if (plannedMinutesPerPiece <= 0)
+        var external = externalLeadTimeDays is not null;
+        if (external ? plannedMinutesPerPiece < 0 : plannedMinutesPerPiece <= 0)
         {
-            throw new ArgumentOutOfRangeException(nameof(plannedMinutesPerPiece), plannedMinutesPerPiece, "Planned minutes per piece must be greater than zero.");
+            throw new ArgumentOutOfRangeException(nameof(plannedMinutesPerPiece), plannedMinutesPerPiece, "Planned minutes per piece must be greater than zero (zero or more for an external stage).");
+        }
+
+        if (external && (externalLeadTimeDays is < MinExternalLeadTimeDays or > MaxExternalLeadTimeDays || machineId is not null || productionUnitId is null))
+        {
+            throw new ArgumentException("An external stage needs its external unit, no machine and a lead time of " + MinExternalLeadTimeDays + " to " + MaxExternalLeadTimeDays + " calendar days.", nameof(externalLeadTimeDays));
         }
 
         var quantity = plannedQuantity ?? RequestedQuantity;
@@ -293,17 +302,34 @@ public sealed class RequestItem
         }
 
         var status = _stages.Count == 0 ? ItemStageStatus.Planned : ItemStageStatus.WaitingPreviousQc;
-        var stage = new ItemStage(_stages.Count + 1, stageTitle, plannedMinutesPerPiece, quantity, status, productionUnitId, machineId);
+        var stage = new ItemStage(_stages.Count + 1, stageTitle, plannedMinutesPerPiece, quantity, status, productionUnitId, machineId, externalLeadTimeDays);
+        if (external && PlannedBaseUnits(stage) is null)
+        {
+            throw new ArgumentException("An external stage needs a quantity that is a whole number of base units.", nameof(plannedQuantity));
+        }
+
         _stages.Add(stage);
         return stage;
     }
 
-    /// <summary>Planning releases the first (internal) stage, which makes it executable (section 9.2). Demonstration-only transition PLANNED -> WAITING.</summary>
+    /// <summary>The shortest expected external lead time, in calendar days (Decision Log #129).</summary>
+    public const int MinExternalLeadTimeDays = 1;
+
+    /// <summary>The longest expected external lead time, in calendar days (a labelled default of Decision Log #132).</summary>
+    public const int MaxExternalLeadTimeDays = 365;
+
+    // The status a stage enters when it becomes executable: an external stage waits for the Warehouse to send it (Decision Log #129 Q4), an internal one enters its unit's queue.
+    private static ItemStageStatus Executable(ItemStage stage) => stage.IsExternal ? ItemStageStatus.WaitingExternalSend : ItemStageStatus.Waiting;
+
+    /// <summary>
+    /// Planning releases the first stage, which makes it executable (section 9.2): PLANNED -> WAITING for an internal stage; PLANNED -> WAITING_EXTERNAL_SEND for an external one, which is NOT
+    /// sent until the Warehouse confirms a dispatch (Decision Log #129 Q4).
+    /// </summary>
     public void ReleaseFirstStage(DateTime? releasedAtUtc = null)
     {
         var first = _stages.FirstOrDefault() ?? throw new InvalidOperationException("The item has no stages.");
         Require(first, ItemStageStatus.Planned, "released");
-        first.Status = ItemStageStatus.Waiting;
+        first.Status = Executable(first);
         first.AvailableSinceUtc = releasedAtUtc is { } at ? Customer.RequireUtc(at, nameof(releasedAtUtc)) : null;
         first.InputBaseUnits = PlannedBaseUnits(first);
     }
@@ -497,7 +523,7 @@ public sealed class RequestItem
 
             if (stage.InputBaseUnits is null || stage.AcceptedBaseUnits > 0)
             {
-                next.Status = ItemStageStatus.Waiting;
+                next.Status = Executable(next);
                 next.AvailableSinceUtc = utc;
             }
         }

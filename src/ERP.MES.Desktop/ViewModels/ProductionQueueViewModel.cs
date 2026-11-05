@@ -218,6 +218,8 @@ public sealed class ProductionQueueViewModel(ProductionQueueService queue, IJala
         ItemStageStatus.WaitingShortfallDecision => "منتظر تصمیم دربارهٔ کسری (ضایعات)",
         ItemStageStatus.WaitingQc => "در انتظار کنترل کیفیت",
         ItemStageStatus.QcApproved => "تأییدشده توسط کنترل کیفیت",
+        ItemStageStatus.WaitingExternalSend => "بیرونی: در انتظار ارسال توسط انبار",
+        ItemStageStatus.ExternalSent => "بیرونی: ارسال‌شده، در انتظار برگشت",
         _ => string.Empty,
     };
 }

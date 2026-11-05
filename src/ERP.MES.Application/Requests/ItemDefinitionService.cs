@@ -10,7 +10,8 @@ public sealed record DefineItemCommand(
     long? ParentItemId = null, bool IsAssembly = false, DateOnly? DeliveryDate = null, string? WarehouseItemCode = null);
 
 /// <summary>What Planning typed to plan one stage of an item: title, minutes per piece, the production unit and optionally the machine. Planned quantity defaults to the item's quantity.</summary>
-public sealed record DefineStageCommand(string? StageTitle, decimal PlannedMinutesPerPiece, long ProductionUnitId, long? MachineId, decimal? PlannedQuantity = null);
+/// <summary>A stage Planning adds to an item's route. <paramref name="ExpectedLeadTimeDays"/> (calendar days) is required exactly when the unit is external (Decision Log #129).</summary>
+public sealed record DefineStageCommand(string? StageTitle, decimal PlannedMinutesPerPiece, long ProductionUnitId, long? MachineId, decimal? PlannedQuantity = null, int? ExpectedLeadTimeDays = null);
 
 /// <summary>What the signed-in user may do in item definition, for enabling buttons (the Application's answer; every command checks again).</summary>
 public sealed record ItemDefinitionCapabilities(bool CanDefineMake, bool CanDefineRepair)
@@ -330,7 +331,7 @@ public sealed class ItemDefinitionService(
             return Outcome<Stored<Request>>.Invalid(ValidationIssue.StageTitleRequired);
         }
 
-        if (command.PlannedMinutesPerPiece <= 0)
+        if (command.PlannedMinutesPerPiece < 0)
         {
             return Outcome<Stored<Request>>.Invalid(ValidationIssue.StageMinutesInvalid);
         }
@@ -379,6 +380,22 @@ public sealed class ItemDefinitionService(
                 return Outcome<Stored<Request>>.Invalid(ValidationIssue.ProductionUnitInvalid);
             }
 
+            if (!unit.Value.IsExternal && command.PlannedMinutesPerPiece == 0)
+            {
+                // Zero minutes per piece is only meaningful for an external route, whose time is the lead time.
+                return Outcome<Stored<Request>>.Invalid(ValidationIssue.StageMinutesInvalid);
+            }
+
+            if (unit.Value.IsExternal != command.ExpectedLeadTimeDays is not null)
+            {
+                return Outcome<Stored<Request>>.Invalid(unit.Value.IsExternal ? ValidationIssue.ExternalStageInvalid : ValidationIssue.ExternalLeadTimeNotAllowed);
+            }
+
+            if (unit.Value.IsExternal && (command.MachineId is not null || command.ExpectedLeadTimeDays is < RequestItem.MinExternalLeadTimeDays or > RequestItem.MaxExternalLeadTimeDays))
+            {
+                return Outcome<Stored<Request>>.Invalid(ValidationIssue.ExternalStageInvalid);
+            }
+
             if (command.MachineId is { } machineId)
             {
                 var machine = (await planning.ListMachinesAsync(cancellationToken)).FirstOrDefault(m => m.Value.Id == machineId);
@@ -398,10 +415,18 @@ public sealed class ItemDefinitionService(
                 var saved = await requests.UpdateRowsAsync(
                     requestId,
                     RowVersionExpectations.ForRequest(expectedRequestVersion).WithItem(itemId, expectedItemVersion),
-                    r => r.Items.Single(i => i.Id == itemId).DefineInitialStage(command.StageTitle!.Trim(), command.PlannedMinutesPerPiece, command.PlannedQuantity, command.ProductionUnitId, command.MachineId),
-                    r => [Audit(user, now, AuditActions.ItemStageDefined, requestId, $"Request {r.RequestNo.Value}: stage of item '{r.Items.Single(i => i.Id == itemId).ItemNo}' planned in unit {unit.Value.Code}" + (command.MachineId is null ? string.Empty : $" on machine {command.MachineId}"))],
+                    r => r.Items.Single(i => i.Id == itemId).DefineInitialStage(
+                        command.StageTitle!.Trim(), command.PlannedMinutesPerPiece, command.PlannedQuantity, command.ProductionUnitId, command.MachineId, command.ExpectedLeadTimeDays),
+                    r => [Audit(user, now, AuditActions.ItemStageDefined, requestId, $"Request {r.RequestNo.Value}: stage of item '{r.Items.Single(i => i.Id == itemId).ItemNo}' planned in unit {unit.Value.Code}"
+                        + (command.MachineId is null ? string.Empty : $" on machine {command.MachineId}")
+                        + (command.ExpectedLeadTimeDays is { } days ? $" (external route, expected lead time {days} calendar days)" : string.Empty))],
                     cancellationToken);
                 return Outcome<Stored<Request>>.Ok(new Stored<Request>(saved.Value, saved.Versions.Request));
+            }
+            catch (ArgumentException)
+            {
+                // An external stage needs a quantity in whole base units (dispatches and returns are counted in base units).
+                return Outcome<Stored<Request>>.Invalid(ValidationIssue.ExternalStageInvalid);
             }
             catch (InvalidOperationException)
             {

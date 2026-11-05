@@ -88,6 +88,9 @@ public enum ImportIssue
     StageUnitUnknown,
     StageMachineUnknown,
     StageMachineUnitMismatch,
+
+    /// <summary>The stage's unit is an external route; its lead time cannot be imported yet, so Planning defines that stage on the item-definition screen (Decision Log #129, #132).</summary>
+    StageUnitExternal,
     StagesIgnoredForExistingItem,
     StageHeaderBeyondLimit,
 }
@@ -115,7 +118,8 @@ public sealed record ImportLookups(
     IReadOnlyDictionary<string, long> Materials,
     IReadOnlyDictionary<string, long> Units,
     IReadOnlyDictionary<string, (long Id, long UnitId)> Machines,
-    IReadOnlySet<string>? StageTitles = null);
+    IReadOnlySet<string>? StageTitles = null,
+    IReadOnlySet<string>? ExternalUnits = null);
 
 /// <summary>
 /// Parses the rows of the first worksheet into item definitions (Decision Log #16, #97). Pure: no database, no clock. Headers are matched by name (see <see cref="ItemImportTemplate"/>), every
@@ -501,6 +505,12 @@ public static class ItemImportParser
             if (!lookups.Units.TryGetValue(unitCode, out var unitId))
             {
                 Error(ImportIssue.StageUnitUnknown, unitCode);
+                continue;
+            }
+
+            if (lookups.ExternalUnits?.Contains(unitCode) == true)
+            {
+                Error(ImportIssue.StageUnitExternal, unitCode);
                 continue;
             }
 
