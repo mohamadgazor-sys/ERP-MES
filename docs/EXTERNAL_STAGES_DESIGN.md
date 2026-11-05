@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | **APPROVED for implementation** (owner, 2026-11-05; Decision Log #129). Not yet implemented; the implementation PRs are listed in section 6. The 2026-11-05 proposal of this file is superseded by this version; its five questions are answered in section 2. |
+| **Status** | **APPROVED** (owner, 2026-11-05; Decision Log #129). **Implemented** in four sequential steps (Decision Log #132-#135; section 6); a step counts as delivered only when its pull request is merged on main. The 2026-11-05 proposal of this file is superseded by this version; its five questions are answered in section 2. |
 | **Sources** | Master Specification §1.5, §10.2, §10.4, §16, §17.3, §13.3; CLAUDE.md "External supply is represented as a production stage..."; Decision Log #5, #15, #95 D3/D7, #101, #105, #122, #129. |
 
 ## 1. Already decided before this design (unchanged)

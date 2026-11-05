@@ -94,11 +94,22 @@ public class ItemImportParserTests
         var badUnit = ItemImportParser.Parse(Book(Row(1, header), Row(2, baseCells, "برش", "5", "NOPE", "")), WorkType.Make, Lookups).Rows.Single();
         Assert.Contains(badUnit.Messages, m => m.Issue == ImportIssue.StageUnitUnknown);
 
-        // A stage on an external route needs a lead time, which the template does not carry yet: the row is refused with its own message, never imported without it (Decision Log #129).
+        // A stage on an external route needs a lead time in whole calendar days and no machine; an internal stage takes none (Decision Log #129).
         var withExternal = Lookups with { Units = new Dictionary<string, long> { ["MILL"] = 3, ["TURN"] = 4, ["PLATE"] = 9 }, ExternalUnits = new HashSet<string> { "PLATE" } };
-        var external = ItemImportParser.Parse(Book(Row(1, header), Row(2, baseCells, "آبکاری", "1", "PLATE", "")), WorkType.Make, withExternal).Rows.Single();
-        Assert.Contains(external.Messages, m => m.Issue == ImportIssue.StageUnitExternal && m.Detail == "PLATE");
-        Assert.Null(external.Data);
+        string[] leadHeader = [.. Header, ItemImportTemplate.StageTitle(1), ItemImportTemplate.StageMinutes(1), ItemImportTemplate.StageUnit(1), ItemImportTemplate.StageMachine(1), ItemImportTemplate.StageLeadTime(1)];
+        ParsedImportRow Parse(params string[] stage) => ItemImportParser.Parse(Book(Row(1, leadHeader), Row(2, baseCells, stage)), WorkType.Make, withExternal).Rows.Single();
+
+        var missing = Parse("آبکاری", "0", "PLATE", "", "");
+        Assert.Contains(missing.Messages, m => m.Issue == ImportIssue.StageLeadTimeInvalid && m.Detail == "1");
+        Assert.Null(missing.Data);
+        Assert.Contains(Parse("آبکاری", "0", "PLATE", "", "2.5").Messages, m => m.Issue == ImportIssue.StageLeadTimeInvalid);
+        Assert.Contains(Parse("آبکاری", "0", "PLATE", "M1", "10").Messages, m => m.Issue == ImportIssue.StageLeadTimeInvalid);
+        Assert.Contains(Parse("برش", "5", "MILL", "", "10").Messages, m => m.Issue == ImportIssue.StageLeadTimeNotAllowed);
+        Assert.Contains(Parse("برش", "0", "MILL", "", "").Messages, m => m.Issue == ImportIssue.StageMinutesInvalid);
+        var external = Parse("آبکاری", "0", "PLATE", "", "۱۴");
+        Assert.True(external.Data is not null, string.Join(",", external.Messages.Select(m => m.Issue)));
+        Assert.Equal((9L, 14, 0m), (external.Data!.Stages[0].ProductionUnitId, external.Data.Stages[0].LeadTimeDays!.Value, external.Data.Stages[0].MinutesPerPiece));
+        Assert.Null(Parse("برش", "5", "MILL", "", "").Data!.Stages[0].LeadTimeDays);
 
         var badMinutes = ItemImportParser.Parse(Book(Row(1, header), Row(2, baseCells, "برش", "0", "MILL", "")), WorkType.Make, Lookups).Rows.Single();
         Assert.Contains(badMinutes.Messages, m => m.Issue == ImportIssue.StageMinutesInvalid);

@@ -236,7 +236,7 @@ public sealed class ItemImportService(
 
                                 foreach (var stage in rowData.Stages)
                                 {
-                                    item.DefineInitialStage(stage.Title, stage.MinutesPerPiece, null, stage.ProductionUnitId, stage.MachineId);
+                                    item.DefineInitialStage(stage.Title, stage.MinutesPerPiece, null, stage.ProductionUnitId, stage.MachineId, stage.LeadTimeDays);
                                 }
                             }
                             else if (outcome == ItemImportOutcome.Updated)

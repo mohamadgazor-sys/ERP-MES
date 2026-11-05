@@ -6,7 +6,7 @@ namespace ERP.MES.Application.Imports;
 /// <summary>
 /// The canonical item-import template (docs/ITEM_IMPORT_TEMPLATE.md; Decision Log #16, #97): ONE worksheet, Persian headers matched by NAME (not position), one row per item. It is the
 /// application\'s own layout, designed from the requirements; it is NOT claimed to match any existing company workbook, which has not been inspected. Columns may appear in any order and
-/// unknown columns are ignored with a warning. Stage columns come in groups of four: the generated template shows <see cref="TemplateStages"/> groups, and a file may use up to
+/// unknown columns are ignored with a warning. Stage columns come in groups of five (title, minutes, unit, machine, external lead time): the generated template shows <see cref="TemplateStages"/> groups, and a file may use up to
 /// <see cref="MaxStages"/> (a safety limit, not a business rule). A stage header beyond that limit is an error, never silently ignored.
 /// </summary>
 public static class ItemImportTemplate
@@ -51,6 +51,9 @@ public static class ItemImportTemplate
     public static string StageUnit(int stage) => $"مرحله {stage} - کد واحد";
 
     public static string StageMachine(int stage) => $"مرحله {stage} - کد ماشین";
+
+    /// <summary>The expected external lead time in calendar days; filled exactly for a stage on an external unit (Decision Log #129).</summary>
+    public static string StageLeadTime(int stage) => $"مرحله {stage} - زمان تحویل بیرونی (روز)";
 
     /// <summary>The headers in template order.</summary>
     public static IReadOnlyList<string> Headers { get; } = BuildHeaders(TemplateStages);
@@ -125,7 +128,7 @@ public static class ItemImportTemplate
         var headers = new List<string> { WorkType, CustomerItemRef, PartName, Quantity, QuantityType, Material, Weight, Length, Diameter, Priority, ParentRef, Assembly, DeliveryDate, WarehouseCode };
         for (var stage = 1; stage <= stages; stage++)
         {
-            headers.AddRange([StageTitle(stage), StageMinutes(stage), StageUnit(stage), StageMachine(stage)]);
+            headers.AddRange([StageTitle(stage), StageMinutes(stage), StageUnit(stage), StageMachine(stage), StageLeadTime(stage)]);
         }
 
         return headers;
@@ -140,11 +143,11 @@ public static class ItemImportTemplate
         {
             if (i < stages.Length)
             {
-                cells.AddRange([stages[i].Title, stages[i].Minutes, stages[i].Unit, stages[i].Machine]);
+                cells.AddRange([stages[i].Title, stages[i].Minutes, stages[i].Unit, stages[i].Machine, string.Empty]);
             }
             else
             {
-                cells.AddRange(["", "", "", ""]);
+                cells.AddRange(["", "", "", "", ""]);
             }
         }
 

@@ -89,8 +89,11 @@ public enum ImportIssue
     StageMachineUnknown,
     StageMachineUnitMismatch,
 
-    /// <summary>The stage's unit is an external route; its lead time cannot be imported yet, so Planning defines that stage on the item-definition screen (Decision Log #129, #132).</summary>
-    StageUnitExternal,
+    /// <summary>A stage on an external unit needs its expected lead time: whole calendar days 1-365, and no machine (Decision Log #129).</summary>
+    StageLeadTimeInvalid,
+
+    /// <summary>An external lead time was filled for a stage on an internal unit.</summary>
+    StageLeadTimeNotAllowed,
     StagesIgnoredForExistingItem,
     StageHeaderBeyondLimit,
 }
@@ -98,7 +101,7 @@ public enum ImportIssue
 /// <summary>A message about the file (<see cref="SheetRow"/> null) or a row, with an optional detail (a header name, a stage number, a code, a first row number).</summary>
 public sealed record ImportMessage(int? SheetRow, ImportIssue Issue, string? Detail, bool IsError);
 
-public sealed record ImportStagePlan(int StageNo, string Title, decimal MinutesPerPiece, long ProductionUnitId, long? MachineId);
+public sealed record ImportStagePlan(int StageNo, string Title, decimal MinutesPerPiece, long ProductionUnitId, long? MachineId, int? LeadTimeDays = null);
 
 /// <summary>A valid, fully resolved worksheet row: the item\'s definition and its planned stages.</summary>
 public sealed record ImportRowData(
@@ -435,7 +438,7 @@ public static class ItemImportParser
             var planningHeaders = new List<string> { ItemImportTemplate.Priority };
             for (var k = 1; k <= ItemImportTemplate.MaxStages; k++)
             {
-                planningHeaders.AddRange([ItemImportTemplate.StageTitle(k), ItemImportTemplate.StageMinutes(k), ItemImportTemplate.StageUnit(k), ItemImportTemplate.StageMachine(k)]);
+                planningHeaders.AddRange([ItemImportTemplate.StageTitle(k), ItemImportTemplate.StageMinutes(k), ItemImportTemplate.StageUnit(k), ItemImportTemplate.StageMachine(k), ItemImportTemplate.StageLeadTime(k)]);
             }
 
             foreach (var header in planningHeaders.Where(h => Text(h) is not null))
@@ -461,7 +464,7 @@ public static class ItemImportParser
             }
         }
 
-        // stages: contiguous groups of title / minutes / unit code / machine code
+        // stages: contiguous groups of title / minutes / unit code / machine code / external lead time
         var stages = new List<ImportStagePlan>();
         var gap = false;
         for (var k = 1; k <= ItemImportTemplate.MaxStages; k++)
@@ -470,7 +473,8 @@ public static class ItemImportParser
             var minutesText = Text(ItemImportTemplate.StageMinutes(k));
             var unitCode = Text(ItemImportTemplate.StageUnit(k));
             var machineCode = Text(ItemImportTemplate.StageMachine(k));
-            if (title is null && minutesText is null && unitCode is null && machineCode is null)
+            var leadText = Text(ItemImportTemplate.StageLeadTime(k));
+            if (title is null && minutesText is null && unitCode is null && machineCode is null && leadText is null)
             {
                 gap = true;
                 continue;
@@ -496,7 +500,7 @@ public static class ItemImportParser
                 continue;
             }
 
-            if (!QuantityText.TryParse(minutesText, out var minutes) || minutes <= 0)
+            if (!QuantityText.TryParse(minutesText, out var minutes) || minutes < 0)
             {
                 Error(ImportIssue.StageMinutesInvalid, number);
                 continue;
@@ -508,9 +512,26 @@ public static class ItemImportParser
                 continue;
             }
 
+            // External route (Decision Log #129): a lead time in whole calendar days, no machine, minutes may be zero; an internal stage takes no lead time and needs minutes > 0.
+            int? leadTime = null;
             if (lookups.ExternalUnits?.Contains(unitCode) == true)
             {
-                Error(ImportIssue.StageUnitExternal, unitCode);
+                if (leadText is null || machineCode is not null || !QuantityText.TryParse(leadText, out var days) || days != decimal.Truncate(days) || days is < 1 or > 365)
+                {
+                    Error(ImportIssue.StageLeadTimeInvalid, number);
+                    continue;
+                }
+
+                leadTime = (int)days;
+            }
+            else if (leadText is not null)
+            {
+                Error(ImportIssue.StageLeadTimeNotAllowed, number);
+                continue;
+            }
+            else if (minutes == 0)
+            {
+                Error(ImportIssue.StageMinutesInvalid, number);
                 continue;
             }
 
@@ -532,7 +553,7 @@ public static class ItemImportParser
                 machineId = machine.Id;
             }
 
-            stages.Add(new ImportStagePlan(stages.Count + 1, title, minutes, unitId, machineId));
+            stages.Add(new ImportStagePlan(stages.Count + 1, title, minutes, unitId, machineId, leadTime));
         }
 
         if (messages.Any(m => m.IsError))

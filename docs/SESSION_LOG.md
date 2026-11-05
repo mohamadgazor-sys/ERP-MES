@@ -2336,3 +2336,7 @@ Append one dated entry after every substantial session. Do not replace prior ent
 ### External stages, step 3 (screens; Decision Log #134)
 - `ExternalWorkViewModel` / `ExternalWorkView` («کار بیرونی»), category on the units page, lead time on the item-definition page, navigation and page access, UI smoke walk for Planning.
 - Local: filtered temporary-harness run of the external-work, shell, page-access, units and item-definition view-model tests: 26 passed (the full local results are in the pull request of this step).
+
+### External stages, step 4 (Excel lead time, expected completion; Decision Log #135)
+- Fifth stage column in the Excel template and parser (external: lead time required, no machine, minutes may be zero; internal: no lead time, minutes > 0); import commit passes the lead time; expected completion of an external stage in the external-work view; limitations page updated; `docs/ITEM_IMPORT_TEMPLATE.md` updated.
+- Local Linux on the working tree with steps 1-4: Domain 584, Application 41, Infrastructure 758 passed; WPF project, Desktop.Tests and SqlServer.Tests compile (0 errors); temporary Desktop harness 152 passed.

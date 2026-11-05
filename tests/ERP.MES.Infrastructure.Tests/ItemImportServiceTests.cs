@@ -444,6 +444,24 @@ public class ItemImportServiceTests
     }
 
     [Fact]
+    public async Task An_external_stage_is_imported_with_its_lead_time_in_calendar_days()
+    {
+        // Decision Log #129: the fifth column of a stage group carries the external lead time; the stage is external because its unit is.
+        var (w, id, _) = await ReadyWorldAsync();
+        using var disposeWorld = w;
+        var plating = (await w.Services.PlanningMaster.AddUnitAsync(w.Admin, "PLATE", "آبکاری بیرونی", Token, ERP.MES.Domain.Planning.ProductionUnitCategory.ExternalPlating)).Value!;
+        var headers = H.Concat([ItemImportTemplate.StageTitle(1), ItemImportTemplate.StageMinutes(1), ItemImportTemplate.StageUnit(1), ItemImportTemplate.StageMachine(1), ItemImportTemplate.StageLeadTime(1)]).ToList();
+
+        var preview = await PreviewOkAsync(w, id, Writer.Write("S", headers, [[.. MakeRow("1.10"), "فرزکاری", "0", "PLATE", "", ""]]));
+        Assert.Contains(preview.Rows.Single().Messages, m => m.Issue == ImportIssue.StageLeadTimeInvalid);
+
+        var result = await CommitAsync(w, id, Writer.Write("S", headers, [[.. MakeRow("1.10"), "فرزکاری", "0", "PLATE", "", "21"]]));
+        Assert.True(result.Succeeded, result.Status + " " + result.Issue);
+        var stage = (await LoadAsync(w, id)).Items.Single().Stages.Single();
+        Assert.Equal((true, 21, plating.Value.Id, 0m), (stage.IsExternal, stage.ExpectedLeadTimeDays!.Value, stage.ProductionUnitId!.Value, stage.PlannedMinutesPerPiece));
+    }
+
+    [Fact]
     public async Task Any_invalid_row_blocks_the_whole_file_and_every_error_carries_its_row_number()
     {
         var (w, id, _) = await ReadyWorldAsync();
