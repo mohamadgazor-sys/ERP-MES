@@ -208,7 +208,10 @@ public sealed class ItemDefinitionViewModel(
         return await ChangeAsync(() => service.MoveItemAsync(currentUser(), requestId, version, itemId, newParentItemId, cancellationToken), "آیتم جابه‌جا شد و شماره‌های زیرمجموعه به‌روز شد.");
     }
 
-    public async Task<bool> DefineStageAsync(string? title, string? minutesText, long unitId, long? machineId, CancellationToken cancellationToken = default)
+    /// <summary>
+    /// Planning defines a stage. <paramref name="leadTimeDaysText"/> (whole calendar days) is filled exactly for a stage on an external unit (Decision Log #129); the Application tells which.
+    /// </summary>
+    public async Task<bool> DefineStageAsync(string? title, string? minutesText, long unitId, long? machineId, CancellationToken cancellationToken = default, string? leadTimeDaysText = null)
     {
         if (_detail is null || _selectedItem is null)
         {
@@ -222,11 +225,23 @@ public sealed class ItemDefinitionViewModel(
             return false;
         }
 
+        int? leadTime = null;
+        if (!string.IsNullOrWhiteSpace(leadTimeDaysText))
+        {
+            if (!QuantityText.TryParse(leadTimeDaysText, out var days) || days != decimal.Truncate(days) || days is < 1 or > 365)
+            {
+                Message = Messages.ForIssue(ValidationIssue.ExternalStageInvalid, JalaliDateError.None);
+                return false;
+            }
+
+            leadTime = (int)days;
+        }
+
         var requestId = _detail.Request.Value.Id;
         var version = _detail.Request.Version;
         var item = _selectedItem;
         return await ChangeAsync(
-            () => service.DefineStageAsync(currentUser(), requestId, version, item.ItemId, item.Version, new DefineStageCommand(title, minutes, unitId, machineId), cancellationToken),
+            () => service.DefineStageAsync(currentUser(), requestId, version, item.ItemId, item.Version, new DefineStageCommand(title, minutes, unitId, machineId, null, leadTime), cancellationToken),
             "مرحله تعریف شد.");
     }
 
@@ -397,7 +412,9 @@ public sealed class ItemDefinitionViewModel(
         {
             _stages.Add(new DefinedStageRow(
                 s.StageNo, s.StageTitle, Digits(s.PlannedMinutesPerPiece.ToString("0.####", System.Globalization.CultureInfo.InvariantCulture)),
-                s.ProductionUnitId is { } u ? units.GetValueOrDefault(u, "؟") : "—", s.MachineId is { } m ? machines.GetValueOrDefault(m, "؟") : "—", ProductionQueueViewModel.StageStatusText(s.Status)));
+                s.ProductionUnitId is { } u ? units.GetValueOrDefault(u, "؟") : "—",
+                s.ExpectedLeadTimeDays is { } days ? "مسیر بیرونی، زمان تحویل " + Digits(days.ToString(System.Globalization.CultureInfo.InvariantCulture)) + " روز تقویمی" : s.MachineId is { } m ? machines.GetValueOrDefault(m, "؟") : "—",
+                ProductionQueueViewModel.StageStatusText(s.Status)));
         }
     }
 

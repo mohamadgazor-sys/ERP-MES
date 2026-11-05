@@ -22,6 +22,7 @@ public sealed class ShellViewModel : ObservableObject
     public const string OvertimeKey = "overtime";
     public const string CostingKey = "costing";
     public const string CompletionKey = "completion";
+    public const string ExternalWorkKey = "external-work";
     public const string KpiKey = "kpi";
     public const string DefinitionsKey = "qcmaster";
     public const string MachinesKey = "machines";
@@ -61,6 +62,7 @@ public sealed class ShellViewModel : ObservableObject
             new NavigationItem(OvertimeKey, "اضافه‌کاری", true),
             new NavigationItem(CostingKey, "هزینه و قیمت", true),
             new NavigationItem(CompletionKey, "دریافت انبار و تکمیل", true),
+            new NavigationItem(ExternalWorkKey, "کار بیرونی", true),
             new NavigationItem(KpiKey, "شاخص‌های واحدها", true),
             new NavigationItem(CalendarKey, "تقویم و شیفت‌ها", true),
             new NavigationItem(DowntimeKey, "توقف ماشین‌ها", true),

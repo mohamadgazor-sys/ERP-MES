@@ -263,7 +263,7 @@ if ($passwords.Keys.Count -ne 11) { Fail "expected eleven accounts, found $($pas
 
 if (-not $SkipWalk) {
     Invoke-Session 'demo.supervisor' $passwords['demo.supervisor'] @('نوبت‌های کاری') -mustNotSee @('کاربران و حساب‌ها', 'هزینه و قیمت', 'ورود آیتم‌ها از اکسل', 'قراردادها', 'توقف ماشین‌ها') | Out-Null
-    Invoke-Session 'demo.planning' $passwords['demo.planning'] @('صف واحدهای تولید', 'قراردادها', 'تعریف آیتم‌ها و مرحله‌ها', 'فهرست عنوان مرحله‌ها', 'نقشه‌های آیتم‌ها', 'توقف ماشین‌ها') -mustNotSee @('کاربران و حساب‌ها') | Out-Null
+    Invoke-Session 'demo.planning' $passwords['demo.planning'] @('صف واحدهای تولید', 'قراردادها', 'تعریف آیتم‌ها و مرحله‌ها', 'فهرست عنوان مرحله‌ها', 'نقشه‌های آیتم‌ها', 'توقف ماشین‌ها', 'کار بیرونی') -mustNotSee @('کاربران و حساب‌ها') | Out-Null
     Invoke-Session 'demo.drawing' $passwords['demo.drawing'] @('نقشه‌های آیتم‌ها', 'ورود آیتم‌ها از اکسل', 'پرسش‌های نقشه‌کشی') -mustNotSee @('کاربران و حساب‌ها', 'هزینه و قیمت', 'فهرست عنوان مرحله‌ها') | Out-Null
     Invoke-Session 'demo.secretary' $passwords['demo.secretary'] @('درخواست‌ها') -mustNotSee @('کاربران و حساب‌ها', 'هزینه و قیمت', 'صف واحدهای تولید') | Out-Null
     Invoke-Session 'demo.admin' $passwords['demo.admin'] @('کاربران و حساب‌ها', 'اپراتورها', 'ماشین‌ها و نرخ‌ها') -mustNotSee @('هزینه و قیمت', 'ورود آیتم‌ها از اکسل', 'صف واحدهای تولید') | Out-Null

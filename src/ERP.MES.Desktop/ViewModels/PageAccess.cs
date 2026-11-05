@@ -20,6 +20,7 @@ public static class PageAccess
         [ShellViewModel.OvertimeKey] = [Permission.ViewOvertime],
         [ShellViewModel.CostingKey] = [Permission.ViewItemCosts, Permission.CalculateItemCost, Permission.ApproveItemPrice],
         [ShellViewModel.CompletionKey] = [Permission.ViewWarehouseCompletion, Permission.RecordWarehouseReceipt],
+        [ShellViewModel.ExternalWorkKey] = [Permission.ViewExternalWork, Permission.RecordExternalShipment],
         [ShellViewModel.KpiKey] = [Permission.ViewKpi],
         [ShellViewModel.CalendarKey] = [Permission.ViewCalendar, Permission.MaintainHolidayCalendar],
         [ShellViewModel.DowntimeKey] = [Permission.ViewDowntime, Permission.RegisterDowntime, Permission.DecideDowntime],
