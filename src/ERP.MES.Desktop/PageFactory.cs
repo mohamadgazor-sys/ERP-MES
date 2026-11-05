@@ -34,6 +34,7 @@ internal static class PageFactory
             ShellViewModel.OvertimeKey => new OvertimeView(pages.Overtime),
             ShellViewModel.CostingKey => new CostingView(pages.Costing),
             ShellViewModel.CompletionKey => new CompletionView(pages.Completion),
+            ShellViewModel.ExternalWorkKey => new ExternalWorkView(pages.ExternalWork),
             ShellViewModel.KpiKey => new KpiView(pages.Kpi),
             ShellViewModel.ItemDrawingsKey => new ItemDrawingsView(pages.ItemDrawings),
             ShellViewModel.StageTitlesKey => new StageTitlesView(pages.StageTitles),

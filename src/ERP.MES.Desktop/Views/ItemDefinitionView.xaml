@@ -93,6 +93,7 @@
                         <WrapPanel Margin="0,6,0,0">
                             <StackPanel Margin="0,0,10,0"><TextBlock Text="عنوان مرحله" /><TextBox x:Name="StageTitleBox" Width="190" /></StackPanel>
                             <StackPanel Margin="0,0,10,0"><TextBlock Text="دقیقه برای هر قطعه" /><TextBox x:Name="MinutesBox" Width="90" FlowDirection="LeftToRight" /></StackPanel>
+                            <StackPanel Margin="0,0,10,0"><TextBlock Text="زمان تحویل بیرونی (روز تقویمی)" /><TextBox x:Name="LeadTimeBox" Width="90" FlowDirection="LeftToRight" ToolTip="فقط برای مرحله‌ای که روی واحد بیرونی برنامه‌ریزی می‌شود: ۱ تا ۳۶۵ روز تقویمی (نه روز کاری). برای واحد داخلی خالی بماند. برای مرحلهٔ بیرونی دقیقه می‌تواند صفر باشد." /></StackPanel>
                             <StackPanel Margin="0,0,10,0"><TextBlock Text="واحد تولیدی" /><ComboBox x:Name="UnitBox" ItemsSource="{Binding UnitChoices}" DisplayMemberPath="Text" Width="180" SelectionChanged="OnUnitChanged" /></StackPanel>
                             <StackPanel Margin="0,0,10,0"><TextBlock Text="ماشین (اختیاری)" /><ComboBox x:Name="MachineBox" DisplayMemberPath="Text" Width="180" /></StackPanel>
                         </WrapPanel>

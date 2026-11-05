@@ -23,13 +23,16 @@ public partial class PlanningMasterView : UserControl
     private async void OnAddUnitClick(object sender, RoutedEventArgs e)
     {
         var saved = false;
-        await SafeAsync(async () => saved = await _viewModel.AddUnitAsync(UnitCodeBox.Text, UnitNameBox.Text));
+        await SafeAsync(async () => saved = await _viewModel.AddUnitAsync(UnitCodeBox.Text, UnitNameBox.Text, category: (UnitCategoryBox.SelectedItem as Choice<string>)?.Value));
         if (saved)
         {
             UnitCodeBox.Clear();
             UnitNameBox.Clear();
         }
     }
+
+    private async void OnSetUnitCategoryClick(object sender, RoutedEventArgs e) =>
+        await SafeAsync(async () => await _viewModel.SetSelectedUnitCategoryAsync((UnitCategoryBox.SelectedItem as Choice<string>)?.Value));
 
     private async void OnRenameUnitClick(object sender, RoutedEventArgs e)
     {

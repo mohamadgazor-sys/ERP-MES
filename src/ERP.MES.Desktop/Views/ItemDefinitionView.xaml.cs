@@ -67,11 +67,12 @@ public partial class ItemDefinitionView : UserControl
         var unit = (UnitBox.SelectedItem as Choice<long>)?.Value ?? 0;
         var machine = (MachineBox.SelectedItem as Choice<long>)?.Value;
         var saved = false;
-        await SafeAsync(async () => saved = await _viewModel.DefineStageAsync(StageTitleBox.Text, MinutesBox.Text, unit, machine));
+        await SafeAsync(async () => saved = await _viewModel.DefineStageAsync(StageTitleBox.Text, MinutesBox.Text, unit, machine, leadTimeDaysText: LeadTimeBox.Text));
         if (saved)
         {
             StageTitleBox.Clear();
             MinutesBox.Clear();
+            LeadTimeBox.Clear();
         }
     }
 

@@ -8,9 +8,11 @@ using ERP.MES.Domain.Planning;
 
 namespace ERP.MES.Desktop.ViewModels;
 
-public sealed record ProductionUnitRow(long Id, string Code, string Name, bool IsActive, long Version)
+public sealed record ProductionUnitRow(long Id, string Code, string Name, bool IsActive, long Version, string Category = ProductionUnitCategory.InternalProduction)
 {
     public string StatusText => IsActive ? "فعال" : "غیرفعال";
+
+    public string CategoryText => PlanningMasterViewModel.CategoryText(Category);
 }
 
 public sealed record MachineRow(long Id, string Code, string Name, string UnitText, bool IsActive, string LatestRateText, long Version)
@@ -45,8 +47,25 @@ public sealed class PlanningMasterViewModel(PlanningMasterService service, IJala
     /// <summary>The rate history of the selected machine, newest first; empty when the user may not read rates.</summary>
     public ObservableCollection<RateRow> Rates => _rates;
 
-    /// <summary>Active units a new machine can be registered in.</summary>
-    public IReadOnlyList<Choice<long>> UnitChoices => _storedUnits.Where(u => u.Value.IsActive).Select(u => new Choice<long>(u.Value.Id, u.Value.Code + " — " + u.Value.Name)).ToList();
+    /// <summary>The nine category codes of Master Specification 16.2 with Persian display labels; the code itself is shown and stored unchanged (Decision Log #129).</summary>
+    public static IReadOnlyList<Choice<string>> CategoryChoices { get; } = ProductionUnitCategory.All.Select(c => new Choice<string>(c, CategoryText(c))).ToList();
+
+    public static string CategoryText(string category) => category switch
+    {
+        ProductionUnitCategory.InternalProduction => "تولید داخلی",
+        ProductionUnitCategory.ExternalPlating => "بیرونی — آبکاری",
+        ProductionUnitCategory.ExternalHeatTreatment => "بیرونی — عملیات حرارتی",
+        ProductionUnitCategory.ExternalCasting => "بیرونی — ریخته‌گری",
+        ProductionUnitCategory.ExternalCeramic => "بیرونی — سرامیک",
+        ProductionUnitCategory.ExternalGrinding => "بیرونی — سنگ‌زنی",
+        ProductionUnitCategory.ExternalGearCutting => "بیرونی — دنده‌زنی",
+        ProductionUnitCategory.ExternalTehran => "بیرونی — تهران",
+        ProductionUnitCategory.ExternalOther => "بیرونی — سایر",
+        _ => string.Empty,
+    } + " (" + category + ")";
+
+    /// <summary>Active internal units a new machine can be registered in (an external route has no machines).</summary>
+    public IReadOnlyList<Choice<long>> UnitChoices => _storedUnits.Where(u => u.Value.IsActive && !u.Value.IsExternal).Select(u => new Choice<long>(u.Value.Id, u.Value.Code + " — " + u.Value.Name)).ToList();
 
     public ProductionUnitRow? SelectedUnit
     {
@@ -95,8 +114,14 @@ public sealed class PlanningMasterViewModel(PlanningMasterService service, IJala
 
     public async Task LoadAsync(CancellationToken cancellationToken = default) => await RunAsync(() => ReloadAsync(cancellationToken, keepMessage: false), showLoading: true);
 
-    public async Task<bool> AddUnitAsync(string? code, string? name, CancellationToken cancellationToken = default) =>
-        await ChangeAsync(async () => await service.AddUnitAsync(currentUser(), code, name, cancellationToken), "واحد تولیدی ثبت شد.", cancellationToken);
+    public async Task<bool> AddUnitAsync(string? code, string? name, CancellationToken cancellationToken = default, string? category = null) =>
+        await ChangeAsync(async () => await service.AddUnitAsync(currentUser(), code, name, cancellationToken, category), "واحد تولیدی ثبت شد.", cancellationToken);
+
+    /// <summary>Program Admin changes the category of the selected unit (refused while an open stage uses it, or while it has machines and would become external).</summary>
+    public async Task<bool> SetSelectedUnitCategoryAsync(string? category, CancellationToken cancellationToken = default) =>
+        _selectedUnit is { } u
+            ? await ChangeAsync(async () => await service.SetUnitCategoryAsync(currentUser(), u.Id, u.Version, category, cancellationToken), "دستهٔ واحد تغییر کرد.", cancellationToken)
+            : Nothing();
 
     public async Task<bool> RenameSelectedUnitAsync(string? name, CancellationToken cancellationToken = default) =>
         _selectedUnit is { } u
@@ -222,7 +247,7 @@ public sealed class PlanningMasterViewModel(PlanningMasterService service, IJala
         _units.Clear();
         foreach (var u in data.Units)
         {
-            _units.Add(new ProductionUnitRow(u.Value.Id, u.Value.Code, u.Value.Name, u.Value.IsActive, u.Version));
+            _units.Add(new ProductionUnitRow(u.Value.Id, u.Value.Code, u.Value.Name, u.Value.IsActive, u.Version, u.Value.Category));
         }
 
         _machines.Clear();
