@@ -2340,3 +2340,11 @@ Append one dated entry after every substantial session. Do not replace prior ent
 ### External stages, step 4 (Excel lead time, expected completion; Decision Log #135)
 - Fifth stage column in the Excel template and parser (external: lead time required, no machine, minutes may be zero; internal: no lead time, minutes > 0); import commit passes the lead time; expected completion of an external stage in the external-work view; limitations page updated; `docs/ITEM_IMPORT_TEMPLATE.md` updated.
 - Local Linux on the working tree with steps 1-4: Domain 584, Application 41, Infrastructure 758 passed; WPF project, Desktop.Tests and SqlServer.Tests compile (0 errors); temporary Desktop harness 152 passed.
+
+### Final state of this session (written in the last pull request)
+- Merged: #77 (`5bc430f`), #78 (`d24071d`), #79 (`0c5ed06`), #80 (`e9fd6ab`), each after all six checks were green on its head. Main post-merge: all four workflows green on `5bc430f` and `0c5ed06`; on `d24071d` CI was cancelled by `cancel-in-progress` when `0c5ed06` was pushed (the three other workflows green; `0c5ed06` contains it and its CI is green); `e9fd6ab` in progress when written.
+- External supply / processing stages are implemented end to end (#129, #132-#135); the only open point is the closure of pieces a contractor never returns (design section 5).
+- Remaining: the final offline package from the final main, physical Windows-client verification, owner answers in `docs/OWNER_REVIEW_PACKET_2.md` (A, B, E) and design section 5.
+
+### Recommended exact next action
+- Verify the post-merge runs of the last main, take the offline package of that main (run log line `PACKAGE:`) into HANDOFF.md's package history, then ask the owner the open point of `docs/EXTERNAL_STAGES_DESIGN.md` section 5 and arrange the physical Windows-client checks.

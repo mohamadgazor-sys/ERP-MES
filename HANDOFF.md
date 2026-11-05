@@ -6,28 +6,30 @@ Repository: `mohamadgazor-sys/ERP-MES` (https://github.com/mohamadgazor-sys/ERP-
 
 ---
 
-## Current state (updated 2026-11-05 after PR #76; read this first)
+## Current state (updated 2026-11-05 evening, written in the last PR of the external-stage series; read this first)
 
 | Item | Value |
 |---|---|
-| `origin/main` | `b8a373e00f0084d37fae94c2633155d7beaa05f2` (merge of PR #76), verified 2026-11-05 |
-| PRs merged on 2026-11-05 | #73 (`715d6a6`), #74 (`00331c8`), #75 (`36b93d6`), #76 (`b8a373e`). Each merged only after all six check runs were green on its PR head (`build-test`, `ui-smoke`, `sqlserver`, `offline-demo` x2; `generate-migrations` skipped as manual-only). Their head commits (`352fbf6`, `0dd56b1`, `837f74b`, `feb9c30`) are ancestors of main. |
-| Post-merge runs on main | `715d6a6`, `00331c8`, `36b93d6`: all four workflows (CI, SQL Server integration, UI smoke, Offline demo package) success. `b8a373e`: SQL Server 42060721297, UI smoke 42060721191 and Offline demo package 42060721266 success; CI 42060721221 was still running when this table was written - see the Session Log for its result. |
-| Branches | Every remote work branch (`claude/admiring-mccarthy-mq8l0v`, `claude/dazzling-goldberg-wdzbdp`, `claude/handoff-docs`) is contained in main; nothing unpushed; no stashes; one worktree. Nothing was deleted or force-pushed. |
-| Implemented | Machine downtime (register, Planning review, forecast effect: PR #74; screen, `demo.maintenance`: PR #75; Decision Log #128, approved with clarifications in #130). |
-| Approved, not yet implemented | External supply / processing stages (Decision Log #129, `docs/EXTERNAL_STAGES_DESIGN.md`). |
-| Confirmed by the owner | Overtime is never booked inside a unit's effective regular hours (#127 point 5 -> #131). |
-| Still open (owner) | How pieces a contractor never returns are closed (design section 5); rows of `docs/OWNER_REVIEW_PACKET_2.md` sections A, B (except B15), E. |
-| Remaining deliverables | The external-stage PRs; the final offline package from the final main; physical Windows-client verification (Windows 10/11 PC, a second disconnected launch, Ethernet unplugged, a machine without .NET) - none of these has been done by automation. |
+| `origin/main` when this was written | `e9fd6ab9032e4a53ece49a93701c838db62952c5` (merge of PR #80). The PR that carries this text (external stages step 4) merges after it; check GitHub for the newest main. |
+| PRs merged on 2026-11-05 | #73 (`715d6a6`), #74 (`00331c8`), #75 (`36b93d6`), #76 (`b8a373e`), #77 (`5bc430f`, owner decisions #129-#131, downtime clarifications), #78 (`d24071d`, external stages 1/4), #79 (`0c5ed06`, external stages 2/4), #80 (`e9fd6ab`, external stages 3/4). Each merged only after all six check runs were green on its PR head (`build-test`, `ui-smoke`, `sqlserver`, `offline-demo` x2; `generate-migrations` skipped as manual-only). |
+| Post-merge runs on main | All four workflows success on `715d6a6`, `00331c8`, `36b93d6`, `b8a373e`, `5bc430f`, `0c5ed06`. On `d24071d` SQL Server, UI smoke and Offline demo succeeded but CI 42078891183 was **cancelled** (the workflow's `cancel-in-progress` on main when `0c5ed06` was pushed 42 minutes later); `0c5ed06` contains `d24071d` and its CI succeeded. On `e9fd6ab` the runs were in progress when this was written - not claimed. |
+| Branches | Every remote work branch is contained in main or is the open PR's head; nothing unpushed; no stashes; one worktree. Nothing was deleted or force-pushed. |
+| Implemented | Machine downtime (PR #74, #75; approved with clarifications #130, provisional forecast and pending visibility in #77). External supply / processing stages: unit category (#78), dispatches/returns/cancellations and QC hand-off (#79), «کار بیرونی» page, unit category and lead time on the screens (#80), Excel lead-time column and expected completion (the PR that carries this text). Decision Log #129, #132-#135. |
+| Confirmed by the owner | Overtime is never booked inside a unit's effective regular hours (#127 point 5 -> #131), with tests for partial overlap, holidays, dated own hours and the re-check at approval. |
+| Still open (owner) | How pieces a contractor never returns are closed (`docs/EXTERNAL_STAGES_DESIGN.md` section 5; proposal: Management's existing shortfall decision); rows of `docs/OWNER_REVIEW_PACKET_2.md` sections A, B (except B15), E. |
+| Remaining deliverables | The final offline package from the final main (a new main needs a new package - see the history below); physical Windows-client verification (Windows 10/11 PC, a second disconnected launch, Ethernet unplugged, a machine without .NET) - none of these is done by automation. |
 
-### Offline packages (history; each is tied to the commit it was built from - only the newest is current)
+### Offline packages (history; each is tied to the commit it was built from - only a package built from the newest main is current)
+
+The **final package** must be taken from the `Offline demo package` run of the final main after the last PR of this series merges (artifact `erp-mes-offline-demo`; record commit, file name, SHA-256 from the run log line `PACKAGE: ...`, run id, artifact id, size and expiry here). Packages of intermediate mains are not listed one by one.
+
 
 | Built from main | Workflow run | Artifact id (size, expires) | ZIP and SHA-256 | Status |
 |---|---|---|---|---|
 | `8e737b7` | 41355359051 | 13103640562 (110,740,355 B, 2026-12-01) | `ERP-MES-OfflineDemo-2026.11.01-8e737b7-win-x64.zip`, `bcfea647381dc564cc589a580f6f1e5528b240347709272b567f539cf27238b0` | superseded (pre-#73 demo data) |
 | `715d6a6` | 42018791380 | 13411072050 (110,747,858 B, 2026-12-05) | `ERP-MES-OfflineDemo-2026.11.05-715d6a6-win-x64.zip`, `22b0f552cb8bc4ca49e6c2385256d845fe3b20f6203e520e25e67c90e7704fe9` | superseded (no downtime) |
 | `36b93d6` | 42049192821 | 13426716386 (110,815,360 B, 2026-12-05) | `ERP-MES-OfflineDemo-2026.11.05-36b93d6-win-x64.zip`, `f058a65c26fc65415ddc5436b5de9fd8bf095b8a574f41885714e28a9c4fd67f` | superseded (not the latest main) |
-| **`b8a373e`** | **42060721266** | **13431117762 (110,815,199 B, expires 2026-12-05T16:08:59Z; artifact digest `sha256:f25518d705f9d9398219592d4840a8b994ba6e2ebb06efb0b540a1c4f2ee79c3`)** | **`ERP-MES-OfflineDemo-2026.11.05-b8a373e-win-x64.zip`, 106.1 MB, `8359e77cb75495b9a66e7a6ad212c61faa2fc1759db43141f58b01ceac924b4e`** | **current for main `b8a373e`**; proven offline from the ZIP on windows-2022 and windows-latest (all eleven accounts signed in, no network connection held). Code identical to `36b93d6` (PR #76 changed two documentation files). A later main needs a new package. |
+| `b8a373e` | 42060721266 | 13431117762 (110,815,199 B, expires 2026-12-05T16:08:59Z; artifact digest `sha256:f25518d705f9d9398219592d4840a8b994ba6e2ebb06efb0b540a1c4f2ee79c3`) | `ERP-MES-OfflineDemo-2026.11.05-b8a373e-win-x64.zip`, 106.1 MB, `8359e77cb75495b9a66e7a6ad212c61faa2fc1759db43141f58b01ceac924b4e` | superseded by later mains (each main push builds a new one: `5bc430f` run 42072331217, `0c5ed06` run 42085614493, and so on); it was current for `b8a373e`; proven offline from the ZIP on windows-2022 and windows-latest (all eleven accounts signed in, no network connection held). Code identical to `36b93d6` (PR #76 changed two documentation files). A later main needs a new package. |
 
 ### Test evidence (exact counts and the commit they ran on)
 
@@ -38,6 +40,11 @@ Repository: `mohamadgazor-sys/ERP-MES` (https://github.com/mohamadgazor-sys/ERP-
 | `0dd56b1` | Linux sandbox | Domain 576, Application 41, Infrastructure 754 passed |
 | `837f74b` (PR #75 head) | Windows CI `build-test` | all discovered tests passed (the CI step fails otherwise); counts in the run's TRX artifact 13418035623; provisioning smoke created 11 accounts |
 | PR #75 working tree | Linux sandbox, **temporary harness, not committed** | 151 Desktop view-model tests passed (see below) |
+| `f53a433` (PR #77 head) | Windows CI `build-test` green; local Linux: Domain 576, Application 41, Infrastructure 755; harness 151 | all passed |
+| `0209e6e` (PR #78 head) | Windows CI green, SQL Server job applied `ExternalStages`; local: Domain 580, Application 41, Infrastructure 756; harness 151 | all passed |
+| `f76dcbb` (PR #79 head) | Windows CI green, SQL Server job applied `ExternalShipments`; local: Domain 584, Application 41; Infrastructure 757 run with 1 failure (`DemoGuardTests`, fixed by renaming to `MarkCancelled` before the commit) and the affected tests re-run filtered (8 passed) | CI authoritative |
+| `539f04a` (PR #80 head) | Windows CI green incl. `ui-smoke` opening «کار بیرونی» | all passed |
+| step 4 working tree (steps 1-4) | Linux: Domain 584, Application 41, Infrastructure 758; harness 152; WPF, Desktop.Tests, SqlServer.Tests compile | all passed |
 
 **SDK and Desktop tests - corrected facts.** The repository pins SDK **10.0.401** (`global.json`, `rollForward: disable`) and Windows CI uses it. The Linux sandbox of 2026-11-05 could only install Ubuntu's 10.0.114 and ran tests from a directory outside the repository so the pin was not changed; CI is the authority. There is **no** `tests/ERP.MES.Desktop.LocalLinux` project. The committed, reproducible Desktop tests are `tests/ERP.MES.Desktop.Tests` (`net10.0-windows`), which run on the Windows CI runner and can only be compile-checked on Linux. The "151 Desktop view-model tests on Linux" were run by a throw-away scratch project outside the repository that compiled the view models and those test files for `net10.0` (excluding `UserSessionTests`, which needs `Microsoft.Win32`); it is not part of the repository and its results are supporting evidence only.
 
