@@ -118,6 +118,10 @@
                                Visibility="{Binding HasNoHistory, Converter={StaticResource BoolToVisibility}}" />
 
                     <TextBlock Text="آیتم‌ها" FontWeight="SemiBold" Margin="0,4,0,4" />
+                    <StackPanel Margin="0,0,0,6" Visibility="{Binding HasProgress, Converter={StaticResource BoolToVisibility}}">
+                        <TextBlock Text="{Binding ProgressText}" TextWrapping="Wrap" AutomationProperties.AutomationId="RequestProgressText" />
+                        <ProgressBar Minimum="0" Maximum="1" Value="{Binding ProgressValue, Mode=OneWay}" Height="10" Margin="0,4,0,0" AutomationProperties.AutomationId="RequestProgressBar" ToolTip="نسبت آیتم‌های تکمیل‌شده به همهٔ آیتم‌ها؛ فرمول درصد نهایی هنوز توسط مالک تأیید نشده است." />
+                    </StackPanel>
                     <DataGrid ItemsSource="{Binding Items}" AutoGenerateColumns="False" IsReadOnly="True" HeadersVisibility="Column"
                               CanUserAddRows="False" CanUserDeleteRows="False" MaxHeight="220" Background="{StaticResource CardBrush}">
                         <DataGrid.Columns>
@@ -133,6 +137,8 @@
                             <DataGridTextColumn Header="نوع کار" Binding="{Binding WorkTypeText}" Width="80" />
                             <DataGridTextColumn Header="تعداد" Binding="{Binding QuantityText}" Width="90" />
                             <DataGridTextColumn Header="اولویت" Binding="{Binding PriorityText}" Width="90" />
+                            <DataGridTextColumn Header="پیشرفت مرحله‌ها" Binding="{Binding StageProgressText}" Width="110" />
+                            <DataGridTextColumn Header="وضعیت فعلی" Binding="{Binding StatusText}" Width="*" />
                         </DataGrid.Columns>
                     </DataGrid>
                     <TextBlock Text="این درخواست هنوز آیتمی ندارد." Foreground="{StaticResource MutedTextBrush}" Margin="0,6,0,0"

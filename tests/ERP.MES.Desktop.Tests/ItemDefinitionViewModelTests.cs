@@ -142,6 +142,30 @@ public class ItemDefinitionViewModelTests
     }
 
     [Fact]
+    public async Task An_assembly_parent_whose_children_are_unfinished_shows_a_waiting_status_that_is_not_an_ordinary_planned_stage()
+    {
+        using var h = await WorkflowHarness.CreateAsync(Token);
+        var id = await ReadyAsync(h, WorkType.Make, "M-8");
+        Assert.True((await h.Workflow.Materials.AddMaterialAsync(h.Warehouse, "ST37-R30", "میلگرد ST37", "ST37", "میلگرد", Token)).Succeeded);
+        var unit = (await h.Workflow.PlanningMaster.AddUnitAsync(h.Admin, "MILLING", "فرزکاری", Token)).Value!;
+        var vm = For(h, h.Planning);
+        await vm.LoadAsync(Token);
+        await vm.SelectRequestAsync(id, Token);
+        var piece = vm.QuantityTypeChoices.First(t => t.Text.StartsWith("PIECE", StringComparison.Ordinal)).Value;
+        var material = vm.MaterialChoices.Single().Value;
+        Assert.True(await vm.DefineItemAsync("P.1", "مونتاژ", "۱", Priority.Normal, piece, material, "۱", "۱۰۰", "۲۰", Token, null, true));
+        var parentId = vm.ParentChoices.Single().Value;
+        Assert.True(await vm.DefineItemAsync("C.1", "زیرمجموعه", "۱", Priority.Normal, piece, material, "۱", "۱۰۰", "۲۰", Token, parentId, false));
+        vm.SelectedItem = vm.Items.Single(i => i.ItemId == parentId);
+        Assert.True(await vm.DefineStageAsync("فرزکاری", "۵", unit.Value.Id, null, Token));
+
+        var stage = vm.Stages.Single();
+        Assert.Contains("منتظر زیرمجموعه‌ها", stage.StatusText, StringComparison.Ordinal);
+        Assert.Contains("اپراتور نمی‌تواند", stage.StatusText, StringComparison.Ordinal);
+        Assert.NotEqual(ProductionQueueViewModel.StageStatusText(ItemStageStatus.Planned), stage.StatusText);
+    }
+
+    [Fact]
     public void The_release_question_is_the_exact_owner_text()
     {
         Assert.Equal("آیا مطمئن هستید که می‌خواهید تمام آیتم‌ها را به همراه مراحل آن‌ها به صف کار واحدهای تولیدی ارسال کنید؟ پس از انجام این عملیات امکان بازگشت وجود ندارد.", ItemDefinitionViewModel.ReleaseConfirmationText);

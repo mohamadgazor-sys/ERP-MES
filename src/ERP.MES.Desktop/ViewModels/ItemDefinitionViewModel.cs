@@ -484,7 +484,9 @@ public sealed class ItemDefinitionViewModel(
                 s.StageNo, s.StageTitle, Digits(s.PlannedMinutesPerPiece.ToString("0.####", System.Globalization.CultureInfo.InvariantCulture)),
                 s.ProductionUnitId is { } u ? units.GetValueOrDefault(u, "؟") : "—",
                 s.ExpectedLeadTimeDays is { } days ? "مسیر بیرونی، زمان تحویل " + Digits(days.ToString(System.Globalization.CultureInfo.InvariantCulture)) + " روز تقویمی" : s.MachineId is { } m ? machines.GetValueOrDefault(m, "؟") : "—",
-                ProductionQueueViewModel.StageStatusText(s.Status)));
+                s.StageNo == 1 && s.Status == ItemStageStatus.Planned && item.IsAssembly && !_detail.Request.Value.AllDescendantsRouteCompleted(item)
+                    ? "منتظر زیرمجموعه‌ها: آزاد نمی‌شود تا پایان مسیر و تأیید کنترل کیفیت همهٔ زیرمجموعه‌ها؛ اپراتور نمی‌تواند آن را شروع کند"
+                    : ProductionQueueViewModel.StageStatusText(s.Status)));
         }
     }
 

@@ -342,6 +342,11 @@ public sealed class StageWorkService(IRequestRepository requests, CurrentAuthori
 
                     var list = string.Join("، ", released);
                     var note = "آیتم‌های آزادشده (" + released.Count + "): " + list;
+                    if (waiting.Count > 0)
+                    {
+                        note += "؛ مونتاژهای منتظر زیرمجموعه (آزاد نشده): " + string.Join("، ", waiting);
+                    }
+
                     r.RecordReleaseToProduction(new WorkflowActor(user.UserId, user.DepartmentCode), note.Length > RequestWorkflowEntry.MaxNoteLength ? note[..RequestWorkflowEntry.MaxNoteLength] : note, now);
                 }
 
@@ -352,6 +357,12 @@ public sealed class StageWorkService(IRequestRepository requests, CurrentAuthori
                     {
                         entries.Add(new AuditLogEntry(now, user.UserId, auditContext.MachineName, auditContext.OsUserName, auditContext.DatabaseLogin, AuditActions.StageReleased, "ItemStage", itemId + "/1",
                             $"Request {requestNo}, item {itemNo}, stage 1 ({title}) released with the whole request: PLANNED -> {r.Items.First(i => i.Id == itemId).Stages[0].Status.Code()}"));
+                    }
+
+                    foreach (var waitingItem in r.Items.Where(i => waiting.Contains(i.ItemNo)).OrderBy(i => i.ItemNo, StringComparer.Ordinal))
+                    {
+                        entries.Add(new AuditLogEntry(now, user.UserId, auditContext.MachineName, auditContext.OsUserName, auditContext.DatabaseLogin, AuditActions.AssemblyWaitingForChildren, "ItemStage", waitingItem.Id + "/1",
+                            $"Request {requestNo}, assembly {waitingItem.ItemNo}: first stage NOT released - waiting until every child and descendant has finished its route with QC approval (visible as waiting to Planning and the Production Manager)"));
                     }
 
                     entries.Add(new AuditLogEntry(now, user.UserId, auditContext.MachineName, auditContext.OsUserName, auditContext.DatabaseLogin, AuditActions.RequestReleasedToProduction, "Request", requestId.ToString(System.Globalization.CultureInfo.InvariantCulture),

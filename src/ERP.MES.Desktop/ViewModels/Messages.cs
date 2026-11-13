@@ -504,7 +504,7 @@ public static class Messages
         ERP.MES.Application.Production.QueueBlock.RequestClosed => "درخواست لغو یا بسته شده است",
         ERP.MES.Application.Production.QueueBlock.GateNotSatisfied => "شرط‌های آزادسازی تولید برقرار نیست",
         ERP.MES.Application.Production.QueueBlock.RepairIncomplete => "آیتم تعمیر ناقص است: تاریخ تحویل یا کد کالای انبار ثبت نشده",
-        ERP.MES.Application.Production.QueueBlock.WaitingChildren => "منتظر پایان مسیر و تأیید کنترل کیفیت همهٔ زیرمجموعه‌ها",
+        ERP.MES.Application.Production.QueueBlock.WaitingChildren => "آزاد نشده: منتظر پایان مسیر و تأیید کنترل کیفیت همهٔ زیرمجموعه‌ها",
         ERP.MES.Application.Production.QueueBlock.NotReleased => "هنوز توسط برنامه‌ریزی آزاد نشده است",
         ERP.MES.Application.Production.QueueBlock.WaitingPreviousQc => "منتظر تأیید کنترل کیفیت مرحلهٔ قبل",
         ERP.MES.Application.Production.QueueBlock.WaitingQc => "منتظر تأیید کنترل کیفیت",

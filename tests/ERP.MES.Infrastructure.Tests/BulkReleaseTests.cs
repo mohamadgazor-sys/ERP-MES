@@ -119,6 +119,26 @@ public class BulkReleaseTests
         var items = (await w.Services.Requests.GetAsync(w.Qc, requestId, Token)).Value!.Request.Value.Items;
         Assert.Equal(ItemStageStatus.Planned, items.Single(i => i.Id == parent.ItemId).Stages[0].Status);
 
+        // The waiting state is a valid business state: recorded in the history note and the audit trail, visible to Planning and the Production Manager as waiting (not as a released stage), and the operator cannot start it.
+        var entry = (await w.Services.Requests.GetAsync(w.Qc, requestId, Token)).Value!.Request.Value.WorkflowHistory.Last(e => e.Action == RequestAction.ReleaseToProduction);
+        Assert.Contains(parent.ItemNo, entry.Note, StringComparison.Ordinal);
+        Assert.Contains("منتظر زیرمجموعه", entry.Note, StringComparison.Ordinal);
+        Assert.Equal(1, w.Count("AuditLog WHERE ActionCode = 'AssemblyWaitingForChildren'"));
+        foreach (var viewer in new[] { w.Planning, w.ProductionManager })
+        {
+            var view = (await w.Services.UnitQueue.LoadAsync(viewer, unit, Token)).Value!;
+            var waitingEntry = view.Pending.Single(e => e.ItemId == parent.ItemId);
+            Assert.Equal(QueueBlock.WaitingChildren, waitingEntry.Block);
+            Assert.Null(waitingEntry.Category);
+            Assert.DoesNotContain(view.Queue, e => e.ItemId == parent.ItemId);
+            Assert.Contains(view.Queue, e => e.ItemId == child.ItemId);
+        }
+
+        // The designated operator cannot start it, and Planning cannot start it either: the stage is not executable until the dependencies are satisfied.
+        var refusedStart = await w.Services.StageWork.PerformAsync(w.Production, StageAction.Start, await w.TargetAsync(requestId, parent.ItemId, 1), Token);
+        Assert.Equal(OperationStatus.InvalidState, refusedStart.Status);
+        Assert.Equal(ItemStageStatus.Planned, (await w.Services.Requests.GetAsync(w.Qc, requestId, Token)).Value!.Request.Value.Items.Single(i => i.Id == parent.ItemId).Stages[0].Status);
+
         // The child finishes its route with QC approval; only then does the assembly release.
         Assert.True((await w.Services.StageWork.PerformAsync(w.Production, StageAction.Start, await w.TargetAsync(requestId, child.ItemId, 1), Token)).Succeeded);
         Assert.True((await w.Services.StageWork.PerformAsync(w.Production, StageAction.SubmitForQc, await w.TargetAsync(requestId, child.ItemId, 1), Token)).Succeeded);
