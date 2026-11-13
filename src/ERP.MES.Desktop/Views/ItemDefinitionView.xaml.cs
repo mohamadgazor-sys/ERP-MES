@@ -73,6 +73,40 @@ public partial class ItemDefinitionView : UserControl
         StageTitleBox.IsDropDownOpen = StageTitleBox.IsKeyboardFocusWithin && typed.Length > 0;
     }
 
+    /// <summary>Commits a catalog title: the full list is shown again, the entry becomes the real selection and the text is set to it (re-applied once the combo box has finished closing its drop-down).</summary>
+    private void CommitTitle(string title)
+    {
+        _titleSuppress = true;
+        try
+        {
+            StageTitleBox.ItemsSource = _viewModel.StageTitleChoices;
+            StageTitleBox.SelectedItem = title;
+            StageTitleBox.Text = title;
+            StageTitleBox.IsDropDownOpen = false;
+        }
+        finally
+        {
+            _titleSuppress = false;
+        }
+
+        Dispatcher.BeginInvoke(new Action(() =>
+        {
+            _titleSuppress = true;
+            try
+            {
+                if (!string.Equals(StageTitleBox.Text, title, StringComparison.Ordinal))
+                {
+                    StageTitleBox.SelectedItem = title;
+                    StageTitleBox.Text = title;
+                }
+            }
+            finally
+            {
+                _titleSuppress = false;
+            }
+        }), System.Windows.Threading.DispatcherPriority.Background);
+    }
+
     private void OnStageTitleSelected(object sender, SelectionChangedEventArgs e)
     {
         if (!_titleSuppress && StageTitleBox.SelectedItem is string chosen)
@@ -95,14 +129,7 @@ public partial class ItemDefinitionView : UserControl
         var resolved = StageTitleSearch.Resolve(_viewModel.StageTitleChoices, typed, StageTitleBox.SelectedItem as string);
         if (resolved is not null)
         {
-            SetTitleText(resolved);
-            if (inner is not null && !string.Equals(inner.Text, resolved, StringComparison.Ordinal))
-            {
-                inner.Text = resolved;
-                inner.CaretIndex = resolved.Length;
-            }
-
-            StageTitleBox.IsDropDownOpen = false;
+            CommitTitle(resolved);
             if (e.Key == Key.Enter)
             {
                 e.Handled = true;
