@@ -60,6 +60,13 @@ public partial class ItemDefinitionView : UserControl
             return;
         }
 
+        // A complete catalog title is a commit (the combo box changes the text before it updates its selection), never a reason to narrow the list.
+        if (_viewModel.StageTitleChoices.Contains(TitleText, StringComparer.Ordinal))
+        {
+            _titleFilter = string.Empty;
+            return;
+        }
+
         EnsureTitleItems();
         var typed = TitleText;
         var inner = StageTitleBox.Template.FindName("PART_EditableTextBox", StageTitleBox) as TextBox;
