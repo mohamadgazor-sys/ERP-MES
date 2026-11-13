@@ -45,6 +45,14 @@ What the first request already went through (visible in history and on the scree
 
 Account names: `demo.secretary`, `demo.management`, `demo.planning`, `demo.drawing`, `demo.qc`, `demo.warehouse`, `demo.production`, `demo.supervisor`, `demo.productionmanager`, `demo.maintenance`, `demo.admin`.
 
+## 2b. Added after the first package (needs the package built from the main that contains them)
+
+| Where | What to show |
+|---|---|
+| Home page (صفحهٔ اصلی) | Four live counts: open requests, items in production, items waiting for QC, urgent unfinished items (Decision Log #141) |
+| درخواست‌ها -> select a request | The progress block above the item grid: "N از M آیتم تکمیل شده" with active / waiting-blocked / rework counts and a bar; each item shows "k از n مرحله" and its current stage and status |
+| تعریف آیتم‌ها و مرحله‌ها, request `DEMO-1405-016` (nested assembly; after Management approval and Drawing) | Define stages for the parent and the children and press the release button: the children are released, the parent shows «منتظر زیرمجموعه‌ها … اپراتور نمی‌تواند آن را شروع کند»; in صف واحدهای تولید it is under «در انتظار آزادسازی» with «آزاد نشده: منتظر پایان مسیر و تأیید کنترل کیفیت همهٔ زیرمجموعه‌ها» (Decision Log #140) |
+
 ## 3. The strongest features to show
 
 1. One request is the container for everything; MAKE and REPAIR are separate requests; the customer's own request number is kept exactly as typed.
