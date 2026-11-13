@@ -91,11 +91,11 @@
 
 ### B10 - Closing the request (Decision Log #105)
 - **Exact original wording:** "Request status - Not closed automatically when all items are finished/sent".
-- **Current implementation:** closing a request is not automatic; the CLOSED status exists in the specification (section 10, 38) but is reached by a separate step that is not part of a normal flow today.
+- **Current implementation (checked in the code):** the CLOSED status exists (Master Specification sections 10 and 38) and the application already treats a closed or cancelled request as read-only for stage actions, but **no action in the application sets it** - nothing closes a request today, neither automatically nor manually. So even option (a) needs a new Close action.
 - **Business context:** whether the request becomes CLOSED by itself.
 - **Alternatives:** (a) manual close by Management after review; (b) automatic close when every item is finished/sent (customer dispatch stays optional, #105); (c) automatic close when every item is finished/sent AND has a customer dispatch.
 - **Recommended default:** (a), because a closed request blocks further changes (#99).
-- **Consequences:** (b)/(c) are status-transition rules; a wrong automatic close needs a reopen action that does not exist.
+- **Consequences:** every option adds the Close transition (status, history entry, audit, screen button); (a) is the smallest. (b)/(c) are automatic rules; a wrong automatic close needs a reopen action that does not exist.
 - **Blocks development?** No.
 - **Related:** #105, Master Specification 38.
 
