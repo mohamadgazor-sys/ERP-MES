@@ -2358,3 +2358,22 @@ Append one dated entry after every substantial session. Do not replace prior ent
 - Decision Log #136: contractor-lost pieces via the existing shortfall decision (Missing shipment kind, stage counter, `LostAtContractorBaseUnits` on the shortfall decision, QC worklist label, external-work page button, audit codes, migrations `ExternalMissingUnits`), design section 5 updated, limitations page updated.
 - `docs/OWNER_REVIEW_REPORT_2026-11-13.md` from the real text of packet sections A, B, E; HANDOFF.md records the owner's Windows 10 22H2 / Windows 11 Pro 21H2 offline testing with its limits.
 - Found: spec §15 "later QC correction returns the item to Stage 1" is approved but NOT built (listed in the report as a gap).
+
+### Completed (second part of the round, same pull request #82)
+- Decision Log #137: searchable stage-title combo box and the release-all action (`StageWorkService.ReleaseAllAsync`, `RequestAction.ReleaseToProduction`, confirmation dialog `ConfirmDialog`); #138: no button ends with an ellipsis, `AppInfo.Name`; #139: `DemoScenarioSeeder` and `docs/MANAGEMENT_DEMO_GUIDE.md`.
+- Several Windows UI-automation rounds fixed real defects of the new combo box found by the CI walk (Enter swallowed by the combo box's own handler, selection reverted by re-filtering, a stale selection making a repeated choice a no-op) - fixed in the application, not in the tests.
+
+### Decisions made
+- Interpretation recorded in #137 (assembly parents wait and are reported). Example overtime limits for the demo only (#139).
+
+### Unresolved questions
+- The owner decisions listed in `docs/OWNER_REVIEW_REPORT_2026-11-13.md`.
+
+### Tests actually run
+- Local Linux: Domain 585, Application 41, Infrastructure 762, temporary Desktop harness 159 (the Windows CI of the PR head is the authority). Windows CI: build-test, ui-smoke (real WPF walk incl. keyboard and mouse on the stage-title box and the release dialog), offline-demo on windows-2022 and windows-latest, SQL Server pass: see the pull request.
+
+### Known risks
+- The real Persian keyboard layout in the stage-title box and the demo scenario's behaviour at other times of day are not covered by CI; a person must rehearse the demonstration once. The management scenario failing at `demo-init` is non-fatal and reported as a warning.
+
+### Recommended exact next action
+- Merge PR #82 when all six checks are green on its head; verify main and its post-merge workflows; take the offline package of that main (run log line `PACKAGE:`) and record commit, file name, SHA-256, run ID, artifact ID, size and expiry here and in HANDOFF.md; then arrange the physical acceptance items.
