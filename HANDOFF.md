@@ -19,6 +19,22 @@ What was built, in order (all in PR #82; Decision Log #136-#139, `docs/SESSION_L
 3. **Button labels without trailing ellipses; official name «برنامه جامع مدیریت و کنترل تولید ایران‌تول»** (#138) from `AppInfo.Name`; `UserInterfaceTextTests` guards both.
 4. **Management demonstration scenario** (#139) created by the real services during `demo-init` (`DemoScenarioSeeder`); walkthrough in `docs/MANAGEMENT_DEMO_GUIDE.md`. Baseline-dataset tests use `includeManagementScenario: false`.
 
+**Merged:** PR #82 into main as `2c2736d32ba369a013c823cfadad8259e7914939` (merge commit; head `0f73cb31d18b3193723fd4e12b42d691afc4ec7c`; all six checks green on that head). **Post-merge workflows on `2c2736d`: all four succeeded** - CI (run 43477652729), SQL Server integration (43477652684), UI smoke (43477652428), Offline demo package (43477652270).
+
+**Offline package built from `2c2736d` (current for that commit only; a newer main needs a new package):**
+
+| Item | Value |
+|---|---|
+| Source commit | `2c2736d32ba369a013c823cfadad8259e7914939` |
+| File | `ERP-MES-OfflineDemo-2026.11.13-2c2736d-win-x64.zip` (a `.sha256` file is beside it) |
+| SHA-256 of the ZIP | `67747f25d8fad22e804ea3c1e6d1a79961c3ca39a809f1da269c096d2b52005b` |
+| Size | 106.2 MB (653 files; 241.2 MB unpacked); the GitHub artifact is 110,959,225 bytes |
+| Workflow run / artifact | run 43477652270 (job `offline-demo (windows-latest)` 132065589447); artifact `erp-mes-offline-demo`, ID 14064501560 |
+| Artifact container digest (not the ZIP checksum) | `sha256:a9d5e35c55413458ffd0443c818b88f1ae4ca277fa6a4bd7ff74c1295018d3f0` |
+| Expires | 2026-12-13 (30-day retention); download: Actions run 43477652270 -> Artifacts -> `erp-mes-offline-demo` |
+| Proven by the run | the ZIP checksum matches its `.sha256` file; every file matches `FILES.sha256`; the launcher and the database initialisation work from the ZIP alone; all 11 demo accounts sign in with the demo passphrase and no change-password panel appears; the demo reset works and the accounts sign in afterwards; the first window title and the manifest carry «برنامه جامع مدیریت و کنترل تولید ایران‌تول»; no one-time credential file is left in `%TEMP%`. Run on windows-2022 and windows-latest (Windows Server hosts, not a Windows 10/11 client). |
+| Previous packages | superseded by this one (do not reuse an older ZIP or checksum) |
+
 Verification evidence for this round:
 
 - Windows CI, UI automation (`ui-smoke` job, `tools/ui-smoke/ui-interact.ps1`) on the real WPF application passed with these checks: official name in the window title and header; stage-title filtering, **Enter**, **Tab** (valid and unknown) and a **real synthesized mouse click** on the drop-down; the release dialog (exact question, «بله»/«خیر», «خیر» changes nothing, «بله» on a request with a blocked item names the blocker and releases nothing).
