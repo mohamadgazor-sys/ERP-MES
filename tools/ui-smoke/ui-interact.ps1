@@ -435,7 +435,7 @@ try {
     [System.Windows.Forms.SendKeys]::SendWait('{ENTER}'); Start-Sleep -Milliseconds 600
     $editChild = $titleBox.FindFirst($Scope::Descendants, (New-Object System.Windows.Automation.PropertyCondition($AE::ControlTypeProperty, [System.Windows.Automation.ControlType]::Edit)))
     $ecState = $null; $ecp = $null; if ($titleBox.TryGetCurrentPattern([System.Windows.Automation.ExpandCollapsePattern]::Pattern, [ref] $ecp)) { $ecState = $ecp.Current.ExpandCollapseState }
-    Note ("  DIAG after Enter: combo value='" + (Get-Value $titleBox) + "'; inner edit='" + $(if ($editChild) { Get-Value $editChild } else { '(none)' }) + "'; dropdown=" + $ecState + "; keyboard focus on combo=" + $titleBox.Current.HasKeyboardFocus + "; focused element=" + $AE::FocusedElement.Current.ControlType.ProgrammaticName + '/' + $AE::FocusedElement.Current.AutomationId + "; catalog-message shown=" + [bool]((Read-Texts $script:Main 300) | Where-Object { $_ -like '*نیست یا بازنشسته*' }))
+    Note ("  DIAG after Enter: combo value='" + (Get-Value $titleBox) + "'; inner edit='" + $(if ($editChild) { Get-Value $editChild } else { '(none)' }) + "'; dropdown=" + $ecState + "; keyboard focus on combo=" + $titleBox.Current.HasKeyboardFocus + "; focused element=" + $AE::FocusedElement.Current.ControlType.ProgrammaticName + '/' + $AE::FocusedElement.Current.AutomationId + "; helptext=" + $titleBox.Current.HelpText + "; catalog-message shown=" + [bool]((Read-Texts $script:Main 300) | Where-Object { $_ -like '*نیست یا بازنشسته*' }))
     Check ((Get-Value $titleBox) -eq 'فرزکاری آزمون رابط') 'KEYBOARD: Enter commits the single matching catalog title' ("Enter did not commit; value: '$(Get-Value $titleBox)'; message: $((Screen-Texts 12))")
     $titleBox.SetFocus(); Set-Text $titleBox 'عنوان خارج از فهرست'; Start-Sleep -Milliseconds 500
     [System.Windows.Forms.SendKeys]::SendWait('{TAB}'); Start-Sleep -Milliseconds 700
@@ -450,6 +450,7 @@ try {
     $all = Get-ListItems $titleBox
     $target = $all | Where-Object { (@(Read-Texts $_ 4) -join ' ') -like '*فرزکاری آزمون رابط*' } | Select-Object -First 1
     Check ($null -ne $target) "the dropdown lists the active catalog titles ($($all.Count) shown)" 'the dropdown did not list the catalog title'
+    if ($titleBox.TryGetCurrentPattern([System.Windows.Automation.ExpandCollapsePattern]::Pattern, [ref] $ec)) { Note ('  DIAG before mouse click: dropdown=' + $ec.Current.ExpandCollapseState + '; item rect=' + $target.Current.BoundingRectangle + '; combo rect=' + $titleBox.Current.BoundingRectangle + '; item offscreen=' + $target.Current.IsOffscreen) }
     if ($target) { Mouse-Click $target }
     if ((Get-Value $titleBox) -ne 'فرزکاری آزمون رابط') {
         Note ("  first mouse click did not select (value '" + (Get-Value $titleBox) + "'); item rectangle: " + $target.Current.BoundingRectangle + "; trying once more")

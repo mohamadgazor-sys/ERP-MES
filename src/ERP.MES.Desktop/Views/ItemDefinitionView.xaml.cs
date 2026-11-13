@@ -121,6 +121,7 @@ public partial class ItemDefinitionView : UserControl
     {
         // With an input method active WPF reports Key.ImeProcessed and the real key in ImeProcessedKey.
         var pressed = e.Key == Key.ImeProcessed ? e.ImeProcessedKey : e.Key;
+        System.Windows.Automation.AutomationProperties.SetHelpText(StageTitleBox, "lastkey=" + e.Key + ";ime=" + e.ImeProcessedKey + ";system=" + e.SystemKey);  // diagnostic for the UI automation walk
         if (pressed is not (Key.Enter or Key.Tab))
         {
             return;
