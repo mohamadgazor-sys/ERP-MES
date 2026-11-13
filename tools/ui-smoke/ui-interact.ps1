@@ -433,6 +433,9 @@ try {
     $filtered = Get-ListItems $titleBox
     Check ($filtered.Count -eq 1 -and (@(Read-Texts $filtered[0] 4) -join ' ') -like '*فرزکاری آزمون رابط*') "typing a fragment narrows the list to the matching catalog title (items shown: $($filtered.Count))" "typing did not filter the list; items: $($filtered.Count)"
     [System.Windows.Forms.SendKeys]::SendWait('{ENTER}'); Start-Sleep -Milliseconds 600
+    $editChild = $titleBox.FindFirst($Scope::Descendants, (New-Object System.Windows.Automation.PropertyCondition($AE::ControlTypeProperty, [System.Windows.Automation.ControlType]::Edit)))
+    $ecState = $null; $ecp = $null; if ($titleBox.TryGetCurrentPattern([System.Windows.Automation.ExpandCollapsePattern]::Pattern, [ref] $ecp)) { $ecState = $ecp.Current.ExpandCollapseState }
+    Note ("  DIAG after Enter: combo value='" + (Get-Value $titleBox) + "'; inner edit='" + $(if ($editChild) { Get-Value $editChild } else { '(none)' }) + "'; dropdown=" + $ecState + "; keyboard focus on combo=" + $titleBox.Current.HasKeyboardFocus + "; focused element=" + $AE::FocusedElement.Current.ControlType.ProgrammaticName + '/' + $AE::FocusedElement.Current.AutomationId + "; catalog-message shown=" + [bool]((Read-Texts $script:Main 300) | Where-Object { $_ -like '*نیست یا بازنشسته*' }))
     Check ((Get-Value $titleBox) -eq 'فرزکاری آزمون رابط') 'KEYBOARD: Enter commits the single matching catalog title' ("Enter did not commit; value: '$(Get-Value $titleBox)'; message: $((Screen-Texts 12))")
     $titleBox.SetFocus(); Set-Text $titleBox 'عنوان خارج از فهرست'; Start-Sleep -Milliseconds 500
     [System.Windows.Forms.SendKeys]::SendWait('{TAB}'); Start-Sleep -Milliseconds 700
