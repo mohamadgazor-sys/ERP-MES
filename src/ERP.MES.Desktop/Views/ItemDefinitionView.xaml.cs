@@ -56,6 +56,12 @@ public partial class ItemDefinitionView : UserControl
             return;
         }
 
+        // A selection made with the mouse changes the text natively; that is a commit, not typing.
+        if (StageTitleBox.SelectedItem is string selected && string.Equals(selected, TitleText, StringComparison.Ordinal))
+        {
+            return;
+        }
+
         var typed = TitleText;
         var caret = (StageTitleBox.Template.FindName("PART_EditableTextBox", StageTitleBox) as TextBox)?.CaretIndex ?? typed.Length;
         _titleSuppress = true;
@@ -114,8 +120,7 @@ public partial class ItemDefinitionView : UserControl
     {
         if (!_titleSuppress && StageTitleBox.SelectedItem is string chosen)
         {
-            SetTitleText(chosen);
-            StageTitleBox.IsDropDownOpen = false;
+            CommitTitle(chosen);
         }
     }
 

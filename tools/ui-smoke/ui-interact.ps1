@@ -455,6 +455,7 @@ try {
     Check ($null -ne $target) "the dropdown lists the active catalog titles ($($all.Count) shown)" 'the dropdown did not list the catalog title'
     if ($titleBox.TryGetCurrentPattern([System.Windows.Automation.ExpandCollapsePattern]::Pattern, [ref] $ec)) { Note ('  DIAG before mouse click: dropdown=' + $ec.Current.ExpandCollapseState + '; item rect=' + $target.Current.BoundingRectangle + '; combo rect=' + $titleBox.Current.BoundingRectangle + '; item offscreen=' + $target.Current.IsOffscreen) }
     if ($target) { Mouse-Click $target }
+    Note ('  DIAG after mouse click: cursor=' + [System.Windows.Forms.Cursor]::Position + '; value=' + (Get-Value $titleBox))
     if ((Get-Value $titleBox) -ne 'فرزکاری آزمون رابط') {
         Note ("  first mouse click did not select (value '" + (Get-Value $titleBox) + "'); item rectangle: " + $target.Current.BoundingRectangle + "; trying once more")
         if ($titleBox.TryGetCurrentPattern([System.Windows.Automation.ExpandCollapsePattern]::Pattern, [ref] $ec)) { try { $ec.Expand() } catch { } ; Start-Sleep -Milliseconds 700 }
