@@ -18,6 +18,9 @@ public partial class ItemDefinitionView : UserControl
         InitializeComponent();
         DataContext = _viewModel;
         StageTitleBox.AddHandler(TextBoxBase.TextChangedEvent, new TextChangedEventHandler(OnStageTitleTextChanged));
+
+        // The combo box's own class handler marks Enter as handled before an ordinary handler would see it, so this one also receives handled events.
+        StageTitleBox.AddHandler(UIElement.PreviewKeyDownEvent, new KeyEventHandler(OnStageTitleKeyDown), handledEventsToo: true);
     }
 
     private bool _titleSuppress;
@@ -121,7 +124,6 @@ public partial class ItemDefinitionView : UserControl
     {
         // With an input method active WPF reports Key.ImeProcessed and the real key in ImeProcessedKey.
         var pressed = e.Key == Key.ImeProcessed ? e.ImeProcessedKey : e.Key;
-        System.Windows.Automation.AutomationProperties.SetHelpText(StageTitleBox, "lastkey=" + e.Key + ";ime=" + e.ImeProcessedKey + ";system=" + e.SystemKey);  // diagnostic for the UI automation walk
         if (pressed is not (Key.Enter or Key.Tab))
         {
             return;

@@ -275,6 +275,9 @@ function Dialog-Ok([string] $title, [string] $text = '') {
 }
 
 # ---- real mouse and keyboard helpers (the editable stage-title box and the release confirmation) ----
+# The cursor position and the UI Automation rectangles must use the same (physical pixel) coordinates.
+Add-Type -Namespace Native -Name Dpi -MemberDefinition '[System.Runtime.InteropServices.DllImport("user32.dll")] public static extern bool SetProcessDPIAware();'
+[Native.Dpi]::SetProcessDPIAware() | Out-Null
 Add-Type -Namespace Native -Name Mouse -MemberDefinition '[System.Runtime.InteropServices.DllImport("user32.dll")] public static extern bool SetCursorPos(int x, int y); [System.Runtime.InteropServices.DllImport("user32.dll")] public static extern void mouse_event(uint flags, uint dx, uint dy, uint data, System.UIntPtr extra);'
 function Mouse-Click($element) {
     $r = $element.Current.BoundingRectangle
