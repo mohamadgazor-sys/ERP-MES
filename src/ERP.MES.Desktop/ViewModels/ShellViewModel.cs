@@ -83,7 +83,7 @@ public sealed class ShellViewModel : ObservableObject
 
         Items = new ObservableCollection<NavigationItem>(_all);
 
-        DashboardTiles =
+        _dashboardTiles =
         [
             new DashboardTile("درخواست‌های باز", "—", "هنوز داده‌ای بارگذاری نشده است"),
             new DashboardTile("آیتم‌های در تولید", "—", "هنوز داده‌ای بارگذاری نشده است"),
@@ -142,7 +142,37 @@ public sealed class ShellViewModel : ObservableObject
         }
     }
 
-    public IReadOnlyList<DashboardTile> DashboardTiles { get; }
+    private IReadOnlyList<DashboardTile> _dashboardTiles = [];
+
+    public IReadOnlyList<DashboardTile> DashboardTiles
+    {
+        get => _dashboardTiles;
+        private set => SetProperty(ref _dashboardTiles, value);
+    }
+
+    /// <summary>Reads the current counts for the home page; null keeps the placeholder tiles (for example when the user may not read the production queue). Set by the composition root.</summary>
+    public Func<CancellationToken, Task<IReadOnlyList<DashboardTile>?>>? DashboardLoader { get; set; }
+
+    /// <summary>Refreshes the home page tiles from the persisted state; a failure leaves the previous tiles in place.</summary>
+    public async Task RefreshDashboardAsync(CancellationToken cancellationToken = default)
+    {
+        if (DashboardLoader is null)
+        {
+            return;
+        }
+
+        try
+        {
+            if (await DashboardLoader(cancellationToken) is { Count: > 0 } tiles)
+            {
+                DashboardTiles = tiles;
+            }
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            // The home page keeps what it shows; the other pages report their own errors.
+        }
+    }
 
     public NavigationItem SelectedItem
     {

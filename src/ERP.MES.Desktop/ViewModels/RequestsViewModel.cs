@@ -9,7 +9,7 @@ namespace ERP.MES.Desktop.ViewModels;
 
 public sealed record RequestRow(long RequestId, string RequestNo, string CustomerName, string WorkTypeText, string DateText, string YearText, string Title, string StatusText, int ItemCount);
 
-public sealed record ItemRow(string ItemNo, string PartName, string WorkTypeText, string QuantityText, string PriorityText, long ItemId = 0) : IHasItemId;
+public sealed record ItemRow(string ItemNo, string PartName, string WorkTypeText, string QuantityText, string PriorityText, long ItemId = 0, string StageProgressText = "", string StatusText = "") : IHasItemId;
 
 public sealed record HistoryRow(string DateText, string ActionText, string StatusChangeText, string DepartmentText, string OutcomeText, string NoteText, string ActorText = "");
 
@@ -132,6 +132,30 @@ public sealed class RequestsViewModel(
     public string DetailDescription => _detail?.Value.Description ?? string.Empty;
 
     public bool HasNoItems => _detail is not null && _items.Count == 0;
+
+    private RequestProgress? _progress;
+
+    /// <summary>The request's progress derived from the stage state (Master Specification 12.5): the counts of completed, active, waiting/blocked and rework items. Empty when the request has no items.</summary>
+    public bool HasProgress => _detail is not null && _progress is { TotalItems: > 0 };
+
+    /// <summary>The share of completed items for the bar (the specification's proposed default; the headline percentage formula is still an owner question, so no percentage is printed).</summary>
+    public double ProgressValue => _progress?.CompletedItemRatio ?? 0d;
+
+    public string ProgressText => _progress is not { TotalItems: > 0 } p
+        ? string.Empty
+        : $"پیشرفت درخواست: {Digits(p.Completed.ToString(System.Globalization.CultureInfo.InvariantCulture))} از {Digits(p.TotalItems.ToString(System.Globalization.CultureInfo.InvariantCulture))} آیتم تکمیل شده؛ "
+          + $"در حال اجرا: {Digits(p.Active.ToString(System.Globalization.CultureInfo.InvariantCulture))}؛ در انتظار یا مسدود: {Digits(p.WaitingOrBlocked.ToString(System.Globalization.CultureInfo.InvariantCulture))}؛ بازکاری: {Digits(p.Rework.ToString(System.Globalization.CultureInfo.InvariantCulture))}";
+
+    private string StageProgressText(ItemProgress p) =>
+        p.StageCount == 0 ? "بدون مرحله" : $"{Digits(p.StagesCompleted.ToString(System.Globalization.CultureInfo.InvariantCulture))} از {Digits(p.StageCount.ToString(System.Globalization.CultureInfo.InvariantCulture))} مرحله";
+
+    private string ItemStatusText(ItemProgress p) => p.Kind switch
+    {
+        ItemProgressKind.Completed => "مسیر کامل شد",
+        _ when p.CurrentStageNo is { } no && p.CurrentStatus is { } status =>
+            $"مرحلهٔ {Digits(no.ToString(System.Globalization.CultureInfo.InvariantCulture))}: {p.CurrentStageTitle} — {ProductionQueueViewModel.StageStatusText(status)}" + (p.Kind == ItemProgressKind.Rework ? " (بازکاری)" : string.Empty),
+        _ => "هنوز مرحله‌ای تعریف نشده است",
+    };
 
     public bool CanCreateRequest => _capabilities.CanCreateRequest;
 
@@ -425,9 +449,14 @@ public sealed class RequestsViewModel(
 
         OnPropertyChanged(nameof(HasHistory));
         OnPropertyChanged(nameof(HasNoHistory));
+        _progress = RequestProgress.From(_detail.Value);
+        var progressByItem = _progress.Items.ToDictionary(p => p.ItemId);
         foreach (var item in _detail.Value.Items)
         {
-            _items.Add(new ItemRow(item.ItemNo, item.PartName, Messages.WorkTypeText(_detail.Value.WorkType), QuantityDisplay(item.RequestedQuantity), item.Priority.PersianName(), item.Id));
+            var progress = progressByItem[item.Id];
+            _items.Add(new ItemRow(
+                item.ItemNo, item.PartName, Messages.WorkTypeText(_detail.Value.WorkType), QuantityDisplay(item.RequestedQuantity), item.Priority.PersianName(), item.Id,
+                StageProgressText(progress), ItemStatusText(progress)));
         }
 
         SelectedRequest = _rows.FirstOrDefault(r => r.RequestId == requestId) ?? _selected;
@@ -449,7 +478,7 @@ public sealed class RequestsViewModel(
     {
         foreach (var name in new[]
                  {
-                     nameof(HasDetail), nameof(DetailHeading), nameof(DetailLine), nameof(DetailTitle), nameof(DetailDescription), nameof(HasNoItems), nameof(CanSubmit), nameof(HasPdf), nameof(PdfText), nameof(CanAttachPdf), nameof(CanApprove), nameof(CanReject), nameof(CanReopen), nameof(CanForwardToDrawing), nameof(CanRecordDrawingResult), nameof(CanSendBackToDrawing), nameof(HasWorkflowActions),
+                     nameof(HasDetail), nameof(HasProgress), nameof(ProgressValue), nameof(ProgressText), nameof(DetailHeading), nameof(DetailLine), nameof(DetailTitle), nameof(DetailDescription), nameof(HasNoItems), nameof(CanSubmit), nameof(HasPdf), nameof(PdfText), nameof(CanAttachPdf), nameof(CanApprove), nameof(CanReject), nameof(CanReopen), nameof(CanForwardToDrawing), nameof(CanRecordDrawingResult), nameof(CanSendBackToDrawing), nameof(HasWorkflowActions),
                  })
         {
             OnPropertyChanged(name);

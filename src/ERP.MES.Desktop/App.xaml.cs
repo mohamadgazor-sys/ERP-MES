@@ -138,6 +138,14 @@ public partial class App : System.Windows.Application
         var dates = new JalaliDateService(DigitStyle.Persian, siteZone);
         var shell = new ShellViewModel(dates, () => DateTime.UtcNow) { UserText = "کاربر: " + user.DisplayName };
 
+        // The home page counts come from the persisted production queue (Master Specification 12.4); a user who may not read it keeps the placeholder tiles.
+        var dashboardWorkflow = WorkflowServices.Create(_contexts!, _services!.Authorization, dates);
+        shell.DashboardLoader = async cancellationToken =>
+        {
+            var loaded = await dashboardWorkflow.Queue.LoadAsync(_session?.Principal ?? user, cancellationToken);
+            return loaded.Succeeded ? DashboardTiles.From(loaded.Value!.Entries, DigitStyle.Persian) : null;
+        };
+
         // The menu shows only the pages the user's department and role make meaningful. It is a convenience: every Application command checks the user again (Decision Log #122 B2).
         shell.ApplyAccess(await PageAccess.VisibleKeysAsync(_services!.Authorization, user));
 
