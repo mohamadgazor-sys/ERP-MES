@@ -43,7 +43,7 @@ public class ExternalWorkViewModelTests
         var itemId = (await h.Workflow.ItemDefinition.DefineItemAsync(h.Planning, created.Value.Id, version, new DefineItemCommand("A", "قطعه", 10m, Priority.Normal, piece, material, 1m, null, null), Token)).Value!.Value.Items.Single().Id;
 
         // Planning types the lead time on the definition screen; a missing one is refused for an external unit.
-        var definition = new ItemDefinitionViewModel(h.Workflow.ItemDefinition, h.Workflow.Requests, h.Workflow.Gates, h.Workflow.QcMaster, h.Workflow.Materials, h.Workflow.PlanningMaster, DigitStyle.Persian, () => h.Planning);
+        var definition = new ItemDefinitionViewModel(h.Workflow.ItemDefinition, h.Workflow.Requests, h.Workflow.Gates, h.Workflow.QcMaster, h.Workflow.Materials, h.Workflow.PlanningMaster, DigitStyle.Persian, () => h.Planning, h.Workflow.StageWork);
         await definition.LoadAsync(Token);
         await definition.SelectRequestAsync(created.Value.Id, Token);
         definition.SelectedItem = definition.Items.Single();

@@ -162,7 +162,7 @@ public partial class App : System.Windows.Application
             new ContractsViewModel(workflow.Contracts, workflow.Gates, dates, CurrentUser, workflow.Users),
             new InquiriesViewModel(workflow.Inquiries, workflow.QcMaster, workflow.Gates, dates, CurrentUser),
             new ClarificationsViewModel(workflow.Clarifications, dates, CurrentUser),
-            new ItemDefinitionViewModel(workflow.ItemDefinition, workflow.Requests, workflow.Gates, workflow.QcMaster, workflow.Materials, workflow.PlanningMaster, DigitStyle.Persian, CurrentUser),
+            new ItemDefinitionViewModel(workflow.ItemDefinition, workflow.Requests, workflow.Gates, workflow.QcMaster, workflow.Materials, workflow.PlanningMaster, DigitStyle.Persian, CurrentUser, workflow.StageWork),
             new ItemImportViewModel(workflow.ItemImport, workflow.Requests, new ERP.MES.Infrastructure.Imports.XlsxWorkbookWriter(), CurrentUser),
             new UnitQueueViewModel(workflow.UnitQueue, workflow.StageWork, workflow.UnitDesignations, dates, DigitStyle.Persian, CurrentUser),
             new CalendarViewModel(workflow.Calendar, workflow.WorkerSchedule, workflow.PlanningMaster, workflow.Operators, dates, DigitStyle.Persian, () => DateTime.UtcNow, CurrentUser),

@@ -14,7 +14,7 @@ public class ItemDefinitionViewModelTests
     private static byte[] Pdf() => System.Text.Encoding.ASCII.GetBytes("%PDF-1.4\n% fictional\n%%EOF\n");
 
     private static ItemDefinitionViewModel For(WorkflowHarness h, Principal user) =>
-        new(h.Workflow.ItemDefinition, h.Workflow.Requests, h.Workflow.Gates, h.Workflow.QcMaster, h.Workflow.Materials, h.Workflow.PlanningMaster, ERP.MES.Domain.Calendar.DigitStyle.Persian, () => user);
+        new(h.Workflow.ItemDefinition, h.Workflow.Requests, h.Workflow.Gates, h.Workflow.QcMaster, h.Workflow.Materials, h.Workflow.PlanningMaster, ERP.MES.Domain.Calendar.DigitStyle.Persian, () => user, h.Workflow.StageWork);
 
     /// <summary>A request that passed Management and Drawing; for MAKE also the contract decision (not required).</summary>
     private static async Task<long> ReadyAsync(WorkflowHarness h, WorkType type, string requestNo)
@@ -32,6 +32,23 @@ public class ItemDefinitionViewModelTests
         }
 
         return created.Value.Id;
+    }
+
+    [Fact]
+    public async Task The_stage_title_choices_are_the_active_catalog_titles_and_a_retired_title_is_not_offered_but_stays_in_old_stage_snapshots()
+    {
+        using var h = await WorkflowHarness.CreateAsync(Token);
+        var vm = For(h, h.Planning);
+        await vm.LoadAsync(Token);
+        Assert.Contains("فرزکاری", vm.StageTitleChoices);
+
+        var titles = (await h.Workflow.PlanningMaster.ListStageTitlesAsync(h.Planning, Token)).Value!;
+        var milling = titles.Single(t => t.Value.Title == "فرزکاری");
+        Assert.True((await h.Workflow.PlanningMaster.SetStageTitleActiveAsync(h.Planning, milling.Value.Id, milling.Version, false, Token)).Succeeded);
+        await vm.LoadAsync(Token);
+
+        Assert.DoesNotContain("فرزکاری", vm.StageTitleChoices);
+        Assert.Contains("تراشکاری", vm.StageTitleChoices);
     }
 
     [Fact]
@@ -82,6 +99,52 @@ public class ItemDefinitionViewModelTests
         Assert.Equal("FCC-06", stage.MachineText);
         Assert.Equal("۵.۵", stage.MinutesText);
         Assert.Equal(1, vm.Items.Single().StageCount);
+    }
+
+    [Fact]
+    public async Task Releasing_all_items_names_the_blocking_item_first_then_releases_everything_once_and_refuses_a_second_release()
+    {
+        using var h = await WorkflowHarness.CreateAsync(Token);
+        var id = await ReadyAsync(h, WorkType.Make, "M-9");
+        Assert.True((await h.Workflow.Materials.AddMaterialAsync(h.Warehouse, "ST37-R30", "میلگرد ST37", "ST37", "میلگرد", Token)).Succeeded);
+        var unit = (await h.Workflow.PlanningMaster.AddUnitAsync(h.Admin, "MILLING", "فرزکاری", Token)).Value!;
+        var vm = For(h, h.Planning);
+        await vm.LoadAsync(Token);
+        await vm.SelectRequestAsync(id, Token);
+        var piece = vm.QuantityTypeChoices.First(t => t.Text.StartsWith("PIECE", StringComparison.Ordinal)).Value;
+        var material = vm.MaterialChoices.Single().Value;
+        Assert.True(await vm.DefineItemAsync("A.1", "الف", "۱۰", Priority.Normal, piece, material, "۱", "۱۰۰", "۲۰", Token));
+        Assert.True(await vm.DefineItemAsync("B.1", "ب", "۱۰", Priority.Normal, piece, material, "۱", "۱۰۰", "۲۰", Token));
+        var itemA = vm.Items[0];
+        var itemB = vm.Items[1];
+        vm.SelectedItem = itemA;
+        Assert.True(await vm.DefineStageAsync("فرزکاری", "۵", unit.Value.Id, null, Token));
+
+        // Item B has no stage: nothing is released and the message names it.
+        Assert.True(vm.CanRelease);
+        Assert.False(await vm.ReleaseAllAsync(Token));
+        Assert.Contains(Messages.Ltr(itemB.ItemNo), vm.Message, StringComparison.Ordinal);
+        Assert.Contains(Messages.ForIssue(ValidationIssue.ItemHasNoStages, ERP.MES.Domain.Calendar.JalaliDateError.None), vm.Message, StringComparison.Ordinal);
+
+        vm.SelectedItem = vm.Items.Single(i => i.ItemId == itemB.ItemId);
+        Assert.True(await vm.DefineStageAsync("تراشکاری", "۵", unit.Value.Id, null, Token));
+        Assert.True(await vm.ReleaseAllAsync(Token));
+        Assert.Contains(Messages.Ltr(itemA.ItemNo), vm.Message, StringComparison.Ordinal);
+        Assert.Contains(Messages.Ltr(itemB.ItemNo), vm.Message, StringComparison.Ordinal);
+
+        Assert.False(await vm.ReleaseAllAsync(Token));
+        Assert.Equal(Messages.ForIssue(ValidationIssue.NothingToRelease, ERP.MES.Domain.Calendar.JalaliDateError.None), vm.Message);
+
+        // Production cannot release; the service refuses.
+        var production = For(h, h.Production);
+        await production.LoadAsync(Token);
+        Assert.Equal(OperationStatus.NotAuthorized, (await h.Workflow.StageWork.ReleaseAllAsync(h.Production, id, Token)).Status);
+    }
+
+    [Fact]
+    public void The_release_question_is_the_exact_owner_text()
+    {
+        Assert.Equal("آیا مطمئن هستید که می‌خواهید تمام آیتم‌ها را به همراه مراحل آن‌ها به صف کار واحدهای تولیدی ارسال کنید؟ پس از انجام این عملیات امکان بازگشت وجود ندارد.", ItemDefinitionViewModel.ReleaseConfirmationText);
     }
 
     [Fact]

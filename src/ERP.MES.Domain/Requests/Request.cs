@@ -195,6 +195,22 @@ public sealed class Request
         Transition(RequestAction.SendBackToDrawing, RequestStatus.UnderDrawingReview, actor, utc, outcome: null, text);
     }
 
+    /// <summary>
+    /// Records that the actor released the request's items to production (Decision Log #137): one append-only history entry, the status stays as it is. The note names the released items.
+    /// The stage changes themselves are made by <see cref="RequestItem.ReleaseFirstStage"/>; a cancelled or closed request cannot be released.
+    /// </summary>
+    public void RecordReleaseToProduction(WorkflowActor actor, string note, DateTime changedAtUtc)
+    {
+        var utc = Customer.RequireUtc(changedAtUtc, nameof(changedAtUtc));
+        var text = RequireNote(note, nameof(note));
+        if (Status is RequestStatus.Cancelled or RequestStatus.Closed)
+        {
+            throw new InvalidOperationException("A " + Status.Code() + " request cannot be released to production.");
+        }
+
+        Transition(RequestAction.ReleaseToProduction, Status, actor, utc, outcome: null, text);
+    }
+
     private void RequireStatus(RequestStatus expected, string what)
     {
         if (Status != expected)

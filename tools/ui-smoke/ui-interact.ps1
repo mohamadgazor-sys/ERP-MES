@@ -269,6 +269,30 @@ function Dialog-Ok([string] $title, [string] $text = '') {
     return $false
 }
 
+# ---- real mouse and keyboard helpers (the editable stage-title box and the release confirmation) ----
+Add-Type -Namespace Native -Name Mouse -MemberDefinition '[System.Runtime.InteropServices.DllImport("user32.dll")] public static extern bool SetCursorPos(int x, int y); [System.Runtime.InteropServices.DllImport("user32.dll")] public static extern void mouse_event(uint flags, uint dx, uint dy, uint data, System.UIntPtr extra);'
+function Mouse-Click($element) {
+    $r = $element.Current.BoundingRectangle
+    if ($r.IsEmpty) { throw 'the element has no screen rectangle' }
+    [Native.Mouse]::SetCursorPos([int]($r.X + $r.Width / 2), [int]($r.Y + $r.Height / 2)) | Out-Null
+    Start-Sleep -Milliseconds 200
+    [Native.Mouse]::mouse_event(0x0002, 0, 0, 0, [System.UIntPtr]::Zero); [Native.Mouse]::mouse_event(0x0004, 0, 0, 0, [System.UIntPtr]::Zero)
+    Start-Sleep -Milliseconds 500
+}
+function Get-Value($element) { $p = $null; if ($element.TryGetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern, [ref] $p)) { return $p.Current.Value } else { return '' } }
+function Get-ListItems($parent) { $cond = New-Object System.Windows.Automation.PropertyCondition($AE::ControlTypeProperty, [System.Windows.Automation.ControlType]::ListItem); return @($parent.FindAll($Scope::Descendants, $cond)) }
+function Find-ConfirmDialog([int] $seconds = 10) {
+    $cond = New-Object System.Windows.Automation.PropertyCondition($AE::AutomationIdProperty, 'ConfirmDialog')
+    $deadline = (Get-Date).AddSeconds($seconds)
+    while ((Get-Date) -lt $deadline) {
+        $w = $script:Main.FindFirst($Scope::Descendants, $cond)
+        if (-not $w) { $w = $AE::RootElement.FindFirst($Scope::Descendants, $cond) }
+        if ($w) { return $w }
+        Start-Sleep -Milliseconds 300
+    }
+    return $null
+}
+
 function Screen-Texts([int] $n = 40) { return ((Read-Texts $script:Main $n) -join ' / ') }
 function Wait-RowChange($root, [string] $contains, [string] $before, [int] $seconds = 15) {
     $deadline = (Get-Date).AddSeconds($seconds)
@@ -395,13 +419,59 @@ try {
     foreach ($r in (Get-GridRows $script:Main)) { if ($r.Joined -like '*DEMO-1405-014-003*') { $defined = $true } }
     Check $defined 'a new item (DEMO-1405-014-003) was defined through the item form and appears in the item grid' ("item DEMO-1405-014-003 did not appear; screen: $(Screen-Texts 40)")
     Select-GridRow $script:Main 'DEMO-1405-014-003' | Out-Null
-    Fill 'StageTitleBox' 'فرزکاری آزمون رابط'; Fill 'MinutesBox' '2'
+    # ---- searchable stage-title box: typing filters, Enter commits, Tab commits a valid title and refuses an unknown one, a mouse click selects ----
+    $titleBox = Find-ById $script:Main 'StageTitleBox' 10
+    Check ($null -ne $titleBox) 'the stage-title control exists (an editable searchable combo box)' 'StageTitleBox not found'
+    $titleBox.SetFocus(); Start-Sleep -Milliseconds 400
+    Set-Text $titleBox 'آزمون'
+    Start-Sleep -Milliseconds 800
+    $filtered = Get-ListItems $titleBox
+    Check ($filtered.Count -eq 1 -and (@(Read-Texts $filtered[0] 4) -join ' ') -like '*فرزکاری آزمون رابط*') "typing a fragment narrows the list to the matching catalog title (items shown: $($filtered.Count))" "typing did not filter the list; items: $($filtered.Count)"
+    [System.Windows.Forms.SendKeys]::SendWait('{ENTER}'); Start-Sleep -Milliseconds 600
+    Check ((Get-Value $titleBox) -eq 'فرزکاری آزمون رابط') 'KEYBOARD: Enter commits the single matching catalog title' ("Enter did not commit; value: '$(Get-Value $titleBox)'")
+    $titleBox.SetFocus(); Set-Text $titleBox 'عنوان خارج از فهرست'; Start-Sleep -Milliseconds 500
+    [System.Windows.Forms.SendKeys]::SendWait('{TAB}'); Start-Sleep -Milliseconds 700
+    Check ((Screen-Texts 40) -like '*در فهرست عنوان مرحله‌ها نیست*') 'KEYBOARD: Tab on a title that is not in the catalog is refused with a message' 'no message for an unknown title'
+    Check ($titleBox.Current.HasKeyboardFocus -or (Get-Value $titleBox) -eq 'عنوان خارج از فهرست') 'KEYBOARD: focus stays on the stage-title box after the refused Tab' 'focus moved on with an unknown title'
+    $titleBox.SetFocus(); Set-Text $titleBox 'فرزکاری آزمون رابط'; Start-Sleep -Milliseconds 500
+    [System.Windows.Forms.SendKeys]::SendWait('{TAB}'); Start-Sleep -Milliseconds 600
+    Check ((Get-Value $titleBox) -eq 'فرزکاری آزمون رابط') 'KEYBOARD: Tab commits a valid catalog title and moves on' ("value after Tab: '$(Get-Value $titleBox)'")
+    $titleBox.SetFocus(); Set-Text $titleBox ''; Start-Sleep -Milliseconds 300
+    $ec = $null
+    if ($titleBox.TryGetCurrentPattern([System.Windows.Automation.ExpandCollapsePattern]::Pattern, [ref] $ec)) { $ec.Expand(); Start-Sleep -Milliseconds 700 }
+    $all = Get-ListItems $titleBox
+    $target = $all | Where-Object { (@(Read-Texts $_ 4) -join ' ') -like '*فرزکاری آزمون رابط*' } | Select-Object -First 1
+    Check ($null -ne $target) "the dropdown lists the active catalog titles ($($all.Count) shown)" 'the dropdown did not list the catalog title'
+    if ($target) { Mouse-Click $target }
+    Check ((Get-Value $titleBox) -eq 'فرزکاری آزمون رابط') 'MOUSE: clicking a title in the dropdown selects it' ("mouse click did not select; value: '$(Get-Value $titleBox)'")
+    Fill 'MinutesBox' '2'
     Pick-Combo 'UnitBox' 'فرزکاری' | Out-Null
     Click-Btn 'ثبت مرحله'
     Start-Sleep -Seconds 2
     $staged = [bool](Get-GridRows $script:Main | Where-Object { $_.Joined -like '*فرزکاری آزمون رابط*' } | Select-Object -First 1)
     Check $staged 'a stage in the MILLING unit was defined through the stage form' ("stage did not appear; screen: $(Screen-Texts 40)")
     Save-Shot 'interact-6-item-and-stage'
+
+    # ---- bulk release from the item/stage definition screen: «خیر» changes nothing; «بله» validates the whole request and explains each blocker ----
+    $releaseBtn = Wait-Enabled 'ارسال همهٔ آیتم‌ها به صف کار واحدهای تولیدی'
+    Check ($releaseBtn -and $releaseBtn.Current.IsEnabled) 'the release-to-work-queue button is on the item/stage definition screen' 'release button missing or disabled'
+    Click $releaseBtn
+    $dlg = Find-ConfirmDialog
+    Check ($null -ne $dlg) 'clicking the release button opens the confirmation dialog' 'no confirmation dialog'
+    if ($dlg) {
+        $dlgText = (@(Read-Texts $dlg 6) -join ' ')
+        Check ($dlgText -like '*آیا مطمئن هستید که می‌خواهید تمام آیتم‌ها را به همراه مراحل آن‌ها به صف کار واحدهای تولیدی ارسال کنید؟ پس از انجام این عملیات امکان بازگشت وجود ندارد.*') 'the dialog shows the exact owner-approved confirmation question' "dialog text differs: $dlgText"
+        $yesB = Find-ById $dlg 'ConfirmYesButton' 3; $noB = Find-ById $dlg 'ConfirmNoButton' 3
+        Check ($yesB -and $noB -and $yesB.Current.Name -eq 'بله' -and $noB.Current.Name -eq 'خیر') 'the two buttons read «بله» and «خیر»' 'dialog buttons are not «بله»/«خیر»'
+        Click $noB; Start-Sleep -Milliseconds 800
+        Check ($null -eq (Find-ConfirmDialog 2)) '«خیر» closes the dialog' 'dialog still open after «خیر»'
+        Check ((Screen-Texts 40) -notlike '*آزادشده*') '«خیر» changes nothing (no release message)' 'a release message appeared after «خیر»'
+    }
+    Click-Btn 'ارسال همهٔ آیتم‌ها به صف کار واحدهای تولیدی'
+    $dlg = Find-ConfirmDialog
+    if ($dlg) { $yesB = Find-ById $dlg 'ConfirmYesButton' 3; Click $yesB; Start-Sleep -Seconds 3 }
+    $blockedText = Screen-Texts 60
+    Check ($blockedText -like '*هیچ آیتمی آزاد نشد*' -and $blockedText -like '*DEMO-1405-014-003*') '«بله» validates the whole request: it is refused, the blocked item DEMO-1405-014-003 is named and nothing is released' "blocked message missing; screen: $blockedText"
 
     # ---- 8. Visible release gating: the item follows the unapproved request contract, so release is refused ----
     Open-Page 'صف واحدهای تولید'

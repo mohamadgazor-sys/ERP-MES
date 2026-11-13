@@ -1,5 +1,7 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
+using System.Windows.Input;
 using ERP.MES.Desktop.ViewModels;
 using ERP.MES.Domain.Requests;
 
@@ -15,6 +17,102 @@ public partial class ItemDefinitionView : UserControl
         _viewModel = viewModel ?? throw new ArgumentNullException(nameof(viewModel));
         InitializeComponent();
         DataContext = _viewModel;
+        StageTitleBox.AddHandler(TextBoxBase.TextChangedEvent, new TextChangedEventHandler(OnStageTitleTextChanged));
+    }
+
+    private bool _titleSuppress;
+
+    private string TitleText => StageTitleBox.Text ?? string.Empty;
+
+    private void SetTitleText(string text)
+    {
+        _titleSuppress = true;
+        try
+        {
+            StageTitleBox.Text = text;
+        }
+        finally
+        {
+            _titleSuppress = false;
+        }
+    }
+
+    private void OnStageTitleFocused(object sender, KeyboardFocusChangedEventArgs e)
+    {
+        if (StageTitleBox.ItemsSource is null)
+        {
+            StageTitleBox.ItemsSource = _viewModel.StageTitleChoices;
+        }
+    }
+
+    /// <summary>Typing narrows the list to the catalog titles that contain the text; the text itself is never turned into a title.</summary>
+    private void OnStageTitleTextChanged(object sender, TextChangedEventArgs e)
+    {
+        if (_titleSuppress)
+        {
+            return;
+        }
+
+        var typed = TitleText;
+        var caret = (StageTitleBox.Template.FindName("PART_EditableTextBox", StageTitleBox) as TextBox)?.CaretIndex ?? typed.Length;
+        _titleSuppress = true;
+        try
+        {
+            StageTitleBox.ItemsSource = StageTitleSearch.Filter(_viewModel.StageTitleChoices, typed);
+            StageTitleBox.Text = typed;
+            if (StageTitleBox.Template.FindName("PART_EditableTextBox", StageTitleBox) is TextBox inner)
+            {
+                inner.CaretIndex = Math.Min(caret, typed.Length);
+            }
+        }
+        finally
+        {
+            _titleSuppress = false;
+        }
+
+        StageTitleBox.IsDropDownOpen = StageTitleBox.IsKeyboardFocusWithin && typed.Length > 0;
+    }
+
+    private void OnStageTitleSelected(object sender, SelectionChangedEventArgs e)
+    {
+        if (!_titleSuppress && StageTitleBox.SelectedItem is string chosen)
+        {
+            SetTitleText(chosen);
+            StageTitleBox.IsDropDownOpen = false;
+        }
+    }
+
+    /// <summary>Enter commits the highlighted or the single matching title; Tab commits a valid title and moves on, and stays put (with a message) when the text is not a catalog title.</summary>
+    private void OnStageTitleKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key is not (Key.Enter or Key.Tab))
+        {
+            return;
+        }
+
+        var resolved = StageTitleSearch.Resolve(_viewModel.StageTitleChoices, TitleText, StageTitleBox.SelectedItem as string);
+        if (resolved is not null)
+        {
+            SetTitleText(resolved);
+            StageTitleBox.IsDropDownOpen = false;
+            if (e.Key == Key.Enter)
+            {
+                e.Handled = true;
+            }
+
+            return;
+        }
+
+        if (TitleText.Trim().Length > 0)
+        {
+            _viewModel.ReportStageTitleNotInCatalog();
+            e.Handled = true;
+        }
+        else if (e.Key == Key.Enter)
+        {
+            StageTitleBox.IsDropDownOpen = true;
+            e.Handled = true;
+        }
     }
 
     private async void OnLoaded(object sender, RoutedEventArgs e)
@@ -57,6 +155,17 @@ public partial class ItemDefinitionView : UserControl
         }
     }
 
+    private async void OnReleaseAllClick(object sender, RoutedEventArgs e)
+    {
+        // «خیر» (or closing the dialog) changes nothing; only «بله» calls the Application.
+        if (!ConfirmDialog.Ask(Window.GetWindow(this), "ارسال به صف کار", ItemDefinitionViewModel.ReleaseConfirmationText))
+        {
+            return;
+        }
+
+        await SafeAsync(() => _viewModel.ReleaseAllAsync());
+    }
+
     private async void OnMakeAssemblyClick(object sender, RoutedEventArgs e) => await SafeAsync(() => _viewModel.SetSelectedAssemblyAsync(true));
 
     private async void OnMoveClick(object sender, RoutedEventArgs e) =>
@@ -67,10 +176,12 @@ public partial class ItemDefinitionView : UserControl
         var unit = (UnitBox.SelectedItem as Choice<long>)?.Value ?? 0;
         var machine = (MachineBox.SelectedItem as Choice<long>)?.Value;
         var saved = false;
-        await SafeAsync(async () => saved = await _viewModel.DefineStageAsync(StageTitleBox.Text, MinutesBox.Text, unit, machine, leadTimeDaysText: LeadTimeBox.Text));
+        await SafeAsync(async () => saved = await _viewModel.DefineStageAsync(StageTitleSearch.Resolve(_viewModel.StageTitleChoices, TitleText, null) is { } chosenTitle && string.Equals(chosenTitle, TitleText.Trim(), StringComparison.Ordinal) ? chosenTitle : TitleText, MinutesBox.Text, unit, machine, leadTimeDaysText: LeadTimeBox.Text));
         if (saved)
         {
-            StageTitleBox.Clear();
+            SetTitleText(string.Empty);
+            StageTitleBox.SelectedItem = null;
+            StageTitleBox.ItemsSource = _viewModel.StageTitleChoices;
             MinutesBox.Clear();
             LeadTimeBox.Clear();
         }
