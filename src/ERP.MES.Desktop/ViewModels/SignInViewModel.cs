@@ -44,7 +44,9 @@ public sealed class SignInViewModel(
     /// <summary>Raised once, when the user is fully signed in (and has no pending password change).</summary>
     public event EventHandler<Principal>? SignedIn;
 
-    public string Title => "ورود به سامانه ERP/MES — نسخه نمایشی";
+    public string Title => "ورود به " + AppInfo.DemoTitle;
+
+    public string ApplicationName => AppInfo.Name;
 
     public SignInMode Mode
     {

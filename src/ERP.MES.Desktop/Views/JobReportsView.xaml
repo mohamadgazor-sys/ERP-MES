@@ -43,7 +43,7 @@
             </DataGrid>
             <WrapPanel Margin="0,6,0,0" IsEnabled="{Binding CanReview}">
                 <Button Content="تأیید گزارش" Padding="10,3" Margin="0,0,6,4" Click="OnApprove" ToolTip="گزارش ارسال‌شده را تأیید می‌کند؛ پس از تأیید قابل تغییر نیست." />
-                <Button Content="بازگرداندن با دلیل…" Padding="10,3" Margin="0,0,6,4" Click="OnReturn" ToolTip="گزارش را با دلیل به اپراتور برمی‌گرداند تا اصلاح کند." />
+                <Button Content="بازگرداندن با دلیل" Padding="10,3" Margin="0,0,6,4" Click="OnReturn" ToolTip="گزارش را با دلیل به اپراتور برمی‌گرداند تا اصلاح کند." />
             </WrapPanel>
 
             <StackPanel Visibility="{Binding CanSubmit, Converter={StaticResource BoolToVisibility}}">

@@ -25,7 +25,7 @@
 
 1. Double-click **`Start-Demo.cmd`**. A black window runs a quick check (section 10), creates the local demonstration database the first time (20-60 seconds, once), and then opens the application.
 2. If Windows shows "Windows protected your PC" (SmartScreen) or a similar message for a file downloaded from the internet: the launcher already removes the "downloaded" mark from the package files (`Unblock-File`), but if the first click is blocked, right-click the ZIP before extracting > **Properties** > tick **Unblock** > OK, then extract again.
-3. Sign in (section 4). The window title is "سامانه ERP/MES — نسخه نمایشی" and a yellow banner says it is a demonstration with fictional data.
+3. Sign in (section 4). The window title is "برنامه جامع مدیریت و کنترل تولید ایران‌تول — نسخه نمایشی" and a yellow banner says it is a demonstration with fictional data.
 
 ## 4. Accounts (all fictional)
 

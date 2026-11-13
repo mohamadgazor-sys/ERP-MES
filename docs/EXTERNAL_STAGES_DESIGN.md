@@ -62,10 +62,9 @@ Additional owner requirements for partial shipments: each dispatch and each retu
 
 **Forecast.** An external stage uses no unit time; its expected return is the latest open dispatch date + lead time (before any dispatch: today + lead time). Downstream internal stages still wait for QC (#5). (Last PR.)
 
-## 5. Remaining open points
+## 5. Contractor-lost pieces (decided 2026-11-13, Decision Log #136; implemented)
 
-1. **Pieces the contractor does not return** (lost or retained). With the rules above the stage stays open until every dispatched unit is returned. Proposed, NOT decided: Management may close the missing quantity with the existing shortfall decision (#95 D3), with a mandatory reason, exactly like scrap. Until the owner decides, no write-off exists; this does not block the first three PRs.
-2. A default lead time per external unit is not required (Planning enters it per stage); not built unless asked.
+The Warehouse records units a contractor never returns as a `Missing` row against the original dispatch (reason mandatory; at most the dispatch's outstanding quantity). Missing units are not returned, not awaiting QC, not accepted and not scrap. When nothing else is away or awaiting QC the stage is `WAITING_SHORTFALL_DECISION` and Management (or Planning's replacement order) decides it through the existing shortfall decision; the decision records the lost quantity separately from scrap. The next stage receives the accepted base units only; the customer's required quantity is not silently reduced. A mistaken record is cancelled with a reason while undecided. No open points remain in this design.
 
 ## 6. Implementation sequence (small sequential PRs)
 

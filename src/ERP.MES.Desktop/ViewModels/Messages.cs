@@ -82,6 +82,9 @@ public static class Messages
         ValidationIssue.ItemHierarchyLocked => "برای آیتم‌های این شاخه (یا والدشان) مرحله تعریف شده است؛ رابطهٔ والد و فرزند دیگر تغییر نمی‌کند.",
         ValidationIssue.ItemHasChildren => "مونتاژی که زیرمجموعه دارد را نمی‌توان به آیتم عادی برگرداند.",
         ValidationIssue.ItemSequenceExhausted => "همهٔ شماره‌های ۱ تا ۹۹۹ این سطح استفاده شده است.",
+        ValidationIssue.ReleaseBlocked => "ارسال به صف کار انجام نشد؛ حداقل یک آیتم قابل آزادسازی نیست و هیچ آیتمی آزاد نشد.",
+        ValidationIssue.NothingToRelease => "آیتمی برای آزادسازی وجود ندارد؛ همهٔ آیتم‌ها قبلاً به صف کار ارسال شده‌اند یا منتظر پایان زیرمجموعه‌های خود هستند.",
+        ValidationIssue.ItemHasNoStages => "این آیتم هیچ مرحله‌ای ندارد.",
         ValidationIssue.AssemblyChildrenNotComplete => "مرحلهٔ اول مونتاژ تا پایان مسیر و تأیید کنترل کیفیت همهٔ زیرمجموعه‌ها آزاد نمی‌شود.",
         ValidationIssue.PartNameRequired => "نام قطعه را وارد کنید.",
         ValidationIssue.QuantityInvalid => "تعداد باید عددی بزرگ‌تر از صفر باشد.",
@@ -281,6 +284,7 @@ public static class Messages
         RequestAction.ForwardToDrawing => "ارسال به نقشه‌کشی",
         RequestAction.RecordDrawingResult => "نتیجهٔ نقشه‌کشی",
         RequestAction.SendBackToDrawing => "بازگشت به نقشه‌کشی",
+        RequestAction.ReleaseToProduction => "ارسال آیتم‌ها به صف کار واحدهای تولیدی",
         _ => string.Empty,
     };
 

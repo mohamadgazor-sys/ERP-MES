@@ -2852,6 +2852,11 @@ namespace ERP.MES.Infrastructure.SqlServer.Migrations
                         .HasColumnType("bigint")
                         .HasDefaultValue(0L);
 
+                    b.Property<long>("ExternalMissingBaseUnits")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasDefaultValue(0L);
+
                     b.Property<long>("ExternalReturnedBaseUnits")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("bigint")
@@ -3277,6 +3282,11 @@ namespace ERP.MES.Infrastructure.SqlServer.Migrations
 
                     b.Property<int>("Kind")
                         .HasColumnType("int");
+
+                    b.Property<long>("LostAtContractorBaseUnits")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasDefaultValue(0L);
 
                     b.Property<string>("Note")
                         .IsRequired()

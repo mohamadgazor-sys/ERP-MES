@@ -50,11 +50,11 @@
             <WrapPanel Margin="0,6,0,0">
                 <StackPanel Orientation="Horizontal" Visibility="{Binding CanDecide, Converter={StaticResource BoolToVisibility}}">
                     <Button Content="تأیید توقف" Padding="10,3" Margin="0,0,6,4" Click="OnAccept" ToolTip="توقف انتخاب‌شده را پس از بررسی تأیید می‌کند؛ همچنان از زمان در دسترس ماشین کم می‌شود. فقط برنامه‌ریزی." />
-                    <Button Content="رد توقف…" Padding="10,3" Margin="0,0,6,4" Click="OnReject" ToolTip="توقف انتخاب‌شده را با دلیلی که می‌نویسید رد می‌کند؛ دیگر در پیش‌بینی پایان کارها اثر ندارد و سابقه می‌ماند. فقط برنامه‌ریزی." />
+                    <Button Content="رد توقف" Padding="10,3" Margin="0,0,6,4" Click="OnReject" ToolTip="توقف انتخاب‌شده را با دلیلی که می‌نویسید رد می‌کند؛ دیگر در پیش‌بینی پایان کارها اثر ندارد و سابقه می‌ماند. فقط برنامه‌ریزی." />
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" Visibility="{Binding CanReport, Converter={StaticResource BoolToVisibility}}">
-                    <Button Content="اصلاح پایان…" Padding="10,3" Margin="0,0,6,4" Click="OnChangeEnd" ToolTip="پایان توقف انتخاب‌شده را با دلیل اصلاح می‌کند (تاریخ و ساعت از کادرهای پایان پایین)؛ توقف تأییدشده دوباره به بررسی برنامه‌ریزی برمی‌گردد." />
-                    <Button Content="لغو با دلیل…" Padding="10,3" Margin="0,0,6,4" Click="OnCancel" ToolTip="توقف انتخاب‌شده را با دلیلی که می‌نویسید لغو می‌کند؛ دیگر اثر ندارد و سابقه می‌ماند. فقط نگهداری و تعمیرات." />
+                    <Button Content="اصلاح پایان" Padding="10,3" Margin="0,0,6,4" Click="OnChangeEnd" ToolTip="پایان توقف انتخاب‌شده را با دلیل اصلاح می‌کند (تاریخ و ساعت از کادرهای پایان پایین)؛ توقف تأییدشده دوباره به بررسی برنامه‌ریزی برمی‌گردد." />
+                    <Button Content="لغو با دلیل" Padding="10,3" Margin="0,0,6,4" Click="OnCancel" ToolTip="توقف انتخاب‌شده را با دلیلی که می‌نویسید لغو می‌کند؛ دیگر اثر ندارد و سابقه می‌ماند. فقط نگهداری و تعمیرات." />
                 </StackPanel>
             </WrapPanel>
 

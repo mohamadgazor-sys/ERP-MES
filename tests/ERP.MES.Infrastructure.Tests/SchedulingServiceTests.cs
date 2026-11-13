@@ -843,4 +843,70 @@ public class SchedulingServiceTests
         Assert.Equal(1, Count(w, "AuditLog WHERE ActionCode = 'ExternalShipmentCancelled'"));
         Assert.Equal(6, Count(w, "ExternalShipments"));
     }
+
+    [Fact]
+    public async Task Pieces_a_contractor_never_returns_are_recorded_by_the_warehouse_and_closed_by_the_existing_shortfall_decision()
+    {
+        // Decision Log #136: Warehouse records missing units against the original dispatch with a reason; Management accepts the shortfall (reason) through the existing mechanism.
+        using var w = await StartAsync();
+        var milling = await AddUnitAsync(w, "MILLING");
+        var plating = (await w.Services.PlanningMaster.AddUnitAsync(w.Admin, "PLATING-CO", "آبکاری بیرونی", Token, ProductionUnitCategory.ExternalPlating)).Value!.Value.Id;
+        await MaterialAsync(w);
+        var (id, version) = await ReadyAsync(w, WorkType.Make, "EXT-3");
+        var (piece, _) = await TypesAsync(w);
+        var material = long.Parse(w.Fixture.Db.Query("SELECT Id FROM Materials LIMIT 1").Single(), System.Globalization.CultureInfo.InvariantCulture);
+        var itemId = (await w.Items.DefineItemAsync(w.Planning, id, version, new DefineItemCommand("E3", "Ring", 10m, Priority.Normal, piece, material, 1m, null, null), Token)).Value!.Value.Items.Single().Id;
+        foreach (var command in new[] { new DefineStageCommand("مرحله 1", 0m, plating, null, null, 7), new DefineStageCommand("مرحله 2", 2m, milling, null) })
+        {
+            var current = (await w.Services.Requests.GetAsync(w.Planning, id, Token)).Value!;
+            Assert.True((await w.Items.DefineStageAsync(w.Planning, id, current.Request.Version, itemId, current.Versions.ItemVersion(itemId), command, Token)).Succeeded);
+        }
+
+        Assert.True((await w.Work.PerformAsync(w.Planning, StageAction.Release, await TargetAsync(w, id, itemId, 1), Token)).Succeeded);
+        var external = w.Services.ExternalWork;
+        async Task<ExternalWorkEntry> EntryAsync() => (await external.LoadAsync(w.Warehouse, includeCompleted: true, Token)).Value!.Entries.Single();
+
+        var dispatch = (await external.DispatchAsync(w.Warehouse, (await EntryAsync()).ToStageTarget(), 10, null, null, Token)).Value!;
+        var back = await external.ReturnAsync(w.Warehouse, (await EntryAsync()).ToStageTarget(), dispatch.Id, 7, null, Token);
+        Assert.True(back.Succeeded);
+        var qc = (await w.Services.QcInspection.LoadAsync(w.Qc, Token)).Value!.Entries.Single(e => e.ItemId == itemId);
+        Assert.True((await w.Services.QcInspection.RecordInspectionAsync(w.Qc, qc.ToStageTarget(), [new InspectionEntry(InspectionDisposition.Accepted, 7, null)], Token)).Succeeded);
+
+        // Only the Warehouse records; more than outstanding or without a reason is refused.
+        foreach (var user in new Principal?[] { w.Planning, w.Manager, w.Qc, null })
+        {
+            Assert.Equal(OperationStatus.NotAuthorized, (await external.MarkMissingAsync(user, (await EntryAsync()).ToStageTarget(), dispatch.Id, 3, "گم شد", Token)).Status);
+        }
+
+        Assert.Equal(ValidationIssue.ExternalQuantityInvalid, (await external.MarkMissingAsync(w.Warehouse, (await EntryAsync()).ToStageTarget(), dispatch.Id, 4, "گم شد", Token)).Issue);
+        Assert.Equal(ValidationIssue.ExternalTextInvalid, (await external.MarkMissingAsync(w.Warehouse, (await EntryAsync()).ToStageTarget(), dispatch.Id, 3, " ", Token)).Issue);
+        var missing = (await external.MarkMissingAsync(w.Warehouse, (await EntryAsync()).ToStageTarget(), dispatch.Id, 3, "پیمانکار تحویل نداد", Token)).Value!;
+        var waiting = await EntryAsync();
+        Assert.Equal((ItemStageStatus.WaitingShortfallDecision, 3L, 7L, 0L, 7L), (waiting.Status, waiting.MissingBaseUnits, waiting.ReturnedBaseUnits, waiting.AtContractorBaseUnits, waiting.AcceptedBaseUnits));
+        Assert.Empty(waiting.OpenDispatches);
+        Assert.Equal(ExternalShipmentKind.Missing, waiting.History.Last().Kind);
+
+        // Management sees the lost quantity apart from scrap, and the stage is NOT closed or QC approved until the shortfall is decided.
+        var entry = (await w.Services.QcInspection.LoadAsync(w.Manager, Token)).Value!.Entries.Single(e => e.ItemId == itemId);
+        Assert.Equal((3L, 0L), (entry.LostAtContractorBaseUnits, entry.ScrapBaseUnits));
+        Assert.Equal(OperationStatus.NotAuthorized, (await w.Services.QcInspection.DecideShortfallAsync(w.Qc, entry.ToStageTarget(), ShortfallKind.ManagementAccepted, "x", Token)).Status);
+        Assert.Equal(ItemStageStatus.WaitingPreviousQc, (await w.Services.Requests.GetAsync(w.Planning, id, Token)).Value!.Request.Value.Items.Single().Stages[1].Status);
+
+        // A mistaken record is cancelled with a reason (history kept), then recorded again; Management accepts the shortfall.
+        Assert.True((await external.CancelAsync(w.Warehouse, (await EntryAsync()).ToStageTarget(), missing.Id, "اشتباه ثبت شد", Token)).Succeeded);
+        Assert.Equal(ItemStageStatus.ExternalSent, (await EntryAsync()).Status);
+        Assert.True((await external.MarkMissingAsync(w.Warehouse, (await EntryAsync()).ToStageTarget(), dispatch.Id, 3, "قطعی شد", Token)).Succeeded);
+        entry = (await w.Services.QcInspection.LoadAsync(w.Manager, Token)).Value!.Entries.Single(e => e.ItemId == itemId);
+        var decided = await w.Services.QcInspection.DecideShortfallAsync(w.Manager, entry.ToStageTarget(), ShortfallKind.ManagementAccepted, "پذیرش کسری مفقودشده‌ها", Token);
+        Assert.True(decided.Succeeded, decided.Status + " " + decided.Issue);
+        Assert.Equal((3L, 3L), (decided.Value!.ShortfallBaseUnits, decided.Value.LostAtContractorBaseUnits));
+        Assert.Equal(ItemStageStatus.QcApproved, (await EntryAsync()).Status);
+        var next = (await LoadAsync(w, w.Planning, milling)).Queue.Single();
+        Assert.Equal(2, next.StageNo);
+        Assert.Equal(7L, (await w.Services.Requests.GetAsync(w.Planning, id, Token)).Value!.Request.Value.Items.Single().Stages[1].InputBaseUnits); // only the accepted units move on
+
+        Assert.Equal(2, Count(w, "AuditLog WHERE ActionCode = 'ExternalMissingRecorded'"));
+        Assert.Equal(1, Count(w, "AuditLog WHERE ActionCode = 'ExternalShipmentCancelled'"));
+        Assert.Equal(new[] { "3" }, w.Fixture.Db.Query("SELECT LostAtContractorBaseUnits FROM ShortfallDecisions"));
+    }
 }

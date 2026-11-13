@@ -24,6 +24,8 @@ public partial class ExternalWorkView : UserControl
 
     private async void OnReturn(object sender, RoutedEventArgs e) => await _viewModel.ReturnAsync(DispatchBox.SelectedItem as OpenDispatchChoice, ReturnQuantityBox.Text, ReturnNoteBox.Text);
 
+    private async void OnMissing(object sender, RoutedEventArgs e) => await _viewModel.MarkMissingAsync(DispatchBox.SelectedItem as OpenDispatchChoice, ReturnQuantityBox.Text, ReturnNoteBox.Text);
+
     private async void OnCancel(object sender, RoutedEventArgs e)
     {
         if (HistoryGrid.SelectedItem is ExternalShipmentRow row && PromptWindow.Ask(Window.GetWindow(this), "لغو ثبت ارسال یا برگشت", "دلیل لغو (الزامی):") is { } reason)

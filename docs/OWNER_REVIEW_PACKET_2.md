@@ -71,4 +71,5 @@ Phases 1a to 9c, the test-speed work 9a and 9e, the work-session phases 10a to 1
 
 - B15 machine downtime: approved with clarifications (Decision Log #130).
 - Decision Log #127 point 5 (overtime never inside the unit's effective regular hours): confirmed (Decision Log #131).
+- Contractor-lost pieces: approved 2026-11-13 (Decision Log #136). A consolidated list of the genuinely open rows is in `docs/OWNER_REVIEW_REPORT_2026-11-13.md`.
 - External supply stages: the five questions of `docs/EXTERNAL_STAGES_DESIGN.md` answered (Decision Log #129). Still open there: how pieces a contractor never returns are closed (design section 5).

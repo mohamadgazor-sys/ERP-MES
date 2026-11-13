@@ -6,6 +6,31 @@ Repository: `mohamadgazor-sys/ERP-MES` (https://github.com/mohamadgazor-sys/ERP-
 
 ---
 
+## Owner-performed acceptance testing (recorded 2026-11-13; physical, not automated)
+
+The owner personally tested the application **without internet access** on **Windows 10 22H2** and on **Windows 11 Pro 21H2**, both on the **same PC** (not two separate computers); it worked on both. Limits of that evidence: it does not establish that the Ethernet cable was physically unplugged, and **no clean Windows installation without .NET was tested**. Do not claim those two as done. The owner also completed live: Secretary created a customer and a MAKE request and sent it to Management; Management approved and forwarded to Planning; Planning forwarded to Drawing; Drawing fully accepted feasibility and returned it; Planning decided "no contract required", started defining items, created a sample item, and then hit the stage-title selection problem (a title that is not an exact catalog entry is an error) that the searchable dropdown of the next PR addresses.
+
+## Round of 2026-11-13 (owner feedback after the real demonstration; written in PR #82; read this before the older sections)
+
+What was built, in order (all in PR #82; Decision Log #136-#139, `docs/SESSION_LOG.md` 2026-11-13):
+
+1. **Contractor-lost pieces** (#136): the Warehouse records units a contractor never returned against the original dispatch (`Missing`, reason mandatory); Management decides through the existing shortfall decision; the lost quantity is stored apart from scrap. Migrations `ExternalMissingUnits` (SQLite and SQL Server).
+2. **Searchable stage-title box and "send all items to the work queue"** (#137): editable combo box fed by the active stage-title catalog (type to filter, click or Enter selects, Tab commits a valid title and refuses an unknown one; retired titles are not offered); a release-all button on the item/stage definition screen with the exact owner confirmation text and «بله»/«خیر» (`StageWorkService.ReleaseAllAsync`, atomic, history entry `RELEASE_TO_PRODUCTION`, audit rows, duplicate protection, same gates as the single release). Assembly parents that still wait for children are reported as waiting, not released (an interpretation recorded in #137 - the owner may prefer to make it a blocker).
+3. **Button labels without trailing ellipses; official name «برنامه جامع مدیریت و کنترل تولید ایران‌تول»** (#138) from `AppInfo.Name`; `UserInterfaceTextTests` guards both.
+4. **Management demonstration scenario** (#139) created by the real services during `demo-init` (`DemoScenarioSeeder`); walkthrough in `docs/MANAGEMENT_DEMO_GUIDE.md`. Baseline-dataset tests use `includeManagementScenario: false`.
+
+Verification evidence for this round:
+
+- Windows CI, UI automation (`ui-smoke` job, `tools/ui-smoke/ui-interact.ps1`) on the real WPF application passed with these checks: official name in the window title and header; stage-title filtering, **Enter**, **Tab** (valid and unknown) and a **real synthesized mouse click** on the drop-down; the release dialog (exact question, «بله»/«خیر», «خیر» changes nothing, «بله» on a request with a blocked item names the blocker and releases nothing).
+- Local (Linux, SDK 10.0.114): Domain 585, Application 41, Infrastructure 762 (+ the demo/end-to-end subset re-run after the scenario change), temporary Desktop harness 159. These are not the authority; Windows CI on the PR head is.
+- The positive path of the release-all button (everything releasable) is covered by service and view-model tests (`BulkReleaseTests`, `ItemDefinitionViewModelTests`), not by a UI-automation step.
+
+Still NOT verified (keep on the physical acceptance list): the whole application on a clean Windows without .NET; with the Ethernet cable physically unplugged; a second disconnected launch; a person rehearsing `docs/MANAGEMENT_DEMO_GUIDE.md` once on the presentation computer; the Persian keyboard layout typing into the stage-title box on the real machine.
+
+Open owner decisions (full table: `docs/OWNER_REVIEW_REPORT_2026-11-13.md`): A1 overtime limits (the demo uses EXAMPLE values 120/600 minutes), A2 contract amount, A4 production SQL Server, B1 late reports, B2 amending approved reports, B6, B8, B9, B10, B13, E1, E4, E5. Approved but not built: a later QC correction returning an item to stage 1 (Master Specification section 15).
+
+The final offline package of this round must be taken from the `Offline demo package` run of the final main (see the history below); a package is valid only for the commit it was built from.
+
 ## Current state (updated 2026-11-05 evening, written in the last PR of the external-stage series; read this first)
 
 | Item | Value |

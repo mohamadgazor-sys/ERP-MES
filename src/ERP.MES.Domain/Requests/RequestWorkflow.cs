@@ -23,6 +23,9 @@ public enum RequestAction
 
     /// <summary>Planning sends a request that Drawing returned back to Drawing (more information or correction).</summary>
     SendBackToDrawing,
+
+    /// <summary>Planning releases all items of the request, with their stages, to the production units' work queues in one operation (Decision Log #137). The request status does not change.</summary>
+    ReleaseToProduction,
 }
 
 /// <summary>
@@ -52,6 +55,7 @@ public static class RequestActionInfo
         RequestAction.ForwardToDrawing => "FORWARD_TO_DRAWING",
         RequestAction.RecordDrawingResult => "RECORD_DRAWING_RESULT",
         RequestAction.SendBackToDrawing => "SEND_BACK_TO_DRAWING",
+        RequestAction.ReleaseToProduction => "RELEASE_TO_PRODUCTION",
         _ => throw new ArgumentOutOfRangeException(nameof(action), action, "Unknown request action."),
     };
 

@@ -25,6 +25,9 @@ public sealed record InspectionEntry2(
     long RemainingBaseUnits,
     long? ProductionUnitId)
 {
+    /// <summary>Units of an external stage that the contractor never returned (Decision Log #136): part of the shortfall to decide, but not scrap and never QC approved.</summary>
+    public long LostAtContractorBaseUnits { get; init; }
+
     public long RequestVersion { get; init; }
 
     public long ItemVersion { get; init; }
@@ -85,6 +88,7 @@ public sealed class QcInspectionService(IRequestRepository requests, IQcInspecti
                             summary.RequestId, summary.RequestNo.Value, summary.CustomerName, item.Id, item.ItemNo, item.PartName, stage.StageNo, item.Stages.Count, stage.StageTitle, stage.Status,
                             item.BaseUnitsPerUnit, stage.InputBaseUnits!.Value, stage.AwaitingQcBaseUnits, stage.AcceptedBaseUnits, stage.ReworkBaseUnits, stage.ScrapBaseUnits, stage.RemainingBaseUnits ?? 0, stage.ProductionUnitId)
                         {
+                            LostAtContractorBaseUnits = stage.ExternalMissingBaseUnits,
                             RequestVersion = loaded.Versions.Request,
                             ItemVersion = loaded.Versions.ItemVersion(item.Id),
                             StageVersions = versions,

@@ -4,6 +4,10 @@
     <TargetFramework>net10.0-windows</TargetFramework>
     <OutputType>WinExe</OutputType>
     <UseWPF>true</UseWPF>
+    <!-- The official name (also AppInfo.Name); the file keeps its technical name ERP.MES.Desktop.exe. -->
+    <Product>برنامه جامع مدیریت و کنترل تولید ایران‌تول</Product>
+    <AssemblyTitle>برنامه جامع مدیریت و کنترل تولید ایران‌تول</AssemblyTitle>
+    <Description>برنامه جامع مدیریت و کنترل تولید ایران‌تول - نسخه نمایشی</Description>
   </PropertyGroup>
 
   <ItemGroup>

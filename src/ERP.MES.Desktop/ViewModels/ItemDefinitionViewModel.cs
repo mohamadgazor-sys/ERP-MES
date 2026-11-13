@@ -28,7 +28,8 @@ public sealed class ItemDefinitionViewModel(
     MaterialService materials,
     PlanningMasterService planning,
     DigitStyle digitStyle,
-    Func<Principal> currentUser) : ObservableObject
+    Func<Principal> currentUser,
+    StageWorkService? stageWork = null) : ObservableObject
 {
     private readonly ERP.MES.Domain.Calendar.JalaliDateService _dates = new(digitStyle, TimeZoneInfo.Utc);
     private readonly ObservableCollection<DefinitionRequestRow> _requests = [];
@@ -43,6 +44,7 @@ public sealed class ItemDefinitionViewModel(
     private IReadOnlyList<Choice<long>> _materialChoices = [];
     private IReadOnlyList<Choice<long>> _unitChoices = [];
     private IReadOnlyList<MachineChoice> _machineChoices = [];
+    private IReadOnlyList<string> _stageTitles = [];
     private string _message = string.Empty;
     private bool _isBusy;
     private bool _isLoading;
@@ -63,6 +65,9 @@ public sealed class ItemDefinitionViewModel(
     public IReadOnlyList<Choice<long>> MaterialChoices => _materialChoices;
 
     public IReadOnlyList<Choice<long>> UnitChoices => _unitChoices;
+
+    /// <summary>The active titles of the catalog (Decision Log #124 B4); retired titles are never offered for a new stage, and the stored snapshots of old stages are untouched.</summary>
+    public IReadOnlyList<string> StageTitleChoices => _stageTitles;
 
     /// <summary>The machines of the given unit, for the stage form.</summary>
     public IReadOnlyList<Choice<long>> MachinesOf(long unitId) => _machineChoices.Where(m => m.UnitId == unitId).Select(m => new Choice<long>(m.Id, m.Text)).ToList();
@@ -92,6 +97,65 @@ public sealed class ItemDefinitionViewModel(
         private set => SetProperty(ref _message, value);
     }
 
+    /// <summary>Tells the user that the typed text is not an active catalog title (the box refuses to commit it).</summary>
+    public void ReportStageTitleNotInCatalog() => Message = Messages.ForIssue(ERP.MES.Application.Requests.ValidationIssue.StageTitleNotInCatalog, default);
+
+    /// <summary>The exact question the release dialog asks (owner text of 2026-11-13); the answers are «بله» and «خیر».</summary>
+    public const string ReleaseConfirmationText = "آیا مطمئن هستید که می‌خواهید تمام آیتم‌ها را به همراه مراحل آن‌ها به صف کار واحدهای تولیدی ارسال کنید؟ پس از انجام این عملیات امکان بازگشت وجود ندارد.";
+
+    /// <summary>Releases every releasable item of the selected request (MAKE or REPAIR) to the production unit queues, after the user answered «بله». The Application checks the permission, every gate and the whole set before changing anything.</summary>
+    public async Task<bool> ReleaseAllAsync(CancellationToken cancellationToken = default)
+    {
+        if (_detail is null || stageWork is null)
+        {
+            Message = Messages.NothingSelected;
+            return false;
+        }
+
+        var released = false;
+        var requestId = _detail.Request.Value.Id;
+        await RunAsync(async () =>
+        {
+            var outcome = await stageWork.ReleaseAllAsync(currentUser(), requestId, cancellationToken);
+            if (outcome.Succeeded)
+            {
+                var result = outcome.Value!;
+                released = true;
+                var text = "آیتم‌های آزادشده و ارسال‌شده به صف کار: " + string.Join("، ", result.Released.Select(Messages.Ltr)) + ".";
+                if (result.WaitingForChildren.Count > 0)
+                {
+                    text += " این مونتاژها تا پایان و تأیید کنترل کیفیت زیرمجموعه‌هایشان منتظر می‌مانند و هنوز آزاد نشده‌اند: " + string.Join("، ", result.WaitingForChildren.Select(Messages.Ltr)) + ".";
+                }
+
+                if (outcome.WarningList.Contains(StageWorkService.NoDrawingWarning))
+                {
+                    text += " هشدار: برای برخی از این آیتم‌ها نقشهٔ فنی بارگذاری نشده است.";
+                }
+
+                await ReloadAsync(requestId, CancellationToken.None);
+                Message = text;
+                return;
+            }
+
+            var reason = Messages.ForIssue(outcome.Issue, JalaliDateError.None);
+            if (outcome.Status == OperationStatus.NotAuthorized)
+            {
+                Message = Messages.For(outcome);
+            }
+            else if (outcome.Value is { Blockers.Count: > 0 } blocked)
+            {
+                Message = reason + " " + string.Join(" ", blocked.Blockers.Select(b => $"آیتم {Messages.Ltr(b.ItemNo)}: {Messages.ForIssue(b.Issue, JalaliDateError.None)}"));
+            }
+            else
+            {
+                Message = outcome.Status == OperationStatus.ValidationFailed ? reason : Messages.For(outcome);
+            }
+
+            await ReloadAsync(requestId, CancellationToken.None);
+        });
+        return released;
+    }
+
     public bool IsBusy
     {
         get => _isBusy;
@@ -117,6 +181,9 @@ public sealed class ItemDefinitionViewModel(
 
     public bool CanDefineItem => _detail is not null && _gate is { DefinitionAllowed: true }
         && (_detail.Request.Value.WorkType == WorkType.Make ? _capabilities.CanDefineMake : _capabilities.CanDefineRepair);
+
+    /// <summary>The release button is available while a request with items is shown; the Application still checks the permission and every gate.</summary>
+    public bool CanRelease => _detail is not null && _items.Count > 0 && stageWork is not null;
 
     public bool CanDefineStage => CanDefineItem && _selectedItem is not null;
 
@@ -321,6 +388,9 @@ public sealed class ItemDefinitionViewModel(
         _machineChoices = master.Succeeded
             ? master.Value!.Machines.Where(m => m.Value.IsActive).Select(m => new MachineChoice(m.Value.Id, m.Value.ProductionUnitId, m.Value.Code + " — " + m.Value.Name)).ToList()
             : [];
+        var titles = await planning.ListStageTitlesAsync(currentUser(), cancellationToken);
+        _stageTitles = titles.Succeeded ? titles.Value!.Where(t => t.Value.IsActive).Select(t => t.Value.Title).OrderBy(t => t, StringComparer.CurrentCulture).ToList() : [];
+        OnPropertyChanged(nameof(StageTitleChoices));
         OnPropertyChanged(nameof(QuantityTypeChoices));
         OnPropertyChanged(nameof(MaterialChoices));
         OnPropertyChanged(nameof(UnitChoices));
@@ -423,7 +493,7 @@ public sealed class ItemDefinitionViewModel(
 
     private void NotifyAll()
     {
-        foreach (var name in new[] { nameof(HasRequest), nameof(RequestHeading), nameof(GateText), nameof(CanDefineItem), nameof(CanDefineStage), nameof(ParentChoices) })
+        foreach (var name in new[] { nameof(HasRequest), nameof(RequestHeading), nameof(GateText), nameof(CanDefineItem), nameof(CanDefineStage), nameof(CanRelease), nameof(ParentChoices) })
         {
             OnPropertyChanged(name);
         }

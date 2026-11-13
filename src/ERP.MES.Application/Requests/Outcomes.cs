@@ -598,6 +598,15 @@ public enum ValidationIssue
 
     /// <summary>A note, piece description or cancellation reason is missing where required or longer than 300 characters.</summary>
     ExternalTextInvalid,
+
+    /// <summary>The release of the whole request was refused because at least one item cannot be released; nothing was released. The result lists the items and the reasons (Decision Log #137).</summary>
+    ReleaseBlocked,
+
+    /// <summary>Every item of the request is already released (or waits only for its assembly children): there is nothing to release.</summary>
+    NothingToRelease,
+
+    /// <summary>The item has no stages, so it cannot be released.</summary>
+    ItemHasNoStages,
 }
 
 /// <summary>The result of a command or query: a status, the value on success, and the details of a refusal.</summary>

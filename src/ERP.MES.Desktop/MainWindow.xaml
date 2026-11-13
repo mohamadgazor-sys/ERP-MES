@@ -28,8 +28,11 @@
 
         <!-- Demonstration banner: always visible so nothing is mistaken for a finished feature. -->
         <Border Grid.Row="0" Background="{StaticResource DemoBannerBrush}" Padding="12,6">
-            <TextBlock Text="{Binding DemoBanner}" Foreground="{StaticResource DemoBannerTextBrush}"
-                       TextWrapping="Wrap" FontWeight="SemiBold" />
+            <StackPanel>
+                <TextBlock Text="{Binding ApplicationName}" Foreground="{StaticResource DemoBannerTextBrush}" FontSize="16" FontWeight="Bold" AutomationProperties.AutomationId="ApplicationNameHeader" />
+                <TextBlock Text="{Binding DemoBanner}" Foreground="{StaticResource DemoBannerTextBrush}"
+                           TextWrapping="Wrap" FontWeight="SemiBold" />
+            </StackPanel>
         </Border>
 
         <Grid Grid.Row="1">

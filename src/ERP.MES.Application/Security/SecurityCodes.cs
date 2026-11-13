@@ -46,6 +46,7 @@ public static class AuditActions
 
     // Demonstration stage flow (Decision Log #79). Written in the same transaction as the stage change. Nothing here ever carries a password or token.
     public const string StageReleased = "StageReleased";
+    public const string RequestReleasedToProduction = "RequestReleasedToProduction";
     public const string StageStarted = "StageStarted";
     public const string StageSubmittedForQc = "StageSubmittedForQc";
     public const string StageQcApproved = "StageQcApproved";
@@ -88,6 +89,7 @@ public static class AuditActions
     public const string ProductionUnitCategoryChanged = "ProductionUnitCategoryChanged";
     public const string ExternalDispatchRecorded = "ExternalDispatchRecorded";
     public const string ExternalReturnRecorded = "ExternalReturnRecorded";
+    public const string ExternalMissingRecorded = "ExternalMissingRecorded";
     public const string ExternalShipmentCancelled = "ExternalShipmentCancelled";
     public const string UnitSupervisorChanged = "UnitSupervisorChanged";
     public const string QcInspectionRecorded = "QcInspectionRecorded";

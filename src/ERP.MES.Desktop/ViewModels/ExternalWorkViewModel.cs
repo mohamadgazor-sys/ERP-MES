@@ -129,6 +129,20 @@ public sealed class ExternalWorkViewModel(ExternalWorkService service, IJalaliDa
         return Relay(await service.ReturnAsync(currentUser(), row.Entry.ToStageTarget(), dispatch.DispatchId, units, note, token));
     });
 
+    /// <summary>
+    /// The Warehouse records <paramref name="quantityText"/> base units of the chosen open dispatch as missing (the contractor never returned them), with a mandatory reason. They are not returned and
+    /// not QC approved; Management (or Planning) then decides the shortfall on the QC page (Decision Log #136).
+    /// </summary>
+    public Task MarkMissingAsync(OpenDispatchChoice? dispatch, string? quantityText, string? reason) => CommandAsync("مقدار مفقودشده ثبت شد؛ مرحله منتظر تصمیم مدیریت دربارهٔ کسری می‌ماند.", async token =>
+    {
+        if (_selected is not { } row || dispatch is null || !TryUnits(quantityText, out var units))
+        {
+            return Outcome<int>.Invalid(ValidationIssue.ExternalQuantityInvalid);
+        }
+
+        return Relay(await service.MarkMissingAsync(currentUser(), row.Entry.ToStageTarget(), dispatch.DispatchId, units, reason, token));
+    });
+
     /// <summary>The Warehouse cancels a mistaken dispatch or return of the selected stage with a reason; the row stays in the history.</summary>
     public Task CancelAsync(ExternalShipmentRow? shipment, string? reason) => CommandAsync("ثبت لغو شد و در سابقه ماند.", async token =>
     {
@@ -177,7 +191,7 @@ public sealed class ExternalWorkViewModel(ExternalWorkService service, IJalaliDa
                 $"مرحلهٔ {Digits(e.StageNo)} از {Digits(e.StageCount)}: {e.StageTitle}",
                 e.UnitName + " — " + PlanningMasterViewModel.CategoryText(e.UnitCategory),
                 StatusText(e.Status) + (overdue ? " — دیرکرد" : string.Empty),
-                $"ورودی {Digits(e.InputBaseUnits)}، ارسال {Digits(e.DispatchedBaseUnits)}، برگشت {Digits(e.ReturnedBaseUnits)}، نزد پیمانکار {Digits(e.AtContractorBaseUnits)}، مانده برای ارسال {Digits(e.StillToSendBaseUnits)}، در انتظار کنترل کیفیت {Digits(e.AwaitingQcBaseUnits)}، پذیرفته {Digits(e.AcceptedBaseUnits)}، ضایعات {Digits(e.ScrapBaseUnits)}",
+                $"ورودی {Digits(e.InputBaseUnits)}، ارسال {Digits(e.DispatchedBaseUnits)}، برگشت {Digits(e.ReturnedBaseUnits)}، نزد پیمانکار {Digits(e.AtContractorBaseUnits)}، مفقودشده نزد پیمانکار {Digits(e.MissingBaseUnits)}، مانده برای ارسال {Digits(e.StillToSendBaseUnits)}، در انتظار کنترل کیفیت {Digits(e.AwaitingQcBaseUnits)}، پذیرفته {Digits(e.AcceptedBaseUnits)}، ضایعات {Digits(e.ScrapBaseUnits)}",
                 (e.ExpectedCompletionUtc is { } done ? $"پایان پیش‌بینی‌شدهٔ مرحله: {dates.FormatDateTime(done)}" + (e.OpenDispatches.Count > 0 ? "؛ " : string.Empty) : string.Empty)
                     + string.Join("؛ ", e.OpenDispatches.Select(d => $"ارسال {Digits(d.Dispatch.Id)}: مانده {Digits(d.OutstandingBaseUnits)}، برگشت مورد انتظار {dates.FormatDateTime(d.ExpectedReturnUtc)}" + (d.Overdue ? " (دیرکرد)" : string.Empty))),
                 overdue));
@@ -200,7 +214,12 @@ public sealed class ExternalWorkViewModel(ExternalWorkService service, IJalaliDa
             var who = UserDirectoryService.Describe(_actors.GetValueOrDefault(h.RecordedByUserId));
             _history.Add(new ExternalShipmentRow(
                 h,
-                h.Kind == ExternalShipmentKind.Dispatch ? $"ارسال {Digits(h.Id)}" : $"برگشت {Digits(h.Id)} از ارسال {Digits(h.DispatchId ?? 0)}",
+                h.Kind switch
+                {
+                    ExternalShipmentKind.Dispatch => $"ارسال {Digits(h.Id)}",
+                    ExternalShipmentKind.Return => $"برگشت {Digits(h.Id)} از ارسال {Digits(h.DispatchId ?? 0)}",
+                    _ => $"مفقودشده {Digits(h.Id)} از ارسال {Digits(h.DispatchId ?? 0)}",
+                },
                 dates.FormatDateTime(h.RecordedAtUtc),
                 Digits(h.BaseUnits) + " واحد پایه",
                 who,

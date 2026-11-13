@@ -200,4 +200,44 @@ public class ExternalStageTests
         waiting.DefineInitialStage("Plating", 0m, null, 7, null, 14);
         Assert.Throws<InvalidOperationException>(() => waiting.DispatchExternal(1, 1, null, null, 5, T2));
     }
+
+    [Fact]
+    public void Units_the_contractor_never_returns_are_recorded_missing_and_close_only_through_the_shortfall_decision()
+    {
+        // Decision Log #136: missing is neither returned nor accepted nor scrap; the stage waits for the shortfall decision and then closes with the accepted units only.
+        var item = Released();
+        var stage = item.Stages[0];
+        var a = Saved(item.DispatchExternal(1, 10, null, null, 5, T1));
+        var shipments = new List<ExternalShipment> { a };
+        var back = Saved(item.ReturnExternal(1, a, shipments, 7, null, 6, T2));
+        shipments.Add(back);
+
+        // At most what the dispatch still has outstanding; a reason is mandatory; the dispatch cannot be cancelled afterwards.
+        Assert.Throws<ExternalQuantityException>(() => item.MarkExternalMissing(1, a, shipments, 4, "گم شد", 6, T2));
+        Assert.Throws<ArgumentException>(() => item.MarkExternalMissing(1, a, shipments, 3, " ", 6, T2));
+        var missing = Saved(item.MarkExternalMissing(1, a, shipments, 3, "پیمانکار تحویل نداد", 6, T2));
+        shipments.Add(missing);
+        Assert.Equal((ExternalShipmentKind.Missing, 3L, a.Id), (missing.Kind, missing.BaseUnits, missing.DispatchId!.Value));
+        Assert.Equal((3L, 7L, 0L, 0L), (stage.ExternalMissingBaseUnits, stage.ExternalReturnedBaseUnits, stage.AtContractorBaseUnits, stage.StillToSendBaseUnits!.Value));
+        Assert.Equal(ItemStageStatus.WaitingQc, stage.Status); // the 7 returned units are still awaiting QC
+        Assert.Throws<ExternalQuantityException>(() => item.ReturnExternal(1, a, shipments, 1, null, 6, T2)); // missing units are not returned
+        Assert.Throws<ExternalQuantityException>(() => item.CancelExternalDispatch(1, a, shipments, "x", 6, T2));
+
+        item.RecordInspection(1, [new InspectionEntry(InspectionDisposition.Accepted, 7, null)], 9, T2, "q-1");
+        Assert.Equal(ItemStageStatus.WaitingShortfallDecision, stage.Status);
+        Assert.Equal(ItemStageStatus.WaitingPreviousQc, item.Stages[1].Status); // not QC approved: the next stage stays locked
+
+        // A mistaken missing record is cancelled while undecided: the units are at the contractor again.
+        item.CancelExternalMissing(1, missing, "پیمانکار تحویل داد", 6, T2);
+        Assert.Equal((ItemStageStatus.ExternalSent, 3L, 0L), (stage.Status, stage.AtContractorBaseUnits, stage.ExternalMissingBaseUnits));
+        var again = Saved(item.MarkExternalMissing(1, a, shipments.Where(s => s.IsActive).ToList(), 3, "قطعی شد", 6, T2));
+        Assert.Equal(ItemStageStatus.WaitingShortfallDecision, stage.Status);
+
+        var decision = item.DecideShortfall(1, ShortfallKind.ManagementAccepted, "پذیرش کسری قطعه‌های مفقودشده", 10, T2);
+        Assert.Equal((3L, 3L), (decision.ShortfallBaseUnits, decision.LostAtContractorBaseUnits));
+        Assert.Equal(ItemStageStatus.QcApproved, stage.Status);
+        Assert.Equal((ItemStageStatus.Waiting, 7L), (item.Stages[1].Status, item.Stages[1].InputBaseUnits!.Value)); // the next stage gets only the accepted units
+        Assert.Equal(7, stage.AcceptedBaseUnits);
+        Assert.NotNull(again);
+    }
 }

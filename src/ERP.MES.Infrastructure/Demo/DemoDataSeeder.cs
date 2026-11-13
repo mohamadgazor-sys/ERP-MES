@@ -14,7 +14,7 @@ namespace ERP.MES.Infrastructure.Demo;
 public sealed record DemoSeedActors(long CreatedByUserId, long QcApproverUserId, long DrawingUserId = 0);
 
 /// <summary>What one seeding run did. Running the seed again on a seeded database adds nothing.</summary>
-public sealed record DemoSeedSummary(int CustomersAdded, int CustomersExisting, int RequestsAdded, int RequestsExisting);
+public sealed record DemoSeedSummary(int CustomersAdded, int CustomersExisting, int RequestsAdded, int RequestsExisting, string? ScenarioWarning = null);
 
 /// <summary>
 /// Populates a database with the FICTIONAL demonstration dataset (docs/FOUR_DAY_DEMO_PLAN.md, Decision Log #57). Everything goes through the

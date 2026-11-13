@@ -27,7 +27,7 @@
                 </DataGrid.Columns>
             </DataGrid>
             <WrapPanel Margin="0,8,0,0">
-                <Button Content="انتخاب فایل اکسل و پیش‌نمایش…" Padding="12,5" Margin="0,0,8,0" Click="OnChooseFileClick" IsEnabled="{Binding CanImport}" ToolTip="فایل اکسل را می‌خواند و فقط پیش‌نمایش و خطاها را نشان می‌دهد. تا تأیید نهایی چیزی ثبت نمی‌شود." />
+                <Button Content="انتخاب فایل اکسل و پیش‌نمایش" Padding="12,5" Margin="0,0,8,0" Click="OnChooseFileClick" IsEnabled="{Binding CanImport}" ToolTip="فایل اکسل را می‌خواند و فقط پیش‌نمایش و خطاها را نشان می‌دهد. تا تأیید نهایی چیزی ثبت نمی‌شود." />
                 <Button Content="ثبت ورود" Padding="12,5" Click="OnCommitClick" IsEnabled="{Binding CanCommit}" ToolTip="اطلاعات واردشده را برای ورود ثبت می‌کند." />
             </WrapPanel>
 

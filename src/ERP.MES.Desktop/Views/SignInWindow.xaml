@@ -16,6 +16,8 @@
                        TextWrapping="Wrap" FontWeight="SemiBold" />
         </Border>
 
+        <TextBlock Text="{Binding ApplicationName}" FontSize="17" FontWeight="Bold" TextWrapping="Wrap" Margin="0,0,0,10" AutomationProperties.AutomationId="ApplicationNameHeader" />
+
         <TextBlock x:Name="MessageText" Text="{Binding Message}" TextWrapping="Wrap" Margin="0,0,0,12"
                    Foreground="#9B1C1C" FontWeight="SemiBold" />
 

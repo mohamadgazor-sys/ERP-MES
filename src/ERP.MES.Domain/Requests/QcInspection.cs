@@ -69,8 +69,9 @@ public sealed class ShortfallDecision
     {
     }
 
-    public ShortfallDecision(long requestItemId, int stageNo, ShortfallKind kind, long shortfallBaseUnits, string note, long decidedByUserId, DateTime decidedAtUtc)
+    public ShortfallDecision(long requestItemId, int stageNo, ShortfallKind kind, long shortfallBaseUnits, string note, long decidedByUserId, DateTime decidedAtUtc, long lostAtContractorBaseUnits = 0)
     {
+        LostAtContractorBaseUnits = lostAtContractorBaseUnits;
         RequestItemId = requestItemId;
         StageNo = stageNo;
         Kind = kind;
@@ -88,7 +89,11 @@ public sealed class ShortfallDecision
 
     public ShortfallKind Kind { get; private set; }
 
+    /// <summary>The whole shortfall in base units: scrap decided by QC plus <see cref="LostAtContractorBaseUnits"/>.</summary>
     public long ShortfallBaseUnits { get; private set; }
+
+    /// <summary>The part of the shortfall that a contractor never returned (Decision Log #136); 0 for a shortfall made of scrap alone.</summary>
+    public long LostAtContractorBaseUnits { get; private set; }
 
     public string Note { get; private set; } = string.Empty;
 

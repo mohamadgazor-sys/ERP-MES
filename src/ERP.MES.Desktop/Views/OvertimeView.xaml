@@ -43,13 +43,13 @@
             <WrapPanel Margin="0,6,0,0">
                 <StackPanel Orientation="Horizontal" Visibility="{Binding CanDecide, Converter={StaticResource BoolToVisibility}}">
                     <Button Content="تأیید" Padding="10,3" Margin="0,0,6,4" Click="OnApprove" ToolTip="انتخاب یا مقدار واردشده را تأیید می‌کند." />
-                    <Button Content="رد…" Padding="10,3" Margin="0,0,6,4" Click="OnReject" ToolTip="مورد انتخاب‌شده را رد می‌کند و دلیل را می‌پرسد." />
+                    <Button Content="رد" Padding="10,3" Margin="0,0,6,4" Click="OnReject" ToolTip="مورد انتخاب‌شده را رد می‌کند و دلیل را می‌پرسد." />
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" Visibility="{Binding CanManagementDecide, Converter={StaticResource BoolToVisibility}}">
                     <Button Content="تأیید (مدیریت)" Padding="10,3" Margin="0,0,6,4" Click="OnManagementApprove" ToolTip="درخواست را تأیید می‌کند و برای برنامه‌ریزی می‌فرستد. فقط مدیریت." />
-                    <Button Content="رد (مدیریت)…" Padding="10,3" Margin="0,0,6,4" Click="OnManagementReject" ToolTip="درخواست را رد می‌کند و دلیل را می‌پرسد؛ برنامه‌ریزی می‌تواند با دلیل دوباره بازش کند." />
+                    <Button Content="رد (مدیریت)" Padding="10,3" Margin="0,0,6,4" Click="OnManagementReject" ToolTip="درخواست را رد می‌کند و دلیل را می‌پرسد؛ برنامه‌ریزی می‌تواند با دلیل دوباره بازش کند." />
                 </StackPanel>
-                <Button Content="لغو با دلیل…" Padding="10,3" Margin="0,0,6,4" Click="OnCancel" ToolTip="مورد انتخاب‌شده را با دلیلی که می‌نویسید لغو می‌کند؛ سابقه می‌ماند." />
+                <Button Content="لغو با دلیل" Padding="10,3" Margin="0,0,6,4" Click="OnCancel" ToolTip="مورد انتخاب‌شده را با دلیلی که می‌نویسید لغو می‌کند؛ سابقه می‌ماند." />
             </WrapPanel>
 
             <StackPanel Visibility="{Binding CanConfigureLimits, Converter={StaticResource BoolToVisibility}}">

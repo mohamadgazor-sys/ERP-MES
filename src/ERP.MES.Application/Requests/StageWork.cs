@@ -40,6 +40,17 @@ public sealed record StageTarget(long RequestId, long ItemId, int StageNo, long 
 }
 
 /// <summary>What a successful stage action did: the new status of the stage, and of the next stage when QC approval released it.</summary>
+/// <summary>Why one item stops the release of the whole request (Decision Log #137).</summary>
+public sealed record ReleaseBlocker(long ItemId, string ItemNo, string PartName, ValidationIssue Issue);
+
+/// <summary>
+/// The result of releasing a whole request. <see cref="Released"/> are the item numbers whose first stage entered the work queue; <see cref="AlreadyReleased"/> were released before (left untouched);
+/// <see cref="WaitingForChildren"/> are assemblies that keep waiting until every child has finished its route with QC approval (Decision Log #121 Q5) - reported, never hidden;
+/// <see cref="Blockers"/> is non-empty only on a refusal, in which case nothing at all was released.
+/// </summary>
+public sealed record BulkReleaseResult(
+    IReadOnlyList<string> Released, IReadOnlyList<string> AlreadyReleased, IReadOnlyList<string> WaitingForChildren, IReadOnlyList<ReleaseBlocker> Blockers);
+
 public sealed record StageActionResult(StageAction Action, int StageNo, ItemStageStatus NewStatus, int? NextStageNo, ItemStageStatus? NextStageNewStatus);
 
 
@@ -231,6 +242,141 @@ public sealed class StageWorkService(IRequestRepository requests, CurrentAuthori
         {
             // An invalid transition or a QC-gate refusal from the Domain (or a missing item or stage). Nothing was saved.
             return Outcome<StageActionResult>.Fail(OperationStatus.InvalidState);
+        }
+    }
+
+    /// <summary>
+    /// Releases every releasable item of a request to the production units' work queues in ONE transaction (Decision Log #137). It reuses the single-stage release rules unchanged: each item is checked
+    /// with exactly the gates of <see cref="PerformAsync"/> (request not cancelled/closed, a unit on the first stage, REPAIR fields complete, contract/approval/Drawing/inquiry/clarification gates)
+    /// and released with <see cref="RequestItem.ReleaseFirstStage"/>. The whole release is validated first: one blocked item refuses everything and nothing is released. Items already released are skipped;
+    /// an assembly whose children are not all complete is reported as waiting (its first stage is released only after them). One history entry names the user and time; one audit entry per released stage.
+    /// </summary>
+    public async Task<Outcome<BulkReleaseResult>> ReleaseAllAsync(Principal? principal, long requestId, CancellationToken cancellationToken = default)
+    {
+        var decision = await authorization.CheckAsync(principal, Permission.ReleaseStage, cancellationToken);
+        if (!decision.IsAllowed)
+        {
+            return Outcome<BulkReleaseResult>.Fail(OperationStatus.NotAuthorized);
+        }
+
+        var user = decision.Current!;
+        try
+        {
+            return await CustomerService.GuardAsync(async () =>
+            {
+                var loaded = await requests.FindWithVersionsAsync(requestId, cancellationToken);
+                if (loaded is null)
+                {
+                    return Outcome<BulkReleaseResult>.Fail(OperationStatus.NotFound);
+                }
+
+                var request = loaded.Value;
+                if (request.Status is RequestStatus.Cancelled or RequestStatus.Closed)
+                {
+                    return Outcome<BulkReleaseResult>.Invalid(ValidationIssue.StageGateNotSatisfied);
+                }
+
+                var already = new List<string>();
+                var waiting = new List<string>();
+                var blockers = new List<ReleaseBlocker>();
+                var toRelease = new List<RequestItem>();
+                foreach (var item in request.Items.OrderBy(i => i.ItemNo, StringComparer.Ordinal))
+                {
+                    if (item.Stages.Count == 0)
+                    {
+                        blockers.Add(new ReleaseBlocker(item.Id, item.ItemNo, item.PartName, ValidationIssue.ItemHasNoStages));
+                        continue;
+                    }
+
+                    if (item.Stages[0].Status != ItemStageStatus.Planned)
+                    {
+                        already.Add(item.ItemNo);
+                        continue;
+                    }
+
+                    if (item.Stages[0].ProductionUnitId is null)
+                    {
+                        blockers.Add(new ReleaseBlocker(item.Id, item.ItemNo, item.PartName, ValidationIssue.StageUnitRequired));
+                    }
+                    else if (item.IsRepairIncomplete(request.WorkType))
+                    {
+                        blockers.Add(new ReleaseBlocker(item.Id, item.ItemNo, item.PartName, ValidationIssue.RepairFieldsMissing));
+                    }
+                    else if (item.IsAssembly && !request.AllDescendantsRouteCompleted(item))
+                    {
+                        waiting.Add(item.ItemNo);
+                    }
+                    else if (await gates.EvaluateAsync(requestId, item.Id, cancellationToken) is not { Satisfied: true })
+                    {
+                        blockers.Add(new ReleaseBlocker(item.Id, item.ItemNo, item.PartName, ValidationIssue.StageGateNotSatisfied));
+                    }
+                    else
+                    {
+                        toRelease.Add(item);
+                    }
+                }
+
+                if (blockers.Count > 0)
+                {
+                    return new Outcome<BulkReleaseResult>(OperationStatus.ValidationFailed, new BulkReleaseResult([], already, waiting, blockers), ValidationIssue.ReleaseBlocked);
+                }
+
+                if (toRelease.Count == 0)
+                {
+                    return new Outcome<BulkReleaseResult>(OperationStatus.ValidationFailed, new BulkReleaseResult([], already, waiting, []), ValidationIssue.NothingToRelease);
+                }
+
+                var now = clock.UtcNow;
+                var ids = toRelease.Select(i => i.Id).ToHashSet();
+                var released = toRelease.Select(i => i.ItemNo).ToList();
+                var titles = toRelease.ToDictionary(i => i.Id, i => (i.ItemNo, i.Stages[0].StageTitle));
+                var requestNo = request.RequestNo.Value;
+
+                // The whole view that was validated is protected: any concurrent change to the request, an item or a stage rejects the release (nothing is saved).
+                void Change(Request r)
+                {
+                    foreach (var item in r.Items.Where(i => ids.Contains(i.Id)))
+                    {
+                        item.ReleaseFirstStage(now);
+                    }
+
+                    var list = string.Join("، ", released);
+                    var note = "آیتم‌های آزادشده (" + released.Count + "): " + list;
+                    r.RecordReleaseToProduction(new WorkflowActor(user.UserId, user.DepartmentCode), note.Length > RequestWorkflowEntry.MaxNoteLength ? note[..RequestWorkflowEntry.MaxNoteLength] : note, now);
+                }
+
+                IReadOnlyList<AuditLogEntry> Audit(Request r)
+                {
+                    var entries = new List<AuditLogEntry>();
+                    foreach (var (itemId, (itemNo, title)) in titles.OrderBy(t => t.Value.ItemNo, StringComparer.Ordinal))
+                    {
+                        entries.Add(new AuditLogEntry(now, user.UserId, auditContext.MachineName, auditContext.OsUserName, auditContext.DatabaseLogin, AuditActions.StageReleased, "ItemStage", itemId + "/1",
+                            $"Request {requestNo}, item {itemNo}, stage 1 ({title}) released with the whole request: PLANNED -> {r.Items.First(i => i.Id == itemId).Stages[0].Status.Code()}"));
+                    }
+
+                    entries.Add(new AuditLogEntry(now, user.UserId, auditContext.MachineName, auditContext.OsUserName, auditContext.DatabaseLogin, AuditActions.RequestReleasedToProduction, "Request", requestId.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                        $"Request {requestNo}: {released.Count} item(s) released to the production unit queues by user {user.UserId} ({user.DisplayName}, username {user.Username}): {string.Join(", ", released)}"));
+                    return entries;
+                }
+
+                await requests.UpdateRowsAsync(requestId, RowVersionExpectations.FromLoaded(loaded.Versions), Change, Audit, cancellationToken);
+
+                IReadOnlyList<string>? warnings = null;
+                if (drawings is not null)
+                {
+                    var withDrawing = (await drawings.ListCurrentAsync(ids.ToArray(), cancellationToken)).Count;
+                    if (withDrawing < ids.Count)
+                    {
+                        warnings = [NoDrawingWarning];
+                    }
+                }
+
+                return Outcome<BulkReleaseResult>.Ok(new BulkReleaseResult(released, already, waiting, []), warnings);
+            });
+        }
+        catch (InvalidOperationException)
+        {
+            return Outcome<BulkReleaseResult>.Fail(OperationStatus.InvalidState);
         }
     }
 

@@ -39,7 +39,7 @@ $frameworks = @($runtimeConfig.runtimeOptions.includedFrameworks | ForEach-Objec
 $deps = Get-Content -LiteralPath (Join-Path $stage 'app\ERP.MES.Desktop.deps.json') -Raw | ConvertFrom-Json
 $packages = @($deps.libraries.PSObject.Properties | Where-Object { $_.Value.type -eq 'package' -and $_.Name -notmatch '^(runtimepack|Microsoft\.(NETCore|WindowsDesktop)\.App)' } | ForEach-Object { $_.Name.Replace('/', ' ') } | Sort-Object)
 $m = New-Object System.Collections.Generic.List[string]
-$m.Add("ERP/MES offline demo package - MANIFEST")
+$m.Add("برنامه جامع مدیریت و کنترل تولید ایران‌تول - offline demo package - MANIFEST")
 $m.Add("Package: $name")
 $m.Add("Built (UTC): " + (Get-Date).ToUniversalTime().ToString('yyyy-MM-dd HH:mm'))
 $m.Add("Source commit: " + $(if ($env:GITHUB_SHA) { $env:GITHUB_SHA } else { (git -C $repo rev-parse HEAD) }))
