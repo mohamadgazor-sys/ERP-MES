@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
+using System.Windows.Data;
 using System.Windows.Input;
 using ERP.MES.Desktop.ViewModels;
 using ERP.MES.Domain.Requests;
@@ -27,26 +28,23 @@ public partial class ItemDefinitionView : UserControl
 
     private string TitleText => StageTitleBox.Text ?? string.Empty;
 
-    private void SetTitleText(string text)
+    private System.ComponentModel.ICollectionView? _titleView;
+    private string _titleFilter = string.Empty;
+
+    /// <summary>The drop-down shows one persistent list of the active catalog titles; typing only changes the view's filter, so the combo box's own selection and text handling are never fought.</summary>
+    private void EnsureTitleItems()
     {
-        _titleSuppress = true;
-        try
+        if (ReferenceEquals(StageTitleBox.ItemsSource, _viewModel.StageTitleChoices))
         {
-            StageTitleBox.Text = text;
+            return;
         }
-        finally
-        {
-            _titleSuppress = false;
-        }
+
+        StageTitleBox.ItemsSource = _viewModel.StageTitleChoices;
+        _titleView = CollectionViewSource.GetDefaultView(StageTitleBox.ItemsSource);
+        _titleView.Filter = item => item is string title && (_titleFilter.Length == 0 || title.Contains(_titleFilter, StringComparison.OrdinalIgnoreCase));
     }
 
-    private void OnStageTitleFocused(object sender, KeyboardFocusChangedEventArgs e)
-    {
-        if (StageTitleBox.ItemsSource is null)
-        {
-            StageTitleBox.ItemsSource = _viewModel.StageTitleChoices;
-        }
-    }
+    private void OnStageTitleFocused(object sender, KeyboardFocusChangedEventArgs e) => EnsureTitleItems();
 
     /// <summary>Typing narrows the list to the catalog titles that contain the text; the text itself is never turned into a title.</summary>
     private void OnStageTitleTextChanged(object sender, TextChangedEventArgs e)
@@ -56,20 +54,27 @@ public partial class ItemDefinitionView : UserControl
             return;
         }
 
-        // A selection made with the mouse changes the text natively; that is a commit, not typing.
+        // A selection made from the drop-down changes the text natively; that is a commit, not typing.
         if (StageTitleBox.SelectedItem is string selected && string.Equals(selected, TitleText, StringComparison.Ordinal))
         {
             return;
         }
 
+        EnsureTitleItems();
         var typed = TitleText;
-        var caret = (StageTitleBox.Template.FindName("PART_EditableTextBox", StageTitleBox) as TextBox)?.CaretIndex ?? typed.Length;
+        var inner = StageTitleBox.Template.FindName("PART_EditableTextBox", StageTitleBox) as TextBox;
+        var caret = inner?.CaretIndex ?? typed.Length;
+        _titleFilter = typed.Trim();
         _titleSuppress = true;
         try
         {
-            StageTitleBox.ItemsSource = StageTitleSearch.Filter(_viewModel.StageTitleChoices, typed);
-            StageTitleBox.Text = typed;
-            if (StageTitleBox.Template.FindName("PART_EditableTextBox", StageTitleBox) is TextBox inner)
+            _titleView?.Refresh();
+            if (!string.Equals(StageTitleBox.Text, typed, StringComparison.Ordinal))
+            {
+                StageTitleBox.Text = typed;
+            }
+
+            if (inner is not null)
             {
                 inner.CaretIndex = Math.Min(caret, typed.Length);
             }
@@ -82,13 +87,15 @@ public partial class ItemDefinitionView : UserControl
         StageTitleBox.IsDropDownOpen = StageTitleBox.IsKeyboardFocusWithin && typed.Length > 0;
     }
 
-    /// <summary>Commits a catalog title: the full list is shown again, the entry becomes the real selection and the text is set to it (re-applied once the combo box has finished closing its drop-down).</summary>
+    /// <summary>Commits a catalog title: the filter is cleared, the entry becomes the real selection and the text is set to it (re-applied once the combo box has finished closing its drop-down).</summary>
     private void CommitTitle(string title)
     {
+        EnsureTitleItems();
         _titleSuppress = true;
         try
         {
-            StageTitleBox.ItemsSource = _viewModel.StageTitleChoices;
+            _titleFilter = string.Empty;
+            _titleView?.Refresh();
             StageTitleBox.SelectedItem = title;
             StageTitleBox.Text = title;
             StageTitleBox.IsDropDownOpen = false;
@@ -98,6 +105,10 @@ public partial class ItemDefinitionView : UserControl
             _titleSuppress = false;
         }
 
+        ReassertTitleLater(title);
+    }
+
+    private void ReassertTitleLater(string title) =>
         Dispatcher.BeginInvoke(new Action(() =>
         {
             _titleSuppress = true;
@@ -114,13 +125,30 @@ public partial class ItemDefinitionView : UserControl
                 _titleSuppress = false;
             }
         }), System.Windows.Threading.DispatcherPriority.Background);
+
+    private void ClearTitle()
+    {
+        _titleSuppress = true;
+        try
+        {
+            _titleFilter = string.Empty;
+            _titleView?.Refresh();
+            StageTitleBox.SelectedItem = null;
+            StageTitleBox.Text = string.Empty;
+        }
+        finally
+        {
+            _titleSuppress = false;
+        }
     }
 
+    /// <summary>Choosing an entry with the mouse (or any selection) is a commit; the combo box sets the text itself, which is re-applied afterwards in case closing the drop-down disturbed it.</summary>
     private void OnStageTitleSelected(object sender, SelectionChangedEventArgs e)
     {
         if (!_titleSuppress && StageTitleBox.SelectedItem is string chosen)
         {
-            CommitTitle(chosen);
+            _titleFilter = string.Empty;
+            ReassertTitleLater(chosen);
         }
     }
 
@@ -165,11 +193,16 @@ public partial class ItemDefinitionView : UserControl
         await SafeAsync(async () =>
         {
             await _viewModel.LoadAsync();
+            EnsureTitleItems();
             PriorityBox.SelectedItem ??= _viewModel.Priorities.FirstOrDefault(p => p.Value == Priority.Normal);
         });
     }
 
-    private async void OnReloadClick(object sender, RoutedEventArgs e) => await SafeAsync(() => _viewModel.LoadAsync());
+    private async void OnReloadClick(object sender, RoutedEventArgs e) => await SafeAsync(async () =>
+    {
+        await _viewModel.LoadAsync();
+        EnsureTitleItems();
+    });
 
     private async void OnRequestSelected(object sender, SelectionChangedEventArgs e)
     {
@@ -224,9 +257,7 @@ public partial class ItemDefinitionView : UserControl
         await SafeAsync(async () => saved = await _viewModel.DefineStageAsync(StageTitleSearch.Resolve(_viewModel.StageTitleChoices, TitleText, null) is { } chosenTitle && string.Equals(chosenTitle, TitleText.Trim(), StringComparison.Ordinal) ? chosenTitle : TitleText, MinutesBox.Text, unit, machine, leadTimeDaysText: LeadTimeBox.Text));
         if (saved)
         {
-            SetTitleText(string.Empty);
-            StageTitleBox.SelectedItem = null;
-            StageTitleBox.ItemsSource = _viewModel.StageTitleChoices;
+            ClearTitle();
             MinutesBox.Clear();
             LeadTimeBox.Clear();
         }
