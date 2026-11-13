@@ -315,7 +315,7 @@ try {
     Sign-In 'demo.secretary' | Out-Null
     Open-Page 'درخواست‌ها'
     $grid = Find-ById $script:Main 'RequestGrid'
-    Check ((Get-GridRows $grid).Count -eq 3) 'Central sees the three seeded sample requests' ('expected 3 requests, saw ' + (Get-GridRows $grid).Count)
+    Check ((Get-GridRows $grid).Count -eq 6) 'Central sees the six seeded requests (three older samples and the three management-scenario requests)' ('expected 6 requests, saw ' + (Get-GridRows $grid).Count)
     Select-GridRow $grid $R15 | Out-Null
     $submit = Find-Btn 'ارسال به مدیریت'
     Check ($submit -and -not $submit.Current.IsEnabled) 'PREMATURE ACTION: "send to Management" is disabled for the request that has no PDF yet' 'the submit button is missing or enabled for a request without a PDF'
@@ -433,7 +433,7 @@ try {
     $filtered = Get-ListItems $titleBox
     Check ($filtered.Count -eq 1 -and (@(Read-Texts $filtered[0] 4) -join ' ') -like '*فرزکاری آزمون رابط*') "typing a fragment narrows the list to the matching catalog title (items shown: $($filtered.Count))" "typing did not filter the list; items: $($filtered.Count)"
     [System.Windows.Forms.SendKeys]::SendWait('{ENTER}'); Start-Sleep -Milliseconds 600
-    Check ((Get-Value $titleBox) -eq 'فرزکاری آزمون رابط') 'KEYBOARD: Enter commits the single matching catalog title' ("Enter did not commit; value: '$(Get-Value $titleBox)'")
+    Check ((Get-Value $titleBox) -eq 'فرزکاری آزمون رابط') 'KEYBOARD: Enter commits the single matching catalog title' ("Enter did not commit; value: '$(Get-Value $titleBox)'; message: $((Screen-Texts 12))")
     $titleBox.SetFocus(); Set-Text $titleBox 'عنوان خارج از فهرست'; Start-Sleep -Milliseconds 500
     [System.Windows.Forms.SendKeys]::SendWait('{TAB}'); Start-Sleep -Milliseconds 700
     Check ((Screen-Texts 40) -like '*در فهرست عنوان مرحله‌ها نیست*') 'KEYBOARD: Tab on a title that is not in the catalog is refused with a message' 'no message for an unknown title'
@@ -475,7 +475,7 @@ try {
     Click-Btn 'ارسال همهٔ آیتم‌ها به صف کار واحدهای تولیدی'
     $dlg = Find-ConfirmDialog
     if ($dlg) { $yesB = Find-ById $dlg 'ConfirmYesButton' 3; Click $yesB; Start-Sleep -Seconds 3 }
-    $blockedText = Screen-Texts 60
+    $blockedText = ((Screen-Texts 80) -replace '[\u200e\u200f]', '')
     Check ($blockedText -like '*هیچ آیتمی آزاد نشد*' -and $blockedText -like '*DEMO-1405-014-003*') '«بله» validates the whole request: it is refused, the blocked item DEMO-1405-014-003 is named and nothing is released' "blocked message missing; screen: $blockedText"
 
     # ---- 8. Visible release gating: the item follows the unapproved request contract, so release is refused ----
@@ -557,7 +557,7 @@ try {
     $mine = Find-ById $script:Main 'MineGrid' 5
     if ($mine) { try { $mine.SetFocus() } catch { }; Start-Sleep -Milliseconds 800 }
     # The operator's own session is the only row that names the machine (the stage grid has no machine column).
-    $mineOnly = @(Get-GridRows $script:Main | Where-Object { $_.Joined -like '*FCC-06*' })
+    $mineOnly = @(Get-GridRows $script:Main | Where-Object { $_.Joined -like '*FCC-06*' -and $_.Joined -like '*DEMO-1405-014-003*' })
     Note ('  rows naming FCC-06: ' + $mineOnly.Count + ' ; ' + (($mineOnly | ForEach-Object { $_.Joined }) -join ' || '))
     Check ($mineOnly.Count -ge 1) 'the operator sees the session in "my sessions"' ("operator sees no session; screen: $(Screen-Texts 70)")
     if ($mineOnly.Count -ge 1) {
@@ -566,18 +566,18 @@ try {
         Click-Btn 'توقف'
         $okPause = Dialog-Ok 'توقف نوبت'
         Start-Sleep -Seconds 2
-        $afterPause = Get-RowText $script:Main 'FCC-06'
+        $afterPause = ((Get-GridRows $script:Main | Where-Object { $_.Joined -like '*FCC-06*' -and $_.Joined -like '*DEMO-1405-014-003*' } | Select-Object -First 1).Joined)
         Note ('  after pause: ' + $afterPause)
         Check ($afterPause -like '*متوقف*') 'PAUSE: the session shows as paused with the chosen reason' ("pause not shown; dialog handled: $okPause; row: $afterPause")
         # The lists are reloaded after every action, which clears the selection: select the session again.
-        $again = Get-GridRows $script:Main | Where-Object { $_.Joined -like '*FCC-06*' } | Select-Object -First 1
+        $again = Get-GridRows $script:Main | Where-Object { $_.Joined -like '*FCC-06*' -and $_.Joined -like '*DEMO-1405-014-003*' } | Select-Object -First 1
         if ($again) { Select-Item $again.Element; Start-Sleep -Milliseconds 600 }
         Click-Btn 'ازسرگیری'
         # Outside the operator's shift the application asks for the reason in a prompt (found and fixed through this test; before, the operator had no way to give it).
         $okShift = Dialog-Ok 'کار خارج از شیفت' 'ازسرگیری خارج از شیفت برای آزمون رابط'
         Note ('  outside-shift prompt shown and answered: ' + $okShift)
         Start-Sleep -Seconds 2
-        $afterResume = Get-RowText $script:Main 'FCC-06'
+        $afterResume = ((Get-GridRows $script:Main | Where-Object { $_.Joined -like '*FCC-06*' -and $_.Joined -like '*DEMO-1405-014-003*' } | Select-Object -First 1).Joined)
         Note ('  long messages after the resume attempt: ' + ((Read-Texts $script:Main 200 | Where-Object { $_.Length -gt 40 -and $_ -notlike '*نسخه نمایشی*' }) -join ' // '))
         Save-Shot 'interact-10c-after-resume'
         Check ($afterResume -notlike '*متوقف*') 'RESUME: the session is active again' "still paused: $afterResume"

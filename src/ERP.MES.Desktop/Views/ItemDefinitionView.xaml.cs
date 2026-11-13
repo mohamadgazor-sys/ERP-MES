@@ -90,10 +90,18 @@ public partial class ItemDefinitionView : UserControl
             return;
         }
 
-        var resolved = StageTitleSearch.Resolve(_viewModel.StageTitleChoices, TitleText, StageTitleBox.SelectedItem as string);
+        var inner = StageTitleBox.Template.FindName("PART_EditableTextBox", StageTitleBox) as TextBox;
+        var typed = inner?.Text ?? TitleText;
+        var resolved = StageTitleSearch.Resolve(_viewModel.StageTitleChoices, typed, StageTitleBox.SelectedItem as string);
         if (resolved is not null)
         {
             SetTitleText(resolved);
+            if (inner is not null && !string.Equals(inner.Text, resolved, StringComparison.Ordinal))
+            {
+                inner.Text = resolved;
+                inner.CaretIndex = resolved.Length;
+            }
+
             StageTitleBox.IsDropDownOpen = false;
             if (e.Key == Key.Enter)
             {
