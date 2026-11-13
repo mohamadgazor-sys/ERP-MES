@@ -1,4 +1,5 @@
-﻿ERP/MES OFFLINE DEMO - FICTIONAL ACCOUNTS
+﻿برنامه جامع مدیریت و کنترل تولید ایران‌تول
+OFFLINE DEMO - FICTIONAL ACCOUNTS
 ========================================
 These accounts exist ONLY in the local demonstration database of this package. All data is fictional.
 The passphrase below is a demo-only value shared by all eleven accounts; it protects nothing real. Do not reuse it anywhere, and do not leave this package on a shared or production computer.

@@ -94,7 +94,7 @@ public partial class PlanningMasterView : UserControl
         }
         catch (Exception)
         {
-            MessageBox.Show(Messages.Unexpected, "سامانه ERP/MES", MessageBoxButton.OK, MessageBoxImage.Warning);
+            MessageBox.Show(Messages.Unexpected, AppInfo.Name, MessageBoxButton.OK, MessageBoxImage.Warning);
         }
     }
 }

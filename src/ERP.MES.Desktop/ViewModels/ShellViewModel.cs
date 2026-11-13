@@ -95,7 +95,10 @@ public sealed class ShellViewModel : ObservableObject
         _statusText = BuildStatusText();
     }
 
-    public string ApplicationTitle => "سامانه ERP/MES — نسخه نمایشی";
+    public string ApplicationTitle => AppInfo.DemoTitle;
+
+    /// <summary>The official application name, shown in the always-visible header band.</summary>
+    public string ApplicationName => AppInfo.Name;
 
     public string DemoBanner => "نسخه نمایشی: فقط داده‌های فرضی؛ بخش‌های ناقص با برچسب مشخص شده‌اند و کامل‌شده معرفی نمی‌شوند.";
 

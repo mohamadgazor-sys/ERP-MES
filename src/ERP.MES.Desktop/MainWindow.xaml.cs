@@ -156,7 +156,7 @@ public partial class MainWindow : Window
         }
         catch (Exception)
         {
-            MessageBox.Show("خروج از حساب ممکن نبود. دوباره تلاش کنید.", "سامانه ERP/MES", MessageBoxButton.OK, MessageBoxImage.Warning);
+            MessageBox.Show("خروج از حساب ممکن نبود. دوباره تلاش کنید.", AppInfo.Name, MessageBoxButton.OK, MessageBoxImage.Warning);
         }
     }
 

@@ -153,7 +153,7 @@
                 <TextBox x:Name="SchHandover" Width="60" Margin="0,0,6,4" ToolTip="دقیقهٔ هم‌پوشانی تحویل (اختیاری)" />
                 <TextBox x:Name="SchNote" Width="140" Margin="0,0,6,4" ToolTip="یادداشت تحویل" />
                 <Button Content="برنامه‌ریزی اپراتور" Padding="10,3" Margin="0,0,6,4" Click="OnSchedule" ToolTip="اپراتور را برای تاریخ، واحد، شیفت و ماشین انتخاب‌شده برنامه‌ریزی می‌کند؛ ناسازگاری‌ها پذیرفته نمی‌شود." />
-                <Button Content="لغو ردیف انتخاب‌شده…" Padding="10,3" Margin="0,0,6,4" Click="OnCancelSchedule" ToolTip="ردیف انتخاب‌شده را با دلیل لغو می‌کند؛ ردیف حذف نمی‌شود و در سابقه می‌ماند." />
+                <Button Content="لغو ردیف انتخاب‌شده" Padding="10,3" Margin="0,0,6,4" Click="OnCancelSchedule" ToolTip="ردیف انتخاب‌شده را با دلیل لغو می‌کند؛ ردیف حذف نمی‌شود و در سابقه می‌ماند." />
             </WrapPanel>
 
             <TextBlock Text="مرخصی و غیبت اپراتورها" Style="{StaticResource SectionStyle}" />

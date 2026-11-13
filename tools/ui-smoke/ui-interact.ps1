@@ -168,6 +168,11 @@ function Sign-In([string] $user) {
     }
     if (-not $main) { throw "main window did not appear for $user" }
     $script:Main = $main
+    if (-not $script:nameChecked) {
+        $script:nameChecked = $true
+        Check ($main.Current.Name -like '*برنامه جامع مدیریت و کنترل تولید ایران‌تول*') 'BRANDING: the main window title carries the official application name' ("window title: $($main.Current.Name)")
+        Check ($null -ne (Find-ById $main 'ApplicationNameHeader' 3)) 'BRANDING: the header shows the official application name' 'application-name header not found'
+    }
     return $main
 }
 
@@ -558,7 +563,7 @@ try {
     if ($mineOnly.Count -ge 1) {
         Select-Item $mineOnly[0].Element; Start-Sleep -Milliseconds 600
         Pick-Combo 'ReasonBox' $null | Out-Null
-        Click-Btn 'توقف…'
+        Click-Btn 'توقف'
         $okPause = Dialog-Ok 'توقف نوبت'
         Start-Sleep -Seconds 2
         $afterPause = Get-RowText $script:Main 'FCC-06'

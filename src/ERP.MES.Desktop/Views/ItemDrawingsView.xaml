@@ -35,7 +35,7 @@
             <WrapPanel Margin="0,8,0,0">
                 <Button Content="باز کردن نقشهٔ فعلی" Padding="10,3" MinWidth="150" Margin="0,0,8,0" Click="OnOpenCurrentClick" ToolTip="نقشهٔ فعلی آیتم انتخاب‌شده را با برنامهٔ PDF باز می‌کند." />
                 <Button Content="باز کردن نسخهٔ انتخاب‌شده" Padding="10,3" MinWidth="170" Margin="0,0,8,0" Click="OnOpenRevisionClick" ToolTip="نسخهٔ انتخاب‌شده در جدول نسخه‌ها را باز می‌کند (نسخه‌های قدیمی فقط برای دیدن‌اند)." />
-                <Button Content="بارگذاری یا جایگزینی نقشه…" Padding="10,3" MinWidth="190" Click="OnUploadClick" IsEnabled="{Binding CanManage}"
+                <Button Content="بارگذاری یا جایگزینی نقشه" Padding="10,3" MinWidth="190" Click="OnUploadClick" IsEnabled="{Binding CanManage}"
                         ToolTip="فایل PDF را برای آیتم انتخاب‌شده بارگذاری می‌کند. اگر نقشه‌ای وجود داشته باشد، نسخهٔ جدید جای آن می‌نشیند و نسخهٔ قبلی در تاریخچه می‌ماند. فقط نقشه‌کشی." />
             </WrapPanel>
         </StackPanel>

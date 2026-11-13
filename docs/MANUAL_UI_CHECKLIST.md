@@ -10,7 +10,7 @@ Approved in Decision Log #50 as the check for the shell until a UI-automation ap
 
 | # | Check | Expected | Result |
 |---|---|---|---|
-| A1 | Start the application | One window titled "سامانه ERP/MES — نسخه نمایشی", centred, opens on the dashboard | |
+| A1 | Start the application | One window titled "برنامه جامع مدیریت و کنترل تولید ایران‌تول — نسخه نمایشی", centred, opens on the dashboard | |
 | A2 | Layout direction | Navigation list is on the **right**; text is right-aligned; reading order is right to left | |
 | A3 | Font | Persian text uses Tahoma (letters پ چ ژ گ ک ی join correctly; the half-space in "درخواست‌ها" and "محدودیت‌ها" shows as a gap without a visible box) | |
 | A4 | Demo banner | Yellow banner at the top says the build is a demonstration with fictional data | |

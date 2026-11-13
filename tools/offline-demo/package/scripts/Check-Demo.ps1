@@ -2,7 +2,7 @@
 param([switch] $NoPause)
 . (Join-Path $PSScriptRoot 'Demo-Common.ps1')
 try {
-    Write-Host 'ERP/MES offline demo - preflight check' -ForegroundColor Cyan
+    Write-Host 'IranTool MES offline demo (برنامه جامع مدیریت و کنترل تولید ایران‌تول) - preflight check' -ForegroundColor Cyan
     $result = Show-Preflight (Test-DemoPreflight)
     Write-Host ''
     Out-Step 'INFO' ("Result: {0} problem(s), {1} warning(s)." -f $result.Fails, $result.Warns)

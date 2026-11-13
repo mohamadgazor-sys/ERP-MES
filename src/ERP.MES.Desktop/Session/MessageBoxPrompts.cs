@@ -1,3 +1,4 @@
+using ERP.MES.Desktop.ViewModels;
 using System.Windows;
 
 namespace ERP.MES.Desktop.Session;
@@ -8,7 +9,7 @@ namespace ERP.MES.Desktop.Session;
 /// </summary>
 public sealed class MessageBoxPrompts : IUnsavedWorkPrompt, IDiscardConfirmation
 {
-    private const string Title = "سامانه ERP/MES";
+    private const string Title = AppInfo.Name;
 
     private const MessageBoxOptions Rtl = MessageBoxOptions.RtlReading | MessageBoxOptions.RightAlign;
 

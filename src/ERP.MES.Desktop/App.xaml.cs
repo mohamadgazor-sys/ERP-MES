@@ -228,7 +228,7 @@ public partial class App : System.Windows.Application
 
     private void Fail(string message)
     {
-        MessageBox.Show(message, "سامانه ERP/MES", MessageBoxButton.OK, MessageBoxImage.Warning, MessageBoxResult.OK, MessageBoxOptions.RtlReading | MessageBoxOptions.RightAlign);
+        MessageBox.Show(message, AppInfo.Name, MessageBoxButton.OK, MessageBoxImage.Warning, MessageBoxResult.OK, MessageBoxOptions.RtlReading | MessageBoxOptions.RightAlign);
         Shutdown(1);
     }
 }

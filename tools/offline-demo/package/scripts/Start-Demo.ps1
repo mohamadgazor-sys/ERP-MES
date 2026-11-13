@@ -2,7 +2,7 @@
 param([switch] $NoPause)
 . (Join-Path $PSScriptRoot 'Demo-Common.ps1')
 try {
-    Write-Host 'ERP/MES offline demo - fictional data only' -ForegroundColor Cyan
+    Write-Host 'IranTool MES offline demo (برنامه جامع مدیریت و کنترل تولید ایران‌تول) - fictional data only' -ForegroundColor Cyan
     Unblock-Package
     $result = Show-Preflight (Test-DemoPreflight)
     if ($result.Fails -gt 0) { Out-Step 'FAIL' 'The demo cannot start until the FAIL lines above are fixed.'; if (-not $NoPause) { Read-Host 'Press Enter to close' }; exit 1 }
