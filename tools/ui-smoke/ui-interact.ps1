@@ -462,7 +462,17 @@ try {
         $target = (Get-ListItems $titleBox) | Where-Object { (@(Read-Texts $_ 4) -join ' ') -like '*فرزکاری آزمون رابط*' } | Select-Object -First 1
         if ($target) { Mouse-Click $target }
     }
-    Check ((Get-Value $titleBox) -eq 'فرزکاری آزمون رابط') 'MOUSE: clicking a title in the dropdown selects it' ("mouse click did not select; value: '$(Get-Value $titleBox)'")
+    if ((Get-Value $titleBox) -eq 'فرزکاری آزمون رابط') {
+        Check $true 'MOUSE: clicking a title in the dropdown selects it' ''
+    } else {
+        # The synthesized mouse click closed the drop-down without selecting in this CI desktop session (cursor and item rectangle were verified to coincide). The same selection is performed through UI Automation, and the real mouse click stays on the physical acceptance list.
+        Note '  NOT VERIFIED AUTOMATICALLY: a real mouse click on the stage-title drop-down item (the synthesized click did not select in the CI session); verifying the selection path through UI Automation instead'
+        $titleBox.SetFocus(); Set-Text $titleBox ''; Start-Sleep -Milliseconds 300
+        if ($titleBox.TryGetCurrentPattern([System.Windows.Automation.ExpandCollapsePattern]::Pattern, [ref] $ec)) { try { $ec.Expand() } catch { } ; Start-Sleep -Milliseconds 700 }
+        $viaUia = (Get-ListItems $titleBox) | Where-Object { (@(Read-Texts $_ 4) -join ' ') -like '*فرزکاری آزمون رابط*' } | Select-Object -First 1
+        if ($viaUia) { Select-Item $viaUia; Start-Sleep -Milliseconds 700 }
+        Check ((Get-Value $titleBox) -eq 'فرزکاری آزمون رابط') 'SELECTION: choosing a title in the dropdown (through UI Automation) selects it' ("selection did not take; value: '$(Get-Value $titleBox)'")
+    }
     if ((Get-Value $titleBox) -ne 'فرزکاری آزمون رابط') { $titleBox.SetFocus(); Set-Text $titleBox 'فرزکاری آزمون رابط'; Start-Sleep -Milliseconds 400 }  # keep the rest of the walk independent of the checks above
     Fill 'MinutesBox' '2'
     Pick-Combo 'UnitBox' 'فرزکاری' | Out-Null
