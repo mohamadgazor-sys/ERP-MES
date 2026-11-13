@@ -43,7 +43,7 @@ public class EndToEndDemoTests
     {
         using var db = new TempDatabase();
         var dates = PersistenceTestData.Dates;
-        var result = await DemoDatabase.InitializeAsync(db.Path, dates, db.NextCredentialPath(), SecurityFixture.FastPolicy, Token);
+        var result = await DemoDatabase.InitializeAsync(db.Path, dates, db.NextCredentialPath(), SecurityFixture.FastPolicy, Token, includeManagementScenario: false);
         var credentials = ReadCredentials(result.CredentialFile!);
         var security = SecurityServices.Create(db.ContextFactory, SecurityFixture.FastPolicy, hasher: new LowCostHasher());
         var clock = new FakeClock { UtcNow = new DateTime(2026, 10, 24, 7, 30, 0, DateTimeKind.Utc) }; // Saturday 1405/08/02, a working day; the display zone of the test is UTC
@@ -178,7 +178,7 @@ public class EndToEndDemoTests
     {
         using var db = new TempDatabase();
         var dates = PersistenceTestData.Dates;
-        var result = await DemoDatabase.InitializeAsync(db.Path, dates, db.NextCredentialPath(), SecurityFixture.FastPolicy, Token);
+        var result = await DemoDatabase.InitializeAsync(db.Path, dates, db.NextCredentialPath(), SecurityFixture.FastPolicy, Token, includeManagementScenario: false);
         var credentials = ReadCredentials(result.CredentialFile!);
         var security = SecurityServices.Create(db.ContextFactory, SecurityFixture.FastPolicy, hasher: new LowCostHasher());
         var clock = new FakeClock { UtcNow = new DateTime(2026, 10, 24, 7, 30, 0, DateTimeKind.Utc) };

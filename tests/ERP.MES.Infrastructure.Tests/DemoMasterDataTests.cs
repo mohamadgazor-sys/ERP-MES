@@ -12,7 +12,7 @@ public class DemoMasterDataTests
     private static long Count(TempDatabase db, string tableAndWhere) => long.Parse(db.Query("SELECT COUNT(*) FROM " + tableAndWhere).Single(), System.Globalization.CultureInfo.InvariantCulture);
 
     private static Task<DemoDatabaseResult> Init(TempDatabase db) =>
-        DemoDatabase.InitializeAsync(db.Path, PersistenceTestData.Dates, db.NextCredentialPath(), SecurityFixture.FastPolicy, Token);
+        DemoDatabase.InitializeAsync(db.Path, PersistenceTestData.Dates, db.NextCredentialPath(), SecurityFixture.FastPolicy, Token, includeManagementScenario: false);
 
     private static List<string> MasterSnapshot(TempDatabase db)
     {
@@ -94,7 +94,7 @@ public class DemoMasterDataTests
         Assert.Equal(27, again.Existing);
         Assert.Equal(before, MasterSnapshot(db));
 
-        await DemoDatabase.ResetAsync(db.Path, PersistenceTestData.Dates, db.NextCredentialPath(), SecurityFixture.FastPolicy, Token);
+        await DemoDatabase.ResetAsync(db.Path, PersistenceTestData.Dates, db.NextCredentialPath(), SecurityFixture.FastPolicy, Token, includeManagementScenario: false);
         Assert.Equal(before, MasterSnapshot(db));
     }
 }

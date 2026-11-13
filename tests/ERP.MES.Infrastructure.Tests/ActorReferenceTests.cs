@@ -127,7 +127,7 @@ public class ActorReferenceTests
     public async Task The_demonstration_data_names_only_real_users_and_passes_the_foreign_key_check()
     {
         using var db = new TempDatabase();
-        await DemoDatabase.InitializeAsync(db.Path, PersistenceTestData.Dates, db.NextCredentialPath(), SecurityFixture.FastPolicy, Token);
+        await DemoDatabase.InitializeAsync(db.Path, PersistenceTestData.Dates, db.NextCredentialPath(), SecurityFixture.FastPolicy, Token, includeManagementScenario: false);
 
         Assert.Empty(db.Query("PRAGMA foreign_key_check"));
         Assert.Equal(new[] { "demo.secretary" }, db.Query("SELECT DISTINCT u.Username FROM Customers c JOIN Users u ON u.Id = c.CreatedByUserId"));
@@ -202,7 +202,7 @@ public class ActorReferenceTests
         Assert.Equal(DemoDatabaseState.Demo, DemoDatabase.Inspect(db.Path));
 
         var refusal = await Assert.ThrowsAsync<DemoDatabaseRefusedException>(
-            () => DemoDatabase.InitializeAsync(db.Path, PersistenceTestData.Dates, db.NextCredentialPath(), SecurityFixture.FastPolicy, Token));
+            () => DemoDatabase.InitializeAsync(db.Path, PersistenceTestData.Dates, db.NextCredentialPath(), SecurityFixture.FastPolicy, Token, includeManagementScenario: false));
 
         Assert.Contains("demo-reset", refusal.Message, StringComparison.Ordinal);
         Assert.Contains("Nothing was changed", refusal.Message, StringComparison.Ordinal);
@@ -210,7 +210,7 @@ public class ActorReferenceTests
         Assert.False(File.Exists(db.CredentialFiles[0]));
 
         // The supported path: the explicit reset builds a new, consistent database and replaces the old one.
-        var reset = await DemoDatabase.ResetAsync(db.Path, PersistenceTestData.Dates, db.NextCredentialPath(), SecurityFixture.FastPolicy, Token);
+        var reset = await DemoDatabase.ResetAsync(db.Path, PersistenceTestData.Dates, db.NextCredentialPath(), SecurityFixture.FastPolicy, Token, includeManagementScenario: false);
 
         Assert.Equal(11, reset.AccountsCreated);
         Assert.Equal(34, db.Query("SELECT MigrationId FROM __EFMigrationsHistory").Count);
@@ -228,7 +228,7 @@ public class ActorReferenceTests
         var bytesBefore = await File.ReadAllBytesAsync(db.Path, Token);
 
         var refusal = await Assert.ThrowsAsync<DemoDatabaseRefusedException>(
-            () => DemoDatabase.ResetAsync(db.Path, PersistenceTestData.Dates, db.NextCredentialPath(), SecurityFixture.FastPolicy, Token));
+            () => DemoDatabase.ResetAsync(db.Path, PersistenceTestData.Dates, db.NextCredentialPath(), SecurityFixture.FastPolicy, Token, includeManagementScenario: false));
 
         Assert.Equal(DemoDatabaseState.Unrecognized, refusal.State);
         Assert.Equal(bytesBefore, await File.ReadAllBytesAsync(db.Path, Token));

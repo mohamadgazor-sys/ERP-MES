@@ -33,10 +33,10 @@ public class DemoDatabaseTests
 
     // A fresh credential file outside the repository for every call, and the documented fast work factor (the floor) so the suite stays quick.
     private static Task<DemoDatabaseResult> Init(TempDatabase db) =>
-        DemoDatabase.InitializeAsync(db.Path, Dates, db.NextCredentialPath(), SecurityFixture.FastPolicy, Token);
+        DemoDatabase.InitializeAsync(db.Path, Dates, db.NextCredentialPath(), SecurityFixture.FastPolicy, Token, includeManagementScenario: false);
 
     private static Task<DemoDatabaseResult> Reset(TempDatabase db) =>
-        DemoDatabase.ResetAsync(db.Path, Dates, db.NextCredentialPath(), SecurityFixture.FastPolicy, Token);
+        DemoDatabase.ResetAsync(db.Path, Dates, db.NextCredentialPath(), SecurityFixture.FastPolicy, Token, includeManagementScenario: false);
 
     private static async Task<List<Request>> LoadAllAsync(TempDatabase db)
     {

@@ -21,10 +21,10 @@ public class DemoAccountsTests
     private static CancellationToken Token => TestContext.Current.CancellationToken;
 
     private static Task<DemoDatabaseResult> Init(TempDatabase db) =>
-        DemoDatabase.InitializeAsync(db.Path, Dates, db.NextCredentialPath(), SecurityFixture.FastPolicy, Token);
+        DemoDatabase.InitializeAsync(db.Path, Dates, db.NextCredentialPath(), SecurityFixture.FastPolicy, Token, includeManagementScenario: false);
 
     private static Task<DemoDatabaseResult> Reset(TempDatabase db) =>
-        DemoDatabase.ResetAsync(db.Path, Dates, db.NextCredentialPath(), SecurityFixture.FastPolicy, Token);
+        DemoDatabase.ResetAsync(db.Path, Dates, db.NextCredentialPath(), SecurityFixture.FastPolicy, Token, includeManagementScenario: false);
 
     private static Dictionary<string, string> ReadCredentials(string path) =>
         File.ReadAllLines(path)
@@ -126,7 +126,7 @@ public class DemoAccountsTests
         var users = db.Query("SELECT u.Id || u.Username || hex(c.PasswordHash) FROM Users u JOIN UserCredentials c ON c.UserId = u.Id ORDER BY u.Id");
         var unusedPath = db.NextCredentialPath();
 
-        var second = await DemoDatabase.InitializeAsync(db.Path, Dates, unusedPath, SecurityFixture.FastPolicy, Token);
+        var second = await DemoDatabase.InitializeAsync(db.Path, Dates, unusedPath, SecurityFixture.FastPolicy, Token, includeManagementScenario: false);
 
         Assert.Equal(0, second.AccountsCreated);
         Assert.Null(second.CredentialFile);
@@ -179,7 +179,7 @@ public class DemoAccountsTests
         using var db = new TempDatabase();
         var inside = Path.Combine(SolutionLayout.Root, "tests", "never-written.credentials.txt");
 
-        await Assert.ThrowsAsync<CredentialFileException>(() => DemoDatabase.InitializeAsync(db.Path, Dates, inside, SecurityFixture.FastPolicy, Token));
+        await Assert.ThrowsAsync<CredentialFileException>(() => DemoDatabase.InitializeAsync(db.Path, Dates, inside, SecurityFixture.FastPolicy, Token, includeManagementScenario: false));
 
         Assert.False(File.Exists(inside));
         Assert.Equal(DemoDatabaseState.Missing, DemoDatabase.Inspect(db.Path));
@@ -194,7 +194,7 @@ public class DemoAccountsTests
         var existing = db.NextCredentialPath();
         await File.WriteAllTextAsync(existing, "someone else's file", Token);
 
-        await Assert.ThrowsAsync<CredentialFileException>(() => DemoDatabase.ResetAsync(db.Path, Dates, existing, SecurityFixture.FastPolicy, Token));
+        await Assert.ThrowsAsync<CredentialFileException>(() => DemoDatabase.ResetAsync(db.Path, Dates, existing, SecurityFixture.FastPolicy, Token, includeManagementScenario: false));
 
         Assert.Equal(before, await File.ReadAllBytesAsync(db.Path, Token));
         Assert.Equal("someone else's file", await File.ReadAllTextAsync(existing, Token));

@@ -100,7 +100,8 @@ public static class DemoDatabase
         IJalaliDateService dates,
         string? credentialFilePath = null,
         AuthenticationPolicy? policy = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        bool includeManagementScenario = true)
     {
         ArgumentNullException.ThrowIfNull(dates);
         var path = FullPath(databasePath);
@@ -109,7 +110,7 @@ public static class DemoDatabase
         {
             case DemoDatabaseState.Missing:
             case DemoDatabaseState.EmptyFile:
-                return await BuildAndInstallAsync(path, dates, credentialFilePath, policy, replacesDemoDatabase: false, cancellationToken);
+                return await BuildAndInstallAsync(path, dates, credentialFilePath, policy, replacesDemoDatabase: false, cancellationToken, includeManagementScenario);
 
             case DemoDatabaseState.Demo:
                 try
@@ -133,7 +134,7 @@ public static class DemoDatabase
                         + " record(s) refer to a user that does not exist. Nothing was changed. Replace it with the explicit reset: demo-reset <file> --yes.");
                 }
 
-                return await SeedExistingAsync(path, dates, credentialFilePath, policy, cancellationToken);
+                return await SeedExistingAsync(path, dates, credentialFilePath, policy, cancellationToken, includeManagementScenario);
 
             case var state:
                 throw Refused(path, state, "initialise");
@@ -150,7 +151,8 @@ public static class DemoDatabase
         IJalaliDateService dates,
         string? credentialFilePath = null,
         AuthenticationPolicy? policy = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        bool includeManagementScenario = true)
     {
         ArgumentNullException.ThrowIfNull(dates);
         var path = FullPath(databasePath);
@@ -161,11 +163,11 @@ public static class DemoDatabase
             throw Refused(path, state, "reset");
         }
 
-        return await BuildAndInstallAsync(path, dates, credentialFilePath, policy, replacesDemoDatabase: true, cancellationToken);
+        return await BuildAndInstallAsync(path, dates, credentialFilePath, policy, replacesDemoDatabase: true, cancellationToken, includeManagementScenario);
     }
 
     private static async Task<DemoDatabaseResult> BuildAndInstallAsync(
-        string path, IJalaliDateService dates, string? credentialFilePath, AuthenticationPolicy? policy, bool replacesDemoDatabase, CancellationToken cancellationToken)
+        string path, IJalaliDateService dates, string? credentialFilePath, AuthenticationPolicy? policy, bool replacesDemoDatabase, CancellationToken cancellationToken, bool includeManagementScenario)
     {
         // Refuse an unsafe credential file location BEFORE anything is built or replaced.
         var credentialPath = Path.GetFullPath(credentialFilePath ?? DefaultCredentialFilePath());
@@ -186,7 +188,7 @@ public static class DemoDatabase
             WriteMarker(temporaryPath);
             var (provisioner, contexts) = CreateProvisioner(temporaryPath, policy);
             var credentials = await provisioner.ProvisionAsync(cancellationToken);
-            var summary = await SeedAsync(contexts, provisioner, dates, cancellationToken);
+            var summary = await SeedAsync(contexts, provisioner, dates, includeManagementScenario, cancellationToken);
 
             // The passwords are written (to the protected file only) before the new database replaces the old one.
             CredentialFile.WriteNew(credentialPath, path, credentials);
@@ -221,21 +223,21 @@ public static class DemoDatabase
     // Initialising a database that already is a marked demonstration database: seed what is missing. A database that was seeded before sign-in existed never gets
     // here (its migration is refused, see above); a marked but still empty one is provisioned.
     private static async Task<DemoDatabaseResult> SeedExistingAsync(
-        string path, IJalaliDateService dates, string? credentialFilePath, AuthenticationPolicy? policy, CancellationToken cancellationToken)
+        string path, IJalaliDateService dates, string? credentialFilePath, AuthenticationPolicy? policy, CancellationToken cancellationToken, bool includeManagementScenario)
     {
         var (provisioner, contexts) = CreateProvisioner(path, policy);
         var state = await SecurityServices.Create(contexts, policy).Bootstrap.GetStateAsync(cancellationToken);
 
         if (state == SetupState.Initialized)
         {
-            return new DemoDatabaseResult(await SeedAsync(contexts, provisioner, dates, cancellationToken), 0, null);
+            return new DemoDatabaseResult(await SeedAsync(contexts, provisioner, dates, includeManagementScenario, cancellationToken), 0, null);
         }
 
         var credentialPath = Path.GetFullPath(credentialFilePath ?? DefaultCredentialFilePath());
         EnsureCredentialFileCanBeCreated(credentialPath);
         var credentials = await provisioner.ProvisionAsync(cancellationToken);
         CredentialFile.WriteNew(credentialPath, path, credentials);
-        return new DemoDatabaseResult(await SeedAsync(contexts, provisioner, dates, cancellationToken), credentials.Count, credentialPath);
+        return new DemoDatabaseResult(await SeedAsync(contexts, provisioner, dates, includeManagementScenario, cancellationToken), credentials.Count, credentialPath);
     }
 
     private static (DemoAccountProvisioner Provisioner, IDbContextFactory<ErpMesDbContext> Contexts) CreateProvisioner(string path, AuthenticationPolicy? policy)
@@ -246,7 +248,7 @@ public static class DemoDatabase
     }
 
     private static async Task<DemoSeedSummary> SeedAsync(
-        IDbContextFactory<ErpMesDbContext> contexts, DemoAccountProvisioner provisioner, IJalaliDateService dates, CancellationToken cancellationToken)
+        IDbContextFactory<ErpMesDbContext> contexts, DemoAccountProvisioner provisioner, IJalaliDateService dates, bool includeManagementScenario, CancellationToken cancellationToken)
     {
         var actors = await provisioner.ResolveActorsAsync(cancellationToken);
         var seeder = new DemoDataSeeder(new EfCustomerRepository(contexts), new EfRequestRepository(contexts), dates, actors, new EfItemDrawingRepository(contexts));
@@ -256,6 +258,25 @@ public static class DemoDatabase
         await new DemoMasterDataSeeder(
             new EfPlanningMasterRepository(contexts), new EfSchedulingRepository(contexts), new EfMaterialRepository(contexts), new EfOperatorRepository(contexts), new EfUnitQueueRepository(contexts),
             dates, await provisioner.ResolveMasterActorsAsync(cancellationToken), new DateTime(2026, 10, 23, 5, 0, 0, DateTimeKind.Utc)).SeedAsync(cancellationToken);
+
+        // The management-demonstration scenario (owner request of 2026-11-13): real services under the real demonstration accounts. A failure here must not stop the demonstration database from
+        // being created; it is reported in the summary and the base data stays usable.
+        if (!includeManagementScenario)
+        {
+            return summary;
+        }
+
+        try
+        {
+            var seedClock = new SeedClock(DateTime.UtcNow.Date.AddDays(-1).AddHours(5));
+            var scenario = new DemoScenarioSeeder(contexts, WorkflowServices.Create(contexts, SecurityServices.Create(contexts).Authorization, dates, seedClock), seedClock);
+            await scenario.SeedAsync(cancellationToken);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            return summary with { ScenarioWarning = exception.GetType().Name + ": " + exception.Message };
+        }
+
         return summary;
     }
 

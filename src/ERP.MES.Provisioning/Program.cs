@@ -209,6 +209,11 @@ try
             Console.WriteLine(
                 $"{(command == "demo-init" ? "Initialised" : "Reset done")}. Customers added {result.Seed.CustomersAdded}, already present {result.Seed.CustomersExisting}; "
                 + $"requests added {result.Seed.RequestsAdded}, already present {result.Seed.RequestsExisting}; demonstration accounts created {result.AccountsCreated}.");
+            if (result.Seed.ScenarioWarning is not null)
+            {
+                Console.Error.WriteLine("WARNING: the management demonstration scenario was not completed: " + result.Seed.ScenarioWarning);
+            }
+
             if (presentation && result.CredentialFile is not null)
             {
                 var replaced = await ReplaceOneTimePasswordsAsync(positional[0], result.CredentialFile, passphrase!);
