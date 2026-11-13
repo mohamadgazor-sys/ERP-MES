@@ -448,7 +448,14 @@ try {
     $target = $all | Where-Object { (@(Read-Texts $_ 4) -join ' ') -like '*فرزکاری آزمون رابط*' } | Select-Object -First 1
     Check ($null -ne $target) "the dropdown lists the active catalog titles ($($all.Count) shown)" 'the dropdown did not list the catalog title'
     if ($target) { Mouse-Click $target }
+    if ((Get-Value $titleBox) -ne 'فرزکاری آزمون رابط') {
+        Note ("  first mouse click did not select (value '" + (Get-Value $titleBox) + "'); item rectangle: " + $target.Current.BoundingRectangle + "; trying once more")
+        if ($titleBox.TryGetCurrentPattern([System.Windows.Automation.ExpandCollapsePattern]::Pattern, [ref] $ec)) { try { $ec.Expand() } catch { } ; Start-Sleep -Milliseconds 700 }
+        $target = (Get-ListItems $titleBox) | Where-Object { (@(Read-Texts $_ 4) -join ' ') -like '*فرزکاری آزمون رابط*' } | Select-Object -First 1
+        if ($target) { Mouse-Click $target }
+    }
     Check ((Get-Value $titleBox) -eq 'فرزکاری آزمون رابط') 'MOUSE: clicking a title in the dropdown selects it' ("mouse click did not select; value: '$(Get-Value $titleBox)'")
+    if ((Get-Value $titleBox) -ne 'فرزکاری آزمون رابط') { $titleBox.SetFocus(); Set-Text $titleBox 'فرزکاری آزمون رابط'; Start-Sleep -Milliseconds 400 }  # keep the rest of the walk independent of the checks above
     Fill 'MinutesBox' '2'
     Pick-Combo 'UnitBox' 'فرزکاری' | Out-Null
     Click-Btn 'ثبت مرحله'

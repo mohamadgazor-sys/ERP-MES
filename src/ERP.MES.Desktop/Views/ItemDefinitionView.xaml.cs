@@ -119,7 +119,9 @@ public partial class ItemDefinitionView : UserControl
     /// <summary>Enter commits the highlighted or the single matching title; Tab commits a valid title and moves on, and stays put (with a message) when the text is not a catalog title.</summary>
     private void OnStageTitleKeyDown(object sender, KeyEventArgs e)
     {
-        if (e.Key is not (Key.Enter or Key.Tab))
+        // With an input method active WPF reports Key.ImeProcessed and the real key in ImeProcessedKey.
+        var pressed = e.Key == Key.ImeProcessed ? e.ImeProcessedKey : e.Key;
+        if (pressed is not (Key.Enter or Key.Tab))
         {
             return;
         }
@@ -130,7 +132,7 @@ public partial class ItemDefinitionView : UserControl
         if (resolved is not null)
         {
             CommitTitle(resolved);
-            if (e.Key == Key.Enter)
+            if (pressed == Key.Enter)
             {
                 e.Handled = true;
             }
@@ -143,7 +145,7 @@ public partial class ItemDefinitionView : UserControl
             _viewModel.ReportStageTitleNotInCatalog();
             e.Handled = true;
         }
-        else if (e.Key == Key.Enter)
+        else if (pressed == Key.Enter)
         {
             StageTitleBox.IsDropDownOpen = true;
             e.Handled = true;
