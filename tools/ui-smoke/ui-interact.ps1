@@ -471,6 +471,7 @@ try {
         if ($titleBox.TryGetCurrentPattern([System.Windows.Automation.ExpandCollapsePattern]::Pattern, [ref] $ec)) { try { $ec.Expand() } catch { } ; Start-Sleep -Milliseconds 700 }
         $viaUia = (Get-ListItems $titleBox) | Where-Object { (@(Read-Texts $_ 4) -join ' ') -like '*فرزکاری آزمون رابط*' } | Select-Object -First 1
         if ($viaUia) { Select-Item $viaUia; Start-Sleep -Milliseconds 700 }
+        Note ('  DIAG trace: ' + $titleBox.Current.HelpText)
         Check ((Get-Value $titleBox) -eq 'فرزکاری آزمون رابط') 'SELECTION: choosing a title in the dropdown (through UI Automation) selects it' ("selection did not take; value: '$(Get-Value $titleBox)'")
     }
     if ((Get-Value $titleBox) -ne 'فرزکاری آزمون رابط') { $titleBox.SetFocus(); Set-Text $titleBox 'فرزکاری آزمون رابط'; Start-Sleep -Milliseconds 400 }  # keep the rest of the walk independent of the checks above

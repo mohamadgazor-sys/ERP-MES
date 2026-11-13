@@ -25,6 +25,15 @@ public partial class ItemDefinitionView : UserControl
     }
 
     private bool _titleSuppress;
+    private string _trace = string.Empty;
+
+    // Temporary: a short event trace exposed through UI Automation help text, to diagnose the drop-down selection in the CI walk.
+    private void Trace(string what)
+    {
+        _trace = (_trace + what + " [sel=" + (StageTitleBox.SelectedItem as string) + ";text=" + StageTitleBox.Text + ";sup=" + _titleSuppress + "]  ");
+        if (_trace.Length > 1500) { _trace = _trace[^1500..]; }
+        System.Windows.Automation.AutomationProperties.SetHelpText(StageTitleBox, _trace);
+    }
 
     private string TitleText => StageTitleBox.Text ?? string.Empty;
 
@@ -49,6 +58,7 @@ public partial class ItemDefinitionView : UserControl
     /// <summary>Typing narrows the list to the catalog titles that contain the text; the text itself is never turned into a title.</summary>
     private void OnStageTitleTextChanged(object sender, TextChangedEventArgs e)
     {
+        Trace("TextChanged");
         if (_titleSuppress)
         {
             return;
@@ -152,6 +162,7 @@ public partial class ItemDefinitionView : UserControl
     /// <summary>Choosing an entry with the mouse (or any selection) is a commit; the combo box sets the text itself, which is re-applied afterwards in case closing the drop-down disturbed it.</summary>
     private void OnStageTitleSelected(object sender, SelectionChangedEventArgs e)
     {
+        Trace("SelectionChanged");
         if (!_titleSuppress && StageTitleBox.SelectedItem is string chosen)
         {
             _titleFilter = string.Empty;
