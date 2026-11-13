@@ -50,6 +50,7 @@ public sealed class ItemStageConfiguration : IEntityTypeConfiguration<ItemStage>
         // External-stage quantities (Decision Log #129): the sums of the active dispatches and returns; the rest is derived.
         builder.Property(s => s.ExternalDispatchedBaseUnits).IsRequired().HasDefaultValue(0L);
         builder.Property(s => s.ExternalReturnedBaseUnits).IsRequired().HasDefaultValue(0L);
+        builder.Property(s => s.ExternalMissingBaseUnits).IsRequired().HasDefaultValue(0L);
         builder.Ignore(s => s.AtContractorBaseUnits);
         builder.Ignore(s => s.StillToSendBaseUnits);
 

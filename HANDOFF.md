@@ -6,6 +6,10 @@ Repository: `mohamadgazor-sys/ERP-MES` (https://github.com/mohamadgazor-sys/ERP-
 
 ---
 
+## Owner-performed acceptance testing (recorded 2026-11-13; physical, not automated)
+
+The owner personally tested the application **without internet access** on **Windows 10 22H2** and on **Windows 11 Pro 21H2**, both on the **same PC** (not two separate computers); it worked on both. Limits of that evidence: it does not establish that the Ethernet cable was physically unplugged, and **no clean Windows installation without .NET was tested**. Do not claim those two as done. The owner also completed live: Secretary created a customer and a MAKE request and sent it to Management; Management approved and forwarded to Planning; Planning forwarded to Drawing; Drawing fully accepted feasibility and returned it; Planning decided "no contract required", started defining items, created a sample item, and then hit the stage-title selection problem (a title that is not an exact catalog entry is an error) that the searchable dropdown of the next PR addresses.
+
 ## Current state (updated 2026-11-05 evening, written in the last PR of the external-stage series; read this first)
 
 | Item | Value |

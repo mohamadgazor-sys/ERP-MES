@@ -43,6 +43,7 @@ public sealed class ShortfallDecisionConfiguration : IEntityTypeConfiguration<Sh
         builder.HasIndex(d => new { d.RequestItemId, d.StageNo });
         builder.Property(d => d.Kind).HasConversion<int>().IsRequired();
         builder.Property(d => d.ShortfallBaseUnits).IsRequired();
+        builder.Property(d => d.LostAtContractorBaseUnits).IsRequired().HasDefaultValue(0L);
         builder.Property(d => d.Note).IsRequired();
         builder.Property(d => d.DecidedByUserId).IsRequired();
         builder.HasOne<User>().WithMany().HasForeignKey(d => d.DecidedByUserId).IsRequired().OnDelete(DeleteBehavior.Restrict);

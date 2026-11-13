@@ -2348,3 +2348,13 @@ Append one dated entry after every substantial session. Do not replace prior ent
 
 ### Recommended exact next action
 - Verify the post-merge runs of the last main, take the offline package of that main (run log line `PACKAGE:`) into HANDOFF.md's package history, then ask the owner the open point of `docs/EXTERNAL_STAGES_DESIGN.md` section 5 and arrange the physical Windows-client checks.
+
+---
+
+### Date / session
+- Date: 2026-11-13 (continued, owner feedback after a real-world demonstration)
+
+### Completed (first pull request of this round)
+- Decision Log #136: contractor-lost pieces via the existing shortfall decision (Missing shipment kind, stage counter, `LostAtContractorBaseUnits` on the shortfall decision, QC worklist label, external-work page button, audit codes, migrations `ExternalMissingUnits`), design section 5 updated, limitations page updated.
+- `docs/OWNER_REVIEW_REPORT_2026-11-13.md` from the real text of packet sections A, B, E; HANDOFF.md records the owner's Windows 10 22H2 / Windows 11 Pro 21H2 offline testing with its limits.
+- Found: spec §15 "later QC correction returns the item to Stage 1" is approved but NOT built (listed in the report as a gap).

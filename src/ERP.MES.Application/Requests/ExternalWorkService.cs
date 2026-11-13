@@ -21,6 +21,9 @@ public sealed record ExternalWorkEntry(
     /// </summary>
     public DateTime? ExpectedCompletionUtc { get; init; }
 
+    /// <summary>Base units recorded as missing (never returned by the contractor; Decision Log #136); not part of the returned or QC-approved quantities.</summary>
+    public long MissingBaseUnits { get; init; }
+
     public long RequestVersion { get; init; }
 
     public long ItemVersion { get; init; }
@@ -78,7 +81,7 @@ public sealed class ExternalWorkService(
             {
                 var history = shipments[(f.Item.Id, f.Stage.StageNo)].OrderBy(s => s.RecordedAtUtc).ThenBy(s => s.Id).ToList();
                 var open = history.Where(s => s.IsActive && s.Kind == ExternalShipmentKind.Dispatch)
-                    .Select(d => (Dispatch: d, Outstanding: d.BaseUnits - history.Where(r => r.IsActive && r.Kind == ExternalShipmentKind.Return && r.DispatchId == d.Id).Sum(r => r.BaseUnits)))
+                    .Select(d => (Dispatch: d, Outstanding: d.BaseUnits - history.Where(r => r.IsActive && r.Kind is ExternalShipmentKind.Return or ExternalShipmentKind.Missing && r.DispatchId == d.Id).Sum(r => r.BaseUnits)))
                     .Where(d => d.Outstanding > 0)
                     .Select(d =>
                     {
@@ -93,6 +96,7 @@ public sealed class ExternalWorkService(
                     f.Stage.InputBaseUnits ?? 0, f.Stage.ExternalDispatchedBaseUnits, f.Stage.ExternalReturnedBaseUnits, f.Stage.AtContractorBaseUnits, f.Stage.StillToSendBaseUnits ?? 0,
                     f.Stage.AwaitingQcBaseUnits, f.Stage.AcceptedBaseUnits, f.Stage.ReworkBaseUnits, f.Stage.ScrapBaseUnits, open, history)
                 {
+                    MissingBaseUnits = f.Stage.ExternalMissingBaseUnits,
                     ExpectedCompletionUtc = (f.Stage.StillToSendBaseUnits ?? 0) > 0 && f.Stage.Status is ItemStageStatus.WaitingExternalSend or ItemStageStatus.ExternalSent or ItemStageStatus.WaitingQc
                         ? now.AddDays(f.Stage.ExpectedLeadTimeDays!.Value)
                         : open.Count > 0 ? open.Max(d => d.ExpectedReturnUtc) : null,
@@ -120,7 +124,19 @@ public sealed class ExternalWorkService(
             },
             (s, no, title) => $"Request {no}: {s.BaseUnits} base units of stage {target.StageNo} ({title}) returned from dispatch {dispatchId} and handed to QC", cancellationToken);
 
-    /// <summary>The Warehouse cancels a mistaken dispatch (no returns yet) or return (QC has not decided its units) with a reason; the row stays in the history.</summary>
+    /// <summary>
+    /// The Warehouse records <paramref name="baseUnits"/> of dispatch <paramref name="dispatchId"/> as missing - the contractor never returned them - with a mandatory reason (Decision Log #136).
+    /// The units are not returned and not QC approved; the stage then waits for the shortfall decision of Management (or Planning's replacement order).
+    /// </summary>
+    public Task<Outcome<ExternalShipment>> MarkMissingAsync(Principal? principal, StageTarget target, long dispatchId, long baseUnits, string? reason, CancellationToken cancellationToken = default) =>
+        RecordAsync(principal, target, AuditActions.ExternalMissingRecorded, (item, shipments, user, now) =>
+            {
+                var dispatch = shipments.FirstOrDefault(s => s.Id == dispatchId) ?? throw new InvalidOperationException("No such dispatch of the stage.");
+                return item.MarkExternalMissing(target.StageNo, dispatch, shipments, baseUnits, reason, user, now);
+            },
+            (s, no, title) => $"Request {no}: {s.BaseUnits} base units of dispatch {dispatchId} of stage {target.StageNo} ({title}) recorded as MISSING at the contractor (not returned); reason: {s.Note}", cancellationToken);
+
+    /// <summary>The Warehouse cancels a mistaken dispatch (no returns or missing units yet), return (QC has not decided its units) or missing record with a reason; the row stays in the history.</summary>
     public Task<Outcome<ExternalShipment>> CancelAsync(Principal? principal, StageTarget target, long shipmentId, string? reason, CancellationToken cancellationToken = default)
     {
         ExternalShipment? cancelled = null;
@@ -130,6 +146,10 @@ public sealed class ExternalWorkService(
                 if (cancelled.Kind == ExternalShipmentKind.Dispatch)
                 {
                     item.CancelExternalDispatch(target.StageNo, cancelled, shipments, reason, user, now);
+                }
+                else if (cancelled.Kind == ExternalShipmentKind.Missing)
+                {
+                    item.CancelExternalMissing(target.StageNo, cancelled, reason, user, now);
                 }
                 else
                 {

@@ -26,7 +26,7 @@ public class MigrationTests
 
         await using var context = db.NewContext();
         var applied = (await context.Database.GetAppliedMigrationsAsync(TestContext.Current.CancellationToken)).ToArray();
-        Assert.Equal(33, applied.Length);
+        Assert.Equal(34, applied.Length);
         Assert.EndsWith("_InitialCreate", applied[0], StringComparison.Ordinal);
         Assert.EndsWith("_AddAuthentication", applied[1], StringComparison.Ordinal);
         Assert.EndsWith("_SingleWorkTypePerRequest", applied[2], StringComparison.Ordinal);
@@ -51,6 +51,7 @@ public class MigrationTests
         Assert.EndsWith("_MachineDowntime", applied[30], StringComparison.Ordinal);
         Assert.EndsWith("_ExternalStages", applied[31], StringComparison.Ordinal);
         Assert.EndsWith("_ExternalShipments", applied[32], StringComparison.Ordinal);
+        Assert.EndsWith("_ExternalMissingUnits", applied[33], StringComparison.Ordinal);
         Assert.Empty(await context.Database.GetPendingMigrationsAsync(TestContext.Current.CancellationToken));
     }
 
@@ -62,7 +63,7 @@ public class MigrationTests
 
         // Fails if the model changed without a new migration, or if the snapshot was edited away from the model.
         Assert.False(context.Database.HasPendingModelChanges());
-        Assert.Equal(33, context.Database.GetMigrations().Count());
+        Assert.Equal(34, context.Database.GetMigrations().Count());
     }
 
     [Fact]

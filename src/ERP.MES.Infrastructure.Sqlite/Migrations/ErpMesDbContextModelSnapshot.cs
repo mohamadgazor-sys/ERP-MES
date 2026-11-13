@@ -2749,6 +2749,11 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
                         .HasColumnType("INTEGER")
                         .HasDefaultValue(0L);
 
+                    b.Property<long>("ExternalMissingBaseUnits")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(0L);
+
                     b.Property<long>("ExternalReturnedBaseUnits")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER")
@@ -3160,6 +3165,11 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
 
                     b.Property<int>("Kind")
                         .HasColumnType("INTEGER");
+
+                    b.Property<long>("LostAtContractorBaseUnits")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(0L);
 
                     b.Property<string>("Note")
                         .IsRequired()

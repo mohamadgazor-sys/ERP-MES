@@ -504,7 +504,8 @@ public sealed class RequestItem
             throw new ArgumentException("A note of 1 to " + QcInspectionLine.MaxReasonLength + " characters is required.", nameof(note));
         }
 
-        var decision = new ShortfallDecision(Id, stageNo, kind, stage.ScrapBaseUnits, text, decidedByUserId, utc);
+        // The shortfall is the scrap QC decided plus the units a contractor never returned (Decision Log #136); the decision keeps the two apart.
+        var decision = new ShortfallDecision(Id, stageNo, kind, stage.ScrapBaseUnits + stage.ExternalMissingBaseUnits, text, decidedByUserId, utc, stage.ExternalMissingBaseUnits);
         CompleteStage(stage, (decimal)stage.AcceptedBaseUnits / BaseUnitsPerUnit, decidedByUserId, utc);
         UpdatedAtUtc = utc;
         return decision;
@@ -539,7 +540,7 @@ public sealed class RequestItem
         ArgumentNullException.ThrowIfNull(returnsOfDispatch);
         var stage = RequireExternalInProgress(stageNo, "returned");
         RequireShipmentOf(stage, dispatch, ExternalShipmentKind.Dispatch);
-        var outstanding = dispatch.BaseUnits - returnsOfDispatch.Where(r => r.IsActive && r.Kind == ExternalShipmentKind.Return && r.DispatchId == dispatch.Id).Sum(r => r.BaseUnits);
+        var outstanding = OutstandingOf(dispatch, returnsOfDispatch);
         if (baseUnits <= 0 || baseUnits > outstanding)
         {
             throw new ExternalQuantityException("Dispatch " + dispatch.Id + " has " + outstanding + " base units outstanding; " + baseUnits + " cannot be returned.");
@@ -559,9 +560,9 @@ public sealed class RequestItem
         ArgumentNullException.ThrowIfNull(returnsOfDispatch);
         var stage = RequireExternalInProgress(stageNo, "corrected");
         RequireShipmentOf(stage, dispatch, ExternalShipmentKind.Dispatch);
-        if (returnsOfDispatch.Any(r => r.IsActive && r.Kind == ExternalShipmentKind.Return && r.DispatchId == dispatch.Id))
+        if (returnsOfDispatch.Any(r => r.IsActive && r.Kind is ExternalShipmentKind.Return or ExternalShipmentKind.Missing && r.DispatchId == dispatch.Id))
         {
-            throw new ExternalQuantityException("Dispatch " + dispatch.Id + " has returns; cancel those first.");
+            throw new ExternalQuantityException("Dispatch " + dispatch.Id + " has returns or missing units; cancel those first.");
         }
 
         dispatch.MarkCancelled(reason, userId, atUtc);
@@ -586,6 +587,42 @@ public sealed class RequestItem
         SettleExternal(stage, userId, returned.CancelledAtUtc!.Value);
     }
 
+    /// <summary>
+    /// The Warehouse records units of one dispatch as missing - the contractor never returned them (Decision Log #136) - with a mandatory reason, never more than that dispatch has outstanding.
+    /// They are not returned and not QC approved; once nothing else is away or awaiting QC the stage waits for the shortfall decision (Management accepts it, or Planning orders replacement).
+    /// </summary>
+    public ExternalShipment MarkExternalMissing(int stageNo, ExternalShipment dispatch, IReadOnlyList<ExternalShipment> shipmentsOfStage, long baseUnits, string? reason, long userId, DateTime atUtc)
+    {
+        ArgumentNullException.ThrowIfNull(dispatch);
+        ArgumentNullException.ThrowIfNull(shipmentsOfStage);
+        var stage = RequireExternalInProgress(stageNo, "recorded as missing");
+        RequireShipmentOf(stage, dispatch, ExternalShipmentKind.Dispatch);
+        var outstanding = OutstandingOf(dispatch, shipmentsOfStage);
+        if (baseUnits <= 0 || baseUnits > outstanding)
+        {
+            throw new ExternalQuantityException("Dispatch " + dispatch.Id + " has " + outstanding + " base units outstanding; " + baseUnits + " cannot be recorded as missing.");
+        }
+
+        var shipment = new ExternalShipment(Id, stageNo, ExternalShipmentKind.Missing, dispatch.Id, baseUnits, null, reason, userId, atUtc);
+        stage.ExternalMissingBaseUnits += baseUnits;
+        SettleExternal(stage, userId, shipment.RecordedAtUtc);
+        return shipment;
+    }
+
+    /// <summary>A mistaken missing record is cancelled with a reason while the shortfall has not been decided; its units are at the contractor again (and can be returned).</summary>
+    public void CancelExternalMissing(int stageNo, ExternalShipment missing, string? reason, long userId, DateTime atUtc)
+    {
+        ArgumentNullException.ThrowIfNull(missing);
+        var stage = RequireExternalInProgress(stageNo, "corrected");
+        RequireShipmentOf(stage, missing, ExternalShipmentKind.Missing);
+        missing.MarkCancelled(reason, userId, atUtc);
+        stage.ExternalMissingBaseUnits -= missing.BaseUnits;
+        SettleExternal(stage, userId, missing.CancelledAtUtc!.Value);
+    }
+
+    private static long OutstandingOf(ExternalShipment dispatch, IReadOnlyList<ExternalShipment> shipments) =>
+        dispatch.BaseUnits - shipments.Where(r => r.IsActive && r.Kind is ExternalShipmentKind.Return or ExternalShipmentKind.Missing && r.DispatchId == dispatch.Id).Sum(r => r.BaseUnits);
+
     private ItemStage RequireExternalInProgress(int stageNo, string action)
     {
         var stage = GetStage(stageNo);
@@ -594,7 +631,7 @@ public sealed class RequestItem
             throw new InvalidOperationException("Stage " + stageNo + " is not an external stage.");
         }
 
-        if (stage.Status is not (ItemStageStatus.WaitingExternalSend or ItemStageStatus.ExternalSent or ItemStageStatus.WaitingQc) || stage.InputBaseUnits is null)
+        if (stage.Status is not (ItemStageStatus.WaitingExternalSend or ItemStageStatus.ExternalSent or ItemStageStatus.WaitingQc or ItemStageStatus.WaitingShortfallDecision) || stage.InputBaseUnits is null)
         {
             throw new InvalidOperationException("Stage " + stageNo + " is " + stage.Status.Code() + " and cannot be " + action + ".");
         }
@@ -629,7 +666,7 @@ public sealed class RequestItem
         {
             stage.Status = ItemStageStatus.WaitingExternalSend;
         }
-        else if (stage.ScrapBaseUnits > 0)
+        else if (stage.ScrapBaseUnits > 0 || stage.ExternalMissingBaseUnits > 0)
         {
             stage.Status = ItemStageStatus.WaitingShortfallDecision;
         }

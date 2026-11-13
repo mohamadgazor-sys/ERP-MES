@@ -88,6 +88,7 @@ public static class AuditActions
     public const string ProductionUnitCategoryChanged = "ProductionUnitCategoryChanged";
     public const string ExternalDispatchRecorded = "ExternalDispatchRecorded";
     public const string ExternalReturnRecorded = "ExternalReturnRecorded";
+    public const string ExternalMissingRecorded = "ExternalMissingRecorded";
     public const string ExternalShipmentCancelled = "ExternalShipmentCancelled";
     public const string UnitSupervisorChanged = "UnitSupervisorChanged";
     public const string QcInspectionRecorded = "QcInspectionRecorded";

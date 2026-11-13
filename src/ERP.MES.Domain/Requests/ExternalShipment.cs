@@ -7,6 +7,9 @@ public enum ExternalShipmentKind
 
     /// <summary>Units back from the external route, handed to QC (§16.6 "RETURNED_TO_QC"); never the final warehouse receipt (§17.3).</summary>
     Return = 2,
+
+    /// <summary>Units the contractor never returned, recorded by the Warehouse against the original dispatch with a mandatory reason (Decision Log #136). Never a return and never QC approved.</summary>
+    Missing = 3,
 }
 
 /// <summary>
@@ -37,6 +40,10 @@ public sealed class ExternalShipment
         BaseUnits = baseUnits;
         PieceDescription = Optional(pieceDescription, nameof(pieceDescription));
         Note = Optional(note, nameof(note));
+        if (kind == ExternalShipmentKind.Missing && Note is null)
+        {
+            throw new ArgumentException("A reason is required to record units as missing.", nameof(note));
+        }
         RecordedByUserId = recordedByUserId;
         RecordedAtUtc = Customer.RequireUtc(recordedAtUtc, nameof(recordedAtUtc));
     }
