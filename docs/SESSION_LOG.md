@@ -2377,3 +2377,29 @@ Append one dated entry after every substantial session. Do not replace prior ent
 
 ### Recommended exact next action
 - (Done: PR #82 merged as `2c2736d`; post-merge workflows green; package `ERP-MES-OfflineDemo-2026.11.13-2c2736d-win-x64.zip`, SHA-256 `67747f25d8fad22e804ea3c1e6d1a79961c3ca39a809f1da269c096d2b52005b`, run 43477652270, artifact 14064501560, expires 2026-12-13; recorded in HANDOFF.md.) Remaining: the physical acceptance items and the owner decisions. Originally: merge PR #82 when all six checks are green on its head; verify main and its post-merge workflows; take the offline package of that main (run log line `PACKAGE:`) and record commit, file name, SHA-256, run ID, artifact ID, size and expiry here and in HANDOFF.md; then arrange the physical acceptance items.
+
+---
+
+### Date / session
+- Date: 2026-11-13 (third part; owner reply after the report on PR #82)
+
+### Completed
+- Verified the repository directly: main, PR #82 (`2c2736d`), PR #83 (`02534f7`, docs only: post-merge evidence and package provenance for `2c2736d`), PR #84 (`dfd30f1`); all post-merge workflows green on each; no open PR other than the docs PR carrying this text; no stash, nothing unpushed.
+- Assembly waiting state approved and made explicit (Decision Log #140). Request progress and live home-page counts built after the requirement audit (Decision Log #141). Consolidated owner-decisions report `docs/OWNER_DECISIONS_REQUIRED_2026-11-13.md` (exact packet rows, QC-correction questions Q1-Q8, progress percentage R1).
+- New offline package built from `dfd30f1`; provenance in HANDOFF.md.
+
+### Decisions made
+- QC correction NOT implemented: the specification determines the structure but not Q1-Q8 (quantity, resulting decision, cost/Warehouse invalidation, session cost, assembly parents); the defaults are proposed in the report for a single owner reply.
+- Labelled default: the classification of stage statuses into active versus waiting/blocked in the progress counts (#141); no percentage is printed because the formula is not approved.
+
+### Unresolved questions
+- Everything in `docs/OWNER_DECISIONS_REQUIRED_2026-11-13.md`.
+
+### Tests actually run
+- Local Linux: Infrastructure 764 passed; Desktop view-model harness 163 of 166 (the three failures are source-scan tests that cannot find the repository from the harness directory; they pass in Windows CI). Windows CI on the head of #84 and on main `dfd30f1`: build-test, ui-smoke, offline-demo (windows-2022 and windows-latest), SQL Server - all green.
+
+### Known risks
+- The latest package has been tested automatically on Windows Server runners only; the owner's physical tests were of an earlier package. The owner will test the latest package before presenting.
+
+### Recommended exact next action
+- On the owner's answers: implement the QC correction (Q1-Q8) in one PR, then the answered rows (A2 contract amount, B1 late-report flag, B2 report revision, B9 reversal, B10 close action as chosen). Rebuild the offline package only if main's code changes again.

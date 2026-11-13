@@ -10,6 +10,37 @@ Repository: `mohamadgazor-sys/ERP-MES` (https://github.com/mohamadgazor-sys/ERP-
 
 The owner personally tested the application **without internet access** on **Windows 10 22H2** and on **Windows 11 Pro 21H2**, both on the **same PC** (not two separate computers); it worked on both. Limits of that evidence: it does not establish that the Ethernet cable was physically unplugged, and **no clean Windows installation without .NET was tested**. Do not claim those two as done. The owner also completed live: Secretary created a customer and a MAKE request and sent it to Management; Management approved and forwarded to Planning; Planning forwarded to Drawing; Drawing fully accepted feasibility and returned it; Planning decided "no contract required", started defining items, created a sample item, and then hit the stage-title selection problem (a title that is not an exact catalog entry is an error) that the searchable dropdown of the next PR addresses.
 
+## Current state after the second round of 2026-11-13 (written in the docs PR after #84; read this first)
+
+| Item | Value |
+|---|---|
+| `main` | `dfd30f13ebfbe10c77d4805fd11855fef9f6fdc4` (merge of PR #84). Later docs-only merges may follow; check GitHub for the newest main. |
+| Merged this round | #82 `2c2736d` (contractor-lost pieces, searchable stage-title box, release-all action, button labels and official name, management demo scenario); #83 `02534f7` (docs only: post-merge evidence and package provenance for `2c2736d`); #84 `dfd30f1` (assembly waiting state #140, request progress and live home counts #141, consolidated owner-decisions report, demo guide additions). |
+| Post-merge workflows | All four succeeded on `2c2736d`, on `02534f7` and on `dfd30f1` (for `dfd30f1`: CI run 43504351118, SQL Server 43504351040, UI smoke 43504351058, Offline demo package 43504351214). |
+| Open PRs / unpushed work | None except the docs PR that carries this text. |
+| Awaiting the owner | `docs/OWNER_DECISIONS_REQUIRED_2026-11-13.md`: rows A1, A2, A4, B1, B2, B6, B8, B9, B10, B13, E1, E4, E5; the QC-correction decisions Q1-Q8; the progress-percentage question R1. A one-line answer sheet is in its section 4. |
+| Approved but NOT built | QC correction (Master Specification 1.10, 15, 15.1): the approved text fixes the structure but not the quantity covered, the resulting decision, the invalidation of cost and Warehouse records, work-session cost and assembly parents (Q1-Q8). Implement in one focused PR as soon as the owner answers or accepts the defaults. Nothing else approved is known to be missing except what the report lists (the request progress and home counts were the other gaps and are built, #141). |
+
+### Offline package - CURRENT (built from `dfd30f1`; supersedes the package of `2c2736d`, which lacks the assembly waiting state, the progress view and the home counts)
+
+| Item | Value |
+|---|---|
+| Source commit | `dfd30f13ebfbe10c77d4805fd11855fef9f6fdc4` |
+| File | `ERP-MES-OfflineDemo-2026.11.13-dfd30f1-win-x64.zip` (a `.sha256` file is beside it) |
+| SHA-256 of the ZIP | `e0187ccf0c61cc91cdeb79a4f378c3842955b8e43b74151ba7e14b0b756adefd` |
+| Size | 106.2 MB (653 files; 241.3 MB unpacked); the GitHub artifact is 110,968,761 bytes |
+| Run / artifact | run 43504351214 (job `offline-demo (windows-latest)` 132157979260); artifact `erp-mes-offline-demo`, ID 14077125037 |
+| Artifact container digest (not the ZIP checksum) | `sha256:77c951ee665c226856d6d45df8c4a8e945d196090ce6cdeaaef1c7954fe546fe` (this is the digest of the uploaded artifact container; compare the ZIP against the ZIP checksum above) |
+| Expires | 2026-12-13 (30-day retention); download: Actions run 43504351214 -> Artifacts |
+| Proven by the run (automated, Windows Server runners) | the ZIP checksum matches its `.sha256` file; every file matches `FILES.sha256`; launcher and database initialisation work from the ZIP alone; all 11 demo accounts sign in; the demo reset works; the first window carries the official name; no one-time credential file is left behind |
+| Earlier package | `ERP-MES-OfflineDemo-2026.11.13-2c2736d-win-x64.zip`, SHA-256 `67747f25d8fad22e804ea3c1e6d1a79961c3ca39a809f1da269c096d2b52005b`, run 43477652270, artifact 14064501560 - valid only for `2c2736d`; do not hand it out as the latest |
+
+### Physical testing - three separate things (do not blur them)
+
+1. **Owner's physical tests (2026-11-13, earlier package):** the application ran successfully **without internet access** on **Windows 10 22H2** and on **Windows 11 Pro 21H2**, both on the owner's **same PC**. The Ethernet cable was not established as physically unplugged and no clean Windows without .NET was tested.
+2. **Automated Windows tests of the latest package:** the `Offline demo package` workflow ran on **Windows Server** runners (windows-2022 and windows-latest), not on a Windows 10/11 client.
+3. **Physical test of the exact latest package (`dfd30f1`):** **not done.** The owner said they will test it separately before presenting. Until then it must not be described as physically tested.
+
 ## Round of 2026-11-13 (owner feedback after the real demonstration; written in PR #82; read this before the older sections)
 
 What was built, in order (all in PR #82; Decision Log #136-#139, `docs/SESSION_LOG.md` 2026-11-13):
