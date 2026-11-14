@@ -31,3 +31,24 @@ Source rows: `docs/OWNER_REVIEW_PACKET_2.md` (exact original questions, quoted),
 
 ## Implementation order after PR #86
 1. B9 Warehouse reversal (PR-C), 2. B2 job-report revision (PR-D), 3. A2 contract amount (PR-E), then the remaining approved but unimplemented items (seeded dispatched-item demo scenario; Warehouse "corrected" reconciliation helpers if needed). No business question is open for any of them.
+
+## Traceability: every "resolved" row to its owner-approved decision
+
+Rule used: a row counts as resolved only when `docs/DECISION_LOG.md` entry **#142** (the owner's message of 2026-11-14) contains an explicit approval for it. A Packet 2 "current default" or a "recommendation" is **not** an approval. Anchors are the bold labels inside entry #142.
+
+| Row | Anchor in Decision Log #142 | Chosen option as recorded | Owner-approved or labelled interpretation? |
+|---|---|---|---|
+| A1 | **A1:** | option (b): Management enters real limits before go-live; 120/600 illustrative only | Owner-approved |
+| A2 | **A2:** | option (b): contract amount in Rial; Planning enters, Management approves; price screen proposes; Management may change price with mandatory reason and audit; distinct from item price decision; no per-item contract price | Owner-approved (implementation details such as field names are mine) |
+| A4 | **A4:** | architecture approved; instance/edition IT's, not blocking | Owner-approved |
+| B1 | **B1:** | option (b), N = 5 working days, warning, never refuse | Owner-approved |
+| B2 | **B2:** | option (b): reopen with reason, new revision, only latest valid approved revision feeds KPIs/costing, stale cost/price, Warehouse receipt not invalidated | Owner-approved |
+| B6 | **B6, B13, E1, E4, E5:** | keep v1 rules | Owner-approved ("keep") |
+| B8 | **B8:** | option (a): both price approval and Warehouse receipt; dispatch optional | Owner-approved |
+| B9 | **B9:** | option (b): Warehouse proposes with reason, Management approves; original never deleted; compensating transaction for physical movements | Owner-approved |
+| B10 | **B10:** | option (a): manual closure by Management only | Owner-approved; the blocker "an item whose last stage accepted nothing needs no finished/sent mark" is a **labelled interpretation** of mine |
+| B13, E1, E4, E5 | **B6, B13, E1, E4, E5:** | keep | Owner-approved ("keep") |
+| QC correction (B7/B12 superseded) | **QC correction Q1-Q8:** | Q1-Q8 as recorded | Owner-approved |
+| R1 | **R1:** | completed / total x 100 | Owner-approved; "rounded down, whole number" is my presentation choice |
+
+Items I decided without an owner decision and that are therefore only labelled defaults: the working-day counting detail of B1 (production calendar of the unit), the exact blocker list of B10, the table/field names, and the demo values. They are marked as such in the code comments and Decision Log entries #142/#143 and can be changed by the owner.
