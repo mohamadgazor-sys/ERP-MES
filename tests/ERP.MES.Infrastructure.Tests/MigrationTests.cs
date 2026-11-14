@@ -26,7 +26,7 @@ public class MigrationTests
 
         await using var context = db.NewContext();
         var applied = (await context.Database.GetAppliedMigrationsAsync(TestContext.Current.CancellationToken)).ToArray();
-        Assert.Equal(36, applied.Length);
+        Assert.Equal(37, applied.Length);
         Assert.EndsWith("_InitialCreate", applied[0], StringComparison.Ordinal);
         Assert.EndsWith("_AddAuthentication", applied[1], StringComparison.Ordinal);
         Assert.EndsWith("_SingleWorkTypePerRequest", applied[2], StringComparison.Ordinal);
@@ -63,7 +63,7 @@ public class MigrationTests
 
         // Fails if the model changed without a new migration, or if the snapshot was edited away from the model.
         Assert.False(context.Database.HasPendingModelChanges());
-        Assert.Equal(36, context.Database.GetMigrations().Count());
+        Assert.Equal(37, context.Database.GetMigrations().Count());
     }
 
     [Fact]

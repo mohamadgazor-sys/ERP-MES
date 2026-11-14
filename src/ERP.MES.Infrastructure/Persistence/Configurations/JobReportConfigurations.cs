@@ -24,10 +24,21 @@ public sealed class DailyJobReportConfiguration : IEntityTypeConfiguration<Daily
         builder.HasOne<ShiftTemplate>().WithMany().HasForeignKey(r => r.ShiftTemplateId).IsRequired().OnDelete(DeleteBehavior.Restrict);
 
         // One report per operator, work date and shift (docs/JOB_REPORTS_KPI_AND_OVERTIME_DESIGN.md section 5): a returned report is corrected, not duplicated.
-        builder.HasIndex(r => new { r.OperatorId, r.WorkDate, r.ShiftTemplateId }).IsUnique();
+        builder.HasIndex(r => new { r.OperatorId, r.WorkDate, r.ShiftTemplateId, r.AmendmentNo }).IsUnique();
         builder.HasIndex(r => new { r.WorkDate, r.ProductionUnitId });
         builder.Property(r => r.Status).HasConversion<int>().IsRequired();
         builder.Property(r => r.RevisionNo).IsRequired();
+
+        // Amendments of an approved report (owner decision B2): a NEW row linked to the report it amends; the approved original is never edited.
+        builder.Property(r => r.AmendmentNo).IsRequired().HasDefaultValue(0);
+        builder.Property(r => r.PreviousRevisionReportId);
+        builder.HasOne<DailyJobReport>().WithMany().HasForeignKey(r => r.PreviousRevisionReportId).IsRequired(false).OnDelete(DeleteBehavior.Restrict);
+        builder.HasIndex(r => r.PreviousRevisionReportId);
+        builder.Property(r => r.AmendmentReason);
+        builder.Property(r => r.AmendmentOpenedByUserId);
+        builder.HasOne<User>().WithMany().HasForeignKey(r => r.AmendmentOpenedByUserId).IsRequired(false).OnDelete(DeleteBehavior.Restrict);
+        builder.Property(r => r.AmendmentOpenedAtUtc);
+        builder.Ignore(r => r.IsAmendment);
         builder.Property(r => r.CreatedByUserId).IsRequired();
         builder.HasOne<User>().WithMany().HasForeignKey(r => r.CreatedByUserId).IsRequired().OnDelete(DeleteBehavior.Restrict);
         builder.Property(r => r.CreatedAtUtc).IsRequired();

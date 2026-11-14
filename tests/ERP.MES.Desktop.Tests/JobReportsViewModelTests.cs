@@ -97,6 +97,26 @@ public class JobReportsViewModelTests
         Assert.Contains("تأییدشده", planning.Rows.Single().StatusText, StringComparison.Ordinal);
         Assert.Contains("برنامه‌ریزی", planning.Rows.Single().StatusText, StringComparison.Ordinal);
 
+        // Reopening an approved report (owner decision B2): Planning and the Production Manager only, with a reason; the approved original stays and an amendment appears for the operator.
+        Assert.True(planning.CanReopen);
+        Assert.False(operatorVm.CanReopen);
+        await planning.ReopenAsync(planning.Rows.Single(), " ");
+        Assert.True(planning.IsErrorMessage);
+        Assert.Equal(Messages.ForIssue(ValidationIssue.JobReportReasonRequired, JalaliDateError.None), planning.Message);
+        await planning.ReopenAsync(planning.Rows.Single(), "ساعت پایان اشتباه ثبت شده بود");
+        Assert.False(planning.IsErrorMessage, planning.Message);
+        Assert.Equal(2, planning.Rows.Count);
+        var originalRow = planning.Rows.Single(r => !r.Item.Report.Value.IsAmendment);
+        var amendmentRow = planning.Rows.Single(r => r.Item.Report.Value.IsAmendment);
+        Assert.Contains("تأییدشده", originalRow.StatusText, StringComparison.Ordinal);
+        Assert.Contains("اصلاحیه در جریان است", originalRow.StatusText, StringComparison.Ordinal);
+        Assert.StartsWith("اصلاحیهٔ ۱ (دلیل بازگشایی: ساعت پایان اشتباه ثبت شده بود)", amendmentRow.StatusText, StringComparison.Ordinal);
+        Assert.Contains("پیش‌نویس", amendmentRow.StatusText, StringComparison.Ordinal);
+        await planning.ReopenAsync(planning.Rows.Single(r => !r.Item.Report.Value.IsAmendment), "دوباره");
+        Assert.Equal(Messages.ForIssue(ValidationIssue.JobReportReopenNotAllowed, JalaliDateError.None), planning.Message); // already has an amendment
+        await operatorVm.LoadAsync(Token);
+        Assert.True(operatorVm.Rows.Single(r => r.Item.Report.Value.IsAmendment).Item.CanEdit); // the operator corrects the amendment
+
         // Other departments are denied.
         var drawing = For(h, h.Drawing);
         await drawing.LoadAsync(Token);

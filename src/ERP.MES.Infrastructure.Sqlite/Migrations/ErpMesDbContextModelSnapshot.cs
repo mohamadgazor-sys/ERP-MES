@@ -613,6 +613,8 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
 
                     b.HasIndex("ByUserId");
 
+                    b.HasIndex("JobReportRevisionId");
+
                     b.HasIndex("QcCorrectionId");
 
                     b.HasIndex("RequestItemId");
@@ -2524,6 +2526,20 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
+                    b.Property<int>("AmendmentNo")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(0);
+
+                    b.Property<DateTime?>("AmendmentOpenedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long?>("AmendmentOpenedByUserId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("AmendmentReason")
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("TEXT");
 
@@ -2531,6 +2547,9 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<long>("OperatorId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long?>("PreviousRevisionReportId")
                         .HasColumnType("INTEGER");
 
                     b.Property<long>("ProductionUnitId")
@@ -2569,7 +2588,11 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("AmendmentOpenedByUserId");
+
                     b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("PreviousRevisionReportId");
 
                     b.HasIndex("ProductionUnitId");
 
@@ -2579,7 +2602,7 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
 
                     b.HasIndex("WorkDate", "ProductionUnitId");
 
-                    b.HasIndex("OperatorId", "WorkDate", "ShiftTemplateId")
+                    b.HasIndex("OperatorId", "WorkDate", "ShiftTemplateId", "AmendmentNo")
                         .IsUnique();
 
                     b.ToTable("DailyJobReports", (string)null);
@@ -4203,6 +4226,11 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("ERP.MES.Domain.Reporting.DailyJobReport", null)
+                        .WithMany()
+                        .HasForeignKey("JobReportRevisionId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("ERP.MES.Domain.Requests.QcCorrection", "QcCorrection")
                         .WithMany()
                         .HasForeignKey("QcCorrectionId")
@@ -4874,6 +4902,11 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
                 {
                     b.HasOne("ERP.MES.Domain.Identity.User", null)
                         .WithMany()
+                        .HasForeignKey("AmendmentOpenedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("ERP.MES.Domain.Identity.User", null)
+                        .WithMany()
                         .HasForeignKey("CreatedByUserId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
@@ -4883,6 +4916,11 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
                         .HasForeignKey("OperatorId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.HasOne("ERP.MES.Domain.Reporting.DailyJobReport", null)
+                        .WithMany()
+                        .HasForeignKey("PreviousRevisionReportId")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("ERP.MES.Domain.Planning.ProductionUnit", null)
                         .WithMany()

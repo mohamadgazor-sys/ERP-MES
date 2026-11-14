@@ -69,7 +69,8 @@ public sealed class EfCostingRepository(IDbContextFactory<ErpMesDbContext> conte
         var stages = item.Stages.OrderBy(s => s.StageNo).ToList();
 
         var reports = await context.DailyJobReports.Include(r => r.Lines).AsNoTracking()
-            .Where(r => r.Status == JobReportStatus.Approved && r.Lines.Any(l => l.RequestItemId == requestItemId)).ToListAsync(cancellationToken);
+            .Where(r => r.Status == JobReportStatus.Approved && r.Lines.Any(l => l.RequestItemId == requestItemId))
+            .Where(r => !context.DailyJobReports.Any(n => n.PreviousRevisionReportId == r.Id && n.Status == JobReportStatus.Approved)).ToListAsync(cancellationToken); // only the latest valid approved revision (owner decision B2)
         var lines = reports.SelectMany(r => r.Lines.Where(l => l.RequestItemId == requestItemId).Select(l => new ApprovedTimeLine(l.Id, l.MachineId, r.WorkDate, l.ProductiveMinutes))).ToList();
         var sessions = await context.WorkSessions.Include(w => w.Intervals).AsSplitQuery().AsNoTracking()
             .Where(w => w.RequestItemId == requestItemId && w.Status == ERP.MES.Domain.Production.WorkSessionStatus.Finished).ToListAsync(cancellationToken);

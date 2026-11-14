@@ -132,6 +132,9 @@ public enum Permission
     /// <summary>Review (approve or return) daily job reports: the supervisor of the unit, or Planning when the unit has none (flagged; Decision Log #95 D8, #102).</summary>
     ReviewJobReports,
 
+    /// <summary>Reopen an approved daily job report for amendment with a mandatory reason; the amendment is a new revision (Planning and the Production Manager; owner decision B2, Decision Log #142).</summary>
+    ReopenJobReport,
+
     /// <summary>Read daily job reports: operators their own, supervisors their unit's, Planning and Management all (Decision Log #95 D8, #102).</summary>
     ViewJobReports,
 
@@ -335,6 +338,7 @@ public static class AuthorizationRules
         [Permission.ManageUnitDesignations] = new([DepartmentCodes.ProductionManager], null),
         [Permission.AssignWorkingUnits] = new([], RoleCodes.Admin),
         [Permission.SubmitJobReport] = new([DepartmentCodes.Production], null),
+        [Permission.ReopenJobReport] = new([DepartmentCodes.Planning, DepartmentCodes.ProductionManager], null),
         [Permission.ReviewJobReports] = new([DepartmentCodes.Production, DepartmentCodes.Planning, DepartmentCodes.ProductionManager], null),
         [Permission.ViewJobReports] = new([DepartmentCodes.Production, DepartmentCodes.Planning, DepartmentCodes.Management, DepartmentCodes.ProductionManager], null),
         [Permission.CorrectStageAction] = new([DepartmentCodes.Planning, DepartmentCodes.ProductionManager], null),

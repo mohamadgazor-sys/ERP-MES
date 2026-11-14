@@ -46,6 +46,9 @@
                 <Button Content="بازگرداندن با دلیل" Padding="10,3" Margin="0,0,6,4" Click="OnReturn" ToolTip="گزارش را با دلیل به اپراتور برمی‌گرداند تا اصلاح کند." />
             </WrapPanel>
 
+            <WrapPanel Margin="0,0,0,4" Visibility="{Binding CanReopen, Converter={StaticResource BoolToVisibility}}">
+                <Button Content="بازگشایی گزارش تأییدشده با دلیل" Padding="10,3" Margin="0,0,6,4" Click="OnReopen" AutomationProperties.AutomationId="ReopenReportButton" ToolTip="گزارش تأییدشده را برای اصلاح بازمی‌کند: گزارش اصلی و سابقه‌اش بدون تغییر می‌ماند و یک اصلاحیهٔ جدید برای اپراتور ساخته می‌شود. تا تأیید اصلاحیه، گزارش اصلی معتبر است. فقط برنامه‌ریزی و مدیر تولید." />
+            </WrapPanel>
             <StackPanel Visibility="{Binding CanSubmit, Converter={StaticResource BoolToVisibility}}">
                 <TextBlock Text="گزارش من" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource PrimaryBrush}" Margin="0,14,0,4" />
                 <WrapPanel>

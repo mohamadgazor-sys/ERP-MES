@@ -41,7 +41,7 @@ public class JobReportMigrationTests
         Assert.Empty(db.Query("SELECT * FROM DailyJobReportLines"));
         Assert.Empty(db.Query("SELECT * FROM DailyJobReportEvents"));
         Assert.Empty(db.Query("PRAGMA foreign_key_check"));
-        Assert.Equal(36, db.Query("SELECT MigrationId FROM __EFMigrationsHistory").Count);
+        Assert.Equal(37, db.Query("SELECT MigrationId FROM __EFMigrationsHistory").Count);
 
         var keys = new List<string>();
         foreach (var table in new[] { "DailyJobReports", "DailyJobReportLines", "DailyJobReportEvents" })
@@ -55,7 +55,7 @@ public class JobReportMigrationTests
         Assert.Contains("DailyJobReportLines:RequestItemId->ItemStages:RESTRICT", keys);
 
         // One report per operator, work date and shift.
-        Assert.Contains("OperatorId,WorkDate,ShiftTemplateId", db.Query("SELECT group_concat(c.name, ',') FROM pragma_index_list('DailyJobReports') l, pragma_index_info(l.name) c WHERE l.\"unique\" = 1 GROUP BY l.name"));
+        Assert.Contains("OperatorId,WorkDate,ShiftTemplateId,AmendmentNo", db.Query("SELECT group_concat(c.name, ',') FROM pragma_index_list('DailyJobReports') l, pragma_index_info(l.name) c WHERE l.\"unique\" = 1 GROUP BY l.name"));
         await using var check = db.NewContext();
         Assert.False(check.Database.HasPendingModelChanges());
     }

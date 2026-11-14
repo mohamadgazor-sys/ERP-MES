@@ -130,6 +130,12 @@ public enum JobReportEventKind
     Submitted,
     Returned,
     Approved,
+
+    /// <summary>An approved report was reopened for amendment with a reason (owner decision B2); recorded on the original, whose approval stays in force until the amendment is approved.</summary>
+    Reopened,
+
+    /// <summary>First event of an amendment: the reopening reason.</summary>
+    RevisionOpened,
 }
 
 /// <summary>Append-only history of a report: who did what and when, with the reason of a return and whether Planning reviewed as the fallback.</summary>
@@ -201,6 +207,20 @@ public sealed class DailyJobReport
     public JobReportStatus Status { get; private set; }
 
     public int RevisionNo { get; private set; }
+
+    /// <summary>0 for the original report; 1, 2, ... for the amendments of an approved report (owner decision B2, Decision Log #142). An amendment is a NEW report row; the approved original is never edited.</summary>
+    public int AmendmentNo { get; private set; }
+
+    /// <summary>The approved report this one amends (null for an original).</summary>
+    public long? PreviousRevisionReportId { get; private set; }
+
+    public string? AmendmentReason { get; private set; }
+
+    public long? AmendmentOpenedByUserId { get; private set; }
+
+    public DateTime? AmendmentOpenedAtUtc { get; private set; }
+
+    public bool IsAmendment => PreviousRevisionReportId is not null;
 
     public long CreatedByUserId { get; private set; }
 
@@ -301,6 +321,38 @@ public sealed class DailyJobReport
         ReturnReason = text;
         RevisionNo++;
         _events.Add(new JobReportEvent(JobReportEventKind.Returned, reviewerUserId, atUtc, text, planningFallback));
+    }
+
+    /// <summary>
+    /// Owner decision B2: reopens an APPROVED report for amendment. The original is not changed (one event is appended to its history); a new report row is returned, a copy of the original's lines in status
+    /// Draft, to be corrected, submitted and approved again. Until the amendment is approved the original stays the latest valid approved revision.
+    /// </summary>
+    public DailyJobReport Reopen(long userId, string? reason, DateTime atUtc)
+    {
+        if (Status != JobReportStatus.Approved)
+        {
+            throw new InvalidOperationException("Only an approved report can be reopened for amendment.");
+        }
+
+        var text = reason?.Trim();
+        if (string.IsNullOrEmpty(text) || text.Length > JobReportLine.MaxNoteLength)
+        {
+            throw new ArgumentException("A reopening reason of 1 to " + JobReportLine.MaxNoteLength + " characters is required.", nameof(reason));
+        }
+
+        var at = Customer.RequireUtc(atUtc, nameof(atUtc));
+        var revision = new DailyJobReport(0, OperatorId, WorkDate, ProductionUnitId, ShiftTemplateId, userId, at)
+        {
+            AmendmentNo = AmendmentNo + 1,
+            PreviousRevisionReportId = Id,
+            AmendmentReason = text,
+            AmendmentOpenedByUserId = userId,
+            AmendmentOpenedAtUtc = at,
+        };
+        revision._events.Add(new JobReportEvent(JobReportEventKind.RevisionOpened, userId, at, text, planningFallback: false));
+        revision.ReplaceLines(_lines.Select(l => new JobReportLine(l.LineNo, l.MachineId, l.RequestId, l.RequestItemId, l.StageNo, l.StartUtc, l.EndUtc, l.DowntimeMinutes, l.DowntimeReason, l.ProcessedBaseUnits, l.Note)));
+        _events.Add(new JobReportEvent(JobReportEventKind.Reopened, userId, at, text, planningFallback: false));
+        return revision;
     }
 
     private void RequireSubmitted(string action)

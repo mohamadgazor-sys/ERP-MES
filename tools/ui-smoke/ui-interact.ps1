@@ -657,6 +657,20 @@ try {
         Check ((($null -ne $approveBtn) -and ($null -ne $rejectBtn)) -eq $who[2]) "ROLE: $($who[0]) $(if ($who[2]) { 'sees' } else { 'does not see' }) the approve/reject reversal buttons" "$($who[0]): unexpected state of the approve/reject reversal buttons"
         Sign-Out
     }
+
+    # ---- 10. Reopening an approved job report (owner decision B2): Planning and the Production Manager only ----
+    foreach ($who in @(@('demo.planning', $true), @('demo.productionmanager', $true), @('demo.production', $false), @('demo.supervisor', $false), @('demo.management', $false))) {
+        Sign-In $who[0] | Out-Null
+        $navHasReports = @(Get-NavRows | Where-Object { $_.Title -like '*گزارش کار روزانه*' }).Count -gt 0
+        if ($navHasReports) {
+            Open-Page 'گزارش کار روزانه'
+            $reopen = Find-ById $script:Main 'ReopenReportButton' 4
+            Check (($null -ne $reopen) -eq $who[1]) "ROLE: $($who[0]) $(if ($who[1]) { 'sees' } else { 'does not see' }) the reopen-approved-report button" "$($who[0]): unexpected state of the reopen button (found: $($null -ne $reopen))"
+        } else {
+            Check (-not $who[1]) "ROLE: $($who[0]) has no job-report page (and must not need the reopen button)" "$($who[0]) should see the job-report page"
+        }
+        Sign-Out
+    }
 }
 catch {
     Fail ('script error: ' + $_.Exception.Message + ' | ' + $_.ScriptStackTrace)

@@ -74,6 +74,8 @@ public sealed class JobReportsViewModel(
 
     public bool CanReview => _capabilities.CanReview;
 
+    public bool CanReopen => _capabilities.CanReopen;
+
     public bool IsDenied
     {
         get => _denied;
@@ -266,7 +268,7 @@ public sealed class JobReportsViewModel(
             var r = item.Report.Value;
             _rows.Add(new JobReportRow(
                 item, dates.FormatDate(r.WorkDate), item.OperatorName, unitNames.GetValueOrDefault(r.ProductionUnitId, "?"), shiftCodes.GetValueOrDefault(r.ShiftTemplateId, "?"),
-                r.Status switch { JobReportStatus.Draft => "پیش‌نویس", JobReportStatus.Submitted => "ارسال‌شده", JobReportStatus.Returned => "بازگردانده‌شده: " + r.ReturnReason, _ => "تأییدشده" + (r.ReviewedByPlanningFallback ? " (بررسی توسط برنامه‌ریزی چون واحد سرپرست ندارد)" : string.Empty) },
+                StatusOf(item),
                 Digits(r.Lines.Count.ToString(CultureInfo.InvariantCulture)) + " ردیف کار، " + Digits(r.Lines.Sum(l => l.ProductiveMinutes).ToString(CultureInfo.InvariantCulture)) + " دقیقهٔ مفید",
                 (r.HasFlaggedLines ? $"{Digits(r.Lines.Count(l => l.Flags != JobLineFlags.None).ToString(CultureInfo.InvariantCulture))} ردیف کار علامت‌دار" : string.Empty)
                 + (item.IsLate ? (r.HasFlaggedLines ? "؛ " : string.Empty) + $"هشدار: گزارش دیرهنگام - {Digits(item.LateWorkingDays.ToString(CultureInfo.InvariantCulture))} روز کاری پس از تاریخ کار (مجاز: {Digits(JobReportService.LateAfterWorkingDays.ToString(CultureInfo.InvariantCulture))} روز)" : string.Empty),
@@ -292,10 +294,40 @@ public sealed class JobReportsViewModel(
         }
     }
 
+    /// <summary>The status text of a row: an amendment (owner decision B2) is named as such with its reason; an approved report that has an amendment says so, and a replaced one says it no longer counts.</summary>
+    private string StatusOf(JobReportItem item)
+    {
+        var r = item.Report.Value;
+        var text = r.Status switch { JobReportStatus.Draft => "پیش‌نویس", JobReportStatus.Submitted => "ارسال‌شده", JobReportStatus.Returned => "بازگردانده‌شده: " + r.ReturnReason, _ => "تأییدشده" + (r.ReviewedByPlanningFallback ? " (بررسی توسط برنامه‌ریزی چون واحد سرپرست ندارد)" : string.Empty) };
+        if (r.IsAmendment)
+        {
+            text = "اصلاحیهٔ " + Digits(r.AmendmentNo.ToString(CultureInfo.InvariantCulture)) + " (دلیل بازگشایی: " + r.AmendmentReason + ") — " + text;
+        }
+
+        if (item.IsSuperseded)
+        {
+            text += " — جایگزین‌شده با اصلاحیهٔ تأییدشده؛ سابقه حفظ شده و در شاخص‌ها و هزینه محاسبه نمی‌شود";
+        }
+        else if (item.HasAmendment)
+        {
+            text += " — اصلاحیه در جریان است؛ این گزارش تا تأیید اصلاحیه معتبر می‌ماند";
+        }
+
+        return text;
+    }
+
+    /// <summary>Planning or the Production Manager reopens an approved report with a mandatory reason; the approved original is kept and a new revision is created for the operator.</summary>
+    public Task ReopenAsync(JobReportRow row, string? reason) => CommandAsync("گزارش برای اصلاح بازگشایی شد؛ گزارش تأییدشدهٔ اصلی بدون تغییر ماند و اصلاحیهٔ جدید برای اپراتور ساخته شد.", async token =>
+    {
+        var outcome = await reports.ReopenAsync(currentUser(), row.Item.Report.Value.Id, row.Item.Report.Version, reason, token);
+        return outcome.Succeeded ? Outcome<int>.Ok(0) : new Outcome<int>(outcome.Status, 0, outcome.Issue, outcome.DateError);
+    });
+
     private void NotifyCaps()
     {
         OnPropertyChanged(nameof(CanSubmit));
         OnPropertyChanged(nameof(CanReview));
+        OnPropertyChanged(nameof(CanReopen));
     }
 
     private async Task CommandAsync(string success, Func<CancellationToken, Task<Outcome<int>>> command)

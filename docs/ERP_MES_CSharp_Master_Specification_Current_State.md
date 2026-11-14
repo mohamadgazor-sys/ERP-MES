@@ -2070,6 +2070,8 @@ Downtime must not be incorrectly attributed to operator performance when the cau
 
 > **Design annotation (2026-10-22, Decision Log #82/#83; PROPOSAL, not approved unless stated):** R5/R6: daily job reports and KPI reporting over any period X-Y with hour-based operator ranking; the 24-day period becomes a preset (U-33). Reward formulas stay Phase 2 (#21). See `JOB_REPORTS_KPI_AND_OVERTIME_DESIGN.md`.
 
+> **Owner decision B2 (2026-11-14, Decision Log #142, #145):** an approved daily job report can be reopened by Planning or the Production Manager with a mandatory reason. The amendment is a NEW revision; the approved original and its whole history are preserved; the amendment is submitted and approved like a report; only the latest valid approved revision feeds KPIs and costing. If the approved amendment changes the machine time costing used, the affected cost snapshot and price approval become not current until recalculated and re-approved. A physically accurate Warehouse receipt is not invalidated by a report amendment.
+
 
 ## 22.1 Daily production report
 
