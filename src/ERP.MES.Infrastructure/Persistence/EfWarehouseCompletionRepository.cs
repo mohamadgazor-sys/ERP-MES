@@ -3,6 +3,7 @@ using ERP.MES.Application.Requests;
 using ERP.MES.Application.Security;
 using ERP.MES.Domain.Costing;
 using ERP.MES.Domain.Requests;
+using ERP.MES.Domain.Warehouse;
 using Microsoft.EntityFrameworkCore;
 
 namespace ERP.MES.Infrastructure.Persistence;
@@ -14,6 +15,7 @@ public sealed class EfWarehouseCompletionRepository(IDbContextFactory<ErpMesDbCo
     {
         await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
         var requests = await EfRequestRepository.LoadAggregate(context).AsNoTracking().ToListAsync(cancellationToken);
+        var reversals = (await context.WarehouseReversals.AsNoTracking().OrderBy(r => r.Id).ToListAsync(cancellationToken)).ToLookup(r => r.RequestItemId);
         var invalidations = (await context.RecordInvalidations.AsNoTracking().OrderBy(i => i.Id).ToListAsync(cancellationToken)).ToLookup(i => (i.Kind, i.TargetId));
         var corrections = (await context.QcCorrections.AsNoTracking().Include(c => c.Sources).OrderBy(c => c.Id).ToListAsync(cancellationToken)).ToLookup(c => c.RequestItemId);
 
@@ -41,13 +43,75 @@ public sealed class EfWarehouseCompletionRepository(IDbContextFactory<ErpMesDbCo
                     ReceiptInvalidation = receipt is null ? null : invalidations[(InvalidatedRecordKind.WarehouseReceipt, receipt.Id)].LastOrDefault(),
                     FinishedSentInvalidation = mark is null ? null : invalidations[(InvalidatedRecordKind.FinishedSent, mark.Id)].LastOrDefault(),
                     CostInvalidation = latest is null ? null : invalidations[(InvalidatedRecordKind.CostSnapshot, latest.Id)].LastOrDefault(),
-                    FlaggedDispatchIds = itemDispatches.Where(d => invalidations[(InvalidatedRecordKind.CustomerDispatch, d.Id)].Any()).Select(d => d.Id).ToHashSet(),
+                    FlaggedDispatchIds = itemDispatches.Where(d => invalidations[(InvalidatedRecordKind.CustomerDispatch, d.Id)].Any(i => i.Effect == InvalidationEffect.Flagged)).Select(d => d.Id).ToHashSet(),
+                    ReversedDispatchIds = itemDispatches.Where(d => invalidations[(InvalidatedRecordKind.CustomerDispatch, d.Id)].Any(i => i.Effect == InvalidationEffect.Reversed)).Select(d => d.Id).ToHashSet(),
+                    Reversals = reversals[item.Id].ToList(),
                     Corrections = corrections[item.Id].ToList(),
                 });
             }
         }
 
         return result.OrderBy(r => r.RequestNo, StringComparer.Ordinal).ThenBy(r => r.ItemNo, StringComparer.Ordinal).ToList();
+    }
+
+    public async Task<ReversalRecord> ProposeReversalAsync(
+        long requestItemId, InvalidatedRecordKind kind, long targetId, Func<ReversalFacts, ReversalRecord> decide, AuditLogEntry audit, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(decide);
+        ArgumentNullException.ThrowIfNull(audit);
+        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
+        var facts = await ReadReversalFactsAsync(context, requestItemId, kind, targetId, cancellationToken);
+        var record = decide(facts);
+        if (record.Refusal != ValidationIssue.None)
+        {
+            return record;
+        }
+
+        context.WarehouseReversals.Add(record.Reversal!);
+        context.AuditLog.Add(audit);
+        await PersistenceSave.SaveAsync(context, cancellationToken);
+        return record;
+    }
+
+    public async Task<ReversalRecord> DecideReversalAsync(
+        long reversalId, Func<WarehouseReversal, ReversalFacts, ReversalRecord> decide, Func<WarehouseReversal, AuditLogEntry> audit, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(decide);
+        ArgumentNullException.ThrowIfNull(audit);
+        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
+        var reversal = await context.WarehouseReversals.FirstOrDefaultAsync(r => r.Id == reversalId, cancellationToken) ?? throw new RecordNotFoundException("warehouse reversal", reversalId);
+        var facts = await ReadReversalFactsAsync(context, reversal.RequestItemId, reversal.TargetKind, reversal.TargetId, cancellationToken);
+        var record = decide(reversal, facts);
+        if (record.Refusal != ValidationIssue.None)
+        {
+            return record;
+        }
+
+        if (record.Marker is not null)
+        {
+            context.RecordInvalidations.Add(record.Marker);
+        }
+
+        context.AuditLog.Add(audit(reversal));
+        await PersistenceSave.SaveAsync(context, cancellationToken);
+        return record;
+    }
+
+    private static async Task<ReversalFacts> ReadReversalFactsAsync(ErpMesDbContext context, long requestItemId, InvalidatedRecordKind kind, long targetId, CancellationToken cancellationToken)
+    {
+        var exists = kind switch
+        {
+            InvalidatedRecordKind.WarehouseReceipt => await context.WarehouseReceipts.AnyAsync(r => r.Id == targetId && r.RequestItemId == requestItemId, cancellationToken),
+            InvalidatedRecordKind.FinishedSent => await context.ItemFinishedSent.AnyAsync(f => f.Id == targetId && f.RequestItemId == requestItemId, cancellationToken),
+            InvalidatedRecordKind.CustomerDispatch => await context.CustomerDispatches.AnyAsync(d => d.Id == targetId && d.RequestItemId == requestItemId, cancellationToken),
+            _ => false,
+        };
+        var current = exists && !await context.RecordInvalidations.AnyAsync(i => i.Kind == kind && i.TargetId == targetId && i.Effect != InvalidationEffect.Flagged, cancellationToken);
+        var open = await context.WarehouseReversals.AnyAsync(r => r.TargetKind == kind && r.TargetId == targetId && r.Status == ReversalStatus.Proposed, cancellationToken);
+        var latestMark = await context.ItemFinishedSent.AsNoTracking().Where(f => f.RequestItemId == requestItemId).OrderByDescending(f => f.Sequence).Select(f => f.Id).FirstOrDefaultAsync(cancellationToken);
+        var markCurrent = latestMark != 0 && !await context.RecordInvalidations.AnyAsync(i => i.Kind == InvalidatedRecordKind.FinishedSent && i.TargetId == latestMark, cancellationToken);
+        var closed = await context.Requests.AnyAsync(r => r.Status == RequestStatus.Closed && r.Items.Any(i => i.Id == requestItemId), cancellationToken);
+        return new ReversalFacts(exists, current, open, markCurrent, closed);
     }
 
     public async Task<CompletionRecord> RecordAsync(long requestItemId, Func<CompletionFacts, CompletionRecord> decide, AuditLogEntry audit, CancellationToken cancellationToken = default)

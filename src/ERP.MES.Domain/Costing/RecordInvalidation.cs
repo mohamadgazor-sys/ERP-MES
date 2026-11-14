@@ -33,12 +33,15 @@ public enum InvalidationEffect
 
     /// <summary>The record stays exactly as it is and is only shown as affected (a customer dispatch that already happened).</summary>
     Flagged,
+
+    /// <summary>The record was reversed after Management approved a Warehouse reversal proposal (owner decision B9): it stays as history and is no longer current.</summary>
+    Reversed,
 }
 
 /// <summary>
 /// The shared "no longer current" marker for cost and Warehouse records (owner decisions Q5 and B2, Decision Log #142). Append-only: the marked record is never changed or deleted; this row says that, why,
 /// by whom and because of what it stopped being current. A record is current when no invalidation of it exists. The source is exactly one of: a QC correction (a change of accepted quantity or quality)
-/// or a job-report revision (a change of the data costing used) - the two are never conflated, and a report revision never invalidates a Warehouse record.
+/// a job-report revision (a change of the data costing used) - the two are never conflated, and a report revision never invalidates a Warehouse record - or an approved Warehouse reversal (owner decision B9), which only marks Warehouse records.
 /// </summary>
 public sealed class RecordInvalidation
 {
@@ -49,21 +52,33 @@ public sealed class RecordInvalidation
         Reason = string.Empty;
     }
 
-    public RecordInvalidation(long requestItemId, InvalidatedRecordKind kind, long targetId, InvalidationEffect effect, string reason, long byUserId, DateTime atUtc, QcCorrection? qcCorrection = null, long? jobReportRevisionId = null)
+    public RecordInvalidation(long requestItemId, InvalidatedRecordKind kind, long targetId, InvalidationEffect effect, string reason, long byUserId, DateTime atUtc, QcCorrection? qcCorrection = null, long? jobReportRevisionId = null, ERP.MES.Domain.Warehouse.WarehouseReversal? warehouseReversal = null)
     {
         if (!Enum.IsDefined(kind) || !Enum.IsDefined(effect))
         {
             throw new ArgumentOutOfRangeException(nameof(kind), "Unknown record kind or effect.");
         }
 
-        if (qcCorrection is null == jobReportRevisionId is null)
+        var sources = (qcCorrection is null ? 0 : 1) + (jobReportRevisionId is null ? 0 : 1) + (warehouseReversal is null ? 0 : 1);
+        if (sources != 1)
         {
-            throw new ArgumentException("An invalidation has exactly one source: a QC correction or a job-report revision.");
+            throw new ArgumentException("An invalidation has exactly one source: a QC correction, a job-report revision or an approved Warehouse reversal.");
         }
 
-        if (kind is InvalidatedRecordKind.WarehouseReceipt or InvalidatedRecordKind.FinishedSent or InvalidatedRecordKind.CustomerDispatch && qcCorrection is null)
+        var warehouseKind = kind is InvalidatedRecordKind.WarehouseReceipt or InvalidatedRecordKind.FinishedSent or InvalidatedRecordKind.CustomerDispatch;
+        if (warehouseKind && jobReportRevisionId is not null)
         {
             throw new ArgumentException("A job-report revision never invalidates a Warehouse record (owner decision B2).", nameof(kind));
+        }
+
+        if (warehouseReversal is not null && (!warehouseKind || effect != InvalidationEffect.Reversed || warehouseReversal.Status != ERP.MES.Domain.Warehouse.ReversalStatus.Approved || warehouseReversal.TargetKind != kind))
+        {
+            throw new ArgumentException("A Warehouse reversal marks only the Warehouse record it was approved for, with the effect Reversed.", nameof(warehouseReversal));
+        }
+
+        if (effect == InvalidationEffect.Reversed && warehouseReversal is null)
+        {
+            throw new ArgumentException("Only an approved Warehouse reversal reverses a record.", nameof(effect));
         }
 
         var text = reason?.Trim();
@@ -81,6 +96,7 @@ public sealed class RecordInvalidation
         AtUtc = Requirements.Utc(atUtc, nameof(atUtc));
         QcCorrection = qcCorrection;
         JobReportRevisionId = jobReportRevisionId;
+        WarehouseReversal = warehouseReversal;
     }
 
     public long Id { get; private set; }
@@ -107,4 +123,9 @@ public sealed class RecordInvalidation
 
     /// <summary>The job-report revision that caused it (null for a QC correction); used by owner decision B2.</summary>
     public long? JobReportRevisionId { get; private set; }
+
+    /// <summary>The approved Warehouse reversal that caused it (null otherwise); owner decision B9.</summary>
+    public ERP.MES.Domain.Warehouse.WarehouseReversal? WarehouseReversal { get; private set; }
+
+    public long? WarehouseReversalId { get; private set; }
 }

@@ -23,7 +23,7 @@
             <TextBlock Text="{x:Static vm:CompletionViewModel.Note}" Margin="0,2,0,8" TextWrapping="Wrap" Foreground="{StaticResource MutedTextBrush}" />
             <TextBlock Text="{Binding Message}" Style="{StaticResource MessageStyle}" />
 
-            <DataGrid x:Name="CompletionGrid" ItemsSource="{Binding Rows}" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single" HeadersVisibility="Column" CanUserAddRows="False" MaxHeight="320" Background="{StaticResource CardBrush}">
+            <DataGrid x:Name="CompletionGrid" SelectionChanged="OnItemSelected" ItemsSource="{Binding Rows}" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single" HeadersVisibility="Column" CanUserAddRows="False" MaxHeight="320" Background="{StaticResource CardBrush}">
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="درخواست" Binding="{Binding RequestText}" Width="100" />
                     <DataGridTextColumn Header="آیتم" Binding="{Binding ItemText}" Width="*" />
@@ -48,6 +48,34 @@
                     <TextBox x:Name="DispatchReferenceBox" Width="140" Margin="0,0,6,4" ToolTip="شمارهٔ سند" />
                     <TextBox x:Name="DispatchNoteBox" Width="200" Margin="0,0,6,4" ToolTip="یادداشت" />
                     <Button Content="ثبت ارسال" Padding="10,3" Margin="0,0,6,4" Click="OnDispatch" ToolTip="ارسال محصول به مشتری را ثبت می‌کند." />
+                </WrapPanel>
+            </StackPanel>
+            <TextBlock Text="برگشت رکورد انبار (پیشنهاد انبار، تأیید مدیریت)" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource PrimaryBrush}" Margin="0,14,0,4" />
+            <TextBlock Text="رکورد اصلی هرگز حذف یا ویرایش نمی‌شود؛ فقط پس از تأیید مدیریت «برگشت‌خورده» علامت می‌خورد و به رکورد اصلی پیوند دارد. حرکت فیزیکی که واقعاً رخ داده با تراکنش جبرانی اصلاح می‌شود، نه با نادیده گرفتن آن." TextWrapping="Wrap" Foreground="{StaticResource MutedTextBrush}" Margin="0,0,0,6" />
+            <StackPanel Visibility="{Binding CanProposeReversal, Converter={StaticResource BoolToVisibility}}" Margin="0,0,0,6">
+                <WrapPanel>
+                    <ComboBox x:Name="ReversalTargetBox" Width="220" Margin="0,0,6,4" DisplayMemberPath="Text" AutomationProperties.AutomationId="ReversalTargetBox" ToolTip="رکوردی از آیتم انتخاب‌شده که می‌خواهید برگشت دهید" />
+                    <ComboBox x:Name="ReversalNatureBox" Width="300" Margin="0,0,6,4" DisplayMemberPath="Text" AutomationProperties.AutomationId="ReversalNatureBox" ToolTip="ماهیت برگشت" />
+                    <TextBox x:Name="ReversalReasonBox" Width="260" Margin="0,0,6,4" AutomationProperties.AutomationId="ReversalReasonBox" ToolTip="دلیل (الزامی، حداکثر ۳۰۰ نویسه)" />
+                    <Button Content="پیشنهاد برگشت" Padding="10,3" Margin="0,0,6,4" Click="OnProposeReversal" AutomationProperties.AutomationId="ProposeReversalButton" ToolTip="پیشنهاد برگشت را برای تأیید مدیریت ثبت می‌کند؛ تا تأیید، رکورد اصلی جاری می‌ماند. فقط انبار." />
+                </WrapPanel>
+            </StackPanel>
+            <DataGrid x:Name="ReversalGrid" ItemsSource="{Binding Reversals}" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single" HeadersVisibility="Column" CanUserAddRows="False" MaxHeight="220" Background="{StaticResource CardBrush}" AutomationProperties.AutomationId="ReversalGrid">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="درخواست / آیتم" Binding="{Binding ItemText}" Width="120" />
+                    <DataGridTextColumn Header="رکورد" Binding="{Binding TargetText}" Width="*" />
+                    <DataGridTextColumn Header="ماهیت" Binding="{Binding NatureText}" Width="*" />
+                    <DataGridTextColumn Header="دلیل" Binding="{Binding ReasonText}" Width="*" />
+                    <DataGridTextColumn Header="پیشنهاددهنده" Binding="{Binding ProposedText}" Width="*" />
+                    <DataGridTextColumn Header="وضعیت" Binding="{Binding StatusText}" Width="*" />
+                    <DataGridTextColumn Header="تصمیم مدیریت" Binding="{Binding DecisionText}" Width="*" />
+                </DataGrid.Columns>
+            </DataGrid>
+            <StackPanel Visibility="{Binding CanDecideReversal, Converter={StaticResource BoolToVisibility}}" Margin="0,6,0,0">
+                <WrapPanel>
+                    <TextBox x:Name="DecisionReasonBox" Width="320" Margin="0,0,6,4" AutomationProperties.AutomationId="DecisionReasonBox" ToolTip="دلیل (اختیاری هنگام تأیید، الزامی هنگام ردّ)" />
+                    <Button Content="تأیید برگشت" Padding="10,3" Margin="0,0,6,4" Click="OnApproveReversal" AutomationProperties.AutomationId="ApproveReversalButton" ToolTip="رکورد اصلی را برگشت‌خورده علامت می‌زند؛ حذف نمی‌شود. فقط مدیریت." />
+                    <Button Content="ردّ برگشت" Padding="10,3" Margin="0,0,6,4" Click="OnRejectReversal" AutomationProperties.AutomationId="RejectReversalButton" ToolTip="پیشنهاد را رد می‌کند؛ رکورد اصلی جاری می‌ماند. دلیل الزامی است. فقط مدیریت." />
                 </WrapPanel>
             </StackPanel>
         </StackPanel>

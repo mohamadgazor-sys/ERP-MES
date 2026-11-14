@@ -619,6 +619,24 @@ public enum ValidationIssue
 
     /// <summary>QC tried to correct more units than the stage's accepted and still-valid quantity (Decision Log #142 Q2).</summary>
     CorrectionExceedsAccepted,
+
+    /// <summary>A Warehouse reversal proposal or rejection needs a reason of 1 to 300 characters and a known record kind and nature (Decision Log #142 B9).</summary>
+    ReversalInvalid,
+
+    /// <summary>The record to reverse does not exist for this item (Decision Log #142 B9).</summary>
+    ReversalTargetMissing,
+
+    /// <summary>The record is already reversed or no longer current (QC correction); there is nothing to reverse (Decision Log #142 B9).</summary>
+    ReversalTargetNotCurrent,
+
+    /// <summary>A reversal of this record is already waiting for Management's decision (Decision Log #142 B9).</summary>
+    ReversalAlreadyProposed,
+
+    /// <summary>The receipt cannot be reversed while a current finished/sent mark depends on it: reverse the mark first (Decision Log #142 B9).</summary>
+    ReversalBlockedByFinishedMark,
+
+    /// <summary>The request is closed and read-only; its Warehouse records cannot be reversed (Decision Log #142 B9, B10).</summary>
+    ReversalRequestClosed,
 }
 
 /// <summary>The result of a command or query: a status, the value on success, and the details of a refusal.</summary>

@@ -2403,3 +2403,20 @@ Append one dated entry after every substantial session. Do not replace prior ent
 
 ### Recommended exact next action
 - On the owner's answers: implement the QC correction (Q1-Q8) in one PR, then the answered rows (A2 contract amount, B1 late-report flag, B2 report revision, B9 reversal, B10 close action as chosen). Rebuild the offline package only if main's code changes again.
+
+## 2026-11-14 (continued) - PR #86 merged; PR-C Warehouse reversal (B9)
+
+### Completed
+- PR #86 merged to main as `85af213` (squash) after build-test, sqlserver, ui-smoke (incl. the new QC-correction interaction checks) and both offline-demo jobs were green on its head `b6f9e30`. QC correction (Q1-Q8) incl. the Requests indicator, the Management warning after a customer dispatch, approved stages listed for QC.
+- PR-C (this branch `claude/pr-c-warehouse-reversal`): `WarehouseReversal` entity, migrations for SQLite and SQL Server (`*_WarehouseReversal`), `RecordInvalidation` third source and effect `Reversed`, permissions `ProposeWarehouseReversal` (Warehouse) and `DecideWarehouseReversal` (Management), service methods `ProposeReversalAsync` / `DecideReversalAsync`, Completion screen (proposal form, reversal list, approve/reject), Decision Log #144, Master Specification 17.5, status matrix.
+
+### Tests actually run (Linux)
+- Domain 598, Application 43, Infrastructure 772 passed; Desktop view-model harness (scratch project outside the repository) for `CompletionViewModelTests` passed; Desktop test project compile-checked with `-p:EnableWindowsTargeting=true` (0 errors). On Linux four source-scan Desktop tests cannot find the repository root from the scratch harness folder (environment/path related, not passes); they run on the Windows CI runner.
+- Windows CI, SQL Server CI and the UI-interaction script run on the PR.
+
+### Unresolved / risks
+- The labelled interpretations of #144 (receipt blocked while a mark is current, one open proposal per record, closed request read-only) are mine, not owner text.
+- The QC-correction after-dispatch scenario is not seeded in the demo data; `docs/MANAGEMENT_DEMO_GUIDE.md` section 2c is a live sequence nobody has clicked through yet.
+
+### Recommended exact next action
+- Merge PR-C when all checks pass, then PR-D (B2 job-report revision), then PR-E (A2 contract amount); then rebuild the offline package from the final main.

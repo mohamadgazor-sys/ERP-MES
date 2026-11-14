@@ -7,7 +7,7 @@ using ERP.MES.Domain.Warehouse;
 
 namespace ERP.MES.Application.Costing;
 
-public sealed record CompletionCapabilities(bool CanView, bool CanReceive, bool CanMarkFinished, bool CanDispatch);
+public sealed record CompletionCapabilities(bool CanView, bool CanReceive, bool CanMarkFinished, bool CanDispatch, bool CanProposeReversal = false, bool CanDecideReversal = false);
 
 public sealed record CompletionList(IReadOnlyList<CompletionItem> Items, CompletionCapabilities Capabilities);
 
@@ -23,7 +23,7 @@ public sealed class WarehouseCompletionService(
     IClock clock,
     IAuditContext auditContext)
 {
-    private static readonly Permission[] All = [Permission.ViewWarehouseCompletion, Permission.RecordWarehouseReceipt, Permission.MarkItemFinishedSent, Permission.RecordCustomerDispatch];
+    private static readonly Permission[] All = [Permission.ViewWarehouseCompletion, Permission.RecordWarehouseReceipt, Permission.MarkItemFinishedSent, Permission.RecordCustomerDispatch, Permission.ProposeWarehouseReversal, Permission.DecideWarehouseReversal];
 
     public async Task<Outcome<CompletionList>> LoadAsync(Principal? principal, CancellationToken cancellationToken = default)
     {
@@ -35,7 +35,7 @@ public sealed class WarehouseCompletionService(
 
         return await CustomerService.GuardAsync(async () => Outcome<CompletionList>.Ok(new CompletionList(
             await store.ListAsync(cancellationToken),
-            new CompletionCapabilities(true, set.Has(Permission.RecordWarehouseReceipt), set.Has(Permission.MarkItemFinishedSent), set.Has(Permission.RecordCustomerDispatch)))));
+            new CompletionCapabilities(true, set.Has(Permission.RecordWarehouseReceipt), set.Has(Permission.MarkItemFinishedSent), set.Has(Permission.RecordCustomerDispatch), set.Has(Permission.ProposeWarehouseReversal), set.Has(Permission.DecideWarehouseReversal)))));
     }
 
     /// <summary>Records the final warehouse receipt of the item's QC-accepted base units; a second receipt is refused.</summary>
@@ -114,6 +114,155 @@ public sealed class WarehouseCompletionService(
                 return new CompletionRecord(ValidationIssue.CompletionInputInvalid);
             }
         }, record => record.Dispatch!, cancellationToken);
+
+    /// <summary>
+    /// The Warehouse proposes the reversal of one of its records with a mandatory reason (owner decision B9, Decision Log #142). Nothing changes until Management approves: the original stays current and is
+    /// never deleted. <paramref name="nature"/> says whether the record was entered by mistake or a physical movement really happened and is being corrected by a compensating transaction.
+    /// </summary>
+    public async Task<Outcome<WarehouseReversal>> ProposeReversalAsync(
+        Principal? principal, long requestItemId, InvalidatedRecordKind kind, long targetId, ReversalNature nature, string? reason, CancellationToken cancellationToken = default)
+    {
+        var decision = await authorization.CheckAsync(principal, Permission.ProposeWarehouseReversal, cancellationToken);
+        if (!decision.IsAllowed)
+        {
+            return Outcome<WarehouseReversal>.Fail(OperationStatus.NotAuthorized);
+        }
+
+        var user = decision.Current!;
+        var now = clock.UtcNow;
+        try
+        {
+            return await CustomerService.GuardAsync(async () =>
+            {
+                var record = await store.ProposeReversalAsync(
+                    requestItemId, kind, targetId,
+                    facts =>
+                    {
+                        WarehouseReversal proposal;
+                        try
+                        {
+                            proposal = new WarehouseReversal(requestItemId, kind, targetId, nature, reason, user.UserId, now);
+                        }
+                        catch (ArgumentException)
+                        {
+                            return new ReversalRecord(ValidationIssue.ReversalInvalid);
+                        }
+
+                        return Refusal(facts, kind) is { } refusal && refusal != ValidationIssue.None
+                            ? new ReversalRecord(refusal)
+                            : new ReversalRecord(ValidationIssue.None, proposal);
+                    },
+                    Audit(user, now, AuditActions.WarehouseReversalProposed, requestItemId, $"Reversal of {kind} {targetId} of item {requestItemId} proposed"),
+                    cancellationToken);
+                return record.Refusal == ValidationIssue.None ? Outcome<WarehouseReversal>.Ok(record.Reversal!) : Outcome<WarehouseReversal>.Invalid(record.Refusal);
+            });
+        }
+        catch (InvalidOperationException)
+        {
+            return Outcome<WarehouseReversal>.Fail(OperationStatus.InvalidState);
+        }
+    }
+
+    /// <summary>
+    /// Management approves or rejects a proposed reversal (owner decision B9). Approval marks the original record reversed (the row itself is kept) and links the reversal to it with proposer, approver,
+    /// timestamps and reasons; rejection needs a reason and leaves the record current. The approver's reason is optional on approval.
+    /// </summary>
+    public async Task<Outcome<WarehouseReversal>> DecideReversalAsync(
+        Principal? principal, long reversalId, bool approve, string? reason, CancellationToken cancellationToken = default)
+    {
+        var decision = await authorization.CheckAsync(principal, Permission.DecideWarehouseReversal, cancellationToken);
+        if (!decision.IsAllowed)
+        {
+            return Outcome<WarehouseReversal>.Fail(OperationStatus.NotAuthorized);
+        }
+
+        var user = decision.Current!;
+        var now = clock.UtcNow;
+        try
+        {
+            return await CustomerService.GuardAsync(async () =>
+            {
+                var record = await store.DecideReversalAsync(
+                    reversalId,
+                    (reversal, facts) =>
+                    {
+                        if (reversal.Status != ReversalStatus.Proposed)
+                        {
+                            throw new InvalidOperationException("The reversal was already decided.");
+                        }
+
+                        if (!approve)
+                        {
+                            try
+                            {
+                                reversal.Reject(user.UserId, reason, now);
+                            }
+                            catch (ArgumentException)
+                            {
+                                return new ReversalRecord(ValidationIssue.ReversalInvalid);
+                            }
+
+                            return new ReversalRecord(ValidationIssue.None, reversal);
+                        }
+
+                        // The proposal itself is not an "open proposal" for this check.
+                        if (Refusal(facts with { OpenProposalExists = false }, reversal.TargetKind) is { } refusal && refusal != ValidationIssue.None)
+                        {
+                            return new ReversalRecord(refusal);
+                        }
+
+                        try
+                        {
+                            reversal.Approve(user.UserId, reason, now);
+                        }
+                        catch (ArgumentException)
+                        {
+                            return new ReversalRecord(ValidationIssue.ReversalInvalid);
+                        }
+
+                        var marker = new RecordInvalidation(
+                            reversal.RequestItemId, reversal.TargetKind, reversal.TargetId, InvalidationEffect.Reversed, reversal.ProposalReason, user.UserId, now, warehouseReversal: reversal);
+                        return new ReversalRecord(ValidationIssue.None, reversal, marker);
+                    },
+                    reversal => Audit(user, now, approve ? AuditActions.WarehouseReversalApproved : AuditActions.WarehouseReversalRejected, reversal.RequestItemId,
+                        $"Reversal {reversal.Id} of {reversal.TargetKind} {reversal.TargetId} " + (approve ? "approved" : "rejected")),
+                    cancellationToken);
+                return record.Refusal == ValidationIssue.None ? Outcome<WarehouseReversal>.Ok(record.Reversal!) : Outcome<WarehouseReversal>.Invalid(record.Refusal);
+            });
+        }
+        catch (InvalidOperationException)
+        {
+            return Outcome<WarehouseReversal>.Fail(OperationStatus.InvalidState);
+        }
+    }
+
+    private static ValidationIssue Refusal(ReversalFacts facts, InvalidatedRecordKind kind)
+    {
+        if (!facts.TargetExists)
+        {
+            return ValidationIssue.ReversalTargetMissing;
+        }
+
+        if (facts.RequestClosed)
+        {
+            return ValidationIssue.ReversalRequestClosed;
+        }
+
+        if (!facts.TargetCurrent)
+        {
+            return ValidationIssue.ReversalTargetNotCurrent;
+        }
+
+        if (facts.OpenProposalExists)
+        {
+            return ValidationIssue.ReversalAlreadyProposed;
+        }
+
+        return kind == InvalidatedRecordKind.WarehouseReceipt && facts.CurrentFinishedMarkExists ? ValidationIssue.ReversalBlockedByFinishedMark : ValidationIssue.None;
+    }
+
+    private AuditLogEntry Audit(Principal user, DateTime now, string code, long requestItemId, string summary) =>
+        new(now, user.UserId, auditContext.MachineName, auditContext.OsUserName, auditContext.DatabaseLogin, code, "WarehouseReversal", requestItemId.ToString(System.Globalization.CultureInfo.InvariantCulture), summary);
 
     private async Task<Outcome<T>> RecordAsync<T>(
         Principal? principal, Permission permission, long requestItemId, string code, string summary, Func<CompletionFacts, Principal, DateTime, CompletionRecord> decide, Func<CompletionRecord, T> pick,

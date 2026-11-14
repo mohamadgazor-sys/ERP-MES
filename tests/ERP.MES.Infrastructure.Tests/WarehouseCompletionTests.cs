@@ -9,6 +9,7 @@ using ERP.MES.Application.Production;
 using ERP.MES.Application.Reporting;
 using ERP.MES.Application.Costing;
 using ERP.MES.Domain.Costing;
+using ERP.MES.Domain.Warehouse;
 using ERP.MES.Application.Scheduling;
 using ERP.MES.Domain.Reporting;
 using ERP.MES.Domain.Scheduling;
@@ -463,6 +464,144 @@ public class WarehouseCompletionTests
         Assert.True((await w.Costing.CalculateAsync(w.Warehouse, s.ItemId, Token)).Succeeded);
         Assert.Equal(ValidationIssue.FinishedSentNeedsPrice, (await w.Completion.MarkFinishedSentAsync(w.Warehouse, s.ItemId, Token)).Issue);
         Assert.Equal(0, Count(w, "ItemFinishedSent"));
+    }
+
+    // ---- Warehouse reversal (owner decision B9, Decision Log #142): the Warehouse proposes with a reason, Management approves or rejects, the original is never deleted ----
+
+    private static async Task<(Setup S, long ReceiptId, long MarkId, long DispatchId)> FullyDispatchedAsync(World w)
+    {
+        var s = await ReadyToCostAsync(w);
+        var receipt = (await w.Completion.ReceiveAsync(w.Warehouse, s.ItemId, "تحویل", Token)).Value!;
+        await ApprovedPriceAsync(w, s);
+        var mark = (await w.Completion.MarkFinishedSentAsync(w.Warehouse, s.ItemId, Token)).Value!;
+        var dispatch = (await w.Completion.RecordDispatchAsync(w.Warehouse, s.ItemId, "1405/08/02", "WB-9001", null, Token)).Value!;
+        return (s, receipt.Id, mark.Id, dispatch.Id);
+    }
+
+    [Fact]
+    public async Task A_reversal_changes_nothing_until_Management_approves_then_marks_the_original_reversed_keeps_every_row_and_links_proposer_approver_and_reasons()
+    {
+        using var w = await StartAsync();
+        var (s, receiptId, markId, _) = await FullyDispatchedAsync(w);
+
+        // The receipt cannot be reversed while a current finished/sent mark depends on it.
+        Assert.Equal(ValidationIssue.ReversalBlockedByFinishedMark,
+            (await w.Completion.ProposeReversalAsync(w.Warehouse, s.ItemId, InvalidatedRecordKind.WarehouseReceipt, receiptId, ReversalNature.RecordedInError, "دریافت اشتباه", Token)).Issue);
+
+        var proposed = await w.Completion.ProposeReversalAsync(w.Warehouse, s.ItemId, InvalidatedRecordKind.FinishedSent, markId, ReversalNature.RecordedInError, "  مهر اشتباه زده شد  ", Token);
+        Assert.True(proposed.Succeeded, proposed.Status + " " + proposed.Issue);
+        Assert.Equal((ReversalStatus.Proposed, "مهر اشتباه زده شد", w.Warehouse.UserId), (proposed.Value!.Status, proposed.Value.ProposalReason, proposed.Value.ProposedByUserId));
+
+        // Proposed only: the mark is still current and nothing is marked.
+        Assert.Equal(0, Count(w, "RecordInvalidations"));
+        var before = Assert.Single((await w.Completion.LoadAsync(w.Manager, Token)).Value!.Items);
+        Assert.False(before.NotCurrent);
+        Assert.Single(before.Reversals);
+        Assert.Equal(ValidationIssue.FinishedSentDuplicate, (await w.Completion.MarkFinishedSentAsync(w.Warehouse, s.ItemId, Token)).Issue);
+        Assert.Equal(ValidationIssue.ReversalAlreadyProposed,
+            (await w.Completion.ProposeReversalAsync(w.Warehouse, s.ItemId, InvalidatedRecordKind.FinishedSent, markId, ReversalNature.RecordedInError, "دوباره", Token)).Issue);
+
+        var approved = await w.Completion.DecideReversalAsync(w.Manager, proposed.Value.Id, approve: true, "تأیید شد", Token);
+        Assert.True(approved.Succeeded, approved.Status + " " + approved.Issue);
+        Assert.Equal((ReversalStatus.Approved, w.Manager.UserId, "تأیید شد"), (approved.Value!.Status, approved.Value.DecidedByUserId, approved.Value.DecisionReason));
+        Assert.NotNull(approved.Value.DecidedAtUtc);
+
+        // Everything is kept; the original is only marked, linked to the reversal.
+        Assert.Equal((1L, 1L, 1L, 1L), (Count(w, "WarehouseReceipts"), Count(w, "ItemFinishedSent"), Count(w, "CustomerDispatches"), Count(w, "WarehouseReversals")));
+        Assert.Equal(1, Count(w, $"RecordInvalidations WHERE Kind = 4 AND TargetId = {markId} AND Effect = 4 AND WarehouseReversalId = {proposed.Value.Id} AND QcCorrectionId IS NULL AND JobReportRevisionId IS NULL"));
+        Assert.Equal((1L, 1L, 0L), (Count(w, "AuditLog WHERE ActionCode = 'WarehouseReversalProposed'"), Count(w, "AuditLog WHERE ActionCode = 'WarehouseReversalApproved'"), Count(w, "AuditLog WHERE ActionCode = 'WarehouseReversalRejected'")));
+        var after = Assert.Single((await w.Completion.LoadAsync(w.Manager, Token)).Value!.Items);
+        Assert.Equal(InvalidationEffect.Reversed, after.FinishedSentInvalidation!.Effect);
+        Assert.True(after.NotCurrent);
+
+        // A decided proposal cannot be decided again; the reversed mark is no longer current, so it cannot be reversed again either.
+        Assert.Equal(OperationStatus.InvalidState, (await w.Completion.DecideReversalAsync(w.Manager, proposed.Value.Id, approve: false, "x", Token)).Status);
+        Assert.Equal(ValidationIssue.ReversalTargetNotCurrent,
+            (await w.Completion.ProposeReversalAsync(w.Warehouse, s.ItemId, InvalidatedRecordKind.FinishedSent, markId, ReversalNature.RecordedInError, "x", Token)).Issue);
+
+        // The mark can now be recorded again (sequence 2), as a real new record; the earlier one stays as history.
+        var again = await w.Completion.MarkFinishedSentAsync(w.Warehouse, s.ItemId, Token);
+        Assert.True(again.Succeeded, again.Status + " " + again.Issue);
+        Assert.Equal(2, again.Value!.Sequence);
+        Assert.Equal(2L, Count(w, "ItemFinishedSent"));
+
+        // With the mark reversed again, the receipt itself can be reversed and re-recorded.
+        var second = (await w.Completion.ProposeReversalAsync(w.Warehouse, s.ItemId, InvalidatedRecordKind.FinishedSent, again.Value.Id, ReversalNature.RecordedInError, "دوباره اشتباه", Token)).Value!;
+        Assert.True((await w.Completion.DecideReversalAsync(w.Manager, second.Id, true, null, Token)).Succeeded);
+        var receiptProposal = (await w.Completion.ProposeReversalAsync(w.Warehouse, s.ItemId, InvalidatedRecordKind.WarehouseReceipt, receiptId, ReversalNature.PhysicalMovementCorrection, "کالا برگشت داده شد", Token)).Value!;
+        Assert.Equal(ReversalNature.PhysicalMovementCorrection, receiptProposal.Nature);
+        Assert.True((await w.Completion.DecideReversalAsync(w.Manager, receiptProposal.Id, true, null, Token)).Succeeded);
+        var newReceipt = await w.Completion.ReceiveAsync(w.Warehouse, s.ItemId, "دریافت مجدد", Token);
+        Assert.True(newReceipt.Succeeded, newReceipt.Status + " " + newReceipt.Issue);
+        Assert.Equal(2, newReceipt.Value!.Sequence);
+        Assert.Equal(2L, Count(w, "WarehouseReceipts"));
+    }
+
+    [Fact]
+    public async Task A_reversed_customer_dispatch_stays_listed_as_reversed_and_a_rejected_proposal_leaves_the_record_current()
+    {
+        using var w = await StartAsync();
+        var (s, _, _, dispatchId) = await FullyDispatchedAsync(w);
+
+        var proposal = (await w.Completion.ProposeReversalAsync(w.Warehouse, s.ItemId, InvalidatedRecordKind.CustomerDispatch, dispatchId, ReversalNature.PhysicalMovementCorrection, "کالا از مشتری برگشت خورد", Token)).Value!;
+        // Rejection needs a reason; without it nothing is decided.
+        Assert.Equal(ValidationIssue.ReversalInvalid, (await w.Completion.DecideReversalAsync(w.Manager, proposal.Id, approve: false, " ", Token)).Issue);
+        var rejected = await w.Completion.DecideReversalAsync(w.Manager, proposal.Id, approve: false, "سند ارسال درست بود", Token);
+        Assert.True(rejected.Succeeded, rejected.Status + " " + rejected.Issue);
+        Assert.Equal((ReversalStatus.Rejected, "سند ارسال درست بود"), (rejected.Value!.Status, rejected.Value.DecisionReason));
+        Assert.Equal(0, Count(w, "RecordInvalidations"));
+
+        // The record is current again, so a new proposal is possible and can be approved.
+        var again = (await w.Completion.ProposeReversalAsync(w.Warehouse, s.ItemId, InvalidatedRecordKind.CustomerDispatch, dispatchId, ReversalNature.PhysicalMovementCorrection, "کالا از مشتری برگشت خورد", Token)).Value!;
+        Assert.True((await w.Completion.DecideReversalAsync(w.Manager, again.Id, approve: true, null, Token)).Succeeded);
+
+        var item = Assert.Single((await w.Completion.LoadAsync(w.Manager, Token)).Value!.Items);
+        Assert.Equal(1, item.Dispatches.Count);                      // the dispatch row is kept
+        Assert.Contains(dispatchId, item.ReversedDispatchIds);        // and shown as reversed
+        Assert.DoesNotContain(dispatchId, item.FlaggedDispatchIds);   // which is different from a QC-correction flag
+        Assert.False(item.NotCurrent);                                // a reversed dispatch does not make the item not current
+        Assert.Equal(2, item.Reversals.Count(r => r.TargetId == dispatchId));
+        Assert.Equal(1L, Count(w, "CustomerDispatches"));
+    }
+
+    [Fact]
+    public async Task Only_the_Warehouse_proposes_only_Management_decides_and_the_reason_target_and_kind_are_validated()
+    {
+        using var w = await StartAsync();
+        var (s, _, _, dispatchId) = await FullyDispatchedAsync(w);
+
+        foreach (var other in new[] { w.Manager, w.ManagementStaff, w.Planning, w.ProductionManager, w.Drawing, w.Qc, w.Production, w.Central, w.Admin })
+        {
+            Assert.Equal(OperationStatus.NotAuthorized, (await w.Completion.ProposeReversalAsync(other, s.ItemId, InvalidatedRecordKind.CustomerDispatch, dispatchId, ReversalNature.RecordedInError, "x", Token)).Status);
+        }
+
+        Assert.Equal(OperationStatus.NotAuthorized, (await w.Completion.ProposeReversalAsync(null, s.ItemId, InvalidatedRecordKind.CustomerDispatch, dispatchId, ReversalNature.RecordedInError, "x", Token)).Status);
+        Assert.Equal(ValidationIssue.ReversalInvalid, (await w.Completion.ProposeReversalAsync(w.Warehouse, s.ItemId, InvalidatedRecordKind.CustomerDispatch, dispatchId, ReversalNature.RecordedInError, "  ", Token)).Issue);
+        Assert.Equal(ValidationIssue.ReversalInvalid, (await w.Completion.ProposeReversalAsync(w.Warehouse, s.ItemId, InvalidatedRecordKind.CustomerDispatch, dispatchId, ReversalNature.RecordedInError, new string('x', 301), Token)).Issue);
+        Assert.Equal(ValidationIssue.ReversalInvalid, (await w.Completion.ProposeReversalAsync(w.Warehouse, s.ItemId, InvalidatedRecordKind.CostSnapshot, 1, ReversalNature.RecordedInError, "x", Token)).Issue);
+        Assert.Equal(ValidationIssue.ReversalInvalid, (await w.Completion.ProposeReversalAsync(w.Warehouse, s.ItemId, InvalidatedRecordKind.CustomerDispatch, dispatchId, (ReversalNature)9, "x", Token)).Issue);
+        Assert.Equal(ValidationIssue.ReversalTargetMissing, (await w.Completion.ProposeReversalAsync(w.Warehouse, s.ItemId, InvalidatedRecordKind.CustomerDispatch, dispatchId + 100, ReversalNature.RecordedInError, "x", Token)).Issue);
+        Assert.Equal(ValidationIssue.ReversalTargetMissing, (await w.Completion.ProposeReversalAsync(w.Warehouse, s.ItemId + 100, InvalidatedRecordKind.CustomerDispatch, dispatchId, ReversalNature.RecordedInError, "x", Token)).Issue);
+        Assert.Equal(0, Count(w, "WarehouseReversals"));
+
+        var proposal = (await w.Completion.ProposeReversalAsync(w.Warehouse, s.ItemId, InvalidatedRecordKind.CustomerDispatch, dispatchId, ReversalNature.RecordedInError, "اشتباه", Token)).Value!;
+        // The Warehouse proposer cannot approve its own proposal; nobody but Management decides.
+        foreach (var other in new[] { w.Warehouse, w.Planning, w.ProductionManager, w.Qc, w.Production, w.Central, w.Admin, w.Drawing })
+        {
+            Assert.Equal(OperationStatus.NotAuthorized, (await w.Completion.DecideReversalAsync(other, proposal.Id, true, null, Token)).Status);
+        }
+
+        Assert.Equal(OperationStatus.NotAuthorized, (await w.Completion.DecideReversalAsync(null, proposal.Id, true, null, Token)).Status);
+        Assert.Equal(ReversalStatus.Proposed, (await w.Completion.LoadAsync(w.Manager, Token)).Value!.Items.Single().Reversals.Single().Status);
+        Assert.Equal(0, Count(w, "RecordInvalidations"));
+
+        // Capabilities: the Warehouse proposes, Management decides, Planning only reads.
+        var warehouse = (await w.Completion.LoadAsync(w.Warehouse, Token)).Value!.Capabilities;
+        var management = (await w.Completion.LoadAsync(w.Manager, Token)).Value!.Capabilities;
+        var planning = (await w.Completion.LoadAsync(w.Planning, Token)).Value!.Capabilities;
+        Assert.Equal((true, false), (warehouse.CanProposeReversal, warehouse.CanDecideReversal));
+        Assert.Equal((false, true), (management.CanProposeReversal, management.CanDecideReversal));
+        Assert.Equal((false, false), (planning.CanProposeReversal, planning.CanDecideReversal));
     }
 
     [Fact]

@@ -6,8 +6,15 @@ using ERP.MES.Application.Requests;
 using ERP.MES.Application.Security;
 using ERP.MES.Domain.Calendar;
 using ERP.MES.Domain.Costing;
+using ERP.MES.Domain.Warehouse;
 
 namespace ERP.MES.Desktop.ViewModels;
+
+/// <summary>One choice of record the Warehouse can propose to reverse for the selected item.</summary>
+public sealed record ReversalTarget(InvalidatedRecordKind Kind, long Id, string Text);
+
+/// <summary>One reversal proposal of any item: what, why, who proposed it and when, and how Management decided.</summary>
+public sealed record ReversalRow(WarehouseReversal Reversal, string ItemText, string TargetText, string NatureText, string ReasonText, string ProposedText, string StatusText, string DecisionText);
 
 public sealed record CompletionRow(CompletionItem Item, string RequestText, string ItemText, string QuantityText, string ReceiptText, string PriceText, string FinishedText, string DispatchText);
 
@@ -19,7 +26,8 @@ public sealed class CompletionViewModel(
     WarehouseCompletionService completion,
     IJalaliDateService dates,
     DigitStyle digitStyle,
-    Func<Principal> currentUser) : ObservableObject
+    Func<Principal> currentUser,
+    UserDirectoryService? users = null) : ObservableObject
 {
     public const string Heading = "دریافت انبار و تکمیل";
 
@@ -28,6 +36,7 @@ public sealed class CompletionViewModel(
         + "هیچ ثبتی جای ثبت دیگر را نمی‌گیرد. بازگشت قطعه از تأمین بیرونی دریافت نهایی نیست. فقط انبار ثبت می‌کند؛ برنامه‌ریزی و مدیریت می‌بینند.";
 
     private readonly ObservableCollection<CompletionRow> _rows = [];
+    private readonly ObservableCollection<ReversalRow> _reversals = [];
     private CompletionCapabilities _capabilities = new(false, false, false, false);
     private string _message = string.Empty;
     private bool _isError;
@@ -35,6 +44,42 @@ public sealed class CompletionViewModel(
     private bool _denied;
 
     public ObservableCollection<CompletionRow> Rows => _rows;
+
+    public ObservableCollection<ReversalRow> Reversals => _reversals;
+
+    public bool HasReversals => _reversals.Count > 0;
+
+    public bool CanProposeReversal => _capabilities.CanProposeReversal;
+
+    public bool CanDecideReversal => _capabilities.CanDecideReversal;
+
+    public static IReadOnlyList<(ReversalNature Nature, string Text)> Natures { get; } =
+    [
+        (ReversalNature.RecordedInError, "رکورد اشتباه ثبت شده است"),
+        (ReversalNature.PhysicalMovementCorrection, "حرکت فیزیکی واقعاً رخ داده و با تراکنش جبرانی اصلاح می‌شود"),
+    ];
+
+    /// <summary>The records of the item that can still be proposed for reversal (current ones only); the original records stay in the list as history.</summary>
+    public static IReadOnlyList<ReversalTarget> TargetsOf(CompletionItem item)
+    {
+        var targets = new List<ReversalTarget>();
+        if (item.Receipt is { } receipt && item.ReceiptInvalidation is null)
+        {
+            targets.Add(new ReversalTarget(InvalidatedRecordKind.WarehouseReceipt, receipt.Id, "رسید انبار"));
+        }
+
+        if (item.FinishedSent is { } mark && item.FinishedSentInvalidation is null)
+        {
+            targets.Add(new ReversalTarget(InvalidatedRecordKind.FinishedSent, mark.Id, "تکمیل/ارسال شد"));
+        }
+
+        foreach (var dispatch in item.Dispatches.Where(d => !item.ReversedDispatchIds.Contains(d.Id)))
+        {
+            targets.Add(new ReversalTarget(InvalidatedRecordKind.CustomerDispatch, dispatch.Id, "ارسال به مشتری (" + dispatch.DocumentReference + ")"));
+        }
+
+        return targets;
+    }
 
     public bool CanReceive => _capabilities.CanReceive;
 
@@ -77,6 +122,16 @@ public sealed class CompletionViewModel(
     public Task DispatchAsync(CompletionRow row, string? dateText, string? reference, string? note) => CommandAsync("ارسال به مشتری ثبت شد.", async () =>
         Relay(await completion.RecordDispatchAsync(currentUser(), row.Item.ItemId, dateText, reference, note)));
 
+    /// <summary>The Warehouse proposes the reversal of the chosen record of the item; nothing changes until Management approves.</summary>
+    public Task ProposeReversalAsync(CompletionRow row, ReversalTarget? target, ReversalNature nature, string? reason) => CommandAsync("پیشنهاد برگشت ثبت شد و منتظر تصمیم مدیریت است؛ رکورد اصلی تغییری نکرده است.", async () =>
+        target is null
+            ? Outcome<int>.Invalid(ValidationIssue.ReversalTargetMissing)
+            : Relay(await completion.ProposeReversalAsync(currentUser(), row.Item.ItemId, target.Kind, target.Id, nature, reason)));
+
+    /// <summary>Management approves (the original is marked reversed, never deleted) or rejects (a reason is required) the proposal.</summary>
+    public Task DecideReversalAsync(ReversalRow row, bool approve, string? reason) => CommandAsync(approve ? "برگشت تأیید شد؛ رکورد اصلی به‌عنوان برگشت‌خورده علامت خورد و در سابقه می‌ماند." : "پیشنهاد برگشت رد شد؛ رکورد اصلی جاری می‌ماند.", async () =>
+        Relay(await completion.DecideReversalAsync(currentUser(), row.Reversal.Id, approve, reason)));
+
     private static Outcome<int> Relay<T>(Outcome<T> outcome) => outcome.Succeeded ? Outcome<int>.Ok(0) : new Outcome<int>(outcome.Status, 0, outcome.Issue, outcome.DateError);
 
     private async Task ReloadAsync(CancellationToken cancellationToken)
@@ -86,6 +141,8 @@ public sealed class CompletionViewModel(
         if (!outcome.Succeeded)
         {
             _capabilities = new CompletionCapabilities(false, false, false, false);
+            _reversals.Clear();
+            OnPropertyChanged(nameof(HasReversals));
             IsDenied = outcome.Status == OperationStatus.NotAuthorized;
             Fail(IsDenied ? "شما اجازهٔ مشاهدهٔ دریافت و تکمیل انبار را ندارید." : Messages.For(outcome));
             NotifyCaps();
@@ -102,7 +159,7 @@ public sealed class CompletionViewModel(
                 item.RequestNo,
                 $"{item.ItemNo} — {item.PartName}",
                 Digits(item.AcceptedBaseUnits.ToString(CultureInfo.InvariantCulture)),
-                item.Receipt is { } receipt ? "دریافت‌شده " + dates.FormatDateTime(receipt.ReceivedAtUtc) : "دریافت نشده",
+                item.Receipt is { } receipt ? "دریافت‌شده " + dates.FormatDateTime(receipt.ReceivedAtUtc) + StateSuffix(item.ReceiptInvalidation) : "دریافت نشده",
                 item.LatestDecisionStatus switch
                 {
                     PriceDecisionStatus.Approved => $"قیمت تأییدشده: {Rial(item.ApprovedPriceRial ?? 0)} ریال",
@@ -110,13 +167,55 @@ public sealed class CompletionViewModel(
                     PriceDecisionStatus.Draft => "قیمت ارسال نشده",
                     _ => "هزینه محاسبه نشده",
                 },
-                item.FinishedSent is { } finished ? "تکمیل/ارسال‌شده " + dates.FormatDateTime(finished.MarkedAtUtc) : string.Empty,
-                item.Dispatches.Count == 0 ? string.Empty : string.Join("؛ ", item.Dispatches.Select(d => $"{dates.FormatDate(d.DispatchDate)} ({d.DocumentReference})"))));
+                item.FinishedSent is { } finished ? "تکمیل/ارسال‌شده " + dates.FormatDateTime(finished.MarkedAtUtc) + StateSuffix(item.FinishedSentInvalidation) : string.Empty,
+                item.Dispatches.Count == 0 ? string.Empty : string.Join("؛ ", item.Dispatches.Select(d => $"{dates.FormatDate(d.DispatchDate)} ({d.DocumentReference})" + (item.ReversedDispatchIds.Contains(d.Id) ? " — برگشت‌خورده" : item.FlaggedDispatchIds.Contains(d.Id) ? " — پس از ارسال، اصلاح کنترل کیفیت رخ داد (سابقه حفظ شده)" : string.Empty)))));
         }
+
+        _reversals.Clear();
+        var ids = outcome.Value.Items.SelectMany(i => i.Reversals).SelectMany(r => new[] { r.ProposedByUserId, r.DecidedByUserId ?? 0 }).Where(id => id != 0).Distinct();
+        var names = await ActorLookup.DescribeAsync(users, currentUser(), ids, cancellationToken);
+        foreach (var item in outcome.Value.Items)
+        {
+            foreach (var reversal in item.Reversals)
+            {
+                _reversals.Add(new ReversalRow(
+                    reversal,
+                    $"{item.RequestNo} / {item.ItemNo}",
+                    reversal.TargetKind switch
+                    {
+                        InvalidatedRecordKind.WarehouseReceipt => "رسید انبار",
+                        InvalidatedRecordKind.FinishedSent => "تکمیل/ارسال شد",
+                        _ => "ارسال به مشتری (" + (item.Dispatches.FirstOrDefault(d => d.Id == reversal.TargetId)?.DocumentReference ?? "؟") + ")",
+                    },
+                    Natures.First(n => n.Nature == reversal.Nature).Text,
+                    reversal.ProposalReason,
+                    ActorLookup.Text(names, reversal.ProposedByUserId) + " — " + dates.FormatDateTime(reversal.ProposedAtUtc),
+                    reversal.Status switch
+                    {
+                        ReversalStatus.Proposed => "منتظر تصمیم مدیریت",
+                        ReversalStatus.Approved => "تأیید شد (رکورد اصلی برگشت‌خورده است)",
+                        _ => "رد شد (رکورد اصلی جاری است)",
+                    },
+                    reversal.DecidedAtUtc is { } decidedAt
+                        ? ActorLookup.Text(names, reversal.DecidedByUserId) + " — " + dates.FormatDateTime(decidedAt) + (reversal.DecisionReason is { } why ? " — " + why : string.Empty)
+                        : string.Empty));
+            }
+        }
+
+        OnPropertyChanged(nameof(HasReversals));
     }
+
+    private static string StateSuffix(RecordInvalidation? marker) => marker switch
+    {
+        null => string.Empty,
+        { Effect: InvalidationEffect.Reversed } => " — برگشت‌خورده (سابقه حفظ شده)",
+        _ => " — غیرجاری (اصلاح کنترل کیفیت)",
+    };
 
     private void NotifyCaps()
     {
+        OnPropertyChanged(nameof(CanProposeReversal));
+        OnPropertyChanged(nameof(CanDecideReversal));
         OnPropertyChanged(nameof(CanReceive));
         OnPropertyChanged(nameof(CanMarkFinished));
         OnPropertyChanged(nameof(CanDispatch));

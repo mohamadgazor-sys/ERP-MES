@@ -631,6 +631,9 @@ namespace ERP.MES.Infrastructure.SqlServer.Migrations
                     b.Property<long>("TargetId")
                         .HasColumnType("bigint");
 
+                    b.Property<long?>("WarehouseReversalId")
+                        .HasColumnType("bigint");
+
                     b.HasKey("Id");
 
                     b.HasIndex("ByUserId");
@@ -638,6 +641,8 @@ namespace ERP.MES.Infrastructure.SqlServer.Migrations
                     b.HasIndex("QcCorrectionId");
 
                     b.HasIndex("RequestItemId");
+
+                    b.HasIndex("WarehouseReversalId");
 
                     b.HasIndex("Kind", "TargetId");
 
@@ -4088,6 +4093,62 @@ namespace ERP.MES.Infrastructure.SqlServer.Migrations
                     b.ToTable("WarehouseReceipts", (string)null);
                 });
 
+            modelBuilder.Entity("ERP.MES.Domain.Warehouse.WarehouseReversal", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime?>("DecidedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<long?>("DecidedByUserId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("DecisionReason")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("Nature")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ProposalReason")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("ProposedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<long>("ProposedByUserId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("RequestItemId")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("Status")
+                        .IsConcurrencyToken()
+                        .HasColumnType("int");
+
+                    b.Property<long>("TargetId")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("TargetKind")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DecidedByUserId");
+
+                    b.HasIndex("ProposedByUserId");
+
+                    b.HasIndex("RequestItemId");
+
+                    b.HasIndex("TargetKind", "TargetId");
+
+                    b.ToTable("WarehouseReversals", (string)null);
+                });
+
             modelBuilder.Entity("ERP.MES.Application.Security.AuditLogEntry", b =>
                 {
                     b.HasOne("ERP.MES.Domain.Identity.User", null)
@@ -4298,7 +4359,14 @@ namespace ERP.MES.Infrastructure.SqlServer.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("ERP.MES.Domain.Warehouse.WarehouseReversal", "WarehouseReversal")
+                        .WithMany()
+                        .HasForeignKey("WarehouseReversalId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.Navigation("QcCorrection");
+
+                    b.Navigation("WarehouseReversal");
                 });
 
             modelBuilder.Entity("ERP.MES.Domain.Documents.ItemDrawing", b =>
@@ -5482,6 +5550,26 @@ namespace ERP.MES.Infrastructure.SqlServer.Migrations
                     b.HasOne("ERP.MES.Domain.Identity.User", null)
                         .WithMany()
                         .HasForeignKey("ReceivedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ERP.MES.Domain.Requests.RequestItem", null)
+                        .WithMany()
+                        .HasForeignKey("RequestItemId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Warehouse.WarehouseReversal", b =>
+                {
+                    b.HasOne("ERP.MES.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("DecidedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("ERP.MES.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("ProposedByUserId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 

@@ -178,7 +178,7 @@ public partial class App : System.Windows.Application
             new JobReportsViewModel(workflow.JobReports, workflow.UnitQueue, workflow.PlanningMaster, workflow.Calendar, dates, DigitStyle.Persian, () => DateTime.UtcNow, CurrentUser),
             new OvertimeViewModel(workflow.Overtime, workflow.Operators, workflow.PlanningMaster, dates, DigitStyle.Persian, () => DateTime.UtcNow, CurrentUser),
             new CostingViewModel(workflow.Costing, workflow.PlanningMaster, dates, DigitStyle.Persian, CurrentUser, workflow.Users),
-            new CompletionViewModel(workflow.Completion, dates, DigitStyle.Persian, CurrentUser),
+            new CompletionViewModel(workflow.Completion, dates, DigitStyle.Persian, CurrentUser, workflow.Users),
             new KpiViewModel(workflow.Kpi, dates, DigitStyle.Persian, () => DateTime.UtcNow, CurrentUser),
             new WorkBoardViewModel(workflow.UnitQueue, workflow.WorkSessions, workflow.StageWork, dates, DigitStyle.Persian, () => DateTime.UtcNow, CurrentUser),
             new UsersViewModel(_services.Accounts, workflow.Users, workflow.UnitDesignations, workflow.PlanningMaster, dates, CurrentUser),

@@ -51,14 +51,34 @@ public sealed record CompletionItem(
     /// <summary>The QC corrections of the item (visible indicator and history for Management and the Warehouse).</summary>
     public IReadOnlyList<QcCorrection> Corrections { get; init; } = [];
 
+    /// <summary>The Warehouse reversal proposals of the item with their decisions (owner decision B9), oldest first.</summary>
+    public IReadOnlyList<WarehouseReversal> Reversals { get; init; } = [];
+
+    /// <summary>The customer dispatches that were reversed after Management approved a reversal; the rows are kept.</summary>
+    public IReadOnlySet<long> ReversedDispatchIds { get; init; } = new HashSet<long>();
+
     /// <summary>True when the Warehouse records or the cost approval of the item are not current and must be reconciled before the item can be finished/sent again.</summary>
     public bool NotCurrent => ReceiptInvalidation is not null || FinishedSentInvalidation is not null || CostInvalidation is not null;
 }
+
+/// <summary>What is true, read INSIDE the transaction that records a reversal proposal or decision.</summary>
+public sealed record ReversalFacts(bool TargetExists, bool TargetCurrent, bool OpenProposalExists, bool CurrentFinishedMarkExists, bool RequestClosed);
+
+/// <summary>The outcome of a reversal step: a refusal, or the saved reversal (for an approval, also the marker added to the original record).</summary>
+public sealed record ReversalRecord(ValidationIssue Refusal, WarehouseReversal? Reversal = null, ERP.MES.Domain.Costing.RecordInvalidation? Marker = null);
 
 /// <summary>Persistence of the warehouse completion records (Decision Log #105): receipt, finished/sent and customer dispatch. All are append-only; each step is one transaction with its audit entry.</summary>
 public interface IWarehouseCompletionRepository
 {
     Task<IReadOnlyList<CompletionItem>> ListAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>Reads the facts of the target, lets <paramref name="decide"/> build the proposal, and saves it with the audit entry; a refusal saves nothing.</summary>
+    Task<ReversalRecord> ProposeReversalAsync(
+        long requestItemId, ERP.MES.Domain.Costing.InvalidatedRecordKind kind, long targetId, Func<ReversalFacts, ReversalRecord> decide, AuditLogEntry audit, CancellationToken cancellationToken = default);
+
+    /// <summary>Loads the proposal with the facts of its target, lets <paramref name="decide"/> approve or reject it (it returns the marker for an approval), and saves both with the audit entry; a refusal saves nothing.</summary>
+    Task<ReversalRecord> DecideReversalAsync(
+        long reversalId, Func<WarehouseReversal, ReversalFacts, ReversalRecord> decide, Func<WarehouseReversal, AuditLogEntry> audit, CancellationToken cancellationToken = default);
 
     /// <summary>Reads the facts, lets <paramref name="decide"/> build the row, and saves it with the audit entry; a refusal saves nothing.</summary>
     Task<CompletionRecord> RecordAsync(long requestItemId, Func<CompletionFacts, CompletionRecord> decide, AuditLogEntry audit, CancellationToken cancellationToken = default);
