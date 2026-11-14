@@ -9,7 +9,7 @@ namespace ERP.MES.Desktop.ViewModels;
 
 public sealed record ContractListRow(long RequestId, string RequestNo, string CustomerName, string StatusText, string ContractNoText, string DateText);
 
-public sealed record ContractVersionRow(int VersionNo, string ContractNo, string DateText, string StateText, string PdfText, string DecisionText, string DecisionNoteText);
+public sealed record ContractVersionRow(int VersionNo, string ContractNo, string DateText, string StateText, string PdfText, string DecisionText, string DecisionNoteText, string AmountText = "");
 
 public sealed record ItemContractRow(long ItemId, string ItemNo, string PartName, string EffectiveText, string ReasonText, bool IsInProduction) : IHasItemId;
 
@@ -174,8 +174,39 @@ public sealed class ContractsViewModel(ContractService service, RequestGateServi
         return saved;
     }
 
-    public Task<bool> SaveDraftAsync(string? contractNo, string? dateText, string? title, string? note, CancellationToken cancellationToken = default) =>
-        ChangeAsync((id, v) => service.SaveDraftAsync(currentUser(), id, v, contractNo, dateText, title, note, cancellationToken), "پیش‌نویس ذخیره شد.");
+    /// <summary>Planning saves the draft; <paramref name="amountText"/> is the optional contract amount in Rial (owner decision A2), typed with any digits and separators.</summary>
+    public Task<bool> SaveDraftAsync(string? contractNo, string? dateText, string? title, string? note, CancellationToken cancellationToken = default, string? amountText = null)
+    {
+        if (!TryParseAmount(amountText, out var amount))
+        {
+            Message = Messages.ForIssue(ValidationIssue.ContractAmountInvalid, JalaliDateError.None);
+            return Task.FromResult(false);
+        }
+
+        return ChangeAsync((id, v) => service.SaveDraftAsync(currentUser(), id, v, contractNo, dateText, title, note, cancellationToken, amount), "پیش‌نویس ذخیره شد.");
+    }
+
+    private static string AmountText(decimal rial) =>
+        new string(rial.ToString("N0", System.Globalization.CultureInfo.InvariantCulture).Select(c => c is >= '0' and <= '9' ? (char)('۰' + (c - '0')) : c == ',' ? '٬' : c).ToArray()) + " ریال";
+
+    /// <summary>Whole Rial typed with Persian or Latin digits and with or without thousands separators; empty means no amount.</summary>
+    internal static bool TryParseAmount(string? text, out decimal? amount)
+    {
+        amount = null;
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return true;
+        }
+
+        var ascii = new string(text.Where(c => c is not (',' or '٬' or ' ' or '،')).Select(c => c is >= '۰' and <= '۹' ? (char)('0' + (c - '۰')) : c is >= '٠' and <= '٩' ? (char)('0' + (c - '٠')) : c).ToArray());
+        if (!decimal.TryParse(ascii, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var value))
+        {
+            return false;
+        }
+
+        amount = value;
+        return true;
+    }
 
     public Task<bool> AttachPdfAsync(string? fileName, byte[]? content, CancellationToken cancellationToken = default) =>
         ChangeAsync((id, v) => service.AttachPdfAsync(currentUser(), id, v, fileName, content, cancellationToken), "فایل PDF پیوست شد.");
@@ -333,7 +364,7 @@ public sealed class ContractsViewModel(ContractService service, RequestGateServi
                 _versions.Add(new ContractVersionRow(
                     v.VersionNo, v.ContractNo ?? string.Empty, v.ContractDate is { } d ? dates.FormatDate(d) : string.Empty, Messages.ContractVersionStateText(v.State),
                     Messages.Ltr(v.CurrentPdf?.FileName) is { Length: > 0 } pdfName ? pdfName : "—", v.Decision is { } decision ? (decision == ContractDecision.Approved ? "تأیید" : "رد") + (v.DecidedAtUtc is { } at ? " (" + dates.FormatDateTime(at) + ")" : string.Empty) : string.Empty,
-                    v.DecisionNote ?? string.Empty));
+                    v.DecisionNote ?? string.Empty, v.AmountRial is { } amountRial ? AmountText(amountRial) : "ثبت نشده"));
             }
 
             var actors = await ActorLookup.DescribeAsync(users, currentUser(), contract.History.Select(h => h.ActionByUserId));

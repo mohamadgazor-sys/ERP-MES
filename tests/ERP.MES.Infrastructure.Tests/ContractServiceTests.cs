@@ -567,4 +567,44 @@ public class ContractServiceTests
         Assert.Equal(5, contract.History.Count);
         Assert.Equal("contract.pdf", contract.Versions.Single().CurrentPdf!.FileName);
     }
+    // ---- Contract amount (owner decision A2, Decision Log #142): Planning enters it, Management approves it with the contract ----
+
+    [Fact]
+    public async Task Planning_enters_the_contract_amount_it_is_validated_kept_on_revision_and_approved_by_Management_with_the_contract()
+    {
+        using var w = await StartAsync();
+        var id = await ReturnedAsync(w);
+        var draft = await RequiredAsync(w, id);
+
+        // Validation: a positive, whole number of Rial; only Planning saves it.
+        foreach (var bad in new[] { 0m, -1m, 100.5m, ContractVersion.MaxAmountRial + 1 })
+        {
+            Assert.Equal(ValidationIssue.ContractAmountInvalid, (await w.Contracts.SaveDraftAsync(w.Planning, id, draft.Version, "CN-100", "1405/07/25", "قرارداد", null, Token, bad)).Issue);
+        }
+
+        Assert.Equal(OperationStatus.NotAuthorized, (await w.Contracts.SaveDraftAsync(w.Warehouse, id, draft.Version, "CN-100", "1405/07/25", "قرارداد", null, Token, 8_000_000m)).Status);
+        Assert.Equal(OperationStatus.NotAuthorized, (await w.Contracts.SaveDraftAsync(w.Manager, id, draft.Version, "CN-100", "1405/07/25", "قرارداد", null, Token, 8_000_000m)).Status);
+        Assert.Null((await w.Contracts.GetAsync(w.Planning, id, Token)).Value!.Contract!.Value.CurrentVersion!.AmountRial);
+
+        var saved = (await w.Contracts.SaveDraftAsync(w.Planning, id, draft.Version, "CN-100", "1405/07/25", "قرارداد", null, Token, 8_000_000m)).Value!;
+        Tick(w);
+        Assert.Equal(8_000_000m, saved.Value.CurrentVersion!.AmountRial);
+        var withPdf = (await w.Contracts.AttachPdfAsync(w.Planning, id, saved.Version, "contract.pdf", Pdf("v1"), Token)).Value!;
+        var submitted = (await w.Contracts.SubmitAsync(w.Planning, id, withPdf.Version, Token)).Value!;
+        Tick(w);
+
+        // Management rejects; the revision starts with the same amount, Planning corrects it, Management approves: the approved amount is the corrected one and the rejected version keeps its own.
+        var rejected = (await w.Contracts.RejectAsync(w.Manager, id, submitted.Version, "مبلغ را اصلاح کنید", Token)).Value!;
+        var revising = (await w.Contracts.StartRevisionAsync(w.Planning, id, rejected.Version, Token)).Value!;
+        Assert.Equal(8_000_000m, revising.Value.CurrentVersion!.AmountRial);
+        var corrected = (await w.Contracts.SaveDraftAsync(w.Planning, id, revising.Version, "CN-100-R1", "1405/07/25", "قرارداد", null, Token, 7_500_000m)).Value!;
+        var resubmitted = (await w.Contracts.SubmitAsync(w.Planning, id, corrected.Version, Token)).Value!;
+        Assert.Null((await w.Contracts.GetAsync(w.Planning, id, Token)).Value!.Contract!.Value.ApprovedAmountRial); // pending: not approved yet
+        Assert.True((await w.Contracts.ApproveAsync(w.Manager, id, resubmitted.Version, null, Token)).Succeeded);
+
+        var contract = (await w.Contracts.GetAsync(w.Manager, id, Token)).Value!.Contract!.Value;
+        Assert.Equal(7_500_000m, contract.ApprovedAmountRial);
+        Assert.Equal((8_000_000m, 7_500_000m), (contract.Versions[0].AmountRial, contract.Versions[1].AmountRial));
+        Assert.Equal(2L, Count(w, "ContractVersions WHERE AmountRial IS NOT NULL"));
+    }
 }

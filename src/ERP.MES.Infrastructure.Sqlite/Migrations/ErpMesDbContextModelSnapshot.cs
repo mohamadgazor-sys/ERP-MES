@@ -262,6 +262,9 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
+                    b.Property<decimal?>("AmountRial")
+                        .HasColumnType("TEXT");
+
                     b.Property<DateOnly?>("ContractDate")
                         .HasColumnType("TEXT");
 
@@ -534,6 +537,9 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("ContractReference")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ProposedContractReference")
                         .HasColumnType("TEXT");
 
                     b.Property<decimal?>("ProposedPriceRial")
