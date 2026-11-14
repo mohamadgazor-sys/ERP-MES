@@ -21,10 +21,12 @@ public sealed class EfCostingRepository(IDbContextFactory<ErpMesDbContext> conte
         var calculations = await context.ItemCostCalculations.Include(c => c.Lines).AsNoTracking().OrderBy(c => c.SequenceNo).ToListAsync(cancellationToken);
         var decisions = await context.ItemPriceDecisions.AsNoTracking().OrderBy(d => d.Id).ToListAsync(cancellationToken);
         var customerNames = await context.Customers.AsNoTracking().ToDictionaryAsync(c => c.Id, c => c.Name, cancellationToken);
+        var invalidations = (await context.RecordInvalidations.AsNoTracking().Where(i => i.Kind == InvalidatedRecordKind.CostSnapshot).OrderBy(i => i.Id).ToListAsync(cancellationToken)).ToLookup(i => i.TargetId);
         var result = new List<CostingItemSummary>();
         foreach (var request in requests)
         {
-            foreach (var item in request.Items.Where(i => i.IsRouteCompleted))
+            // An item with a reopened stage stays visible while its latest cost snapshot is marked not current (it shows why and what is outstanding).
+            foreach (var item in request.Items.Where(i => i.IsRouteCompleted || calculations.Any(c => c.RequestItemId == i.Id)))
             {
                 var latest = calculations.LastOrDefault(c => c.RequestItemId == item.Id);
                 var decision = latest is null ? null : decisions.LastOrDefault(d => d.CalculationId == latest.Id);
@@ -32,7 +34,11 @@ public sealed class EfCostingRepository(IDbContextFactory<ErpMesDbContext> conte
                     request.Id, request.RequestNo.Value, item.Id, item.ItemNo, item.PartName, request.WorkType, IsContractApproved(contracts, request.Id) && !notRequired.Contains(item.Id), item.Stages.OrderBy(s => s.StageNo).Last().AcceptedBaseUnits,
                     latest is null ? null : new Stored<ItemCostCalculation>(latest, 0),
                     decision is null ? null : new Stored<ItemPriceDecision>(decision, VersionOf(context, decision.Id)),
-                    customerNames.GetValueOrDefault(request.CustomerId, string.Empty)));
+                    customerNames.GetValueOrDefault(request.CustomerId, string.Empty))
+                {
+                    LatestInvalidation = latest is null ? null : invalidations[latest.Id].LastOrDefault(),
+                    RouteComplete = item.IsRouteCompleted,
+                });
             }
         }
 
@@ -106,6 +112,12 @@ public sealed class EfCostingRepository(IDbContextFactory<ErpMesDbContext> conte
         if (own != latest)
         {
             throw new InvalidOperationException("The price decision belongs to a superseded cost snapshot.");
+        }
+
+        // A snapshot marked not current (QC correction, report revision) cannot be submitted or approved: it must be recalculated first (owner decisions Q5, B2, Decision Log #142).
+        if (await context.RecordInvalidations.AnyAsync(i => i.Kind == InvalidatedRecordKind.CostSnapshot && i.TargetId == row.CalculationId, cancellationToken))
+        {
+            return (null, ValidationIssue.CostSnapshotNotCurrent);
         }
 
         var refusal = change(row);

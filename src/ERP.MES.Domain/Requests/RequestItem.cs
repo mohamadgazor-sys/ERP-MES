@@ -484,6 +484,111 @@ public sealed class RequestItem
         return new InspectionOutcome(lines, stage.Status, completed);
     }
 
+    /// <summary>True when a QC correction affected any stage of the item (the visible "corrected" indicator of Master Specification 15.1).</summary>
+    public bool HasQcCorrection => _stages.Any(s => s.AffectedByCorrection is not null || s.AffectedByQcCorrectionId is not null);
+
+    /// <summary>
+    /// QC corrects the final decision of a QC_APPROVED stage (Master Specification 1.10, 15; owner decisions Q1-Q3, Q6, Decision Log #142). QC names how many of the previously accepted units become
+    /// rework or scrap; the accepted quantity falls by that amount and the rest stays accepted. Rework units return to the stage as executable work (IN_PROGRESS, or WAITING_EXTERNAL_SEND for an external
+    /// stage) and go through production and QC again; scrap alone waits for the existing shortfall decision. Nothing is deleted or reset: the old QC lines, the approval, the work sessions and the stages
+    /// downstream stay as they are, and the downstream stages that had progressed are marked as affected. The sequential gate then keeps every later stage from proceeding until this stage is QC approved
+    /// again. <paramref name="sources"/> are the earlier accepted decisions superseded (their units must add up to the corrected quantity).
+    /// </summary>
+    public QcCorrection CorrectQcDecision(
+        int stageNo, long reworkBaseUnits, long scrapBaseUnits, string? reason, IReadOnlyList<QcCorrectionSource> sources, bool afterCustomerDispatch, long userId, DateTime atUtc)
+    {
+        ArgumentNullException.ThrowIfNull(sources);
+        var stage = GetStage(stageNo);
+        var utc = Customer.RequireUtc(atUtc, nameof(atUtc));
+        Require(stage, ItemStageStatus.QcApproved, "corrected");
+        if (stage.InputBaseUnits is null)
+        {
+            throw new StageNotCountableException("Stage " + stageNo + " has no whole number of base units, so a QC decision about quantities cannot be corrected.");
+        }
+
+        if (reworkBaseUnits < 0 || scrapBaseUnits < 0 || reworkBaseUnits + scrapBaseUnits <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(reworkBaseUnits), "A correction names a positive number of units as rework or scrap.");
+        }
+
+        var text = reason?.Trim();
+        if (string.IsNullOrEmpty(text) || text.Length > QcCorrection.MaxReasonLength)
+        {
+            throw new ArgumentException("A reason of 1 to " + QcCorrection.MaxReasonLength + " characters is required.", nameof(reason));
+        }
+
+        var corrected = reworkBaseUnits + scrapBaseUnits;
+        if (corrected > stage.AcceptedBaseUnits)
+        {
+            throw new CorrectionExceedsAcceptedException("QC cannot correct " + corrected + " base units: only " + stage.AcceptedBaseUnits + " are accepted and still valid at stage " + stageNo + ".");
+        }
+
+        if (sources.Sum(s => s.SupersededBaseUnits) != corrected)
+        {
+            throw new ArgumentException("The superseded decisions must add up to the corrected quantity.", nameof(sources));
+        }
+
+        var acceptedBefore = stage.AcceptedBaseUnits;
+        stage.AcceptedBaseUnits -= corrected;
+        stage.ReworkBaseUnits += reworkBaseUnits;
+        stage.ScrapBaseUnits += scrapBaseUnits;
+        stage.PlanningPosition = null;
+        if (stage.IsExternal)
+        {
+            // Rework must be sent again; scrap alone waits for the shortfall decision (the same derivation as after an inspection of an external stage).
+            SettleExternal(stage, userId, utc);
+        }
+        else
+        {
+            stage.Status = reworkBaseUnits > 0 ? ItemStageStatus.InProgress : ItemStageStatus.WaitingShortfallDecision;
+            if (reworkBaseUnits > 0)
+            {
+                stage.AvailableSinceUtc = utc;
+            }
+        }
+
+        var correction = new QcCorrection(Id, stageNo, reworkBaseUnits, scrapBaseUnits, text, acceptedBefore, stage.Status, afterCustomerDispatch, sources, userId, utc);
+        stage.AffectedByCorrection = correction;
+        foreach (var later in _stages.Where(s => s.StageNo > stageNo && s.Status is not (ItemStageStatus.Planned or ItemStageStatus.WaitingPreviousQc)))
+        {
+            later.AffectedByCorrection = correction;
+        }
+
+        UpdatedAtUtc = utc;
+        return correction;
+    }
+
+    /// <summary>
+    /// A child of this assembly (or a descendant) was QC corrected (owner decision Q7, Decision Log #142). The first stage of the assembly returns to the waiting state (PLANNED) when it has not started
+    /// (no work session exists), exactly the waiting state of an assembly whose children are unfinished (#140), until the corrected child is QC approved again. A first stage that is already in production
+    /// is NOT reset: it is only marked as affected so the production staff assess the real situation. Returns true when the stage returned to waiting.
+    /// </summary>
+    public bool ApplyChildQcCorrection(QcCorrection correction, bool firstStageHasWorkSessions)
+    {
+        ArgumentNullException.ThrowIfNull(correction);
+        var first = _stages.FirstOrDefault();
+        if (first is null || first.Status is ItemStageStatus.Planned or ItemStageStatus.WaitingPreviousQc)
+        {
+            return false;
+        }
+
+        var unstarted = !firstStageHasWorkSessions
+            && (first.Status == ItemStageStatus.Waiting || (first.Status == ItemStageStatus.WaitingExternalSend && first.ExternalDispatchedBaseUnits == 0))
+            && first.AcceptedBaseUnits == 0 && first.AwaitingQcBaseUnits == 0 && first.ReworkBaseUnits == 0 && first.ScrapBaseUnits == 0;
+        first.AffectedByCorrection = correction;
+        if (!unstarted)
+        {
+            return false;
+        }
+
+        first.Status = ItemStageStatus.Planned;
+        first.AvailableSinceUtc = null;
+        first.InputBaseUnits = null;
+        first.PlanningPosition = null;
+        UpdatedAtUtc = correction.CorrectedAtUtc;
+        return true;
+    }
+
     /// <summary>
     /// Closes the shortfall scrap created (Decision Log #95 D3, #101): Management accepts it, or Planning records that replacement production was ordered; nothing is ordered automatically. The stage
     /// then counts as QC approved with the accepted base units, which are all the next stage receives. A note or reference is required.
@@ -689,6 +794,13 @@ public sealed class RequestItem
         UpdatedAtUtc = utc;
 
         var next = _stages.FirstOrDefault(s => s.StageNo == stage.StageNo + 1);
+        if (next is { Status: ItemStageStatus.Waiting or ItemStageStatus.WaitingExternalSend } && stage.InputBaseUnits is not null
+            && next.AcceptedBaseUnits == 0 && next.AwaitingQcBaseUnits == 0 && next.ReworkBaseUnits == 0 && next.ScrapBaseUnits == 0 && next.ExternalDispatchedBaseUnits == 0)
+        {
+            // Re-approval after a QC correction (Decision Log #142): the downstream stage has not started, so its input follows the quantity that is valid now (the scrapped units never arrive).
+            next.InputBaseUnits = stage.AcceptedBaseUnits;
+        }
+
         if (next is { Status: ItemStageStatus.WaitingPreviousQc })
         {
             if (stage.InputBaseUnits is not null)

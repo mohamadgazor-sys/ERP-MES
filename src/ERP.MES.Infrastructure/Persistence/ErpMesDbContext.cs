@@ -36,6 +36,10 @@ public sealed class ErpMesDbContext(DbContextOptions<ErpMesDbContext> options) :
 
     public DbSet<ShortfallDecision> ShortfallDecisions => Set<ShortfallDecision>();
 
+    public DbSet<QcCorrection> QcCorrections => Set<QcCorrection>();
+
+    public DbSet<ERP.MES.Domain.Costing.RecordInvalidation> RecordInvalidations => Set<ERP.MES.Domain.Costing.RecordInvalidation>();
+
     public DbSet<QcApproval> QcApprovals => Set<QcApproval>();
 
     public DbSet<StoredDocument> Documents => Set<StoredDocument>();

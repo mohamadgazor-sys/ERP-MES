@@ -39,6 +39,10 @@ public sealed class ItemStageConfiguration : IEntityTypeConfiguration<ItemStage>
         builder.HasOne<ERP.MES.Domain.Identity.User>().WithMany().HasForeignKey(s => s.StoppedByUserId).IsRequired(false).OnDelete(DeleteBehavior.Restrict);
         builder.Ignore(s => s.IsStopped);
 
+        // The QC correction that affected the stage (owner decisions Q4, Q7, Decision Log #142): a visible marker, never a reset.
+        builder.Property(s => s.AffectedByQcCorrectionId);
+        builder.HasOne(s => s.AffectedByCorrection).WithMany().HasForeignKey(s => s.AffectedByQcCorrectionId).IsRequired(false).OnDelete(DeleteBehavior.Restrict);
+
         // Quantity-level QC (Decision Log #92, #101): base units, never per-piece identities.
         builder.Property(s => s.InputBaseUnits);
         builder.Property(s => s.AwaitingQcBaseUnits).IsRequired().HasDefaultValue(0L);

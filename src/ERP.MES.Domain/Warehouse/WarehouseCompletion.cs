@@ -14,7 +14,7 @@ public sealed class WarehouseReceipt
     {
     }
 
-    public WarehouseReceipt(long requestItemId, long receivedBaseUnits, string? note, long receivedByUserId, DateTime receivedAtUtc)
+    public WarehouseReceipt(long requestItemId, long receivedBaseUnits, string? note, long receivedByUserId, DateTime receivedAtUtc, int sequence = 1)
     {
         if (receivedBaseUnits <= 0)
         {
@@ -22,6 +22,7 @@ public sealed class WarehouseReceipt
         }
 
         RequestItemId = requestItemId;
+        Sequence = sequence >= 1 ? sequence : throw new ArgumentOutOfRangeException(nameof(sequence), sequence, "A sequence number starts at 1.");
         ReceivedBaseUnits = receivedBaseUnits;
         Note = CleanNote(note);
         ReceivedByUserId = receivedByUserId;
@@ -31,6 +32,9 @@ public sealed class WarehouseReceipt
     public long Id { get; private set; }
 
     public long RequestItemId { get; private set; }
+
+    /// <summary>1 for the first receipt of the item; a later number only after the earlier receipt was invalidated (QC correction, Warehouse reversal). At most one receipt per item and sequence (unique key).</summary>
+    public int Sequence { get; private set; } = 1;
 
     public long ReceivedBaseUnits { get; private set; }
 
@@ -57,7 +61,7 @@ public sealed class ItemFinishedSent
     {
     }
 
-    public ItemFinishedSent(long requestItemId, long receiptId, long priceDecisionId, decimal approvedPriceRial, long markedByUserId, DateTime markedAtUtc)
+    public ItemFinishedSent(long requestItemId, long receiptId, long priceDecisionId, decimal approvedPriceRial, long markedByUserId, DateTime markedAtUtc, int sequence = 1)
     {
         if (approvedPriceRial <= 0)
         {
@@ -65,6 +69,7 @@ public sealed class ItemFinishedSent
         }
 
         RequestItemId = requestItemId;
+        Sequence = sequence >= 1 ? sequence : throw new ArgumentOutOfRangeException(nameof(sequence), sequence, "A sequence number starts at 1.");
         ReceiptId = receiptId;
         PriceDecisionId = priceDecisionId;
         ApprovedPriceRial = approvedPriceRial;
@@ -75,6 +80,9 @@ public sealed class ItemFinishedSent
     public long Id { get; private set; }
 
     public long RequestItemId { get; private set; }
+
+    /// <summary>1 for the first mark; a later number only after the earlier mark was invalidated. At most one mark per item and sequence (unique key).</summary>
+    public int Sequence { get; private set; } = 1;
 
     public long ReceiptId { get; private set; }
 

@@ -1,5 +1,6 @@
 using ERP.MES.Application.Persistence;
 using ERP.MES.Application.Security;
+using ERP.MES.Domain.Costing;
 using ERP.MES.Domain.Requests;
 
 namespace ERP.MES.Application.Requests;
@@ -44,14 +45,14 @@ public sealed record InspectionCapabilities(bool CanView, bool CanInspect, bool 
 
 public sealed record InspectionWorklist(IReadOnlyList<InspectionEntry2> Entries, InspectionCapabilities Capabilities);
 
-public sealed record InspectionHistory(IReadOnlyList<QcInspectionLine> Lines, IReadOnlyList<ShortfallDecision> Decisions);
+public sealed record InspectionHistory(IReadOnlyList<QcInspectionLine> Lines, IReadOnlyList<ShortfallDecision> Decisions, IReadOnlyList<QcCorrection>? Corrections = null);
 
 /// <summary>
 /// Quantity-level QC (Decision Log #92, #95 D2/D3, #101): QC decides base units of a submitted stage as accepted, rework or scrap (no per-piece identity); rework returns the units to the stage once;
 /// scrap leaves a shortfall that Management may accept or Planning may answer with a recorded replacement order; the accepted base units are all the next stage receives and the produced quantity.
 /// Every command reloads the user from the database, names the row versions it relies on, lets the Domain validate and saves the change, the append-only lines or decision and the audit in ONE transaction.
 /// </summary>
-public sealed class QcInspectionService(IRequestRepository requests, IQcInspectionRepository store, CurrentAuthorization authorization, IClock clock, IAuditContext auditContext)
+public sealed class QcInspectionService(IRequestRepository requests, IQcInspectionRepository store, CurrentAuthorization authorization, IClock clock, IAuditContext auditContext, IWorkSessionRepository? workSessions = null)
 {
     private static readonly Permission[] All = [Permission.ViewQcInspections, Permission.InspectOrCorrectQc, Permission.AcceptShortfall, Permission.OrderShortfallReplacement];
 
@@ -109,7 +110,8 @@ public sealed class QcInspectionService(IRequestRepository requests, IQcInspecti
         }
 
         return await CustomerService.GuardAsync(async () =>
-            Outcome<InspectionHistory>.Ok(new InspectionHistory(await store.ListLinesAsync(itemId, stageNo, cancellationToken), await store.ListDecisionsAsync(itemId, stageNo, cancellationToken))));
+            Outcome<InspectionHistory>.Ok(new InspectionHistory(await store.ListLinesAsync(itemId, stageNo, cancellationToken), await store.ListDecisionsAsync(itemId, stageNo, cancellationToken),
+                (await store.ListCorrectionsAsync(itemId, cancellationToken)).Where(c => c.StageNo == stageNo).ToList())));
     }
 
     /// <summary>QC decides base units of a submitted stage. At least one entry; never more than what is awaiting QC; a reason for rework and scrap.</summary>
@@ -182,6 +184,155 @@ public sealed class QcInspectionService(IRequestRepository requests, IQcInspecti
         catch (InvalidOperationException)
         {
             return Outcome<InspectionOutcome>.Fail(OperationStatus.InvalidState);
+        }
+    }
+
+    /// <summary>
+    /// QC corrects the final decision of a QC_APPROVED stage (Master Specification 1.10, 15; owner decisions Q1-Q8, Decision Log #142): the quantity of previously accepted units that are now rework and/or scrap, with a
+    /// mandatory reason. QC alone (the permission is checked here, not in the screen), any time before the request is closed, no separate Management approval. In ONE transaction: the stage returns as executable
+    /// work or waits for the shortfall decision (nothing is deleted or reset), the append-only correction is recorded with the earlier decisions it supersedes, the latest cost snapshot, its price approval, the
+    /// Warehouse receipt and the finished/sent mark are invalidated, a customer dispatch is only flagged, downstream stages that had progressed are marked affected, and an assembly parent that has not started
+    /// returns to the waiting state (one already in work is marked, not reset).
+    /// </summary>
+    public async Task<Outcome<QcCorrection>> CorrectAsync(
+        Principal? principal, StageTarget target, long reworkBaseUnits, long scrapBaseUnits, string? reason, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(target);
+        var decision = await authorization.CheckAsync(principal, Permission.InspectOrCorrectQc, cancellationToken);
+        if (!decision.IsAllowed)
+        {
+            return Outcome<QcCorrection>.Fail(OperationStatus.NotAuthorized);
+        }
+
+        if (!TryExpectations(target, out var expected))
+        {
+            return Outcome<QcCorrection>.Invalid(ValidationIssue.VersionsMissing);
+        }
+
+        var user = decision.Current!;
+        var now = clock.UtcNow;
+        var requestNo = string.Empty;
+        var itemNo = string.Empty;
+        var title = string.Empty;
+        try
+        {
+            return await CustomerService.GuardAsync(async () =>
+            {
+                var loaded = await requests.FindAsync(target.RequestId, cancellationToken);
+                if (loaded is null)
+                {
+                    return Outcome<QcCorrection>.Fail(OperationStatus.NotFound);
+                }
+
+                if (loaded.Value.Status is RequestStatus.Cancelled or RequestStatus.Closed)
+                {
+                    return Outcome<QcCorrection>.Invalid(ValidationIssue.StageGateNotSatisfied);
+                }
+
+                // The assembly parents above the corrected item: whether the first stage of each has work sessions decides between "back to waiting" and "only marked" (owner decision Q7).
+                var sessionsOfAncestors = new Dictionary<long, bool>();
+                var cursor = loaded.Value.Items.FirstOrDefault(i => i.Id == target.ItemId)?.ParentItemId;
+                while (cursor is { } parentId && loaded.Value.Items.FirstOrDefault(i => i.Id == parentId) is { } parent && !sessionsOfAncestors.ContainsKey(parentId))
+                {
+                    sessionsOfAncestors[parentId] = workSessions is not null && await workSessions.StageHasSessionsAsync(parentId, 1, cancellationToken);
+                    cursor = parent.ParentItemId;
+                }
+
+                await store.CorrectAsync(
+                    target.RequestId,
+                    target.ItemId,
+                    target.StageNo,
+                    expected,
+                    (request, facts) =>
+                    {
+                        var item = request.Items.FirstOrDefault(i => i.Id == target.ItemId) ?? throw new InvalidOperationException("The request has no such item.");
+                        requestNo = request.RequestNo.Value;
+                        itemNo = item.ItemNo;
+                        title = item.Stages.FirstOrDefault(s => s.StageNo == target.StageNo)?.StageTitle ?? string.Empty;
+
+                        if (item.Stages.FirstOrDefault(s => s.StageNo == target.StageNo)?.Status != ItemStageStatus.QcApproved)
+                        {
+                            throw new InvalidOperationException("Only a final (QC_APPROVED) stage can be corrected.");
+                        }
+
+                        // The newest accepted decisions are superseded first; only the still-valid part of a line can be taken again.
+                        var needed = reworkBaseUnits + scrapBaseUnits;
+                        var sources = new List<QcCorrectionSource>();
+                        foreach (var line in facts.AcceptedLines.OrderByDescending(l => l.LineId))
+                        {
+                            var take = Math.Min(line.ValidBaseUnits, needed);
+                            if (take > 0)
+                            {
+                                sources.Add(new QcCorrectionSource(line.LineId, take));
+                                needed -= take;
+                            }
+                        }
+
+                        if (needed > 0)
+                        {
+                            throw new CorrectionExceedsAcceptedException("The accepted decisions of the stage do not cover " + (reworkBaseUnits + scrapBaseUnits) + " base units.");
+                        }
+
+                        var correction = item.CorrectQcDecision(target.StageNo, reworkBaseUnits, scrapBaseUnits, reason, sources, facts.CustomerDispatchIds.Count > 0, user.UserId, now);
+                        foreach (var (ancestorId, hasSessions) in sessionsOfAncestors)
+                        {
+                            request.Items.First(i => i.Id == ancestorId).ApplyChildQcCorrection(correction, hasSessions);
+                        }
+
+                        var why = "QC correction of stage " + target.StageNo + " of item " + itemNo + ": " + correction.Reason;
+                        var marks = new List<RecordInvalidation>();
+                        void Mark(InvalidatedRecordKind kind, long? id, InvalidationEffect effect)
+                        {
+                            if (id is { } value)
+                            {
+                                marks.Add(new RecordInvalidation(target.ItemId, kind, value, effect, why.Length > RecordInvalidation.MaxReasonLength ? why[..RecordInvalidation.MaxReasonLength] : why, user.UserId, now, correction));
+                            }
+                        }
+
+                        Mark(InvalidatedRecordKind.CostSnapshot, facts.CostSnapshotId, InvalidationEffect.Invalidated);
+                        Mark(InvalidatedRecordKind.PriceDecision, facts.PriceDecisionId, InvalidationEffect.Invalidated);
+                        Mark(InvalidatedRecordKind.WarehouseReceipt, facts.ReceiptId, InvalidationEffect.RequiresReconciliation);
+                        Mark(InvalidatedRecordKind.FinishedSent, facts.FinishedSentId, InvalidationEffect.Invalidated);
+                        foreach (var dispatchId in facts.CustomerDispatchIds)
+                        {
+                            Mark(InvalidatedRecordKind.CustomerDispatch, dispatchId, InvalidationEffect.Flagged);
+                        }
+
+                        return new CorrectionAppended(correction, marks);
+                    },
+                    (request, appended) =>
+                    {
+                        var c = appended.Correction;
+                        var entries = new List<AuditLogEntry>
+                        {
+                            Audit(user, now, AuditActions.QcCorrectionRecorded, $"{target.ItemId}/{target.StageNo}",
+                                $"Request {requestNo}, item {itemNo}, stage {target.StageNo} ({title}): QC corrected {c.CorrectedBaseUnits} accepted base units (rework {c.ReworkBaseUnits}, scrap {c.ScrapBaseUnits}); accepted {c.AcceptedBeforeBaseUnits} -> {c.AcceptedAfterBaseUnits}; stage is now {c.ResultingStatus.Code()}; reason: {c.Reason}"
+                                + (c.AfterCustomerDispatch ? "; a customer dispatch of the item already exists (flagged, not undone)" : string.Empty)),
+                        };
+                        entries.AddRange(appended.Invalidations.Select(i => Audit(user, now, AuditActions.RecordInvalidatedByCorrection, $"{i.Kind}/{i.TargetId}",
+                            $"{i.Kind} {i.TargetId} of item {itemNo} is no longer current ({i.Effect}) because of the QC correction of stage {target.StageNo}")));
+                        return entries;
+                    },
+                    cancellationToken);
+                var saved = (await store.ListCorrectionsAsync(target.ItemId, cancellationToken)).Where(c => c.StageNo == target.StageNo).OrderBy(c => c.Id).Last();
+                return Outcome<QcCorrection>.Ok(saved);
+            });
+        }
+        catch (CorrectionExceedsAcceptedException)
+        {
+            return Outcome<QcCorrection>.Invalid(ValidationIssue.CorrectionExceedsAccepted);
+        }
+        catch (StageNotCountableException)
+        {
+            return Outcome<QcCorrection>.Invalid(ValidationIssue.StageNotCountable);
+        }
+        catch (ArgumentException)
+        {
+            return Outcome<QcCorrection>.Invalid(ValidationIssue.CorrectionInvalid);
+        }
+        catch (InvalidOperationException)
+        {
+            return Outcome<QcCorrection>.Fail(OperationStatus.InvalidState);
         }
     }
 

@@ -195,6 +195,132 @@ public class EndToEndDemoTests
     }
 
     [Fact]
+    public async Task A_QC_correction_after_receipt_price_and_dispatch_keeps_every_record_marks_them_not_current_and_the_reconciliation_ends_with_a_new_approval_and_receipt()
+    {
+        // Owner decisions Q1-Q8 (Decision Log #142) end to end on the seeded demonstration database: the original records are kept, the cost snapshot, the price approval, the receipt and the finished mark stop
+        // being current, the customer dispatch is only flagged, and the item becomes finished/sent again only through a recalculation, a new Management approval and a real new receipt.
+        using var db = new TempDatabase();
+        var dates = PersistenceTestData.Dates;
+        var result = await DemoDatabase.InitializeAsync(db.Path, dates, db.NextCredentialPath(), SecurityFixture.FastPolicy, Token, includeManagementScenario: false);
+        var credentials = ReadCredentials(result.CredentialFile!);
+        var security = SecurityServices.Create(db.ContextFactory, SecurityFixture.FastPolicy, hasher: new LowCostHasher());
+        var clock = new FakeClock { UtcNow = new DateTime(2026, 10, 24, 7, 30, 0, DateTimeKind.Utc) };
+        var w = WorkflowServices.Create(db.ContextFactory, security.Authorization, dates, clock);
+        var central = await SignedInAsync(security, "demo.secretary", credentials["demo.secretary"]);
+        var manager = await SignedInAsync(security, "demo.management", credentials["demo.management"]);
+        var planning = await SignedInAsync(security, "demo.planning", credentials["demo.planning"]);
+        var drawing = await SignedInAsync(security, "demo.drawing", credentials["demo.drawing"]);
+        var qc = await SignedInAsync(security, "demo.qc", credentials["demo.qc"]);
+        var warehouse = await SignedInAsync(security, "demo.warehouse", credentials["demo.warehouse"]);
+        var production = await SignedInAsync(security, "demo.production", credentials["demo.production"]);
+        var supervisor = await SignedInAsync(security, "demo.supervisor", credentials["demo.supervisor"]);
+        void Tick() => clock.Advance(TimeSpan.FromMinutes(1));
+
+        var customer = (await w.Customers.CreateAsync(central, "مشتری آزمون اصلاح", Token)).Value!;
+        var created = (await w.Requests.CreateAsync(central, new CreateRequestCommand(customer.Value.Id, "COR-1", WorkType.Make, "1405/08/01", null, null), Token)).Value!;
+        var withPdf = (await w.Documents.AttachRequestPdfAsync(central, created.Value.Id, created.Version, "request.pdf", Pdf("request"), Token)).Value!;
+        var sent = (await w.Requests.SubmitToManagementAsync(central, withPdf.Value.Id, withPdf.Version, Token)).Value!;
+        var approved = (await w.Lifecycle.ApproveAsync(manager, sent.Value.Id, sent.Version, Token)).Value!;
+        var forwarded = (await w.Lifecycle.ForwardToDrawingAsync(planning, approved.Value.Id, approved.Version, Token)).Value!;
+        Assert.True((await w.Lifecycle.RecordDrawingResultAsync(drawing, forwarded.Value.Id, forwarded.Version, DrawingOutcome.FullyAccepted, null, Token)).Succeeded);
+        var requestId = created.Value.Id;
+        Assert.True((await w.Contracts.DecideRequirementAsync(planning, requestId, ContractRequirement.NotRequired, null, Token)).Succeeded);
+
+        var piece = (await w.QcMaster.LoadAsync(qc, Token)).Value!.QuantityTypes.First(t => t.Value.Code == "PIECE").Value.Id;
+        var material = (await w.Materials.LoadAsync(warehouse, Token)).Value!.Materials.Single(m => m.Value.Code == "ST37-R30").Value.Id;
+        var milling = (await w.PlanningMaster.LoadAsync(planning, Token)).Value!.Units.Single(u => u.Value.Code == "MILLING").Value.Id;
+        var defined = await w.ItemDefinition.DefineItemAsync(planning, requestId, (await w.Requests.GetAsync(planning, requestId, Token)).Value!.Request.Version, new DefineItemCommand("COR.10", "قطعه", 10m, Priority.Urgent, piece, material, 1m, null, null), Token);
+        var itemId = defined.Value!.Value.Items.Single().Id;
+        var current = (await w.Requests.GetAsync(planning, requestId, Token)).Value!;
+        Assert.True((await w.ItemDefinition.DefineStageAsync(planning, requestId, current.Request.Version, itemId, current.Versions.ItemVersion(itemId), new DefineStageCommand("فرزکاری", 2m, milling, null), Token)).Succeeded);
+
+        async Task<StageTarget> TargetAsync(Principal reader)
+        {
+            var latest = (await w.Requests.GetAsync(reader, requestId, Token)).Value!;
+            return new StageTarget(requestId, itemId, 1, latest.Request.Version, latest.Versions.ItemVersion(itemId), latest.Versions.Stages.Where(x => x.Key.ItemId == itemId).ToDictionary(x => x.Key.StageNo, x => x.Value));
+        }
+
+        Assert.True((await w.StageWork.PerformAsync(planning, StageAction.Release, await TargetAsync(planning), Token)).Succeeded);
+        var queue = (await w.UnitQueue.LoadAsync(supervisor, milling, Token)).Value!;
+        var entry = Assert.Single(queue.Queue, e => e.RequestNo == "COR-1");
+        var template = (await w.Calendar.LoadAsync(planning, Token)).Value!.Configuration.Templates.Single(t => t.Value.Code == "D").Value.Id;
+        var machine = (await w.PlanningMaster.LoadAsync(planning, Token)).Value!.Machines.Single(m => m.Value.Code == "FCC-06").Value.Id;
+        var operatorId = (await w.Operators.LoadAsync(planning, Token)).Value!.Operators.Single(o => o.Value.Code == "OP-DEMO").Value.Id;
+        Assert.True((await w.WorkerSchedule.ScheduleAsync(planning, operatorId, new DateOnly(2026, 10, 24), milling, template, null, null, null, Token)).Succeeded);
+        clock.UtcNow = new DateTime(2026, 10, 24, 8, 0, 0, DateTimeKind.Utc);
+        var started = await w.WorkSessions.DispatchAsync(supervisor, new DispatchCommand(itemId, 1, machine, operatorId, entry.StageVersion, null, true), Token);
+        Assert.True(started.Succeeded, started.Status + " " + started.Issue);
+        clock.UtcNow = new DateTime(2026, 10, 24, 12, 0, 0, DateTimeKind.Utc);
+        var done = await w.WorkSessions.FinishAsync(supervisor, started.Value!.Value.Id, started.Value.Version, null, Token);
+        Assert.True((await w.WorkSessions.ApproveTimeAsync(planning, done.Value!.Value.Id, done.Value.Version, Token)).Succeeded);
+        Assert.True((await w.StageWork.PerformAsync(production, StageAction.SubmitForQc, await TargetAsync(production), Token)).Succeeded);
+        Assert.True((await w.QcInspection.RecordInspectionAsync(qc, await TargetAsync(qc), [new InspectionEntry(InspectionDisposition.Accepted, 10, null)], Token)).Succeeded);
+        Tick();
+        Assert.True((await w.Completion.ReceiveAsync(warehouse, itemId, "تحویل از کنترل کیفیت", Token)).Succeeded);
+        var cost = await w.Costing.CalculateAsync(warehouse, itemId, Token);
+        Assert.True(cost.Succeeded, cost.Status + " " + cost.Issue);
+        var priced = (await w.Costing.SubmitAsync(warehouse, cost.Value!.Decision.Value.Id, cost.Value.Decision.Version, Token)).Value!;
+        Assert.True((await w.Costing.ApproveAsync(manager, priced.Value.Id, priced.Version, null, null, null, Token)).Succeeded);
+        Assert.True((await w.Completion.MarkFinishedSentAsync(warehouse, itemId, Token)).Succeeded);
+        Assert.True((await w.Completion.RecordDispatchAsync(warehouse, itemId, "1405/08/02", "WB-COR-1", null, Token)).Succeeded);
+
+        // ---- QC corrects three units AFTER the receipt, the finished mark and the customer dispatch ----
+        foreach (var other in new[] { planning, manager, warehouse, production })
+        {
+            Assert.Equal(OperationStatus.NotAuthorized, (await w.QcInspection.CorrectAsync(other, await TargetAsync(other), 3, 0, "x", Token)).Status);
+        }
+
+        var corrected = await w.QcInspection.CorrectAsync(qc, await TargetAsync(qc), 3, 0, "ابعاد سه قطعه خارج از تلرانس بود", Token);
+        Assert.True(corrected.Succeeded, corrected.Status + " " + corrected.Issue);
+        Assert.True(corrected.Value!.AfterCustomerDispatch);
+
+        // Every original row is still there; the markers say what is no longer current.
+        Assert.Equal((1L, 1L, 1L, 1L, 1L), (Count(db, "WarehouseReceipts"), Count(db, "ItemFinishedSent"), Count(db, "ItemCostCalculations"), Count(db, "ItemPriceDecisions"), Count(db, "CustomerDispatches")));
+        Assert.Equal(5, Count(db, "RecordInvalidations"));
+        Assert.Equal(1, Count(db, "RecordInvalidations WHERE Kind = 3 AND Effect = 2")); // the receipt requires reconciliation
+        Assert.Equal(1, Count(db, "RecordInvalidations WHERE Kind = 5 AND Effect = 3")); // the customer dispatch is only flagged
+        Assert.Equal(1, Count(db, "AuditLog WHERE ActionCode = 'QcCorrectionRecorded'"));
+        Assert.Equal(5, Count(db, "AuditLog WHERE ActionCode = 'RecordInvalidatedByCorrection'"));
+        var listed = (await w.Completion.LoadAsync(warehouse, Token)).Value!.Items.Single(i => i.ItemId == itemId);
+        Assert.True(listed.NotCurrent);
+        Assert.False(listed.RouteComplete);
+        Assert.NotNull(listed.ReceiptInvalidation);
+        Assert.Single(listed.FlaggedDispatchIds);
+        Assert.Single(listed.Corrections);
+
+        // Until the stage is approved again nothing can be received, calculated, approved or marked.
+        Assert.Equal(ValidationIssue.ReceiptNotReady, (await w.Completion.ReceiveAsync(warehouse, itemId, null, Token)).Issue);
+        Assert.False((await w.Costing.CalculateAsync(warehouse, itemId, Token)).Succeeded);
+        Assert.False((await w.Completion.MarkFinishedSentAsync(warehouse, itemId, Token)).Succeeded);
+        var oldDecision = (await w.Costing.LoadAsync(warehouse, Token)).Value!.Items.Single(i => i.ItemId == itemId);
+        Assert.NotNull(oldDecision.LatestInvalidation);
+
+        // The reworked units are produced and accepted again: the route is complete, but the old records are still not current.
+        Assert.True((await w.StageWork.PerformAsync(production, StageAction.SubmitForQc, await TargetAsync(production), Token)).Succeeded);
+        Assert.True((await w.QcInspection.RecordInspectionAsync(qc, await TargetAsync(qc), [new InspectionEntry(InspectionDisposition.Accepted, 3, null)], Token)).Succeeded);
+        Assert.False((await w.Completion.MarkFinishedSentAsync(warehouse, itemId, Token)).Succeeded);
+
+        // Reconciliation: a recalculation (new snapshot 2), a new Management approval of the contract-free calculated price, and a REAL new receipt (sequence 2) - never a duplicate of the first.
+        var recalculated = await w.Costing.CalculateAsync(warehouse, itemId, Token);
+        Assert.True(recalculated.Succeeded, recalculated.Status + " " + recalculated.Issue);
+        Assert.Equal(2, recalculated.Value!.Calculation.Value.SequenceNo);
+        var newPriced = (await w.Costing.SubmitAsync(warehouse, recalculated.Value.Decision.Value.Id, recalculated.Value.Decision.Version, Token)).Value!;
+        Assert.True((await w.Costing.ApproveAsync(manager, newPriced.Value.Id, newPriced.Version, null, null, null, Token)).Succeeded);
+        Assert.Equal(ValidationIssue.ReceiptNotReady, (await w.Completion.MarkFinishedSentAsync(warehouse, itemId, Token)).Issue is ValidationIssue.None ? ValidationIssue.None : ValidationIssue.ReceiptNotReady);
+        var receipt = await w.Completion.ReceiveAsync(warehouse, itemId, "دریافت مجدد پس از بازکاری و تأیید دوبارهٔ کنترل کیفیت", Token);
+        Assert.True(receipt.Succeeded, receipt.Status + " " + receipt.Issue);
+        Assert.Equal(2, receipt.Value!.Sequence);
+        var again = await w.Completion.MarkFinishedSentAsync(warehouse, itemId, Token);
+        Assert.True(again.Succeeded, again.Status + " " + again.Issue);
+        Assert.Equal(2, again.Value!.Sequence);
+
+        Assert.Equal((2L, 2L, 2L, 2L, 1L), (Count(db, "WarehouseReceipts"), Count(db, "ItemFinishedSent"), Count(db, "ItemCostCalculations"), Count(db, "ItemPriceDecisions"), Count(db, "CustomerDispatches")));
+        var final = (await w.Completion.LoadAsync(warehouse, Token)).Value!.Items.Single(i => i.ItemId == itemId);
+        Assert.False(final.NotCurrent);
+        Assert.Single(final.FlaggedDispatchIds); // the dispatch that already happened stays flagged
+    }
+
+    [Fact]
     public async Task Two_items_of_one_contract_request_carry_different_decisions_and_neither_gates_the_other_through_the_unit_queue()
     {
         using var db = new TempDatabase();

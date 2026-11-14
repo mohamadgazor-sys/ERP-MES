@@ -54,7 +54,7 @@ public sealed class WarehouseCompletionService(
 
             try
             {
-                return new CompletionRecord(ValidationIssue.None, Receipt: new WarehouseReceipt(requestItemId, facts.AcceptedBaseUnits, note, user.UserId, now));
+                return new CompletionRecord(ValidationIssue.None, Receipt: new WarehouseReceipt(requestItemId, facts.AcceptedBaseUnits, note, user.UserId, now, facts.NextReceiptSequence));
             }
             catch (ArgumentException)
             {
@@ -81,7 +81,7 @@ public sealed class WarehouseCompletionService(
                 return new CompletionRecord(ValidationIssue.FinishedSentNeedsPrice);
             }
 
-            return new CompletionRecord(ValidationIssue.None, FinishedSent: new ItemFinishedSent(requestItemId, facts.Receipt.Id, decisionId, price, user.UserId, now));
+            return new CompletionRecord(ValidationIssue.None, FinishedSent: new ItemFinishedSent(requestItemId, facts.Receipt.Id, decisionId, price, user.UserId, now, facts.NextFinishedSentSequence));
         }, record => record.FinishedSent!, cancellationToken);
 
     /// <summary>Records a customer dispatch of a received item: a Jalali date that is not in the future and a document reference.</summary>

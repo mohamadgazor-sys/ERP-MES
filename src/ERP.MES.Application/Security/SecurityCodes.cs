@@ -49,6 +49,8 @@ public static class AuditActions
     public const string RequestReleasedToProduction = "RequestReleasedToProduction";
     public const string AssemblyWaitingForChildren = "AssemblyWaitingForChildren";
     public const string RequestClosed = "RequestClosed";
+    public const string QcCorrectionRecorded = "QcCorrectionRecorded";
+    public const string RecordInvalidatedByCorrection = "RecordInvalidatedByCorrection";
     public const string StageStarted = "StageStarted";
     public const string StageSubmittedForQc = "StageSubmittedForQc";
     public const string StageQcApproved = "StageQcApproved";

@@ -55,7 +55,7 @@ public sealed record WorkflowServices(
             unitQueue,
             new CalendarService(scheduling, new EfPlanningMasterRepository(contexts), authorization, effectiveClock, auditContext ?? new EnvironmentAuditContext()),
             new WorkerScheduleService(scheduling, new EfOperatorRepository(contexts), authorization, effectiveClock, auditContext ?? new EnvironmentAuditContext()),
-            new QcInspectionService(requests, new EfQcInspectionRepository(contexts), authorization, effectiveClock, auditContext ?? new EnvironmentAuditContext()),
+            new QcInspectionService(requests, new EfQcInspectionRepository(contexts), authorization, effectiveClock, auditContext ?? new EnvironmentAuditContext(), workSessions),
             new JobReportService(new EfJobReportRepository(contexts), new EfOperatorRepository(contexts), new EfPlanningMasterRepository(contexts), scheduling, unitQueue, requests, workSessions, dates, authorization, effectiveClock, auditContext ?? new EnvironmentAuditContext()),
             new OvertimeService(new EfOvertimeRepository(contexts), new EfOperatorRepository(contexts), new EfPlanningMasterRepository(contexts), unitQueue, authorization, effectiveClock, auditContext ?? new EnvironmentAuditContext()),
             new CostingService(new EfCostingRepository(contexts), dates, authorization, effectiveClock, auditContext ?? new EnvironmentAuditContext()),

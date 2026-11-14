@@ -610,6 +610,15 @@ public enum ValidationIssue
 
     /// <summary>The request cannot be closed yet: the result lists each blocking item and the reason (Decision Log #142 B10).</summary>
     ClosureBlocked,
+
+    /// <summary>The correction names no unit, a negative quantity or no reason (Decision Log #142 Q2, Q8).</summary>
+    CorrectionInvalid,
+
+    /// <summary>The cost snapshot is no longer current (a QC correction or a job-report revision changed what it was based on); calculate again first (Decision Log #142 Q5, B2).</summary>
+    CostSnapshotNotCurrent,
+
+    /// <summary>QC tried to correct more units than the stage's accepted and still-valid quantity (Decision Log #142 Q2).</summary>
+    CorrectionExceedsAccepted,
 }
 
 /// <summary>The result of a command or query: a status, the value on success, and the details of a refusal.</summary>
