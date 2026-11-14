@@ -2420,3 +2420,18 @@ Append one dated entry after every substantial session. Do not replace prior ent
 
 ### Recommended exact next action
 - Merge PR-C when all checks pass, then PR-D (B2 job-report revision), then PR-E (A2 contract amount); then rebuild the offline package from the final main.
+
+## 2026-11-14 (continued) - PR #87 merged; PR-D job-report revision (B2)
+
+### Completed
+- PR #87 (Warehouse reversal, B9) merged to main as `15d7508` after all six checks were green; `ui-smoke` failed once on a UI-Automation timing error in the existing stage-title keyboard section (unrelated to the PR), was re-run once and passed including the new reversal checks.
+- PR-D (branch `claude/pr-d-job-report-revision`): reopen of an approved report creates a new revision row (`AmendmentNo`, `PreviousRevisionReportId`, reason, opener); KPIs and costing read only the latest valid approved revision; approval of an amendment that changes the machine time costing used marks the affected cost snapshot and price approval stale in the same transaction; Warehouse records are never touched; migrations for SQLite and SQL Server; job-report screen; Decision Log #145; Master Specification note; status matrix.
+
+### Tests actually run (Linux)
+- Domain 602 passed; Infrastructure and Desktop view-model runs for this PR are listed in the PR; Desktop project compile-checked. Windows CI, SQL Server CI and the UI-interaction script (which role sees the reopen button) run on the PR.
+
+### Unresolved / risks
+- Labelled interpretations in #145 (no late warning on amendments, an opened amendment cannot be discarded, costing inputs = machine and productive minutes per item) are mine, not owner text.
+
+### Recommended exact next action
+- Merge PR-D when green, then PR-E (A2 contract amount), then full main validation and a fresh offline package.

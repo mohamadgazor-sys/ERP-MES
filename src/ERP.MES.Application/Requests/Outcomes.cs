@@ -443,6 +443,9 @@ public enum ValidationIssue
     /// <summary>Planning may review only when the unit has no designated supervisor, and nobody reviews their own report.</summary>
     JobReportReviewerNotAllowed,
 
+    /// <summary>Only an approved report can be reopened, and only while it has no amendment yet (owner decision B2).</summary>
+    JobReportReopenNotAllowed,
+
     /// <summary>The inspection decisions are not valid (none, a non-positive count, or a reason missing for rework or scrap).</summary>
     InspectionEntriesInvalid,
 

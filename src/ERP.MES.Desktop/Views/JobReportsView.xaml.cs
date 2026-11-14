@@ -48,6 +48,14 @@ public partial class JobReportsView : UserControl
         }
     }
 
+    private async void OnReopen(object sender, RoutedEventArgs e)
+    {
+        if (ReportGrid.SelectedItem is JobReportRow row && PromptWindow.Ask(Window.GetWindow(this), "بازگشایی گزارش تأییدشده", "دلیل بازگشایی (الزامی):") is { } reason)
+        {
+            await _viewModel.ReopenAsync(row, reason);
+        }
+    }
+
     private void OnEdit(object sender, RoutedEventArgs e)
     {
         if (ReportGrid.SelectedItem is JobReportRow row)

@@ -72,6 +72,7 @@ public class AuthorizationRulesTests
         [Permission.AssignWorkingUnits] = ([], "ADMIN"),
         [Permission.SubmitJobReport] = (["PRODUCTION"], null),
         [Permission.ReviewJobReports] = (["PRODUCTION", "PLANNING", "PRODUCTION_MANAGER"], null),
+        [Permission.ReopenJobReport] = (["PLANNING", "PRODUCTION_MANAGER"], null),
         [Permission.ViewJobReports] = (["PRODUCTION", "PLANNING", "MANAGEMENT", "PRODUCTION_MANAGER"], null),
         [Permission.CorrectStageAction] = (["PLANNING", "PRODUCTION_MANAGER"], null),
         [Permission.ViewKpi] = (["PLANNING", "MANAGEMENT", "PRODUCTION", "PRODUCTION_MANAGER"], null),

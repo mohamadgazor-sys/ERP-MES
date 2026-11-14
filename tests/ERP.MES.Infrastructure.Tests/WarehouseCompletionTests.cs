@@ -604,6 +604,115 @@ public class WarehouseCompletionTests
         Assert.Equal((false, false), (planning.CanProposeReversal, planning.CanDecideReversal));
     }
 
+    // ---- Job-report revision (owner decision B2, Decision Log #142): reopening an approved report creates a new revision; the original stays valid until the revision is approved ----
+
+    private static async Task<int> OperatorMinutesAsync(World w) =>
+        (await w.Services.Kpi.ReportAsync(w.Planning, DateOnly.FromDateTime(Day), DateOnly.FromDateTime(Day), Token)).Value!.Operators.Single().ProductiveMinutes;
+
+    private static long OriginalReportId(World w) => long.Parse(w.Fixture.Db.Query("SELECT Id FROM DailyJobReports WHERE AmendmentNo = 0").Single(), System.Globalization.CultureInfo.InvariantCulture);
+
+    private static async Task<Stored<DailyJobReport>> ReloadAsync(World w, long id) => (await w.Services.JobReports.LoadAsync(w.Planning, DateOnly.FromDateTime(Day), DateOnly.FromDateTime(Day), Token)).Value!.Items.Single(i => i.Report.Value.Id == id).Report;
+
+    [Fact]
+    public async Task Reopening_an_approved_report_keeps_the_original_valid_until_the_amendment_is_approved_then_marks_the_cost_stale_without_touching_the_Warehouse()
+    {
+        using var w = await StartAsync();
+        var s = await ReadyToCostAsync(w);
+        var originalId = OriginalReportId(w);
+        await ApprovedPriceAsync(w, s);
+        Assert.True((await w.Completion.ReceiveAsync(w.Warehouse, s.ItemId, "تحویل", Token)).Succeeded);
+        Assert.True((await w.Completion.MarkFinishedSentAsync(w.Warehouse, s.ItemId, Token)).Succeeded);
+        Assert.Equal(240, await OperatorMinutesAsync(w));
+        var original = await ReloadAsync(w, originalId);
+
+        // Only Planning and the Production Manager reopen, with a reason, and only an approved report.
+        foreach (var other in new[] { w.Production, w.Supervisor, w.Manager, w.Warehouse, w.Qc, w.Admin, w.Central, w.Drawing })
+        {
+            Assert.Equal(OperationStatus.NotAuthorized, (await w.Services.JobReports.ReopenAsync(other, originalId, original.Version, "دلیل", Token)).Status);
+        }
+
+        Assert.Equal(OperationStatus.NotAuthorized, (await w.Services.JobReports.ReopenAsync(null, originalId, original.Version, "دلیل", Token)).Status);
+        Assert.Equal(ValidationIssue.JobReportReasonRequired, (await w.Services.JobReports.ReopenAsync(w.Planning, originalId, original.Version, "  ", Token)).Issue);
+        Assert.Equal(0, Count(w, "DailyJobReports WHERE AmendmentNo > 0"));
+
+        var reopened = await w.Services.JobReports.ReopenAsync(w.ProductionManager, originalId, original.Version, "زمان پایان اشتباه ثبت شده بود", Token);
+        Assert.True(reopened.Succeeded, reopened.Status + " " + reopened.Issue);
+        var revision = reopened.Value!;
+        Assert.Equal((JobReportStatus.Draft, 1, originalId, "زمان پایان اشتباه ثبت شده بود", w.ProductionManager.UserId), (revision.Value.Status, revision.Value.AmendmentNo, revision.Value.PreviousRevisionReportId!.Value, revision.Value.AmendmentReason, revision.Value.AmendmentOpenedByUserId!.Value));
+        Assert.Single(revision.Value.Lines);
+
+        // The original is untouched (same status, lines and approval) apart from the appended event; it cannot be reopened a second time.
+        var untouched = await ReloadAsync(w, originalId);
+        Assert.Equal((JobReportStatus.Approved, 1, 240), (untouched.Value.Status, untouched.Value.Lines.Count, untouched.Value.Lines.Sum(l => l.ProductiveMinutes)));
+        Assert.Contains(untouched.Value.Events, e => e.Kind == JobReportEventKind.Reopened && e.UserId == w.ProductionManager.UserId && e.Reason == "زمان پایان اشتباه ثبت شده بود");
+        Assert.Equal(ValidationIssue.JobReportReopenNotAllowed, (await w.Services.JobReports.ReopenAsync(w.Planning, originalId, untouched.Version, "دوباره", Token)).Issue);
+        Assert.Equal(ValidationIssue.JobReportReopenNotAllowed, (await w.Services.JobReports.ReopenAsync(w.Planning, revision.Value.Id, revision.Version, "هنوز تأیید نشده", Token)).Issue);
+        Assert.Equal(240, await OperatorMinutesAsync(w)); // the draft amendment does not count; the original is still the latest valid approved revision
+        Assert.Equal(0, Count(w, "RecordInvalidations"));
+
+        // The operator corrects and submits the amendment (it does not collide with the report it amends), and the supervisor first returns, then approves it.
+        var edited = await w.Reports.SaveDraftAsync(w.Production, revision.Value.Id, revision.Version, DateOnly.FromDateTime(Day), s.Unit, s.Template, [Line(s, 8, 11, 10)], Token);
+        Assert.True(edited.Succeeded, edited.Status + " " + edited.Issue);
+        var submitted = await w.Reports.SubmitAsync(w.Production, revision.Value.Id, edited.Value!.Version, Token);
+        Assert.True(submitted.Succeeded, submitted.Status + " " + submitted.Issue);
+        Assert.Equal(0, submitted.Value!.Value.Lines.Count(l => l.Flags.HasFlag(JobLineFlags.MachineOverlap)));
+        var returned = await w.Reports.ReviewAsync(w.Supervisor, revision.Value.Id, submitted.Value.Version, false, "ساعت شروع را بررسی کنید", Token);
+        Assert.True(returned.Succeeded, returned.Status + " " + returned.Issue);
+        Assert.Equal(240, await OperatorMinutesAsync(w));
+        var again = await w.Reports.SubmitAsync(w.Production, revision.Value.Id, returned.Value!.Version, Token);
+        Assert.True(again.Succeeded, again.Status + " " + again.Issue);
+        var approved = await w.Reports.ReviewAsync(w.Supervisor, revision.Value.Id, again.Value!.Version, true, null, Token);
+        Assert.True(approved.Succeeded, approved.Status + " " + approved.Issue);
+
+        // Only the amendment feeds the KPIs now; the original is kept as history and shown as replaced.
+        Assert.Equal(180, await OperatorMinutesAsync(w));
+        var list = (await w.Services.JobReports.LoadAsync(w.Planning, DateOnly.FromDateTime(Day), DateOnly.FromDateTime(Day), Token)).Value!.Items;
+        Assert.True(list.Single(i => i.Report.Value.Id == originalId).IsSuperseded);
+        Assert.False(list.Single(i => i.Report.Value.Id == revision.Value.Id).IsSuperseded);
+        Assert.Equal(2L, Count(w, "DailyJobReports"));
+        Assert.Equal(1L, Count(w, "AuditLog WHERE ActionCode = 'JobReportReopened'"));
+
+        // The amendment changed the machine time costing used: the latest snapshot and its price approval are stale, linked to the amendment; no Warehouse record is touched.
+        Assert.Equal(1L, Count(w, $"RecordInvalidations WHERE Kind = 1 AND Effect = 1 AND JobReportRevisionId = {revision.Value.Id} AND QcCorrectionId IS NULL AND WarehouseReversalId IS NULL"));
+        Assert.Equal(1L, Count(w, $"RecordInvalidations WHERE Kind = 2 AND Effect = 1 AND JobReportRevisionId = {revision.Value.Id}"));
+        Assert.Equal(2L, Count(w, "RecordInvalidations"));
+        var completion = Assert.Single((await w.Completion.LoadAsync(w.Manager, Token)).Value!.Items);
+        Assert.NotNull(completion.CostInvalidation);
+        Assert.Null(completion.ReceiptInvalidation);       // a physically accurate receipt is NOT invalidated by a report amendment
+        Assert.Null(completion.FinishedSentInvalidation);
+        Assert.Equal(1L, Count(w, "WarehouseReceipts"));
+
+        // Recalculation uses the amendment only (180 minutes, not 420) and a new Management approval is required.
+        var stale = Assert.Single((await w.Costing.LoadAsync(w.Warehouse, Token)).Value!.Items);
+        Assert.NotNull(stale.LatestInvalidation);
+        var recalculated = await w.Costing.CalculateAsync(w.Warehouse, s.ItemId, Token);
+        Assert.True(recalculated.Succeeded, recalculated.Status + " " + recalculated.Issue);
+        Assert.Equal(2, recalculated.Value!.Calculation.Value.SequenceNo);
+        Assert.True(recalculated.Value.Calculation.Value.MachiningTotalRial < 4_800_000m); // 180 minutes at 1,200,000 per hour (240 minutes would be 4,800,000)
+        var priced = (await w.Costing.SubmitAsync(w.Warehouse, recalculated.Value.Decision.Value.Id, recalculated.Value.Decision.Version, Token)).Value!;
+        Assert.True((await w.Costing.ApproveAsync(w.Manager, priced.Value.Id, priced.Version, null, null, null, Token)).Succeeded);
+    }
+
+    [Fact]
+    public async Task An_amendment_that_changes_no_costing_data_marks_nothing_stale_and_replaces_the_original_for_the_KPIs()
+    {
+        using var w = await StartAsync();
+        var s = await ReadyToCostAsync(w);
+        var originalId = OriginalReportId(w);
+        await ApprovedPriceAsync(w, s);
+        var revision = (await w.Services.JobReports.ReopenAsync(w.Planning, originalId, (await ReloadAsync(w, originalId)).Version, "تعداد واحد گزارش‌شده اصلاح شود", Token)).Value!;
+
+        // Same machine, same times; only the processed units change (not a costing input).
+        var edited = (await w.Reports.SaveDraftAsync(w.Production, revision.Value.Id, revision.Version, DateOnly.FromDateTime(Day), s.Unit, s.Template, [Line(s, 8, 12, 9)], Token)).Value!;
+        var submitted = (await w.Reports.SubmitAsync(w.Production, revision.Value.Id, edited.Version, Token)).Value!;
+        Assert.True((await w.Reports.ReviewAsync(w.Supervisor, revision.Value.Id, submitted.Version, true, null, Token)).Succeeded);
+
+        Assert.Equal(0, Count(w, "RecordInvalidations"));
+        Assert.Equal(240, await OperatorMinutesAsync(w)); // counted once, from the amendment
+        Assert.True((await w.Services.JobReports.LoadAsync(w.Planning, DateOnly.FromDateTime(Day), DateOnly.FromDateTime(Day), Token)).Value!.Items.Single(i => i.Report.Value.Id == originalId).IsSuperseded);
+        Assert.Equal(1L, Count(w, "ItemPriceDecisions"));
+    }
+
     [Fact]
     public async Task Only_warehouse_records_and_warehouse_planning_and_management_read()
     {

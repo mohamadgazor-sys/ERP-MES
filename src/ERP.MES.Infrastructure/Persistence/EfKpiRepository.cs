@@ -15,7 +15,9 @@ public sealed class EfKpiRepository(IDbContextFactory<ErpMesDbContext> contextFa
         var units = await context.ProductionUnits.AsNoTracking().Select(u => new KpiUnit(u.Id, u.Code, u.Name)).ToListAsync(cancellationToken);
         var operators = await context.Operators.AsNoTracking().Select(o => new KpiOperator(o.Id, o.Code, o.FullName)).ToListAsync(cancellationToken);
 
-        var reports = await context.DailyJobReports.Include(r => r.Lines).AsNoTracking().Where(r => r.WorkDate >= from && r.WorkDate <= toInclusive && r.Status == JobReportStatus.Approved).ToListAsync(cancellationToken);
+        var reports = await context.DailyJobReports.Include(r => r.Lines).AsNoTracking().Where(r => r.WorkDate >= from && r.WorkDate <= toInclusive && r.Status == JobReportStatus.Approved)
+            // Only the latest valid approved revision counts (owner decision B2): a report whose amendment was approved is superseded.
+            .Where(r => !context.DailyJobReports.Any(n => n.PreviousRevisionReportId == r.Id && n.Status == JobReportStatus.Approved)).ToListAsync(cancellationToken);
         var lines = reports.SelectMany(r => r.Lines.Select(l => new KpiApprovedLine(r.Id, r.OperatorId, r.ProductionUnitId, r.WorkDate, l.StartUtc, l.EndUtc, l.ProductiveMinutes))).ToList();
         var pending = (await context.DailyJobReports.AsNoTracking().Where(r => r.WorkDate >= from && r.WorkDate <= toInclusive && r.Status == JobReportStatus.Submitted).Select(r => r.ProductionUnitId).ToListAsync(cancellationToken))
             .GroupBy(id => id).Select(g => new KpiPending(g.Key, g.Count())).ToList();
@@ -55,7 +57,8 @@ public sealed class EfKpiRepository(IDbContextFactory<ErpMesDbContext> contextFa
         // Stages that are QC-approved and had a decision in the widened period: last decision time over all their decisions, and the approved minutes reported for them.
         var allLines = await context.QcInspectionLines.AsNoTracking().Where(l => itemIds.Contains(l.RequestItemId)).Select(l => new { l.RequestItemId, l.StageNo, l.DecidedAtUtc }).ToListAsync(cancellationToken);
         var approved = await context.DailyJobReports.Include(r => r.Lines).AsNoTracking()
-            .Where(r => r.Status == JobReportStatus.Approved && r.Lines.Any(l => itemIds.Contains(l.RequestItemId))).ToListAsync(cancellationToken);
+            .Where(r => r.Status == JobReportStatus.Approved && r.Lines.Any(l => itemIds.Contains(l.RequestItemId)))
+            .Where(r => !context.DailyJobReports.Any(n => n.PreviousRevisionReportId == r.Id && n.Status == JobReportStatus.Approved)).ToListAsync(cancellationToken);
         var actual = approved.SelectMany(r => r.Lines).Where(l => itemIds.Contains(l.RequestItemId)).GroupBy(l => (l.RequestItemId, l.StageNo)).ToDictionary(g => g.Key, g => g.Sum(l => l.ProductiveMinutes));
         // A stage tracked by sessions compares its planned minutes with the machine runtime of its approved sessions (a handover counted once), the quantity the plan estimates.
         var stageSessions = await context.WorkSessions.Include(w => w.Intervals).AsSplitQuery().AsNoTracking()
