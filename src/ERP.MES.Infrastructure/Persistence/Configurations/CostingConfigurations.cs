@@ -78,6 +78,7 @@ public sealed class ItemPriceDecisionConfiguration : IEntityTypeConfiguration<It
         builder.HasOne<RequestItem>().WithMany().HasForeignKey(d => d.RequestItemId).IsRequired().OnDelete(DeleteBehavior.Restrict);
         builder.Property(d => d.Basis).HasConversion<int>().IsRequired();
         builder.Property(d => d.ProposedPriceRial);
+        builder.Property(d => d.ProposedContractReference);
         builder.Property(d => d.Status).HasConversion<int>().IsRequired();
         builder.Property(d => d.SubmittedByUserId);
         builder.HasOne<User>().WithMany().HasForeignKey(d => d.SubmittedByUserId).IsRequired(false).OnDelete(DeleteBehavior.Restrict);

@@ -49,7 +49,12 @@ public class ContractsViewModelTests
 
         Assert.False(await planning.SubmitAsync(Token));
         Assert.Equal(Messages.ForIssue(ValidationIssue.ContractNoRequired, ERP.MES.Domain.Calendar.JalaliDateError.None), planning.Message);
-        Assert.True(await planning.SaveDraftAsync("CN-1", "۱۴۰۵/۰۷/۲۵", "قرارداد", null, Token));
+        Assert.False(await planning.SaveDraftAsync("CN-1", "۱۴۰۵/۰۷/۲۵", "قرارداد", null, Token, "abc")); // not a number
+        Assert.Equal(Messages.ForIssue(ValidationIssue.ContractAmountInvalid, ERP.MES.Domain.Calendar.JalaliDateError.None), planning.Message);
+        Assert.False(await planning.SaveDraftAsync("CN-1", "۱۴۰۵/۰۷/۲۵", "قرارداد", null, Token, "0"));
+        Assert.Equal("ثبت نشده", planning.Versions.Single().AmountText);
+        Assert.True(await planning.SaveDraftAsync("CN-1", "۱۴۰۵/۰۷/۲۵", "قرارداد", null, Token, "۸٬۰۰۰٬۰۰۰")); // Persian digits and separators
+        Assert.Equal("۸٬۰۰۰٬۰۰۰ ریال", planning.Versions.Single().AmountText);
         Assert.True(await planning.AttachPdfAsync("contract.pdf", Pdf("c"), Token));
         Assert.True(await planning.SubmitAsync(Token));
 

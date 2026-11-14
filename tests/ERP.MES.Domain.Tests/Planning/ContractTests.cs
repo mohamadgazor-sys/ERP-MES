@@ -110,4 +110,37 @@ public class ContractTests
         Assert.Throws<ContractGateException>(() => contract.Approve(moved, null, Management, At));
         Assert.Throws<ContractGateException>(() => contract.Reject(moved, "x", Management, At));
     }
+    // ---- Contract amount (owner decision A2, Decision Log #142) ----
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-5)]
+    [InlineData(100.5)]
+    public void An_amount_that_is_not_a_positive_whole_number_of_Rial_is_refused(double amount)
+    {
+        var contract = Required();
+        Assert.Throws<ArgumentOutOfRangeException>(() => contract.SaveDraft(Ok, "CN-1", null, null, null, Planning, At, (decimal)amount));
+        Assert.Throws<ArgumentOutOfRangeException>(() => contract.SaveDraft(Ok, "CN-1", null, null, null, Planning, At, ContractVersion.MaxAmountRial + 1));
+        Assert.Null(contract.CurrentVersion!.AmountRial);
+    }
+
+    [Fact]
+    public void The_amount_belongs_to_the_version_is_kept_on_revision_and_is_the_approved_amount_only_after_Management_approves()
+    {
+        var contract = Required();
+        contract.SaveDraft(Ok, "CN-1", new DateOnly(2026, 10, 2), null, null, Planning, At, 8_000_000m);
+        contract.AttachPdf(Ok, Pdf(), Planning, At);
+        Assert.Null(contract.ApprovedAmountRial);
+        contract.Submit(Ok, Planning, At);
+        Assert.Null(contract.ApprovedAmountRial); // pending Management: not an approved amount yet
+        contract.Reject(Ok, "مبلغ را اصلاح کنید", Management, At);
+
+        contract.StartRevision(Ok, Planning, At);
+        Assert.Equal(8_000_000m, contract.CurrentVersion!.AmountRial); // the revision starts with the same amount
+        contract.SaveDraft(Ok, "CN-1", new DateOnly(2026, 10, 2), null, null, Planning, At, 7_500_000m);
+        contract.Submit(Ok, Planning, At);
+        contract.Approve(Ok, null, Management, At);
+        Assert.Equal(7_500_000m, contract.ApprovedAmountRial);
+        Assert.Equal(8_000_000m, contract.Versions[0].AmountRial); // the rejected version keeps its own amount
+    }
 }

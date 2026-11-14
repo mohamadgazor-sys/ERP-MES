@@ -64,7 +64,7 @@ public sealed class EfCostingRepository(IDbContextFactory<ErpMesDbContext> conte
         var request = await EfRequestRepository.LoadAggregate(context).FirstOrDefaultAsync(r => r.Items.Any(i => i.Id == requestItemId), cancellationToken)
             ?? throw new RecordNotFoundException("request item", requestItemId);
         var item = request.Items.Single(i => i.Id == requestItemId);
-        var contract = await context.RequestContracts.AsNoTracking().FirstOrDefaultAsync(c => c.RequestId == request.Id, cancellationToken);
+        var contract = await context.RequestContracts.AsNoTracking().Include(c => c.Versions).FirstOrDefaultAsync(c => c.RequestId == request.Id, cancellationToken);
         var itemNotRequired = (await NotRequiredItemsAsync(context, cancellationToken)).Contains(item.Id);
         var stages = item.Stages.OrderBy(s => s.StageNo).ToList();
 
@@ -84,7 +84,12 @@ public sealed class EfCostingRepository(IDbContextFactory<ErpMesDbContext> conte
 
         var inputs = new CostInputs(
             item.Id, request.Id, request.RequestNo.Value, item.ItemNo, request.WorkType, IsContractApproved(contract) && !itemNotRequired, item.IsRouteCompleted, stages.FirstOrDefault()?.AvailableSinceUtc,
-            stages.FirstOrDefault()?.InputBaseUnits, stages.LastOrDefault()?.AcceptedBaseUnits ?? 0, item.MaterialId, material?.Code, item.WeightKgPerBaseUnit, lines, rates, codes, prices, next, approvedSessions, sessions.Count(w => !w.IsTimeApproved));
+            stages.FirstOrDefault()?.InputBaseUnits, stages.LastOrDefault()?.AcceptedBaseUnits ?? 0, item.MaterialId, material?.Code, item.WeightKgPerBaseUnit, lines, rates, codes, prices, next, approvedSessions, sessions.Count(w => !w.IsTimeApproved))
+        {
+            // The amount Management approved with the contract is proposed as the price of a contract item (owner decision A2).
+            ContractAmountRial = IsContractApproved(contract) ? contract!.ApprovedAmountRial : null,
+            ContractNo = IsContractApproved(contract) ? contract!.CurrentVersion?.ContractNo : null,
+        };
         var built = build(inputs);
         if (built.Refusal != ValidationIssue.None)
         {

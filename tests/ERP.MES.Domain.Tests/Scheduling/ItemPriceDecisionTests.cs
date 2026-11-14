@@ -61,4 +61,44 @@ public class ItemPriceDecisionTests
         decision.Approve(8_000_000m, null, " CN-1 ", 2, Now);
         Assert.Equal((8_000_000m, "CN-1"), (decision.ApprovedPriceRial, decision.ContractReference));
     }
+    // ---- Contract amount (owner decision A2, Decision Log #142) ----
+
+    [Fact]
+    public void A_contract_item_proposes_the_approved_contract_amount_which_is_accepted_as_it_is_or_changed_with_a_reason()
+    {
+        var accepted = new ItemPriceDecision(Calculation(), PriceBasis.Contract, 8_000_000m, "CN-1");
+        Assert.Equal((8_000_000m, "CN-1"), (accepted.ProposedPriceRial, accepted.ProposedContractReference));
+        accepted.Submit(1, Now);
+        accepted.Approve(null, null, null, 2, Now);
+        Assert.Equal((8_000_000m, "CN-1", (string?)null), (accepted.ApprovedPriceRial, accepted.ContractReference, accepted.Reason));
+
+        var changed = new ItemPriceDecision(Calculation(), PriceBasis.Contract, 8_000_000m, "CN-1");
+        changed.Submit(1, Now);
+        Assert.Throws<ArgumentException>(() => changed.Approve(7_000_000m, null, null, 2, Now)); // a different price needs a reason
+        changed.Approve(7_000_000m, "تخفیف", null, 2, Now);
+        Assert.Equal((8_000_000m, 7_000_000m, "تخفیف", "CN-1"), (changed.ProposedPriceRial, changed.ApprovedPriceRial, changed.Reason, changed.ContractReference));
+
+        // Management may name another reference than the proposed one.
+        var other = new ItemPriceDecision(Calculation(), PriceBasis.Contract, 8_000_000m, "CN-1");
+        other.Submit(1, Now);
+        other.Approve(null, null, "CN-1-R1", 2, Now);
+        Assert.Equal("CN-1-R1", other.ContractReference);
+    }
+
+    [Fact]
+    public void A_contract_item_without_a_contract_amount_keeps_the_manual_entry_of_amount_and_reference()
+    {
+        var none = new ItemPriceDecision(Calculation(), PriceBasis.Contract);
+        Assert.Null(none.ProposedPriceRial);
+        Assert.Null(none.ProposedContractReference);
+        none.Submit(1, Now);
+        Assert.Throws<ArgumentException>(() => none.Approve(null, null, "CN-1", 2, Now));
+        Assert.Throws<ArgumentException>(() => none.Approve(8_000_000m, null, null, 2, Now));
+        none.Approve(8_000_000m, null, "CN-1", 2, Now);
+        Assert.Equal((8_000_000m, "CN-1"), (none.ApprovedPriceRial, none.ContractReference));
+
+        // A calculated-basis decision never takes a contract amount.
+        Assert.Equal(5_700_000m, new ItemPriceDecision(Calculation(), PriceBasis.Calculated, 1m, "CN").ProposedPriceRial);
+        Assert.Null(new ItemPriceDecision(Calculation(), PriceBasis.Calculated, 1m, "CN").ProposedContractReference);
+    }
 }
