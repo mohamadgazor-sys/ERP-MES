@@ -39,7 +39,7 @@ public sealed record WorkflowServices(
             new ProductionQueueService(requests, authorization),
             new StageWorkService(requests, authorization, effectiveClock, auditContext ?? new EnvironmentAuditContext(), gates, unitQueue, workSessions, new EfItemDrawingRepository(contexts)),
             new RequestDocumentService(requests, authorization, effectiveClock, auditContext ?? new EnvironmentAuditContext(), documentPolicy ?? DocumentPolicy.Default),
-            new RequestWorkflowService(requests, authorization, effectiveClock, auditContext ?? new EnvironmentAuditContext()),
+            new RequestWorkflowService(requests, authorization, effectiveClock, auditContext ?? new EnvironmentAuditContext(), new EfWarehouseCompletionRepository(contexts)),
             new QcMasterService(new EfQcMasterRepository(contexts), authorization, effectiveClock),
             new PlanningMasterService(new EfPlanningMasterRepository(contexts), authorization, effectiveClock, dates, auditContext ?? new EnvironmentAuditContext()),
             new OperatorService(new EfOperatorRepository(contexts), new EfPlanningMasterRepository(contexts), authorization, effectiveClock, dates, auditContext ?? new EnvironmentAuditContext()),

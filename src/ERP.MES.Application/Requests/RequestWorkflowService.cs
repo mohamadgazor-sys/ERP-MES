@@ -5,7 +5,7 @@ using ERP.MES.Domain.Requests;
 namespace ERP.MES.Application.Requests;
 
 /// <summary>Which request-level workflow actions the current user may perform, for enabling buttons (the Application's answer, from the database; every command checks again).</summary>
-public sealed record RequestActionCapabilities(bool CanDecide, bool CanReopen, bool CanForwardToDrawing, bool CanRecordDrawingResult)
+public sealed record RequestActionCapabilities(bool CanDecide, bool CanReopen, bool CanForwardToDrawing, bool CanRecordDrawingResult, bool CanClose = false)
 {
     public static RequestActionCapabilities None { get; } = new(false, false, false, false);
 }
@@ -17,7 +17,7 @@ public sealed record RequestActionCapabilities(bool CanDecide, bool CanReopen, b
 /// "receives" the request); Drawing result = Drawing. Each action passes the version the request was loaded at, changes the status through the Domain method, adds one history entry and
 /// one audit entry in ONE transaction, and refuses a request that is not in the required status. Cancelling, contract and item steps are not part of this service.
 /// </summary>
-public sealed class RequestWorkflowService(IRequestRepository requests, CurrentAuthorization authorization, IClock clock, IAuditContext auditContext)
+public sealed class RequestWorkflowService(IRequestRepository requests, CurrentAuthorization authorization, IClock clock, IAuditContext auditContext, IWarehouseCompletionRepository? completion = null)
 {
     private static readonly Permission[] AllPermissions =
     [
@@ -25,6 +25,7 @@ public sealed class RequestWorkflowService(IRequestRepository requests, CurrentA
         Permission.ReopenRejectedRequest,
         Permission.ReceiveAndEditRequestDetails,
         Permission.RecordDrawingDoabilityDecision,
+        Permission.CloseRequest,
     ];
 
     public async Task<RequestActionCapabilities> GetCapabilitiesAsync(Principal? principal, CancellationToken cancellationToken = default)
@@ -36,8 +37,57 @@ public sealed class RequestWorkflowService(IRequestRepository requests, CurrentA
                 set.Has(Permission.ApproveOrRejectInitialRequest),
                 set.Has(Permission.ReopenRejectedRequest),
                 set.Has(Permission.ReceiveAndEditRequestDetails),
-                set.Has(Permission.RecordDrawingDoabilityDecision));
+                set.Has(Permission.RecordDrawingDoabilityDecision),
+                set.Has(Permission.CloseRequest));
     }
+
+    /// <summary>What still blocks the manual closure of the request (empty = it can be closed). Management with the Manager role only (Decision Log #142 B10).</summary>
+    public async Task<Outcome<IReadOnlyList<ClosureBlocker>>> PreviewCloseAsync(Principal? principal, long requestId, CancellationToken cancellationToken = default)
+    {
+        if (!await IsAllowedAsync(principal, Permission.CloseRequest, cancellationToken))
+        {
+            return Outcome<IReadOnlyList<ClosureBlocker>>.Fail(OperationStatus.NotAuthorized);
+        }
+
+        return await CustomerService.GuardAsync(async () =>
+        {
+            var loaded = await requests.FindAsync(requestId, cancellationToken);
+            return loaded is null
+                ? Outcome<IReadOnlyList<ClosureBlocker>>.Fail(OperationStatus.NotFound)
+                : Outcome<IReadOnlyList<ClosureBlocker>>.Ok(RequestClosure.Evaluate(loaded.Value, await FinishedSentAsync(requestId, cancellationToken)));
+        });
+    }
+
+    /// <summary>
+    /// Management closes the request after review (owner decision B10, Decision Log #142): never automatic. Refused with the list of blockers while an item is unresolved, units await QC, a shortfall is
+    /// undecided or an external quantity is outstanding; otherwise the status becomes CLOSED, one history entry and one audit entry are written, and the request is read-only from then on.
+    /// </summary>
+    public async Task<Outcome<Stored<Request>>> CloseAsync(Principal? principal, long requestId, long expectedVersion, CancellationToken cancellationToken = default)
+    {
+        if (!await IsAllowedAsync(principal, Permission.CloseRequest, cancellationToken))
+        {
+            return Outcome<Stored<Request>>.Fail(OperationStatus.NotAuthorized);
+        }
+
+        var blockers = await PreviewCloseAsync(principal, requestId, cancellationToken);
+        if (!blockers.Succeeded)
+        {
+            return Outcome<Stored<Request>>.Fail(blockers.Status);
+        }
+
+        if (blockers.Value!.Count > 0)
+        {
+            return Outcome<Stored<Request>>.Invalid(ValidationIssue.ClosureBlocked);
+        }
+
+        return await RunAsync(principal, Permission.CloseRequest, requestId, expectedVersion, AuditActions.RequestClosed, "closed by Management", null,
+            (request, actor, now) => request.Close(actor, now), cancellationToken);
+    }
+
+    private async Task<IReadOnlySet<long>> FinishedSentAsync(long requestId, CancellationToken cancellationToken) =>
+        completion is null
+            ? new HashSet<long>()
+            : (await completion.ListAsync(cancellationToken)).Where(i => i.RequestId == requestId && i.FinishedSent is not null).Select(i => i.ItemId).ToHashSet();
 
     public Task<Outcome<Stored<Request>>> ApproveAsync(Principal? principal, long requestId, long expectedVersion, CancellationToken cancellationToken = default) =>
         RunAsync(principal, Permission.ApproveOrRejectInitialRequest, requestId, expectedVersion, AuditActions.RequestApproved, "approved by Management", null,

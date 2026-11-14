@@ -15,7 +15,11 @@ public sealed record JobLineInput(
     long RequestId, long ItemId, int StageNo, long MachineId, DateTime StartUtc, DateTime EndUtc, int DowntimeMinutes, string? DowntimeReason, long ProcessedBaseUnits, string? Note);
 
 /// <summary>A report with the operator's name and what the signed-in user may do with it.</summary>
-public sealed record JobReportItem(Stored<DailyJobReport> Report, string OperatorName, bool CanEdit, bool CanReview, bool ReviewWouldBePlanningFallback);
+public sealed record JobReportItem(Stored<DailyJobReport> Report, string OperatorName, bool CanEdit, bool CanReview, bool ReviewWouldBePlanningFallback, int LateWorkingDays = 0)
+{
+    /// <summary>True when the report was (or, for a draft, would be today) entered more than <see cref="JobReportService.LateAfterWorkingDays"/> working days after its work date (Decision Log #142 B1). A warning only; a late report is never refused.</summary>
+    public bool IsLate => LateWorkingDays > JobReportService.LateAfterWorkingDays;
+}
 
 public sealed record JobReportCapabilities(bool CanView, bool CanSubmit, bool CanReview)
 {
@@ -43,7 +47,29 @@ public sealed class JobReportService(
     IClock clock,
     IAuditContext auditContext)
 {
+    /// <summary>A report entered more than this many working days after its work date shows a late-report warning (owner decision B1, 2026-11-14: N = 5). Never a refusal.</summary>
+    public const int LateAfterWorkingDays = 5;
+
     private static readonly Permission[] All = [Permission.ViewJobReports, Permission.SubmitJobReport, Permission.ReviewJobReports];
+
+    /// <summary>
+    /// The working days between the report's work date and the day it was submitted (today for a draft), counted on the production calendar of the report's unit and shift: the days after the work date
+    /// up to and including the submission day on which that shift works. The work date and the submission time stay separate facts on the report.
+    /// </summary>
+    public static int WorkingDaysLate(DailyJobReport report, WorkingCalendar calendar, IJalaliDateService dates, DateTime nowUtc)
+    {
+        var enteredLocal = dates.UtcToLocal(report.SubmittedAtUtc ?? nowUtc).Date;
+        var count = 0;
+        for (var day = report.WorkDate.AddDays(1); day <= enteredLocal; day = day.AddDays(1))
+        {
+            if (calendar.IsWorking(report.ProductionUnitId, report.ShiftTemplateId, day))
+            {
+                count++;
+            }
+        }
+
+        return count;
+    }
 
     public async Task<Outcome<JobReportList>> LoadAsync(Principal? principal, DateOnly from, DateOnly toInclusive, CancellationToken cancellationToken = default)
     {
@@ -68,6 +94,8 @@ public sealed class JobReportService(
             var unitsWithSupervisor = designations.Where(d => d.Value.IsSupervisor).Select(d => d.Value.ProductionUnitId).ToHashSet();
             var broad = user.DepartmentCode is DepartmentCodes.Planning or DepartmentCodes.Management or DepartmentCodes.ProductionManager;
             var names = people.ToDictionary(o => o.Value.Id, o => o.Value.FullName);
+            var calendar = (await scheduling.LoadConfigurationAsync(cancellationToken)).ToCalendar();
+            var nowUtc = clock.UtcNow;
             var items = (await store.ListAsync(from, toInclusive, cancellationToken))
                 .Where(r => broad || r.Value.OperatorId == own || supervised.Contains(r.Value.ProductionUnitId))
                 .Select(r =>
@@ -75,7 +103,7 @@ public sealed class JobReportService(
                     var isOwn = r.Value.OperatorId == own;
                     var mayReview = set.Has(Permission.ReviewJobReports) && !isOwn && r.Value.Status == JobReportStatus.Submitted
                         && (supervised.Contains(r.Value.ProductionUnitId) || user.DepartmentCode == DepartmentCodes.ProductionManager || (user.DepartmentCode == DepartmentCodes.Planning && !unitsWithSupervisor.Contains(r.Value.ProductionUnitId)));
-                    return new JobReportItem(r, names.GetValueOrDefault(r.Value.OperatorId, string.Empty), set.Has(Permission.SubmitJobReport) && isOwn && r.Value.IsEditable, mayReview, user.DepartmentCode != DepartmentCodes.ProductionManager && !supervised.Contains(r.Value.ProductionUnitId));
+                    return new JobReportItem(r, names.GetValueOrDefault(r.Value.OperatorId, string.Empty), set.Has(Permission.SubmitJobReport) && isOwn && r.Value.IsEditable, mayReview, user.DepartmentCode != DepartmentCodes.ProductionManager && !supervised.Contains(r.Value.ProductionUnitId), WorkingDaysLate(r.Value, calendar, dates, nowUtc));
                 })
                 .OrderByDescending(i => i.Report.Value.WorkDate).ThenBy(i => i.OperatorName, StringComparer.Ordinal).ToList();
             return Outcome<JobReportList>.Ok(new JobReportList(items, new JobReportCapabilities(true, set.Has(Permission.SubmitJobReport) && own is not null, set.Has(Permission.ReviewJobReports)), own));

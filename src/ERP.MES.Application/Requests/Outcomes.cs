@@ -607,6 +607,9 @@ public enum ValidationIssue
 
     /// <summary>The item has no stages, so it cannot be released.</summary>
     ItemHasNoStages,
+
+    /// <summary>The request cannot be closed yet: the result lists each blocking item and the reason (Decision Log #142 B10).</summary>
+    ClosureBlocked,
 }
 
 /// <summary>The result of a command or query: a status, the value on success, and the details of a refusal.</summary>

@@ -26,6 +26,9 @@ public enum Permission
     CreateAndSubmitRequest,
     ReceiveAndEditRequestDetails,
     ReopenRejectedRequest,
+
+    /// <summary>Close a request after Management's review (Management with the Manager role; owner decision B10, Decision Log #142).</summary>
+    CloseRequest,
     DefineMakeItems,
     DefineRepairItemsAndEditAnyItem,
     ImportItemsFromExcel,
@@ -283,6 +286,7 @@ public static class AuthorizationRules
         [Permission.CreateAndSubmitRequest] = new([DepartmentCodes.Central], null),
         [Permission.ReceiveAndEditRequestDetails] = new([DepartmentCodes.Planning], null),
         [Permission.ReopenRejectedRequest] = new([DepartmentCodes.Planning, DepartmentCodes.Management], null),
+        [Permission.CloseRequest] = new([DepartmentCodes.Management], RoleCodes.Manager),
         [Permission.DefineMakeItems] = new([DepartmentCodes.Planning], null),
         [Permission.DefineRepairItemsAndEditAnyItem] = new([DepartmentCodes.Planning], null),
         [Permission.ImportItemsFromExcel] = new([DepartmentCodes.Planning], null),

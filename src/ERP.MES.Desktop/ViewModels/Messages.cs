@@ -50,6 +50,22 @@ public static class Messages
     public const string Unexpected = "خطای غیرمنتظره رخ داد. دوباره تلاش کنید؛ اگر ادامه یافت با مدیر سیستم تماس بگیرید.";
     public const string NothingSelected = "ابتدا یک مورد را از فهرست انتخاب کنید.";
 
+    /// <summary>One blocker of the manual request closure, with the item it names.</summary>
+    public static string ClosureBlockerText(ClosureBlocker blocker)
+    {
+        var reason = blocker.Reason switch
+        {
+            ClosureBlockReason.NoItems => "درخواست هیچ آیتمی ندارد (درخواستی که چیزی تولید نکرده لغو می‌شود، نه بسته)",
+            ClosureBlockReason.RouteNotComplete => "مسیر آیتم کامل نشده است (مرحله‌ای هنوز تأیید کنترل کیفیت نشده)",
+            ClosureBlockReason.PendingQcDecision => "تصمیم کنترل کیفیت در انتظار است",
+            ClosureBlockReason.ShortfallDecisionPending => "تصمیم دربارهٔ کسری (ضایعات یا مفقودی پیمانکار) هنوز گرفته نشده است",
+            ClosureBlockReason.ExternalQuantityOutstanding => "مقدار بیرونی باقی است (ارسال‌نشده، نزد پیمانکار یا در انتظار برگشت)",
+            ClosureBlockReason.NotFinishedSent => "انبار هنوز آیتم را «تمام‌شده/ارسال‌شده» ثبت نکرده است",
+            _ => string.Empty,
+        };
+        return (blocker.ItemNo.Length == 0 ? string.Empty : "آیتم " + Ltr(blocker.ItemNo) + ": ") + reason + ".";
+    }
+
     public static string For<T>(Outcome<T> outcome) => outcome.Status switch
     {
         OperationStatus.NotAuthorized => NotAuthorized,
@@ -84,6 +100,7 @@ public static class Messages
         ValidationIssue.ItemSequenceExhausted => "همهٔ شماره‌های ۱ تا ۹۹۹ این سطح استفاده شده است.",
         ValidationIssue.ReleaseBlocked => "ارسال به صف کار انجام نشد؛ حداقل یک آیتم قابل آزادسازی نیست و هیچ آیتمی آزاد نشد.",
         ValidationIssue.NothingToRelease => "آیتمی برای آزادسازی وجود ندارد؛ همهٔ آیتم‌ها قبلاً به صف کار ارسال شده‌اند یا منتظر پایان زیرمجموعه‌های خود هستند.",
+        ValidationIssue.ClosureBlocked => "درخواست هنوز قابل بستن نیست؛ موانع در فهرست آمده است.",
         ValidationIssue.ItemHasNoStages => "این آیتم هیچ مرحله‌ای ندارد.",
         ValidationIssue.AssemblyChildrenNotComplete => "مرحلهٔ اول مونتاژ تا پایان مسیر و تأیید کنترل کیفیت همهٔ زیرمجموعه‌ها آزاد نمی‌شود.",
         ValidationIssue.PartNameRequired => "نام قطعه را وارد کنید.",
@@ -285,6 +302,7 @@ public static class Messages
         RequestAction.RecordDrawingResult => "نتیجهٔ نقشه‌کشی",
         RequestAction.SendBackToDrawing => "بازگشت به نقشه‌کشی",
         RequestAction.ReleaseToProduction => "ارسال آیتم‌ها به صف کار واحدهای تولیدی",
+        RequestAction.Close => "بستن درخواست توسط مدیریت",
         _ => string.Empty,
     };
 

@@ -28,6 +28,7 @@ public class AuthorizationRulesTests
         [Permission.CreateAndSubmitRequest] = (["CENTRAL"], null),
         [Permission.ReceiveAndEditRequestDetails] = (["PLANNING"], null),
         [Permission.ReopenRejectedRequest] = (["PLANNING", "MANAGEMENT"], null),
+        [Permission.CloseRequest] = (["MANAGEMENT"], "MANAGER"),
         [Permission.DefineMakeItems] = (["PLANNING"], null),
         [Permission.DefineRepairItemsAndEditAnyItem] = (["PLANNING"], null),
         [Permission.ImportItemsFromExcel] = (["PLANNING"], null),

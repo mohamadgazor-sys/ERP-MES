@@ -96,6 +96,7 @@
                                 <Button Content="بازگشایی (با دلیل)" Padding="12,5" Margin="0,0,8,4" Click="OnReopenClick" Visibility="{Binding CanReopen, Converter={StaticResource BoolToVisibility}}" ToolTip="درخواست ردشده را با دلیل دوباره باز می‌کند تا ارسال شود." />
                                 <Button Content="ارسال به نقشه‌کشی" Padding="12,5" Margin="0,0,8,4" Click="OnForwardClick" Visibility="{Binding CanForwardToDrawing, Converter={StaticResource BoolToVisibility}}" ToolTip="درخواست را برای بررسی فنی به نقشه‌کشی می‌فرستد." />
                                 <Button Content="ثبت نتیجهٔ نقشه‌کشی" Padding="12,5" Margin="0,0,8,4" Click="OnDrawingResultClick" Visibility="{Binding CanRecordDrawingResult, Converter={StaticResource BoolToVisibility}}" ToolTip="نتیجهٔ بررسی فنی (پذیرش کامل یا جزئی، رد، نیاز به اطلاعات، بازگشت برای اصلاح) را ثبت می‌کند و درخواست را به برنامه‌ریزی برمی‌گرداند." />
+                                <Button Content="بستن درخواست" Padding="12,5" Margin="0,0,8,4" Click="OnCloseClick" Visibility="{Binding CanClose, Converter={StaticResource BoolToVisibility}}" AutomationProperties.AutomationId="CloseRequestButton" ToolTip="درخواست را پس از بررسی مدیریت می‌بندد. تا زمانی که آیتمی ناتمام باشد، کنترل کیفیتی در انتظار باشد، تصمیم کسری گرفته نشده باشد یا مقدار بیرونی باقی باشد بسته نمی‌شود؛ بستن خودکار نیست." />
                                 <Button Content="بازگشت به نقشه‌کشی (با دلیل)" Padding="12,5" Margin="0,0,8,4" Click="OnSendBackClick" Visibility="{Binding CanSendBackToDrawing, Converter={StaticResource BoolToVisibility}}" ToolTip="آیتم را با دلیل برای بررسی دوباره به نقشه‌کشی برمی‌گرداند." />
                             </WrapPanel>
                         </StackPanel>
@@ -120,7 +121,7 @@
                     <TextBlock Text="آیتم‌ها" FontWeight="SemiBold" Margin="0,4,0,4" />
                     <StackPanel Margin="0,0,0,6" Visibility="{Binding HasProgress, Converter={StaticResource BoolToVisibility}}">
                         <TextBlock Text="{Binding ProgressText}" TextWrapping="Wrap" AutomationProperties.AutomationId="RequestProgressText" />
-                        <ProgressBar Minimum="0" Maximum="1" Value="{Binding ProgressValue, Mode=OneWay}" Height="10" Margin="0,4,0,0" AutomationProperties.AutomationId="RequestProgressBar" ToolTip="نسبت آیتم‌های تکمیل‌شده به همهٔ آیتم‌ها؛ فرمول درصد نهایی هنوز توسط مالک تأیید نشده است." />
+                        <ProgressBar Minimum="0" Maximum="1" Value="{Binding ProgressValue, Mode=OneWay}" Height="10" Margin="0,4,0,0" AutomationProperties.AutomationId="RequestProgressBar" ToolTip="درصد = آیتم‌های تکمیل‌شده ÷ همهٔ آیتم‌ها × ۱۰۰ (فقط اطلاع‌رسانی؛ جایگزین دروازه‌ها، کنترل کیفیت یا تأیید مدیریت نیست)." />
                     </StackPanel>
                     <DataGrid ItemsSource="{Binding Items}" AutoGenerateColumns="False" IsReadOnly="True" HeadersVisibility="Column"
                               CanUserAddRows="False" CanUserDeleteRows="False" MaxHeight="220" Background="{StaticResource CardBrush}">

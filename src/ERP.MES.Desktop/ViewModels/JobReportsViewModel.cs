@@ -268,7 +268,8 @@ public sealed class JobReportsViewModel(
                 item, dates.FormatDate(r.WorkDate), item.OperatorName, unitNames.GetValueOrDefault(r.ProductionUnitId, "?"), shiftCodes.GetValueOrDefault(r.ShiftTemplateId, "?"),
                 r.Status switch { JobReportStatus.Draft => "پیش‌نویس", JobReportStatus.Submitted => "ارسال‌شده", JobReportStatus.Returned => "بازگردانده‌شده: " + r.ReturnReason, _ => "تأییدشده" + (r.ReviewedByPlanningFallback ? " (بررسی توسط برنامه‌ریزی چون واحد سرپرست ندارد)" : string.Empty) },
                 Digits(r.Lines.Count.ToString(CultureInfo.InvariantCulture)) + " ردیف کار، " + Digits(r.Lines.Sum(l => l.ProductiveMinutes).ToString(CultureInfo.InvariantCulture)) + " دقیقهٔ مفید",
-                r.HasFlaggedLines ? $"{Digits(r.Lines.Count(l => l.Flags != JobLineFlags.None).ToString(CultureInfo.InvariantCulture))} ردیف کار علامت‌دار" : string.Empty,
+                (r.HasFlaggedLines ? $"{Digits(r.Lines.Count(l => l.Flags != JobLineFlags.None).ToString(CultureInfo.InvariantCulture))} ردیف کار علامت‌دار" : string.Empty)
+                + (item.IsLate ? (r.HasFlaggedLines ? "؛ " : string.Empty) + $"هشدار: گزارش دیرهنگام - {Digits(item.LateWorkingDays.ToString(CultureInfo.InvariantCulture))} روز کاری پس از تاریخ کار (مجاز: {Digits(JobReportService.LateAfterWorkingDays.ToString(CultureInfo.InvariantCulture))} روز)" : string.Empty),
                 item.CanReview ? (item.ReviewWouldBePlanningFallback ? "قابل بررسی (به‌عنوان جایگزین سرپرست)" : "قابل بررسی") : string.Empty));
         }
 

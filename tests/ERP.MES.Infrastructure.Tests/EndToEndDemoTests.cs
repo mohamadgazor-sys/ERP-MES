@@ -151,10 +151,31 @@ public class EndToEndDemoTests
         Assert.True(final.Succeeded, final.Status + " " + final.Issue);
 
         // 9. Warehouse marks the item finished/sent and records the customer dispatch.
+        // 8b. Closing (owner decision B10): Management only, never automatic; while the Warehouse has not marked the item finished/sent the request is blocked and the blocker names the item.
+        var blockedClose = await w.Lifecycle.PreviewCloseAsync(manager, requestId, Token);
+        Assert.Equal([ClosureBlockReason.NotFinishedSent], blockedClose.Value!.Select(b => b.Reason).ToArray());
+        Assert.Equal("E2E.10", (await w.Requests.GetAsync(manager, requestId, Token)).Value!.Request.Value.Items.Single().CustomerItemRef);
+        Assert.Equal(ValidationIssue.ClosureBlocked, (await w.Lifecycle.CloseAsync(manager, requestId, (await w.Requests.GetAsync(manager, requestId, Token)).Value!.Request.Version, Token)).Issue);
         var finished = await w.Completion.MarkFinishedSentAsync(warehouse, itemId, Token);
         Assert.True(finished.Succeeded, finished.Status + " " + finished.Issue);
         Assert.Equal(8_000_000m, finished.Value!.ApprovedPriceRial);
         Assert.True((await w.Completion.RecordDispatchAsync(warehouse, itemId, "1405/08/02", "WB-E2E-1", null, Token)).Succeeded);
+
+        // 9b. Nothing blocks any more: only Management (Manager role) can close; the close is a history entry and an audit row, and the closed request is read-only.
+        Assert.Empty((await w.Lifecycle.PreviewCloseAsync(manager, requestId, Token)).Value!);
+        var closeVersion = (await w.Requests.GetAsync(manager, requestId, Token)).Value!.Request.Version;
+        foreach (var other in new[] { planning, qc, warehouse, central, drawing, production })
+        {
+            Assert.Equal(OperationStatus.NotAuthorized, (await w.Lifecycle.CloseAsync(other, requestId, closeVersion, Token)).Status);
+        }
+
+        var closed = await w.Lifecycle.CloseAsync(manager, requestId, closeVersion, Token);
+        Assert.True(closed.Succeeded, closed.Status + " " + closed.Issue);
+        var closedRequest = (await w.Requests.GetAsync(manager, requestId, Token)).Value!.Request.Value;
+        Assert.Equal(RequestStatus.Closed, closedRequest.Status);
+        Assert.Equal((RequestAction.Close, RequestStatus.DrawingReturnedToPlanning, RequestStatus.Closed), (closedRequest.WorkflowHistory[^1].Action, closedRequest.WorkflowHistory[^1].FromStatus, closedRequest.WorkflowHistory[^1].ToStatus));
+        Assert.Equal(1, Count(db, "AuditLog WHERE ActionCode = 'RequestClosed'"));
+        Assert.Equal(OperationStatus.InvalidState, (await w.Lifecycle.CloseAsync(manager, requestId, (await w.Requests.GetAsync(manager, requestId, Token)).Value!.Request.Version, Token)).Status); // not twice
 
         // 10. Management reads the unit metrics of the day: only approved time counts (the operator's labour time, pause excluded) and nothing is waiting for approval.
         var kpi = (await w.Kpi.ReportAsync(manager, new DateOnly(2026, 10, 24), new DateOnly(2026, 10, 24), Token)).Value!;

@@ -23,14 +23,19 @@ public sealed record ItemProgress(long ItemId, string ItemNo, int StagesComplete
 
 /// <summary>
 /// Request-level and item-level progress derived from the persisted stage state, never typed (Master Specification 12.5, 12.5.1): the counts of completed, active, waiting/blocked and
-/// rework items and each item's "completed stages / stages". The headline percentage formula is an open owner question (R1 of docs/OWNER_DECISIONS_REQUIRED_2026-11-13.md); until it is decided
-/// only the transparent item counts are offered, and <see cref="CompletedItemRatio"/> is the specification's proposed default.
+/// rework items and each item's "completed stages / stages". The headline percentage formula is the owner-approved completed-items / total-items x 100 (R1, Decision Log #142).
 /// The classification of each stage status into active versus waiting/blocked is a labelled default (Decision Log #141).
 /// </summary>
 public sealed record RequestProgress(int TotalItems, int Completed, int Active, int WaitingOrBlocked, int Rework, IReadOnlyList<ItemProgress> Items)
 {
-    /// <summary>Completed items divided by all items (0 for a request without items); the proposed default, not an approved rule.</summary>
+    /// <summary>Completed items divided by all items (0 for a request without items).</summary>
     public double CompletedItemRatio => TotalItems == 0 ? 0d : (double)Completed / TotalItems;
+
+    /// <summary>
+    /// The request's headline completion percentage, owner-approved formula (Decision Log #142 R1): completed items / total items x 100, shown as a whole number rounded DOWN so that 100 appears only
+    /// when every item is complete. Null for a request without items (nothing is divided and no percentage is shown). Informational only: it never replaces a workflow gate, a QC requirement, an assembly dependency or a Management approval.
+    /// </summary>
+    public int? CompletedItemPercent => TotalItems == 0 ? null : (int)Math.Floor(100d * Completed / TotalItems);
 
     public static RequestProgress From(Request request)
     {

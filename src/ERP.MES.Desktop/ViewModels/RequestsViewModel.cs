@@ -73,10 +73,48 @@ public sealed class RequestsViewModel(
 
     public bool CanRecordDrawingResult => _actions.CanRecordDrawingResult && Status == RequestStatus.UnderDrawingReview;
 
+    /// <summary>Management (Manager role) may close a request whose drawing result is back; the Application lists the blockers and checks again (Decision Log #142 B10).</summary>
+    public bool CanClose => _actions.CanClose && Status == RequestStatus.DrawingReturnedToPlanning;
+
+    public const string CloseConfirmationText = "آیا مطمئن هستید که می‌خواهید این درخواست را ببندید؟ پس از بسته شدن، درخواست فقط‌خواندنی می‌شود و امکان تغییر ندارد.";
+
+    /// <summary>Asks the Application what still blocks the closure and shows each blocker; true when nothing blocks and the confirmation may be asked.</summary>
+    public async Task<bool> PrepareCloseAsync(CancellationToken cancellationToken = default)
+    {
+        var clear = false;
+        await RunAsync(async () =>
+        {
+            if (_detail is null)
+            {
+                Message = Messages.NothingSelected;
+                return;
+            }
+
+            var outcome = await lifecycle.PreviewCloseAsync(currentUser(), _detail.Value.Id, cancellationToken);
+            if (!outcome.Succeeded)
+            {
+                Message = Messages.For(outcome);
+                return;
+            }
+
+            if (outcome.Value!.Count > 0)
+            {
+                Message = Messages.ForIssue(ValidationIssue.ClosureBlocked, JalaliDateError.None) + " " + string.Join(" ", outcome.Value.Select(Messages.ClosureBlockerText));
+                return;
+            }
+
+            clear = true;
+        });
+        return clear;
+    }
+
+    public Task<bool> CloseAsync(CancellationToken cancellationToken = default) =>
+        RunLifecycleAsync((id, version) => lifecycle.CloseAsync(currentUser(), id, version, cancellationToken), "درخواست بسته شد و از این پس فقط‌خواندنی است.", cancellationToken);
+
     public bool CanSendBackToDrawing => _actions.CanForwardToDrawing && Status == RequestStatus.DrawingReturnedToPlanning;
 
     /// <summary>True when any lifecycle action is offered for the selected request (shows the action panel).</summary>
-    public bool HasWorkflowActions => CanApprove || CanReopen || CanForwardToDrawing || CanRecordDrawingResult || CanSendBackToDrawing;
+    public bool HasWorkflowActions => CanApprove || CanReopen || CanForwardToDrawing || CanRecordDrawingResult || CanSendBackToDrawing || CanClose;
 
     private RequestStatus? Status => _detail?.Value.Status;
 
@@ -143,7 +181,7 @@ public sealed class RequestsViewModel(
 
     public string ProgressText => _progress is not { TotalItems: > 0 } p
         ? string.Empty
-        : $"پیشرفت درخواست: {Digits(p.Completed.ToString(System.Globalization.CultureInfo.InvariantCulture))} از {Digits(p.TotalItems.ToString(System.Globalization.CultureInfo.InvariantCulture))} آیتم تکمیل شده؛ "
+        : $"درصد تکمیل درخواست: {Digits((p.CompletedItemPercent ?? 0).ToString(System.Globalization.CultureInfo.InvariantCulture))}٪ (تعداد آیتم‌های تکمیل‌شده ÷ همهٔ آیتم‌ها)؛ پیشرفت: {Digits(p.Completed.ToString(System.Globalization.CultureInfo.InvariantCulture))} از {Digits(p.TotalItems.ToString(System.Globalization.CultureInfo.InvariantCulture))} آیتم تکمیل شده؛ "
           + $"در حال اجرا: {Digits(p.Active.ToString(System.Globalization.CultureInfo.InvariantCulture))}؛ در انتظار یا مسدود: {Digits(p.WaitingOrBlocked.ToString(System.Globalization.CultureInfo.InvariantCulture))}؛ بازکاری: {Digits(p.Rework.ToString(System.Globalization.CultureInfo.InvariantCulture))}";
 
     private string StageProgressText(ItemProgress p) =>
@@ -478,7 +516,7 @@ public sealed class RequestsViewModel(
     {
         foreach (var name in new[]
                  {
-                     nameof(HasDetail), nameof(HasProgress), nameof(ProgressValue), nameof(ProgressText), nameof(DetailHeading), nameof(DetailLine), nameof(DetailTitle), nameof(DetailDescription), nameof(HasNoItems), nameof(CanSubmit), nameof(HasPdf), nameof(PdfText), nameof(CanAttachPdf), nameof(CanApprove), nameof(CanReject), nameof(CanReopen), nameof(CanForwardToDrawing), nameof(CanRecordDrawingResult), nameof(CanSendBackToDrawing), nameof(HasWorkflowActions),
+                     nameof(HasDetail), nameof(HasProgress), nameof(ProgressValue), nameof(ProgressText), nameof(DetailHeading), nameof(DetailLine), nameof(DetailTitle), nameof(DetailDescription), nameof(HasNoItems), nameof(CanSubmit), nameof(HasPdf), nameof(PdfText), nameof(CanAttachPdf), nameof(CanApprove), nameof(CanReject), nameof(CanReopen), nameof(CanForwardToDrawing), nameof(CanRecordDrawingResult), nameof(CanSendBackToDrawing), nameof(CanClose), nameof(HasWorkflowActions),
                  })
         {
             OnPropertyChanged(name);
@@ -487,7 +525,7 @@ public sealed class RequestsViewModel(
 
     private void RaiseCapabilityChanges()
     {
-        foreach (var name in new[] { nameof(CanCreateRequest), nameof(CanSubmit), nameof(CanSetPriority), nameof(CanAttachPdf), nameof(CanApprove), nameof(CanReject), nameof(CanReopen), nameof(CanForwardToDrawing), nameof(CanRecordDrawingResult), nameof(CanSendBackToDrawing), nameof(HasWorkflowActions) })
+        foreach (var name in new[] { nameof(CanCreateRequest), nameof(CanSubmit), nameof(CanSetPriority), nameof(CanAttachPdf), nameof(CanApprove), nameof(CanReject), nameof(CanReopen), nameof(CanForwardToDrawing), nameof(CanRecordDrawingResult), nameof(CanSendBackToDrawing), nameof(CanClose), nameof(HasWorkflowActions) })
         {
             OnPropertyChanged(name);
         }
