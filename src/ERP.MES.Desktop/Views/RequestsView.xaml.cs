@@ -105,6 +105,18 @@ public partial class RequestsView : UserControl
 
     private async void OnReopenClick(object sender, RoutedEventArgs e) => await ReasonActionAsync(() => _viewModel.ReopenAsync(ReasonBox.Text));
 
+    private async void OnCloseClick(object sender, RoutedEventArgs e)
+    {
+        // The blockers are shown first; only a request that can be closed reaches the confirmation, and «خیر» changes nothing.
+        await SafeAsync(async () =>
+        {
+            if (await _viewModel.PrepareCloseAsync() && ConfirmDialog.Ask(Window.GetWindow(this), "بستن درخواست", RequestsViewModel.CloseConfirmationText))
+            {
+                await _viewModel.CloseAsync();
+            }
+        });
+    }
+
     private async void OnForwardClick(object sender, RoutedEventArgs e) => await SafeAsync(() => _viewModel.ForwardToDrawingAsync());
 
     private async void OnSendBackClick(object sender, RoutedEventArgs e) => await ReasonActionAsync(() => _viewModel.SendBackToDrawingAsync(ReasonBox.Text));

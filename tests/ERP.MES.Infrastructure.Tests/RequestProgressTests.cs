@@ -64,6 +64,9 @@ public class RequestProgressTests
         Assert.Equal((1, 1), (running.Items.Single(i => i.ItemId == b).StagesCompleted, running.Items.Single(i => i.ItemId == b).StageCount));
         Assert.Equal(ItemProgressKind.Completed, running.Items.Single(i => i.ItemId == b).Kind);
         Assert.Equal(0.3333d, Math.Round(running.CompletedItemRatio, 4));
+        Assert.Equal(33, running.CompletedItemPercent); // 1 of 3, rounded down: 100 appears only when every item is complete
+        Assert.Equal(0, start.CompletedItemPercent);
+        Assert.Null(new RequestProgress(0, 0, 0, 0, 0, []).CompletedItemPercent); // no items: no percentage and no division by zero
 
         // A is submitted and QC sends three units to rework: the item counts as rework, and its progress stays 0 of 2 stages.
         Assert.True((await w.Services.StageWork.PerformAsync(w.Production, StageAction.SubmitForQc, await w.TargetAsync(requestId, a, 1), Token)).Succeeded);

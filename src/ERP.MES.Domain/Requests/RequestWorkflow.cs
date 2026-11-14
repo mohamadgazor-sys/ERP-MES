@@ -26,6 +26,9 @@ public enum RequestAction
 
     /// <summary>Planning releases all items of the request, with their stages, to the production units' work queues in one operation (Decision Log #137). The request status does not change.</summary>
     ReleaseToProduction,
+
+    /// <summary>Management closes the request after review (Decision Log #142 B10); DRAWING_RETURNED_TO_PLANNING to CLOSED. Never automatic.</summary>
+    Close,
 }
 
 /// <summary>
@@ -56,6 +59,7 @@ public static class RequestActionInfo
         RequestAction.RecordDrawingResult => "RECORD_DRAWING_RESULT",
         RequestAction.SendBackToDrawing => "SEND_BACK_TO_DRAWING",
         RequestAction.ReleaseToProduction => "RELEASE_TO_PRODUCTION",
+        RequestAction.Close => "CLOSE",
         _ => throw new ArgumentOutOfRangeException(nameof(action), action, "Unknown request action."),
     };
 

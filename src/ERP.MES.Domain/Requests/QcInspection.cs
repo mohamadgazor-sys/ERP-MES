@@ -110,3 +110,6 @@ public sealed class InspectionExceedsAwaitingException(string message) : Invalid
 
 /// <summary>The stage has no whole number of base units, so it cannot be inspected by quantity.</summary>
 public sealed class StageNotCountableException(string message) : InvalidOperationException(message);
+
+/// <summary>QC tried to correct more base units than the stage's accepted and still-valid quantity (owner decision Q2, Decision Log #142).</summary>
+public sealed class CorrectionExceedsAcceptedException(string message) : InvalidOperationException(message);

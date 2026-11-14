@@ -242,6 +242,7 @@ public class RequestsViewModelTests
         // Progress derived from the (empty) routes: two items, none completed, none active, both waiting (Master Specification 12.5).
         Assert.True(planning.HasProgress);
         Assert.Equal(0d, planning.ProgressValue);
+        Assert.Contains("درصد تکمیل درخواست: ۰٪", planning.ProgressText, StringComparison.Ordinal);
         Assert.Contains("۰ از ۲ آیتم تکمیل شده", planning.ProgressText, StringComparison.Ordinal);
         Assert.Contains("در انتظار یا مسدود: ۲", planning.ProgressText, StringComparison.Ordinal);
 

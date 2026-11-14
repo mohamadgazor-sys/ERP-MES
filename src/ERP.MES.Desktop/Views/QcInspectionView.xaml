@@ -53,6 +53,7 @@
                 <TextBox x:Name="Scrap" Width="60" Margin="0,0,6,4" ToolTip="ضایعات" />
                 <TextBox x:Name="Reason" Width="260" Margin="0,0,6,4" ToolTip="دلیل (الزامی برای بازکاری و ضایعات)" />
                 <Button Content="ثبت بازرسی" Padding="12,4" Margin="0,0,6,4" Click="OnInspectClick" ToolTip="تعداد پذیرفته، بازکاری و ضایعات را برای مرحله ثبت می‌کند. نتیجه در سابقهٔ بازرسی می‌ماند." />
+                <Button Content="اصلاح تأیید قبلی" AutomationProperties.AutomationId="QcCorrectButton" Padding="12,4" Margin="0,0,6,4" Click="OnCorrectClick" ToolTip="برای مرحلهٔ تأییدشده، تعداد بازکاری و ضایعات (و دلیل الزامی) را از واحدهای پذیرفته‌شده کم می‌کند. سوابق حفظ می‌شود؛ هزینه، قیمت و رسید انبار «غیرجاری» می‌شود. فقط کنترل کیفیت." />
             </WrapPanel>
             <WrapPanel Margin="0,4,0,0">
                 <TextBox x:Name="ShortfallNote" Width="320" Margin="0,0,6,4" ToolTip="یادداشت یا شمارهٔ ارجاع" />

@@ -116,6 +116,12 @@ public sealed class ItemStage
 
     public bool IsStopped => StoppedAtUtc is not null;
 
+    /// <summary>The QC correction that affected this stage (the corrected stage itself, a downstream stage that had progressed, or the first stage of an assembly parent); null when none (owner decisions Q4, Q7, Decision Log #142). A visible marker only: nothing is reset.</summary>
+    public QcCorrection? AffectedByCorrection { get; internal set; }
+
+    /// <summary>The foreign key of <see cref="AffectedByCorrection"/>, filled when the correction is saved.</summary>
+    public long? AffectedByQcCorrectionId { get; private set; }
+
     /// <summary>
     /// Base units the stage works on (Decision Log #92, #101): the item's ordered base units for the first stage, the previous stage's accepted base units for the others. Null for a stage
     /// whose quantity is not a whole number of base units (then only the demonstration's whole-quantity approval applies) and until the stage is released.

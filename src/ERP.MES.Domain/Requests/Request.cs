@@ -211,6 +211,14 @@ public sealed class Request
         Transition(RequestAction.ReleaseToProduction, Status, actor, utc, outcome: null, text);
     }
 
+    /// <summary>Management closes a request whose production is over (Decision Log #142 B10): <c>DRAWING_RETURNED_TO_PLANNING</c> to <c>CLOSED</c>, one history entry. The application checks the blockers first; a closed request is read-only.</summary>
+    public void Close(WorkflowActor actor, DateTime changedAtUtc)
+    {
+        var utc = Customer.RequireUtc(changedAtUtc, nameof(changedAtUtc));
+        RequireStatus(RequestStatus.DrawingReturnedToPlanning, "closed");
+        Transition(RequestAction.Close, RequestStatus.Closed, actor, utc, outcome: null, note: null);
+    }
+
     private void RequireStatus(RequestStatus expected, string what)
     {
         if (Status != expected)

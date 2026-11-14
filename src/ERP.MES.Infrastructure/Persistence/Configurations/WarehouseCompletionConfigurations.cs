@@ -17,7 +17,8 @@ public sealed class WarehouseReceiptConfiguration : IEntityTypeConfiguration<War
         builder.Property(r => r.Id).ValueGeneratedOnAdd();
         builder.Property(r => r.RequestItemId).IsRequired();
         builder.HasOne<RequestItem>().WithMany().HasForeignKey(r => r.RequestItemId).IsRequired().OnDelete(DeleteBehavior.Restrict);
-        builder.HasIndex(r => r.RequestItemId).IsUnique();
+        builder.Property(r => r.Sequence).IsRequired().HasDefaultValue(1);
+        builder.HasIndex(r => new { r.RequestItemId, r.Sequence }).IsUnique();
         builder.Property(r => r.ReceivedBaseUnits).IsRequired();
         builder.Property(r => r.Note);
         builder.Property(r => r.ReceivedByUserId).IsRequired();
@@ -35,7 +36,8 @@ public sealed class ItemFinishedSentConfiguration : IEntityTypeConfiguration<Ite
         builder.Property(f => f.Id).ValueGeneratedOnAdd();
         builder.Property(f => f.RequestItemId).IsRequired();
         builder.HasOne<RequestItem>().WithMany().HasForeignKey(f => f.RequestItemId).IsRequired().OnDelete(DeleteBehavior.Restrict);
-        builder.HasIndex(f => f.RequestItemId).IsUnique();
+        builder.Property(f => f.Sequence).IsRequired().HasDefaultValue(1);
+        builder.HasIndex(f => new { f.RequestItemId, f.Sequence }).IsUnique();
         builder.Property(f => f.ReceiptId).IsRequired();
         builder.HasOne<WarehouseReceipt>().WithMany().HasForeignKey(f => f.ReceiptId).IsRequired().OnDelete(DeleteBehavior.Restrict);
         builder.Property(f => f.PriceDecisionId).IsRequired();

@@ -572,6 +572,53 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
                     b.ToTable("ItemPriceDecisions", (string)null);
                 });
 
+            modelBuilder.Entity("ERP.MES.Domain.Costing.RecordInvalidation", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("AtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("ByUserId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Effect")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long?>("JobReportRevisionId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Kind")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long?>("QcCorrectionId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("RequestItemId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("TargetId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ByUserId");
+
+                    b.HasIndex("QcCorrectionId");
+
+                    b.HasIndex("RequestItemId");
+
+                    b.HasIndex("Kind", "TargetId");
+
+                    b.ToTable("RecordInvalidations", (string)null);
+                });
+
             modelBuilder.Entity("ERP.MES.Domain.Documents.ItemDrawing", b =>
                 {
                     b.Property<long>("Id")
@@ -2733,6 +2780,9 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
                         .HasColumnType("INTEGER")
                         .HasDefaultValue(0L);
 
+                    b.Property<long?>("AffectedByQcCorrectionId")
+                        .HasColumnType("INTEGER");
+
                     b.Property<DateTime?>("AvailableSinceUtc")
                         .HasColumnType("TEXT");
 
@@ -2815,6 +2865,8 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("AffectedByQcCorrectionId");
+
                     b.HasIndex("MachineId");
 
                     b.HasIndex("ProductionUnitId");
@@ -2852,6 +2904,76 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
                     b.HasIndex("RequestItemId", "StageNo");
 
                     b.ToTable("QcApprovals", (string)null);
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Requests.QcCorrection", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("AcceptedBeforeBaseUnits")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("AfterCustomerDispatch")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CorrectedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("CorrectedByUserId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("RequestItemId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("ResultingStatus")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("ReworkBaseUnits")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("ScrapBaseUnits")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("StageNo")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CorrectedByUserId");
+
+                    b.HasIndex("RequestItemId", "StageNo");
+
+                    b.ToTable("QcCorrections", (string)null);
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Requests.QcCorrectionSource", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("CorrectionId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("InspectionLineId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("SupersededBaseUnits")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CorrectionId");
+
+                    b.HasIndex("InspectionLineId");
+
+                    b.ToTable("QcCorrectionSources", (string)null);
                 });
 
             modelBuilder.Entity("ERP.MES.Domain.Requests.QcInspectionLine", b =>
@@ -3768,6 +3890,11 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
                     b.Property<long>("RequestItemId")
                         .HasColumnType("INTEGER");
 
+                    b.Property<int>("Sequence")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(1);
+
                     b.HasKey("Id");
 
                     b.HasIndex("MarkedByUserId");
@@ -3776,7 +3903,7 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
 
                     b.HasIndex("ReceiptId");
 
-                    b.HasIndex("RequestItemId")
+                    b.HasIndex("RequestItemId", "Sequence")
                         .IsUnique();
 
                     b.ToTable("ItemFinishedSent", (string)null);
@@ -3803,11 +3930,16 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
                     b.Property<long>("RequestItemId")
                         .HasColumnType("INTEGER");
 
+                    b.Property<int>("Sequence")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(1);
+
                     b.HasKey("Id");
 
                     b.HasIndex("ReceivedByUserId");
 
-                    b.HasIndex("RequestItemId")
+                    b.HasIndex("RequestItemId", "Sequence")
                         .IsUnique();
 
                     b.ToTable("WarehouseReceipts", (string)null);
@@ -4002,6 +4134,28 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Calculation");
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Costing.RecordInvalidation", b =>
+                {
+                    b.HasOne("ERP.MES.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("ByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ERP.MES.Domain.Requests.QcCorrection", "QcCorrection")
+                        .WithMany()
+                        .HasForeignKey("QcCorrectionId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("ERP.MES.Domain.Requests.RequestItem", null)
+                        .WithMany()
+                        .HasForeignKey("RequestItemId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("QcCorrection");
                 });
 
             modelBuilder.Entity("ERP.MES.Domain.Documents.ItemDrawing", b =>
@@ -4762,6 +4916,11 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
 
             modelBuilder.Entity("ERP.MES.Domain.Requests.ItemStage", b =>
                 {
+                    b.HasOne("ERP.MES.Domain.Requests.QcCorrection", "AffectedByCorrection")
+                        .WithMany()
+                        .HasForeignKey("AffectedByQcCorrectionId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("ERP.MES.Domain.Planning.Machine", null)
                         .WithMany()
                         .HasForeignKey("MachineId")
@@ -4782,6 +4941,8 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
                         .WithMany()
                         .HasForeignKey("StoppedByUserId")
                         .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("AffectedByCorrection");
                 });
 
             modelBuilder.Entity("ERP.MES.Domain.Requests.QcApproval", b =>
@@ -4802,6 +4963,36 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
                         .WithMany()
                         .HasForeignKey("RequestItemId", "StageNo")
                         .HasPrincipalKey("RequestItemId", "StageNo")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Requests.QcCorrection", b =>
+                {
+                    b.HasOne("ERP.MES.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("CorrectedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ERP.MES.Domain.Requests.RequestItem", null)
+                        .WithMany()
+                        .HasForeignKey("RequestItemId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Requests.QcCorrectionSource", b =>
+                {
+                    b.HasOne("ERP.MES.Domain.Requests.QcCorrection", null)
+                        .WithMany("Sources")
+                        .HasForeignKey("CorrectionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ERP.MES.Domain.Requests.QcInspectionLine", null)
+                        .WithMany()
+                        .HasForeignKey("InspectionLineId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });
@@ -5217,6 +5408,11 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
                     b.Navigation("Events");
 
                     b.Navigation("Lines");
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Requests.QcCorrection", b =>
+                {
+                    b.Navigation("Sources");
                 });
 
             modelBuilder.Entity("ERP.MES.Domain.Requests.Request", b =>

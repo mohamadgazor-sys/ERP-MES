@@ -595,6 +595,55 @@ namespace ERP.MES.Infrastructure.SqlServer.Migrations
                     b.ToTable("ItemPriceDecisions", (string)null);
                 });
 
+            modelBuilder.Entity("ERP.MES.Domain.Costing.RecordInvalidation", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime>("AtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<long>("ByUserId")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("Effect")
+                        .HasColumnType("int");
+
+                    b.Property<long?>("JobReportRevisionId")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("Kind")
+                        .HasColumnType("int");
+
+                    b.Property<long?>("QcCorrectionId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<long>("RequestItemId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("TargetId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ByUserId");
+
+                    b.HasIndex("QcCorrectionId");
+
+                    b.HasIndex("RequestItemId");
+
+                    b.HasIndex("Kind", "TargetId");
+
+                    b.ToTable("RecordInvalidations", (string)null);
+                });
+
             modelBuilder.Entity("ERP.MES.Domain.Documents.ItemDrawing", b =>
                 {
                     b.Property<long>("Id")
@@ -2836,6 +2885,9 @@ namespace ERP.MES.Infrastructure.SqlServer.Migrations
                         .HasColumnType("bigint")
                         .HasDefaultValue(0L);
 
+                    b.Property<long?>("AffectedByQcCorrectionId")
+                        .HasColumnType("bigint");
+
                     b.Property<DateTime?>("AvailableSinceUtc")
                         .HasColumnType("datetime2");
 
@@ -2918,6 +2970,8 @@ namespace ERP.MES.Infrastructure.SqlServer.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("AffectedByQcCorrectionId");
+
                     b.HasIndex("MachineId");
 
                     b.HasIndex("ProductionUnitId");
@@ -2957,6 +3011,80 @@ namespace ERP.MES.Infrastructure.SqlServer.Migrations
                     b.HasIndex("RequestItemId", "StageNo");
 
                     b.ToTable("QcApprovals", (string)null);
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Requests.QcCorrection", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<long>("AcceptedBeforeBaseUnits")
+                        .HasColumnType("bigint");
+
+                    b.Property<bool>("AfterCustomerDispatch")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime>("CorrectedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<long>("CorrectedByUserId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<long>("RequestItemId")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("ResultingStatus")
+                        .HasColumnType("int");
+
+                    b.Property<long>("ReworkBaseUnits")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("ScrapBaseUnits")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("StageNo")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CorrectedByUserId");
+
+                    b.HasIndex("RequestItemId", "StageNo");
+
+                    b.ToTable("QcCorrections", (string)null);
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Requests.QcCorrectionSource", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<long>("CorrectionId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("InspectionLineId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("SupersededBaseUnits")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CorrectionId");
+
+                    b.HasIndex("InspectionLineId");
+
+                    b.ToTable("QcCorrectionSources", (string)null);
                 });
 
             modelBuilder.Entity("ERP.MES.Domain.Requests.QcInspectionLine", b =>
@@ -3903,6 +4031,11 @@ namespace ERP.MES.Infrastructure.SqlServer.Migrations
                     b.Property<long>("RequestItemId")
                         .HasColumnType("bigint");
 
+                    b.Property<int>("Sequence")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(1);
+
                     b.HasKey("Id");
 
                     b.HasIndex("MarkedByUserId");
@@ -3911,7 +4044,7 @@ namespace ERP.MES.Infrastructure.SqlServer.Migrations
 
                     b.HasIndex("ReceiptId");
 
-                    b.HasIndex("RequestItemId")
+                    b.HasIndex("RequestItemId", "Sequence")
                         .IsUnique();
 
                     b.ToTable("ItemFinishedSent", (string)null);
@@ -3940,11 +4073,16 @@ namespace ERP.MES.Infrastructure.SqlServer.Migrations
                     b.Property<long>("RequestItemId")
                         .HasColumnType("bigint");
 
+                    b.Property<int>("Sequence")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(1);
+
                     b.HasKey("Id");
 
                     b.HasIndex("ReceivedByUserId");
 
-                    b.HasIndex("RequestItemId")
+                    b.HasIndex("RequestItemId", "Sequence")
                         .IsUnique();
 
                     b.ToTable("WarehouseReceipts", (string)null);
@@ -4139,6 +4277,28 @@ namespace ERP.MES.Infrastructure.SqlServer.Migrations
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Calculation");
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Costing.RecordInvalidation", b =>
+                {
+                    b.HasOne("ERP.MES.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("ByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ERP.MES.Domain.Requests.QcCorrection", "QcCorrection")
+                        .WithMany()
+                        .HasForeignKey("QcCorrectionId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("ERP.MES.Domain.Requests.RequestItem", null)
+                        .WithMany()
+                        .HasForeignKey("RequestItemId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("QcCorrection");
                 });
 
             modelBuilder.Entity("ERP.MES.Domain.Documents.ItemDrawing", b =>
@@ -4899,6 +5059,11 @@ namespace ERP.MES.Infrastructure.SqlServer.Migrations
 
             modelBuilder.Entity("ERP.MES.Domain.Requests.ItemStage", b =>
                 {
+                    b.HasOne("ERP.MES.Domain.Requests.QcCorrection", "AffectedByCorrection")
+                        .WithMany()
+                        .HasForeignKey("AffectedByQcCorrectionId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("ERP.MES.Domain.Planning.Machine", null)
                         .WithMany()
                         .HasForeignKey("MachineId")
@@ -4919,6 +5084,8 @@ namespace ERP.MES.Infrastructure.SqlServer.Migrations
                         .WithMany()
                         .HasForeignKey("StoppedByUserId")
                         .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("AffectedByCorrection");
                 });
 
             modelBuilder.Entity("ERP.MES.Domain.Requests.QcApproval", b =>
@@ -4939,6 +5106,36 @@ namespace ERP.MES.Infrastructure.SqlServer.Migrations
                         .WithMany()
                         .HasForeignKey("RequestItemId", "StageNo")
                         .HasPrincipalKey("RequestItemId", "StageNo")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Requests.QcCorrection", b =>
+                {
+                    b.HasOne("ERP.MES.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("CorrectedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ERP.MES.Domain.Requests.RequestItem", null)
+                        .WithMany()
+                        .HasForeignKey("RequestItemId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Requests.QcCorrectionSource", b =>
+                {
+                    b.HasOne("ERP.MES.Domain.Requests.QcCorrection", null)
+                        .WithMany("Sources")
+                        .HasForeignKey("CorrectionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ERP.MES.Domain.Requests.QcInspectionLine", null)
+                        .WithMany()
+                        .HasForeignKey("InspectionLineId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });
@@ -5354,6 +5551,11 @@ namespace ERP.MES.Infrastructure.SqlServer.Migrations
                     b.Navigation("Events");
 
                     b.Navigation("Lines");
+                });
+
+            modelBuilder.Entity("ERP.MES.Domain.Requests.QcCorrection", b =>
+                {
+                    b.Navigation("Sources");
                 });
 
             modelBuilder.Entity("ERP.MES.Domain.Requests.Request", b =>

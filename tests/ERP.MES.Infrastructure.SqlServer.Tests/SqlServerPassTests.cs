@@ -149,6 +149,22 @@ public class SqlServerPassTests
     }
 
     [Fact]
+    public async Task The_production_collation_requirement_is_case_insensitive_accent_sensitive_and_orders_Persian_text()
+    {
+        // Owner decision A4 (Decision Log #142, docs/SQL_SERVER_PRODUCTION_ARCHITECTURE.md): case-insensitive, accent-sensitive and Persian-compatible. The database of this pass uses the server default, and the Persian
+        // collation the production database is expected to use is checked directly on the server.
+        await using var db = await SqlServerFixture.CreateAsync();
+        var databaseCollation = (await db.QueryAsync("SELECT CAST(DATABASEPROPERTYEX(DB_NAME(), 'Collation') AS nvarchar(128))"))[0];
+        Assert.Contains("_CI_AS", databaseCollation, StringComparison.Ordinal);
+
+        Assert.Equal("1", (await db.QueryAsync("SELECT COUNT(*) FROM sys.fn_helpcollations() WHERE name = 'Persian_100_CI_AS'"))[0]);
+        Assert.Equal("eq", (await db.QueryAsync("SELECT CASE WHEN N'Abc' = N'abc' COLLATE Persian_100_CI_AS THEN 'eq' ELSE 'ne' END"))[0]);           // case-insensitive
+        Assert.Equal("ne", (await db.QueryAsync("SELECT CASE WHEN N'e' = N'\u00E9' COLLATE Persian_100_CI_AS THEN 'eq' ELSE 'ne' END"))[0]);          // accent-sensitive
+        Assert.Equal("before", (await db.QueryAsync("SELECT CASE WHEN N'\u0628' < N'\u067E' COLLATE Persian_100_CI_AS THEN 'before' ELSE 'after' END"))[0]); // Persian letter order: be before pe
+        Assert.Equal("before", (await db.QueryAsync("SELECT CASE WHEN N'\u067E' < N'\u062A' COLLATE Persian_100_CI_AS THEN 'before' ELSE 'after' END"))[0]); // pe before te
+    }
+
+    [Fact]
     public async Task A_request_number_is_compared_case_sensitively_and_persian_text_survives()
     {
         await using var db = await SqlServerFixture.CreateAsync();

@@ -181,6 +181,25 @@ public sealed class QcInspectionViewModel(QcInspectionService service, IJalaliDa
         return outcome.Succeeded ? Outcome<int>.Ok(0) : new Outcome<int>(outcome.Status, 0, outcome.Issue, outcome.DateError);
     });
 
+    /// <summary>QC corrects an earlier approval of the selected, already approved stage (owner decisions Q1-Q8): the typed rework and scrap counts are taken out of the accepted units; the reason is mandatory.</summary>
+    public Task CorrectAsync(string? rework, string? scrap, string? reason) => CommandAsync("اصلاح تأیید ثبت شد؛ سوابق قبلی حفظ شد و رکوردهای وابسته «غیرجاری» علامت خوردند.", async token =>
+    {
+        if (_selected is not { } row)
+        {
+            return Fail2(ValidationIssue.QueueRowsInvalid);
+        }
+
+        long reworkUnits = 0, scrapUnits = 0;
+        if ((!string.IsNullOrWhiteSpace(rework) && !long.TryParse(Ascii(rework), NumberStyles.None, CultureInfo.InvariantCulture, out reworkUnits))
+            || (!string.IsNullOrWhiteSpace(scrap) && !long.TryParse(Ascii(scrap), NumberStyles.None, CultureInfo.InvariantCulture, out scrapUnits)))
+        {
+            return Fail2(ValidationIssue.InspectionEntriesInvalid);
+        }
+
+        var outcome = await service.CorrectAsync(currentUser(), row.Entry.ToStageTarget(), reworkUnits, scrapUnits, reason, token);
+        return outcome.Succeeded ? Outcome<int>.Ok(0) : new Outcome<int>(outcome.Status, 0, outcome.Issue, outcome.DateError);
+    });
+
     public Task DecideShortfallAsync(ShortfallKind kind, string? note) => CommandAsync(kind == ShortfallKind.ManagementAccepted ? "کسری پذیرفته شد." : "سفارش جایگزین ثبت شد.", async token =>
     {
         if (_selected is not { } row)
@@ -262,6 +281,7 @@ public sealed class QcInspectionViewModel(QcInspectionService service, IJalaliDa
         e.Status switch
         {
             ItemStageStatus.WaitingQc => "در انتظار تصمیم کنترل کیفیت",
+            ItemStageStatus.QcApproved => "تأییدشده (قابل اصلاح توسط کنترل کیفیت)",
             ItemStageStatus.WaitingShortfallDecision => "در انتظار تصمیم دربارهٔ کسری" + (e.LostAtContractorBaseUnits > 0 ? $" (شامل {Digits(e.LostAtContractorBaseUnits)} واحد پایهٔ مفقودشده نزد پیمانکار، نه ضایعات)" : string.Empty),
             ItemStageStatus.WaitingExternalSend or ItemStageStatus.ExternalSent => "بیرونی: بازکاری باید دوباره ارسال شود",
             _ => "در بازکاری (تولید)",

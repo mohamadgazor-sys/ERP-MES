@@ -45,10 +45,44 @@ public static class Messages
     public const string NotFound = "رکورد پیدا نشد؛ ممکن است تغییر کرده باشد. فهرست دوباره بارگذاری شد.";
     public const string Conflict = "این رکورد را کاربر دیگری تغییر داده است. فهرست دوباره بارگذاری شد؛ کار خود را دوباره انجام دهید.";
     public const string Duplicate = "درخواستی با همین شماره برای این مشتری در همین سال شمسی از قبل وجود دارد.";
+    public const string CorrectionNone = "تأیید عادی";
+    public const string CorrectionCorrected = "اصلاح‌شده توسط کنترل کیفیت";
+    public const string CorrectionNotCurrent = "اصلاح‌شده؛ سوابق وابسته غیرجاری است و اقدام لازم دارد";
+
+    public static string CorrectionIndicatorText(ItemCorrectionIndicator indicator) => indicator.State switch
+    {
+        ItemCorrectionState.Corrected => CorrectionCorrected,
+        ItemCorrectionState.DownstreamNotCurrent => CorrectionNotCurrent,
+        _ => CorrectionNone,
+    };
+
+    /// <summary>The Management warning after a QC correction of an item already dispatched to the customer; the dispatch is stated to be retained, never reversed automatically.</summary>
+    public static string DispatchCorrectionWarningText(IReadOnlyList<string> itemNos) => itemNos.Count == 0
+        ? string.Empty
+        : "هشدار برای مدیریت: کنترل کیفیت پس از ارسال به مشتری، تأیید قبلی این آیتم‌ها را اصلاح کرده است: " + string.Join("، ", itemNos) + ". "
+          + "ارسال قبلی به مشتری به‌عنوان سابقه حفظ شده و به‌صورت خودکار برگشت داده نشده است. "
+          + "تولید، رسید انبار، هزینه، قیمت و تأییدهای وابسته ممکن است دیگر جاری نباشند؛ اقدام بعدی یا تأیید جدید لازم است (محاسبهٔ دوبارهٔ هزینه، تأیید جدید مدیریت و رسید واقعی انبار).";
+
     public const string InvalidState = "در وضعیت فعلی درخواست، این کار مجاز نیست.";
     public const string Failed = "ذخیره یا خواندن اطلاعات ممکن نشد. دوباره تلاش کنید؛ اگر ادامه یافت با مدیر سیستم تماس بگیرید.";
     public const string Unexpected = "خطای غیرمنتظره رخ داد. دوباره تلاش کنید؛ اگر ادامه یافت با مدیر سیستم تماس بگیرید.";
     public const string NothingSelected = "ابتدا یک مورد را از فهرست انتخاب کنید.";
+
+    /// <summary>One blocker of the manual request closure, with the item it names.</summary>
+    public static string ClosureBlockerText(ClosureBlocker blocker)
+    {
+        var reason = blocker.Reason switch
+        {
+            ClosureBlockReason.NoItems => "درخواست هیچ آیتمی ندارد (درخواستی که چیزی تولید نکرده لغو می‌شود، نه بسته)",
+            ClosureBlockReason.RouteNotComplete => "مسیر آیتم کامل نشده است (مرحله‌ای هنوز تأیید کنترل کیفیت نشده)",
+            ClosureBlockReason.PendingQcDecision => "تصمیم کنترل کیفیت در انتظار است",
+            ClosureBlockReason.ShortfallDecisionPending => "تصمیم دربارهٔ کسری (ضایعات یا مفقودی پیمانکار) هنوز گرفته نشده است",
+            ClosureBlockReason.ExternalQuantityOutstanding => "مقدار بیرونی باقی است (ارسال‌نشده، نزد پیمانکار یا در انتظار برگشت)",
+            ClosureBlockReason.NotFinishedSent => "انبار هنوز آیتم را «تمام‌شده/ارسال‌شده» ثبت نکرده است",
+            _ => string.Empty,
+        };
+        return (blocker.ItemNo.Length == 0 ? string.Empty : "آیتم " + Ltr(blocker.ItemNo) + ": ") + reason + ".";
+    }
 
     public static string For<T>(Outcome<T> outcome) => outcome.Status switch
     {
@@ -84,6 +118,10 @@ public static class Messages
         ValidationIssue.ItemSequenceExhausted => "همهٔ شماره‌های ۱ تا ۹۹۹ این سطح استفاده شده است.",
         ValidationIssue.ReleaseBlocked => "ارسال به صف کار انجام نشد؛ حداقل یک آیتم قابل آزادسازی نیست و هیچ آیتمی آزاد نشد.",
         ValidationIssue.NothingToRelease => "آیتمی برای آزادسازی وجود ندارد؛ همهٔ آیتم‌ها قبلاً به صف کار ارسال شده‌اند یا منتظر پایان زیرمجموعه‌های خود هستند.",
+        ValidationIssue.CostSnapshotNotCurrent => "این محاسبهٔ هزینه دیگر معتبر نیست (اصلاح کنترل کیفیت یا بازنگری گزارش کار)؛ ابتدا هزینه را دوباره محاسبه کنید.",
+        ValidationIssue.CorrectionInvalid => "اصلاح کنترل کیفیت نیاز به تعداد مثبت (بازکاری یا ضایعات) و دلیل دارد.",
+        ValidationIssue.CorrectionExceedsAccepted => "تعداد اصلاح‌شده از تعداد پذیرفته‌شدهٔ معتبر این مرحله بیشتر است.",
+        ValidationIssue.ClosureBlocked => "درخواست هنوز قابل بستن نیست؛ موانع در فهرست آمده است.",
         ValidationIssue.ItemHasNoStages => "این آیتم هیچ مرحله‌ای ندارد.",
         ValidationIssue.AssemblyChildrenNotComplete => "مرحلهٔ اول مونتاژ تا پایان مسیر و تأیید کنترل کیفیت همهٔ زیرمجموعه‌ها آزاد نمی‌شود.",
         ValidationIssue.PartNameRequired => "نام قطعه را وارد کنید.",
@@ -285,6 +323,7 @@ public static class Messages
         RequestAction.RecordDrawingResult => "نتیجهٔ نقشه‌کشی",
         RequestAction.SendBackToDrawing => "بازگشت به نقشه‌کشی",
         RequestAction.ReleaseToProduction => "ارسال آیتم‌ها به صف کار واحدهای تولیدی",
+        RequestAction.Close => "بستن درخواست توسط مدیریت",
         _ => string.Empty,
     };
 
@@ -504,6 +543,7 @@ public static class Messages
         ERP.MES.Application.Production.QueueBlock.RequestClosed => "درخواست لغو یا بسته شده است",
         ERP.MES.Application.Production.QueueBlock.GateNotSatisfied => "شرط‌های آزادسازی تولید برقرار نیست",
         ERP.MES.Application.Production.QueueBlock.RepairIncomplete => "آیتم تعمیر ناقص است: تاریخ تحویل یا کد کالای انبار ثبت نشده",
+        ERP.MES.Application.Production.QueueBlock.PreviousStageReopened => "مرحلهٔ قبل با اصلاح کنترل کیفیت دوباره باز شده است؛ تا تأیید مجدد آن ادامه نمی‌یابد",
         ERP.MES.Application.Production.QueueBlock.WaitingChildren => "آزاد نشده: منتظر پایان مسیر و تأیید کنترل کیفیت همهٔ زیرمجموعه‌ها",
         ERP.MES.Application.Production.QueueBlock.NotReleased => "هنوز توسط برنامه‌ریزی آزاد نشده است",
         ERP.MES.Application.Production.QueueBlock.WaitingPreviousQc => "منتظر تأیید کنترل کیفیت مرحلهٔ قبل",

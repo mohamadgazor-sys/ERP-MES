@@ -537,6 +537,7 @@ public sealed class UnitQueueService(
                     var active = stored is { Value.IsActive: true } && released && stored.Value.ProductionUnitId == unitId ? stored.Value : null;
                     var block = closed ? QueueBlock.RequestClosed
                         : !gateOk ? QueueBlock.GateNotSatisfied
+                        : stage.StageNo > 1 && stage.Status is ItemStageStatus.Waiting or ItemStageStatus.InProgress && stages.First(s => s.StageNo == stage.StageNo - 1).Status != ItemStageStatus.QcApproved ? QueueBlock.PreviousStageReopened
                         : stage.Status switch
                         {
                             ItemStageStatus.Planned => item.IsRepairIncomplete(loaded.Value.WorkType) ? QueueBlock.RepairIncomplete : stage.StageNo == 1 && item.IsAssembly && !loaded.Value.AllDescendantsRouteCompleted(item) ? QueueBlock.WaitingChildren : QueueBlock.NotReleased,

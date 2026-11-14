@@ -43,6 +43,9 @@ public enum QueueBlock
 
     /// <summary>A REPAIR item lacks its delivery date or warehouse item code and cannot be released until completed (Decision Log #124 B5).</summary>
     RepairIncomplete,
+
+    /// <summary>The immediately preceding stage was reopened by a QC correction and is not QC approved again yet, so this released stage cannot proceed (Decision Log #142 Q4).</summary>
+    PreviousStageReopened,
 }
 
 /// <summary>

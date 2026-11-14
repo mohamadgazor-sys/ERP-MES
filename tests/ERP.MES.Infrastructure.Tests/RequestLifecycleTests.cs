@@ -310,7 +310,7 @@ public class RequestLifecycleTests
         using var w = await StartAsync();
 
         Assert.Equal(new RequestActionCapabilities(false, false, false, false), await w.Lifecycle.GetCapabilitiesAsync(w.Central, Token));
-        Assert.Equal(new RequestActionCapabilities(true, true, false, false), await w.Lifecycle.GetCapabilitiesAsync(w.Manager, Token));
+        Assert.Equal(new RequestActionCapabilities(true, true, false, false, CanClose: true), await w.Lifecycle.GetCapabilitiesAsync(w.Manager, Token));
         Assert.Equal(new RequestActionCapabilities(false, true, false, false), await w.Lifecycle.GetCapabilitiesAsync(w.ManagementStaff, Token));
         Assert.Equal(new RequestActionCapabilities(false, true, true, false), await w.Lifecycle.GetCapabilitiesAsync(w.Planning, Token));
         Assert.Equal(new RequestActionCapabilities(false, false, false, true), await w.Lifecycle.GetCapabilitiesAsync(w.Drawing, Token));
