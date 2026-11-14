@@ -1678,6 +1678,10 @@ A warehouse-history view is required to answer:
 
 The detailed warehouse movement model can evolve later, but the history must never overwrite prior receipt records.
 
+## 17.5 Reversal of a Warehouse record (owner decision B9, Decision Log #142, #144)
+
+The Warehouse proposes the reversal of a mistaken receipt, finished/sent mark or customer dispatch with a mandatory reason; Management approves or rejects. The original record is never deleted or edited: it is marked reversed only after approval, and the reversal links to it with proposer, approver, timestamps and reasons. A database record entered by mistake and a physical movement that really happened are told apart: the latter is corrected by a compensating Warehouse transaction (the approved reversal is that transaction), never pretended away. A receipt cannot be reversed while a current finished/sent mark depends on it (reverse the mark first). After a reversal the Warehouse may record a new receipt or mark (next sequence number) as a real new record.
+
 ---
 
 # 18. Contract Control

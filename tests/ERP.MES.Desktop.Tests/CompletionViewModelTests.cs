@@ -5,6 +5,7 @@ using ERP.MES.Desktop.ViewModels;
 using ERP.MES.Domain.Calendar;
 using ERP.MES.Domain.Contracts;
 using ERP.MES.Domain.Requests;
+using ERP.MES.Domain.Warehouse;
 
 namespace ERP.MES.Desktop.Tests;
 
@@ -113,9 +114,45 @@ public class CompletionViewModelTests
         Assert.False(warehouse.IsErrorMessage, warehouse.Message);
         Assert.Equal("۱۴۰۵/۰۸/۰۲ (WB-1001)", warehouse.Rows.Single().DispatchText);
 
+        // Reversal of a Warehouse record (owner decision B9): the Warehouse proposes with a reason, Management decides, the original is only marked.
+        Assert.True(warehouse.CanProposeReversal);
+        Assert.False(warehouse.CanDecideReversal);
+        var current = warehouse.Rows.Single();
+        var targets = CompletionViewModel.TargetsOf(current.Item);
+        Assert.Equal(["رسید انبار", "تکمیل/ارسال شد", "ارسال به مشتری (WB-1001)"], targets.Select(t => t.Text));
+        await warehouse.ProposeReversalAsync(current, targets[2], ReversalNature.RecordedInError, "  ");
+        Assert.True(warehouse.IsErrorMessage);
+        Assert.Equal(Messages.ForIssue(ValidationIssue.ReversalInvalid, JalaliDateError.None), warehouse.Message);
+        await warehouse.ProposeReversalAsync(current, null, ReversalNature.RecordedInError, "سند اشتباه بود");
+        Assert.Equal(Messages.ForIssue(ValidationIssue.ReversalTargetMissing, JalaliDateError.None), warehouse.Message);
+        await warehouse.ProposeReversalAsync(warehouse.Rows.Single(), targets[2], ReversalNature.RecordedInError, "سند اشتباه بود");
+        Assert.False(warehouse.IsErrorMessage, warehouse.Message);
+        var pending = Assert.Single(warehouse.Reversals);
+        Assert.Equal(("ارسال به مشتری (WB-1001)", "منتظر تصمیم مدیریت", "سند اشتباه بود"), (pending.TargetText, pending.StatusText, pending.ReasonText));
+        Assert.DoesNotContain("برگشت‌خورده", warehouse.Rows.Single().DispatchText, StringComparison.Ordinal); // still current until Management decides
+
+        // The Warehouse cannot decide its own proposal; only Management can, and a rejection needs a reason.
+        await warehouse.DecideReversalAsync(pending, approve: true, null);
+        Assert.True(warehouse.IsErrorMessage);
+        var management = For(h, h.Manager);
+        await management.LoadAsync(Token);
+        Assert.True(management.CanDecideReversal);
+        Assert.False(management.CanProposeReversal);
+        await management.DecideReversalAsync(management.Reversals.Single(), approve: false, " ");
+        Assert.Equal(Messages.ForIssue(ValidationIssue.ReversalInvalid, JalaliDateError.None), management.Message);
+        await management.DecideReversalAsync(management.Reversals.Single(), approve: true, "تأیید شد");
+        Assert.False(management.IsErrorMessage, management.Message);
+        Assert.Equal("۱۴۰۵/۰۸/۰۲ (WB-1001) — برگشت‌خورده", management.Rows.Single().DispatchText); // kept in the list and shown as reversed
+        var decided = Assert.Single(management.Reversals);
+        Assert.StartsWith("تأیید شد", decided.StatusText, StringComparison.Ordinal);
+        Assert.Contains("تأیید شد", decided.DecisionText, StringComparison.Ordinal);
+        await management.DecideReversalAsync(decided, approve: false, "دوباره");
+        Assert.True(management.IsErrorMessage); // already decided
+        Assert.Empty(CompletionViewModel.TargetsOf(management.Rows.Single().Item).Where(t => t.Kind == ERP.MES.Domain.Costing.InvalidatedRecordKind.CustomerDispatch));
+
         var planning = For(h, h.Planning);
         await planning.LoadAsync(Token);
-        Assert.False(planning.CanReceive || planning.CanMarkFinished || planning.CanDispatch);
+        Assert.False(planning.CanReceive || planning.CanMarkFinished || planning.CanDispatch || planning.CanProposeReversal || planning.CanDecideReversal);
         Assert.Single(planning.Rows);
         var drawing = For(h, h.Drawing);
         await drawing.LoadAsync(Token);

@@ -67,3 +67,30 @@ public sealed class CustomerDispatchConfiguration : IEntityTypeConfiguration<Cus
         builder.Property(d => d.RecordedAtUtc).IsRequired();
     }
 }
+
+/// <summary>A proposed, approved or rejected reversal of a Warehouse record (owner decision B9, Decision Log #142): never deleted; the status is the concurrency token of the single decision.</summary>
+public sealed class WarehouseReversalConfiguration : IEntityTypeConfiguration<WarehouseReversal>
+{
+    public void Configure(EntityTypeBuilder<WarehouseReversal> builder)
+    {
+        builder.ToTable("WarehouseReversals");
+        builder.HasKey(r => r.Id);
+        builder.Property(r => r.Id).ValueGeneratedOnAdd();
+        builder.Property(r => r.RequestItemId).IsRequired();
+        builder.HasOne<RequestItem>().WithMany().HasForeignKey(r => r.RequestItemId).IsRequired().OnDelete(DeleteBehavior.Restrict);
+        builder.Property(r => r.TargetKind).HasConversion<int>().IsRequired();
+        builder.Property(r => r.TargetId).IsRequired();
+        builder.HasIndex(r => new { r.TargetKind, r.TargetId });
+        builder.HasIndex(r => r.RequestItemId);
+        builder.Property(r => r.Nature).HasConversion<int>().IsRequired();
+        builder.Property(r => r.Status).HasConversion<int>().IsRequired().IsConcurrencyToken();
+        builder.Property(r => r.ProposalReason).IsRequired();
+        builder.Property(r => r.ProposedByUserId).IsRequired();
+        builder.HasOne<User>().WithMany().HasForeignKey(r => r.ProposedByUserId).IsRequired().OnDelete(DeleteBehavior.Restrict);
+        builder.Property(r => r.ProposedAtUtc).IsRequired();
+        builder.Property(r => r.DecidedByUserId);
+        builder.HasOne<User>().WithMany().HasForeignKey(r => r.DecidedByUserId).IsRequired(false).OnDelete(DeleteBehavior.Restrict);
+        builder.Property(r => r.DecidedAtUtc);
+        builder.Property(r => r.DecisionReason);
+    }
+}

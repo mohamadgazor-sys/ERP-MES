@@ -165,6 +165,12 @@ public enum Permission
     /// <summary>Record an optional customer dispatch of a received item (Warehouse; Decision Log #95 D7, #105).</summary>
     RecordCustomerDispatch,
 
+    /// <summary>Propose the reversal of a Warehouse record with a reason (Warehouse only; owner decision B9, Decision Log #142).</summary>
+    ProposeWarehouseReversal,
+
+    /// <summary>Approve or reject a proposed Warehouse reversal (Management alone; owner decision B9, Decision Log #142).</summary>
+    DecideWarehouseReversal,
+
     /// <summary>Read the warehouse completion list: receipts, finished/sent marks and dispatches (Warehouse, Planning, Management; Decision Log #105).</summary>
     ViewWarehouseCompletion,
 
@@ -336,6 +342,8 @@ public static class AuthorizationRules
         [Permission.RecordWarehouseReceipt] = new([DepartmentCodes.Warehouse], null),
         [Permission.MarkItemFinishedSent] = new([DepartmentCodes.Warehouse], null),
         [Permission.RecordCustomerDispatch] = new([DepartmentCodes.Warehouse], null),
+        [Permission.ProposeWarehouseReversal] = new([DepartmentCodes.Warehouse], null),
+        [Permission.DecideWarehouseReversal] = new([DepartmentCodes.Management], null),
         [Permission.ViewWarehouseCompletion] = new([DepartmentCodes.Warehouse, DepartmentCodes.Planning, DepartmentCodes.Management], null),
         [Permission.CalculateItemCost] = new([DepartmentCodes.Warehouse], null),
         [Permission.ApproveItemPrice] = new([DepartmentCodes.Management], null),

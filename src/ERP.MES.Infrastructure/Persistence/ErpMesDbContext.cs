@@ -116,6 +116,8 @@ public sealed class ErpMesDbContext(DbContextOptions<ErpMesDbContext> options) :
 
     public DbSet<CustomerDispatch> CustomerDispatches => Set<CustomerDispatch>();
 
+    public DbSet<ERP.MES.Domain.Warehouse.WarehouseReversal> WarehouseReversals => Set<ERP.MES.Domain.Warehouse.WarehouseReversal>();
+
     public DbSet<QueueOverride> QueueOverrides => Set<QueueOverride>();
 
     public DbSet<QueueOverrideHistoryEntry> QueueOverrideHistory => Set<QueueOverrideHistoryEntry>();
@@ -253,6 +255,12 @@ public sealed class ErpMesDbContext(DbContextOptions<ErpMesDbContext> options) :
         if (ChangeTracker.Entries().Any(e => e.Entity is WarehouseReceipt or ERP.MES.Domain.Warehouse.ItemFinishedSent or CustomerDispatch && e.State is EntityState.Modified or EntityState.Deleted))
         {
             throw new InvalidOperationException("The warehouse completion records are append-only: entries cannot be changed or deleted.");
+        }
+
+        // A Warehouse reversal proposal is never deleted (owner decision B9); its single decision is the only permitted change.
+        if (ChangeTracker.Entries<ERP.MES.Domain.Warehouse.WarehouseReversal>().Any(e => e.State is EntityState.Deleted))
+        {
+            throw new InvalidOperationException("Warehouse reversals are append-only: entries cannot be deleted.");
         }
 
         // The queue override history is append-only as well.

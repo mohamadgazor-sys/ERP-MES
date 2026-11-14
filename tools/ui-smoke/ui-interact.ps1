@@ -645,6 +645,18 @@ try {
         }
         Sign-Out
     }
+
+    # ---- 9. Warehouse reversal (owner decision B9): the Warehouse proposes, Management decides, nobody else sees the buttons ----
+    foreach ($who in @(@('demo.warehouse', $true, $false), @('demo.management', $false, $true), @('demo.planning', $false, $false))) {
+        Sign-In $who[0] | Out-Null
+        Open-Page 'دریافت انبار و تکمیل'
+        $propose = Find-ById $script:Main 'ProposeReversalButton' 4
+        $approveBtn = Find-ById $script:Main 'ApproveReversalButton' 4
+        $rejectBtn = Find-ById $script:Main 'RejectReversalButton' 4
+        Check ((($null -ne $propose) -and $propose.Current.IsEnabled) -eq $who[1]) "ROLE: $($who[0]) $(if ($who[1]) { 'sees' } else { 'does not see' }) the reversal proposal button" "$($who[0]): unexpected state of the reversal proposal button (found: $($null -ne $propose))"
+        Check ((($null -ne $approveBtn) -and ($null -ne $rejectBtn)) -eq $who[2]) "ROLE: $($who[0]) $(if ($who[2]) { 'sees' } else { 'does not see' }) the approve/reject reversal buttons" "$($who[0]): unexpected state of the approve/reject reversal buttons"
+        Sign-Out
+    }
 }
 catch {
     Fail ('script error: ' + $_.Exception.Message + ' | ' + $_.ScriptStackTrace)

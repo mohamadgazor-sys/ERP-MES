@@ -114,5 +114,7 @@ public sealed class RecordInvalidationConfiguration : IEntityTypeConfiguration<E
         builder.Property(i => i.QcCorrectionId);
         builder.HasOne(i => i.QcCorrection).WithMany().HasForeignKey(i => i.QcCorrectionId).IsRequired(false).OnDelete(DeleteBehavior.Restrict);
         builder.Property(i => i.JobReportRevisionId);
+        builder.Property(i => i.WarehouseReversalId);
+        builder.HasOne(i => i.WarehouseReversal).WithMany().HasForeignKey(i => i.WarehouseReversalId).IsRequired(false).OnDelete(DeleteBehavior.Restrict);
     }
 }

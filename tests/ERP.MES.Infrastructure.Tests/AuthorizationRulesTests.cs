@@ -78,6 +78,8 @@ public class AuthorizationRulesTests
         [Permission.RecordWarehouseReceipt] = (["WAREHOUSE"], null),
         [Permission.MarkItemFinishedSent] = (["WAREHOUSE"], null),
         [Permission.RecordCustomerDispatch] = (["WAREHOUSE"], null),
+        [Permission.ProposeWarehouseReversal] = (["WAREHOUSE"], null),
+        [Permission.DecideWarehouseReversal] = (["MANAGEMENT"], null),
         [Permission.ViewWarehouseCompletion] = (["WAREHOUSE", "PLANNING", "MANAGEMENT"], null),
         [Permission.CalculateItemCost] = (["WAREHOUSE"], null),
         [Permission.ApproveItemPrice] = (["MANAGEMENT"], null),
