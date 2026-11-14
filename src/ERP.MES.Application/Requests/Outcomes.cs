@@ -446,6 +446,9 @@ public enum ValidationIssue
     /// <summary>Only an approved report can be reopened, and only while it has no amendment yet (owner decision B2).</summary>
     JobReportReopenNotAllowed,
 
+    /// <summary>The contract amount must be a positive, whole number of Iranian Rial (owner decision A2).</summary>
+    ContractAmountInvalid,
+
     /// <summary>The inspection decisions are not valid (none, a non-positive count, or a reason missing for rework or scrap).</summary>
     InspectionEntriesInvalid,
 

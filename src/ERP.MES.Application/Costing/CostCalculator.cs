@@ -92,7 +92,7 @@ public static class CostCalculator
 
         var calculation = new ItemCostCalculation(inputs.ItemId, inputs.NextSequenceNo, inputs.AcceptedBaseUnits, consumed, inputs.MaterialId, materialPriceId, priceDate, lines, userId, nowUtc);
         var basis = inputs.ContractApproved && inputs.WorkType == ERP.MES.Domain.Requests.WorkType.Make ? PriceBasis.Contract : PriceBasis.Calculated;
-        return new CostBuild(calculation, new ItemPriceDecision(calculation, basis), ValidationIssue.None, []);
+        return new CostBuild(calculation, new ItemPriceDecision(calculation, basis, inputs.ContractAmountRial, inputs.ContractNo), ValidationIssue.None, []);
     }
 
     private static CostBuild Refuse(ValidationIssue issue) => new(null, null, issue, []);

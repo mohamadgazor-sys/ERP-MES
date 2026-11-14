@@ -2435,3 +2435,17 @@ Append one dated entry after every substantial session. Do not replace prior ent
 
 ### Recommended exact next action
 - Merge PR-D when green, then PR-E (A2 contract amount), then full main validation and a fresh offline package.
+
+## 2026-11-14 (continued) - PR-E contract amount (A2)
+
+### Completed
+- PR-E (branch `claude/pr-e-contract-amount`, built on top of PR-D until it merges): `ContractVersions.AmountRial`, Planning enters it, Management approves it with the contract, the item price decision of a contract item proposes it (accept, or change with a mandatory reason), migrations for SQLite and SQL Server, contract screen field and column, Decision Log #146, Master Specification 18 note, status matrix.
+
+### Tests actually run (Linux)
+- Domain 608 passed; Infrastructure costing and contract service tests passed; Desktop view-model tests for contracts and costing passed (scratch harness); Desktop project compile-checked. Full suites and Windows CI run on the PR.
+
+### Unresolved / risks
+- Amount is optional at submission (labelled interpretation in #146).
+
+### Recommended exact next action
+- Merge PR-D, rebase this branch onto main (regenerate the migration if the snapshot conflicts), open PR-E, merge when green; then full main validation and a fresh offline package.
