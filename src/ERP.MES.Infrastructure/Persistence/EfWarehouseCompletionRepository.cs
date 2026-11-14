@@ -26,7 +26,7 @@ public sealed class EfWarehouseCompletionRepository(IDbContextFactory<ErpMesDbCo
         var result = new List<CompletionItem>();
         foreach (var request in requests)
         {
-            foreach (var item in request.Items.Where(i => i.IsRouteCompleted || receipts.ContainsKey(i.Id) || finished.ContainsKey(i.Id)))
+            foreach (var item in request.Items.Where(i => i.IsRouteCompleted || receipts.ContainsKey(i.Id) || finished.ContainsKey(i.Id) || corrections.Contains(i.Id)))
             {
                 var latest = calculations.Where(c => c.RequestItemId == item.Id).OrderBy(c => c.SequenceNo).LastOrDefault();
                 var decision = latest is null ? null : decisions.FirstOrDefault(d => d.CalculationId == latest.Id);

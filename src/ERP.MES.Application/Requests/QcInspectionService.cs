@@ -59,7 +59,7 @@ public sealed class QcInspectionService(IRequestRepository requests, IQcInspecti
     public async Task<InspectionCapabilities> GetCapabilitiesAsync(Principal? principal, CancellationToken cancellationToken = default) =>
         CapabilitiesOf(await authorization.EvaluateAsync(principal, All, cancellationToken));
 
-    /// <summary>The stages waiting for QC or for a shortfall decision, and the stages in rework, oldest request first.</summary>
+    /// <summary>The stages waiting for QC or for a shortfall decision, the stages in rework and the QC-approved stages of requests that are not closed (QC may correct them, owner decisions Q1/Q8), oldest request first.</summary>
     public async Task<Outcome<InspectionWorklist>> LoadAsync(Principal? principal, CancellationToken cancellationToken = default)
     {
         var set = await authorization.EvaluateAsync(principal, All, cancellationToken);
@@ -83,7 +83,7 @@ public sealed class QcInspectionService(IRequestRepository requests, IQcInspecti
                 foreach (var item in loaded.Value.Items)
                 {
                     var versions = item.Stages.ToDictionary(s => s.StageNo, s => loaded.Versions.StageVersion(item.Id, s.StageNo));
-                    foreach (var stage in item.Stages.Where(s => s.InputBaseUnits is not null && (s.Status is ItemStageStatus.WaitingQc or ItemStageStatus.WaitingShortfallDecision || (s.Status == ItemStageStatus.InProgress && s.ReworkBaseUnits > 0))))
+                    foreach (var stage in item.Stages.Where(s => s.InputBaseUnits is not null && (s.Status is ItemStageStatus.WaitingQc or ItemStageStatus.WaitingShortfallDecision || (s.Status == ItemStageStatus.InProgress && s.ReworkBaseUnits > 0) || (s.Status == ItemStageStatus.QcApproved && summary.Status != RequestStatus.Closed))))
                     {
                         entries.Add(new InspectionEntry2(
                             summary.RequestId, summary.RequestNo.Value, summary.CustomerName, item.Id, item.ItemNo, item.PartName, stage.StageNo, item.Stages.Count, stage.StageTitle, stage.Status,

@@ -625,6 +625,26 @@ try {
     Check (-not $mg -or -not $mg.Current.IsEnabled) 'UNAUTHORIZED: Management cannot make the per-item contract decision (button absent or disabled)' 'Management has an enabled per-item decision button'
     Save-Shot 'interact-5-management-contracts'
     Sign-Out
+
+    # ---- 8. QC correction action: offered to QC only (owner decisions Q1-Q8) ----
+    Sign-In 'demo.qc' | Out-Null
+    Open-Page 'بازرسی کنترل کیفیت'
+    $correct = Find-ById $script:Main 'QcCorrectButton' 8
+    Check ($null -ne $correct -and $correct.Current.IsEnabled) 'ROLE: QC sees an enabled correction button «اصلاح تأیید قبلی»' "QC has no enabled correction button; screen: $(Screen-Texts 25)"
+    Save-Shot 'interact-6-qc-correction'
+    Sign-Out
+    foreach ($other in @('demo.management', 'demo.planning', 'demo.warehouse', 'demo.production')) {
+        Sign-In $other | Out-Null
+        $navHasQc = @(Get-NavRows | Where-Object { $_.Title -like '*بازرسی کنترل کیفیت*' }).Count -gt 0
+        if ($navHasQc) {
+            Open-Page 'بازرسی کنترل کیفیت'
+            $c = Find-ById $script:Main 'QcCorrectButton' 3
+            Check (-not $c -or -not $c.Current.IsEnabled) "UNAUTHORIZED: $other cannot use the QC correction button (absent or disabled)" "$other has an enabled QC correction button"
+        } else {
+            Check $true "UNAUTHORIZED: $other does not even see the QC inspection page" ''
+        }
+        Sign-Out
+    }
 }
 catch {
     Fail ('script error: ' + $_.Exception.Message + ' | ' + $_.ScriptStackTrace)

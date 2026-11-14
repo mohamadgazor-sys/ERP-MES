@@ -15,7 +15,7 @@ public class QcInspectionViewModelTests
 
     private static QcInspectionViewModel For(WorkflowHarness h, ERP.MES.Application.Security.Principal user) => new(h.Workflow.QcInspection, h.Dates, DigitStyle.Persian, () => user);
 
-    private static async Task<(long Id, long ItemId)> SubmittedPairItemAsync(WorkflowHarness h)
+    internal static async Task<(long Id, long ItemId)> SubmittedPairItemAsync(WorkflowHarness h)
     {
         var customer = (await h.Workflow.Customers.CreateAsync(h.Central, "Fictional Customer", Token)).Value!;
         var created = (await h.Workflow.Requests.CreateAsync(h.Central, new CreateRequestCommand(customer.Value.Id, "Q-1", WorkType.Make, "1405/07/20", null, null), Token)).Value!;
@@ -83,10 +83,11 @@ public class QcInspectionViewModelTests
         await manager.SelectAsync(manager.Rows.Single());
         await manager.DecideShortfallAsync(ShortfallKind.ManagementAccepted, "پذیرش کسری");
         Assert.False(manager.IsErrorMessage, manager.Message);
-        Assert.Empty(manager.Rows);
+        // The decided stage is QC approved: nothing is waiting any more, and the approved stage stays listed only so that QC can correct it later.
+        Assert.Equal("تأییدشده (قابل اصلاح توسط کنترل کیفیت)", manager.Rows.Single().StatusText);
 
         await qc.LoadAsync(Token);
-        Assert.Empty(qc.Rows);
+        Assert.Equal("تأییدشده (قابل اصلاح توسط کنترل کیفیت)", qc.Rows.Single().StatusText);
     }
 
     [Fact]

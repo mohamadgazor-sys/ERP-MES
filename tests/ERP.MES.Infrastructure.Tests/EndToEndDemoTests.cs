@@ -288,6 +288,14 @@ public class EndToEndDemoTests
         Assert.Single(listed.FlaggedDispatchIds);
         Assert.Single(listed.Corrections);
 
+        // The Requests-screen indicator is built from the same records: the item is corrected, its downstream records are not current, and the dispatch happened before the correction.
+        var indicator = (await w.Lifecycle.LoadCorrectionIndicatorsAsync(central, requestId, Token)).Value![itemId];
+        Assert.Equal(ItemCorrectionState.DownstreamNotCurrent, indicator.State);
+        Assert.True(indicator.AfterCustomerDispatch);
+        Assert.True(indicator.DispatchRetained);
+        Assert.Equal("ابعاد سه قطعه خارج از تلرانس بود", indicator.LastReason);
+        Assert.Equal(OperationStatus.NotAuthorized, (await w.Lifecycle.LoadCorrectionIndicatorsAsync(null, requestId, Token)).Status);
+
         // Until the stage is approved again nothing can be received, calculated, approved or marked.
         Assert.Equal(ValidationIssue.ReceiptNotReady, (await w.Completion.ReceiveAsync(warehouse, itemId, null, Token)).Issue);
         Assert.False((await w.Costing.CalculateAsync(warehouse, itemId, Token)).Succeeded);
@@ -318,6 +326,9 @@ public class EndToEndDemoTests
         var final = (await w.Completion.LoadAsync(warehouse, Token)).Value!.Items.Single(i => i.ItemId == itemId);
         Assert.False(final.NotCurrent);
         Assert.Single(final.FlaggedDispatchIds); // the dispatch that already happened stays flagged
+        var settled = (await w.Lifecycle.LoadCorrectionIndicatorsAsync(manager, requestId, Token)).Value![itemId];
+        Assert.Equal(ItemCorrectionState.Corrected, settled.State); // reconciled: still marked as corrected, no longer waiting for action
+        Assert.True(settled.AfterCustomerDispatch);
     }
 
     [Fact]

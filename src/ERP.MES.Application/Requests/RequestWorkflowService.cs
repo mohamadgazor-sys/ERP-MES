@@ -17,6 +17,24 @@ public sealed record RequestActionCapabilities(bool CanDecide, bool CanReopen, b
 /// "receives" the request); Drawing result = Drawing. Each action passes the version the request was loaded at, changes the status through the Domain method, adds one history entry and
 /// one audit entry in ONE transaction, and refuses a request that is not in the required status. Cancelling, contract and item steps are not part of this service.
 /// </summary>
+/// <summary>How the earlier QC approval of an item stands (owner decisions Q1-Q8): ordinary, corrected later, or corrected with records that are no longer current.</summary>
+public enum ItemCorrectionState
+{
+    None = 0,
+
+    /// <summary>QC corrected an earlier approval; nothing downstream is waiting for reconciliation (yet or any more).</summary>
+    Corrected,
+
+    /// <summary>QC corrected an earlier approval and the cost snapshot, price approval, Warehouse receipt or finished/sent mark of the item is no longer current: further action or a new approval is required.</summary>
+    DownstreamNotCurrent,
+}
+
+/// <summary>The correction indicator of one item for the Requests screen, built from the existing correction and invalidation records (no duplicate business record).</summary>
+public sealed record ItemCorrectionIndicator(long ItemId, ItemCorrectionState State, int CorrectionCount, bool AfterCustomerDispatch, string? LastReason, bool DispatchRetained)
+{
+    public static ItemCorrectionIndicator None(long itemId) => new(itemId, ItemCorrectionState.None, 0, false, null, false);
+}
+
 public sealed class RequestWorkflowService(IRequestRepository requests, CurrentAuthorization authorization, IClock clock, IAuditContext auditContext, IWarehouseCompletionRepository? completion = null)
 {
     private static readonly Permission[] AllPermissions =
@@ -82,6 +100,32 @@ public sealed class RequestWorkflowService(IRequestRepository requests, CurrentA
 
         return await RunAsync(principal, Permission.CloseRequest, requestId, expectedVersion, AuditActions.RequestClosed, "closed by Management", null,
             (request, actor, now) => request.Close(actor, now), cancellationToken);
+    }
+
+    /// <summary>The correction indicator of every item of the request that was corrected after its QC approval (items without a correction are absent). Any user who may view requests.</summary>
+    public async Task<Outcome<IReadOnlyDictionary<long, ItemCorrectionIndicator>>> LoadCorrectionIndicatorsAsync(Principal? principal, long requestId, CancellationToken cancellationToken = default)
+    {
+        if (!await IsAllowedAsync(principal, Permission.ViewCustomersAndRequests, cancellationToken))
+        {
+            return Outcome<IReadOnlyDictionary<long, ItemCorrectionIndicator>>.Fail(OperationStatus.NotAuthorized);
+        }
+
+        return await CustomerService.GuardAsync(async () =>
+        {
+            var result = new Dictionary<long, ItemCorrectionIndicator>();
+            if (completion is not null)
+            {
+                foreach (var item in (await completion.ListAsync(cancellationToken)).Where(i => i.RequestId == requestId && i.Corrections.Count > 0))
+                {
+                    var last = item.Corrections[^1];
+                    result[item.ItemId] = new ItemCorrectionIndicator(
+                        item.ItemId, item.NotCurrent ? ItemCorrectionState.DownstreamNotCurrent : ItemCorrectionState.Corrected, item.Corrections.Count,
+                        item.Corrections.Any(c => c.AfterCustomerDispatch), last.Reason, item.Dispatches.Count > 0);
+                }
+            }
+
+            return Outcome<IReadOnlyDictionary<long, ItemCorrectionIndicator>>.Ok(result);
+        });
     }
 
     private async Task<IReadOnlySet<long>> FinishedSentAsync(long requestId, CancellationToken cancellationToken) =>

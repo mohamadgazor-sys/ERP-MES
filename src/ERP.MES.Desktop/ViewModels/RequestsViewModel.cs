@@ -9,7 +9,7 @@ namespace ERP.MES.Desktop.ViewModels;
 
 public sealed record RequestRow(long RequestId, string RequestNo, string CustomerName, string WorkTypeText, string DateText, string YearText, string Title, string StatusText, int ItemCount);
 
-public sealed record ItemRow(string ItemNo, string PartName, string WorkTypeText, string QuantityText, string PriorityText, long ItemId = 0, string StageProgressText = "", string StatusText = "") : IHasItemId;
+public sealed record ItemRow(string ItemNo, string PartName, string WorkTypeText, string QuantityText, string PriorityText, long ItemId = 0, string StageProgressText = "", string StatusText = "", string CorrectionText = "", int CorrectionLevel = 0) : IHasItemId;
 
 public sealed record HistoryRow(string DateText, string ActionText, string StatusChangeText, string DepartmentText, string OutcomeText, string NoteText, string ActorText = "");
 
@@ -43,6 +43,11 @@ public sealed class RequestsViewModel(
     public ObservableCollection<RequestRow> Requests => _rows;
 
     public ObservableCollection<ItemRow> Items => _items;
+
+    /// <summary>The prominent notice shown (to Management and every viewer) when a QC correction affected an item already dispatched to the customer; empty otherwise.</summary>
+    public string DispatchCorrectionWarning { get; private set; } = string.Empty;
+
+    public bool HasDispatchCorrectionWarning => DispatchCorrectionWarning.Length > 0;
 
     /// <summary>The workflow history of the selected request, oldest first (Domain and Database Specification 4.4).</summary>
     public ObservableCollection<HistoryRow> History => _history;
@@ -489,13 +494,22 @@ public sealed class RequestsViewModel(
         OnPropertyChanged(nameof(HasNoHistory));
         _progress = RequestProgress.From(_detail.Value);
         var progressByItem = _progress.Items.ToDictionary(p => p.ItemId);
+        var indicators = (await lifecycle.LoadCorrectionIndicatorsAsync(currentUser(), requestId, cancellationToken)) is { Succeeded: true } loadedIndicators
+            ? loadedIndicators.Value!
+            : new Dictionary<long, ItemCorrectionIndicator>();
         foreach (var item in _detail.Value.Items)
         {
             var progress = progressByItem[item.Id];
+            var indicator = indicators.GetValueOrDefault(item.Id) ?? ItemCorrectionIndicator.None(item.Id);
             _items.Add(new ItemRow(
                 item.ItemNo, item.PartName, Messages.WorkTypeText(_detail.Value.WorkType), QuantityDisplay(item.RequestedQuantity), item.Priority.PersianName(), item.Id,
-                StageProgressText(progress), ItemStatusText(progress)));
+                StageProgressText(progress), ItemStatusText(progress),
+                indicator.State == ItemCorrectionState.None && !item.Stages.Any(s => s.Status == ItemStageStatus.QcApproved) ? string.Empty : Messages.CorrectionIndicatorText(indicator), (int)indicator.State));
         }
+
+        DispatchCorrectionWarning = Messages.DispatchCorrectionWarningText(_detail.Value.Items.Where(i => indicators.GetValueOrDefault(i.Id) is { AfterCustomerDispatch: true }).Select(i => i.ItemNo).ToList());
+        OnPropertyChanged(nameof(DispatchCorrectionWarning));
+        OnPropertyChanged(nameof(HasDispatchCorrectionWarning));
 
         SelectedRequest = _rows.FirstOrDefault(r => r.RequestId == requestId) ?? _selected;
         RaiseDetailChanges();

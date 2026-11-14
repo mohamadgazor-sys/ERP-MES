@@ -45,6 +45,24 @@ public static class Messages
     public const string NotFound = "رکورد پیدا نشد؛ ممکن است تغییر کرده باشد. فهرست دوباره بارگذاری شد.";
     public const string Conflict = "این رکورد را کاربر دیگری تغییر داده است. فهرست دوباره بارگذاری شد؛ کار خود را دوباره انجام دهید.";
     public const string Duplicate = "درخواستی با همین شماره برای این مشتری در همین سال شمسی از قبل وجود دارد.";
+    public const string CorrectionNone = "تأیید عادی";
+    public const string CorrectionCorrected = "اصلاح‌شده توسط کنترل کیفیت";
+    public const string CorrectionNotCurrent = "اصلاح‌شده؛ سوابق وابسته غیرجاری است و اقدام لازم دارد";
+
+    public static string CorrectionIndicatorText(ItemCorrectionIndicator indicator) => indicator.State switch
+    {
+        ItemCorrectionState.Corrected => CorrectionCorrected,
+        ItemCorrectionState.DownstreamNotCurrent => CorrectionNotCurrent,
+        _ => CorrectionNone,
+    };
+
+    /// <summary>The Management warning after a QC correction of an item already dispatched to the customer; the dispatch is stated to be retained, never reversed automatically.</summary>
+    public static string DispatchCorrectionWarningText(IReadOnlyList<string> itemNos) => itemNos.Count == 0
+        ? string.Empty
+        : "هشدار برای مدیریت: کنترل کیفیت پس از ارسال به مشتری، تأیید قبلی این آیتم‌ها را اصلاح کرده است: " + string.Join("، ", itemNos) + ". "
+          + "ارسال قبلی به مشتری به‌عنوان سابقه حفظ شده و به‌صورت خودکار برگشت داده نشده است. "
+          + "تولید، رسید انبار، هزینه، قیمت و تأییدهای وابسته ممکن است دیگر جاری نباشند؛ اقدام بعدی یا تأیید جدید لازم است (محاسبهٔ دوبارهٔ هزینه، تأیید جدید مدیریت و رسید واقعی انبار).";
+
     public const string InvalidState = "در وضعیت فعلی درخواست، این کار مجاز نیست.";
     public const string Failed = "ذخیره یا خواندن اطلاعات ممکن نشد. دوباره تلاش کنید؛ اگر ادامه یافت با مدیر سیستم تماس بگیرید.";
     public const string Unexpected = "خطای غیرمنتظره رخ داد. دوباره تلاش کنید؛ اگر ادامه یافت با مدیر سیستم تماس بگیرید.";

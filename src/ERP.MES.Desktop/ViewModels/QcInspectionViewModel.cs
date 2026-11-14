@@ -281,6 +281,7 @@ public sealed class QcInspectionViewModel(QcInspectionService service, IJalaliDa
         e.Status switch
         {
             ItemStageStatus.WaitingQc => "در انتظار تصمیم کنترل کیفیت",
+            ItemStageStatus.QcApproved => "تأییدشده (قابل اصلاح توسط کنترل کیفیت)",
             ItemStageStatus.WaitingShortfallDecision => "در انتظار تصمیم دربارهٔ کسری" + (e.LostAtContractorBaseUnits > 0 ? $" (شامل {Digits(e.LostAtContractorBaseUnits)} واحد پایهٔ مفقودشده نزد پیمانکار، نه ضایعات)" : string.Empty),
             ItemStageStatus.WaitingExternalSend or ItemStageStatus.ExternalSent => "بیرونی: بازکاری باید دوباره ارسال شود",
             _ => "در بازکاری (تولید)",

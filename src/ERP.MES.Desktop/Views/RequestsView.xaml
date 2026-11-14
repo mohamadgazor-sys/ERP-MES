@@ -123,6 +123,9 @@
                         <TextBlock Text="{Binding ProgressText}" TextWrapping="Wrap" AutomationProperties.AutomationId="RequestProgressText" />
                         <ProgressBar Minimum="0" Maximum="1" Value="{Binding ProgressValue, Mode=OneWay}" Height="10" Margin="0,4,0,0" AutomationProperties.AutomationId="RequestProgressBar" ToolTip="درصد = آیتم‌های تکمیل‌شده ÷ همهٔ آیتم‌ها × ۱۰۰ (فقط اطلاع‌رسانی؛ جایگزین دروازه‌ها، کنترل کیفیت یا تأیید مدیریت نیست)." />
                     </StackPanel>
+                    <Border Background="#FDECEA" BorderBrush="#B71C1C" BorderThickness="2" Padding="10" Margin="0,0,0,6" Visibility="{Binding HasDispatchCorrectionWarning, Converter={StaticResource BoolToVisibility}}" AutomationProperties.AutomationId="DispatchCorrectionWarning">
+                        <TextBlock Text="{Binding DispatchCorrectionWarning}" TextWrapping="Wrap" FontWeight="SemiBold" Foreground="#7F0000" />
+                    </Border>
                     <DataGrid ItemsSource="{Binding Items}" AutoGenerateColumns="False" IsReadOnly="True" HeadersVisibility="Column"
                               CanUserAddRows="False" CanUserDeleteRows="False" MaxHeight="220" Background="{StaticResource CardBrush}">
                         <DataGrid.Columns>
@@ -140,6 +143,17 @@
                             <DataGridTextColumn Header="اولویت" Binding="{Binding PriorityText}" Width="90" />
                             <DataGridTextColumn Header="پیشرفت مرحله‌ها" Binding="{Binding StageProgressText}" Width="110" />
                             <DataGridTextColumn Header="وضعیت فعلی" Binding="{Binding StatusText}" Width="*" />
+                            <DataGridTextColumn Header="تأیید کنترل کیفیت" Binding="{Binding CorrectionText}" Width="*">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="TextWrapping" Value="Wrap" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding CorrectionLevel}" Value="1"><Setter Property="Foreground" Value="#E65100" /><Setter Property="FontWeight" Value="SemiBold" /></DataTrigger>
+                                            <DataTrigger Binding="{Binding CorrectionLevel}" Value="2"><Setter Property="Foreground" Value="#B71C1C" /><Setter Property="FontWeight" Value="Bold" /></DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
                         </DataGrid.Columns>
                     </DataGrid>
                     <TextBlock Text="این درخواست هنوز آیتمی ندارد." Foreground="{StaticResource MutedTextBrush}" Margin="0,6,0,0"

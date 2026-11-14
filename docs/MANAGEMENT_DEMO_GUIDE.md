@@ -53,6 +53,17 @@ Account names: `demo.secretary`, `demo.management`, `demo.planning`, `demo.drawi
 | درخواست‌ها -> select a request | The progress block above the item grid: "N از M آیتم تکمیل شده" with active / waiting-blocked / rework counts and a bar; each item shows "k از n مرحله" and its current stage and status |
 | تعریف آیتم‌ها و مرحله‌ها, request `DEMO-1405-016` (nested assembly; after Management approval and Drawing) | Define stages for the parent and the children and press the release button: the children are released, the parent shows «منتظر زیرمجموعه‌ها … اپراتور نمی‌تواند آن را شروع کند»; in صف واحدهای تولید it is under «در انتظار آزادسازی» with «آزاد نشده: منتظر پایان مسیر و تأیید کنترل کیفیت همهٔ زیرمجموعه‌ها» (Decision Log #140) |
 
+## 2c. QC correction after customer dispatch (owner decisions Q1-Q8, Decision Log #142/#143; needs the package built from the main that contains it)
+
+The seeded demonstration data has **no** item that has already been received, priced and dispatched, so this scenario is shown on an item that is taken through the steps live, or described from the automated end-to-end test (`A_QC_correction_after_receipt_price_and_dispatch_...` in `EndToEndDemoTests`). Seeding a ready-made dispatched item is a separate follow-up so that the offline package and its physical-test record are not changed by this feature.
+
+| Step | Account | Page | What to show / say |
+|---|---|---|---|
+| 1 | `demo.qc` | بازرسی کنترل کیفیت | A QC-**approved** stage is listed as «تأییدشده (قابل اصلاح توسط کنترل کیفیت)». Type the rework/scrap count and a reason, press «اصلاح تأیید قبلی». QC alone has the button; every other role has it disabled or does not see the page |
+| 2 | any | درخواست‌ها -> request | The item grid column «تأیید کنترل کیفیت» now shows «اصلاح‌شده توسط کنترل کیفیت» (orange) or, when the cost/price/receipt/finished records are no longer current, «اصلاح‌شده؛ سوابق وابسته غیرجاری است و اقدام لازم دارد» (red); ordinary approved items show «تأیید عادی» |
+| 3 | `demo.management` | درخواست‌ها -> request | When the item had **already been dispatched to the customer** a red box «هشدار برای مدیریت» states: the correction came after the customer dispatch; the dispatch is kept as a historical record and was **not** reversed; production, receipt, cost, price and approvals may no longer be current; a new approval may be needed |
+| 4 | `demo.warehouse`, `demo.management` | هزینه‌یابی, تحویل و ارسال | Recalculate the cost, Management approves the new price, Warehouse records a real new receipt (sequence 2) and the finished/sent mark. All the first records stay visible as history |
+
 ## 3. The strongest features to show
 
 1. One request is the container for everything; MAKE and REPAIR are separate requests; the customer's own request number is kept exactly as typed.
