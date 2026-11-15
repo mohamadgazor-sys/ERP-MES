@@ -25,7 +25,7 @@ Accounts: `DEMO-ACCOUNTS.txt` in the package (eleven fictional accounts, one dem
 ## D. Permissions (try each, expect refusal or no button)
 - [ ] Only `demo.qc` inspects and corrects QC; only `demo.drawing` decides technical feasibility; only `demo.planning` creates contracts; only `demo.management` approves requests, contracts and prices; only `demo.warehouse` receives and dispatches; `demo.admin` alone administers users.
 - [ ] The Production Manager reopens approved reports and designates supervisors; the supervisor reviews the unit's reports; nobody reviews their own report.
-- [ ] `demo.central`, `demo.production`, `demo.supervisor` do not see the Warehouse reversal, report reopening or contract amount actions.
+- [ ] `demo.secretary`, `demo.production`, `demo.supervisor` do not see the Warehouse reversal, report reopening or contract amount actions.
 
 ## E. Production release, work sessions and queue
 - [ ] `demo.supervisor` dispatches a stage to a machine and operator (missing qualification is a warning; work outside the shift needs a reason).
