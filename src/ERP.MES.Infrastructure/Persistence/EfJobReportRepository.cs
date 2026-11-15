@@ -74,12 +74,16 @@ public sealed class EfJobReportRepository(IDbContextFactory<ErpMesDbContext> con
         await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
         var original = await Load(context).SingleOrDefaultAsync(r => r.Id == originalId, cancellationToken) ?? throw new RecordNotFoundException("daily job report", originalId);
         PersistenceSave.CheckExpectedVersion(context, original, expectedVersion);
-        if (await context.DailyJobReports.AnyAsync(r => r.PreviousRevisionReportId == originalId, cancellationToken))
+        if (await context.DailyJobReports.AnyAsync(r => r.PreviousRevisionReportId == originalId && r.Status != JobReportStatus.Cancelled, cancellationToken))
         {
             throw new InvalidOperationException("The report already has an amendment.");
         }
 
         var revision = reopen(original);
+
+        // A cancelled amendment keeps its number: the next one takes the next free number of this operator, date and shift (owner decision I-3).
+        var highest = await context.DailyJobReports.Where(r => r.OperatorId == original.OperatorId && r.WorkDate == original.WorkDate && r.ShiftTemplateId == original.ShiftTemplateId).MaxAsync(r => r.AmendmentNo, cancellationToken);
+        revision.AssignAmendmentNo(Math.Max(revision.AmendmentNo, highest + 1));
         context.DailyJobReports.Add(revision);
         context.AuditLog.Add(audit);
 

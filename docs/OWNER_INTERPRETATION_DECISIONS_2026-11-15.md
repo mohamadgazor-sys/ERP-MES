@@ -1,4 +1,6 @@
-# Four interpretation decisions for the owner (from Decision Log #144-#146)
+# Four interpretation decisions (from Decision Log #144-#146) - ALL DECIDED by the owner on 2026-11-15 (Decision Log #148)
+
+> **Status: closed.** The owner approved: I-1 mandatory amount at submission to Management (optional while preparing); I-2 keep the receipt restriction; I-3 allow cancelling a never-submitted amendment with a reason; I-4 keep no late warning on amendments and preserve the original's lateness. The text below is the question and consequence analysis as it was put to the owner.
 
 **What this is.** While implementing the owner's decisions of 2026-11-14, four details were not covered by the owner's text. Claude chose a behaviour for each so the work could continue. **These four are technical interpretations, not owner-approved requirements.** Each is easy to change. Nothing below reopens any decision recorded in #142. A one-line answer per row is enough ("keep" or the alternative).
 

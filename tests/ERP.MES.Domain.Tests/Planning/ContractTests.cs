@@ -60,7 +60,7 @@ public class ContractTests
     public void A_submitted_version_is_immutable()
     {
         var contract = Required();
-        contract.SaveDraft(Ok, "CN-1", new DateOnly(2026, 10, 2), null, null, Planning, At);
+        contract.SaveDraft(Ok, "CN-1", new DateOnly(2026, 10, 2), null, null, Planning, At, 8_000_000m);
         contract.AttachPdf(Ok, Pdf(), Planning, At);
         contract.Submit(Ok, Planning, At);
 
@@ -80,13 +80,18 @@ public class ContractTests
         Assert.Equal(ContractSubmissionProblem.ContractDateMissing, Assert.Throws<ContractSubmissionException>(() => contract.Submit(Ok, Planning, At)).Problem);
         contract.SaveDraft(Ok, "CN-1", new DateOnly(2026, 10, 2), null, null, Planning, At);
         Assert.Equal(ContractSubmissionProblem.PdfMissing, Assert.Throws<ContractSubmissionException>(() => contract.Submit(Ok, Planning, At)).Problem);
+        contract.AttachPdf(Ok, Pdf(), Planning, At);
+        Assert.Equal(ContractSubmissionProblem.AmountMissing, Assert.Throws<ContractSubmissionException>(() => contract.Submit(Ok, Planning, At)).Problem); // owner decision I-1: needed to submit, not to prepare the draft
+        contract.SaveDraft(Ok, "CN-1", new DateOnly(2026, 10, 2), null, null, Planning, At, 8_000_000m);
+        contract.Submit(Ok, Planning, At);
+        Assert.Equal(ContractStatus.PendingManagement, contract.Status);
     }
 
     [Fact]
     public void Rejection_needs_a_reason_and_approval_does_not()
     {
         var contract = Required();
-        contract.SaveDraft(Ok, "CN-1", new DateOnly(2026, 10, 2), null, null, Planning, At);
+        contract.SaveDraft(Ok, "CN-1", new DateOnly(2026, 10, 2), null, null, Planning, At, 8_000_000m);
         contract.AttachPdf(Ok, Pdf(), Planning, At);
         contract.Submit(Ok, Planning, At);
 

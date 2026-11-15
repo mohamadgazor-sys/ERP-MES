@@ -232,7 +232,7 @@ public sealed class DemoScenarioSeeder(IDbContextFactory<ErpMesDbContext> contex
         var contract = await ApprovedAsync(customer, ContractRequestNo, WorkType.Make, "ساخت چرخ‌دنده (قرارداد در انتظار تأیید مدیریت)", "داده فرضی برای نمایش به مدیریت.");
         created++;
         var decided = Ok(await w.Contracts.DecideRequirementAsync(planning, contract.Id, ContractRequirement.Required, "مشتری قرارداد کتبی خواسته است.", ct), "contract decision (required)");
-        var draft = Ok(await w.Contracts.SaveDraftAsync(planning, contract.Id, decided.Version, "CN-DEMO-103", "1405/08/10", "قرارداد ساخت چرخ‌دنده", null, ct), "contract draft");
+        var draft = Ok(await w.Contracts.SaveDraftAsync(planning, contract.Id, decided.Version, "CN-DEMO-103", "1405/08/10", "قرارداد ساخت چرخ‌دنده", null, ct, 8_000_000m), "contract draft");
         var withPdf = Ok(await w.Contracts.AttachPdfAsync(planning, contract.Id, draft.Version, "contract-103.pdf", Pdf("contract 103"), ct), "contract PDF");
         Ok(await w.Contracts.SubmitAsync(planning, contract.Id, withPdf.Version, ct), "submit the contract");
         var gear = await DefineItemAsync(contract.Id, new DefineItemCommand("C-1", "چرخ‌دنده مارپیچ", 12m, Priority.Normal, piece, material, 1.8m, 120m, 90m));

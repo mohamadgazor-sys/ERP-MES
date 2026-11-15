@@ -197,7 +197,7 @@ public class CostingTests
 
     private static bool WithContract { get; set; }
 
-    private static decimal? ContractAmount { get; set; }
+    private static decimal? ContractAmount { get; set; } = 8_000_000m;
 
     private static async Task<long> VersionAsync(World w, long id) => (await w.Services.Requests.GetAsync(w.Qc, id, Token)).Value!.Request.Version;
 
@@ -532,6 +532,8 @@ public class CostingTests
     {
         using var w = await StartAsync();
         var s = await ReadyToCostAsync(w, contract: true);
+        // An older contract approved before the amount became mandatory has none: simulate it.
+        w.Fixture.Db.Execute("UPDATE ContractVersions SET AmountRial = NULL");
         var calculated = (await w.Costing.CalculateAsync(w.Warehouse, s.ItemId, Token)).Value!;
         Assert.Equal(5_700_000m, calculated.Calculation.Value.TotalRial);
         Assert.Equal((PriceBasis.Contract, (decimal?)null), (calculated.Decision.Value.Basis, calculated.Decision.Value.ProposedPriceRial));
@@ -574,7 +576,7 @@ public class CostingTests
         }
         finally
         {
-            ContractAmount = null;
+            ContractAmount = 8_000_000m;
         }
     }
 
@@ -594,7 +596,7 @@ public class CostingTests
         }
         finally
         {
-            ContractAmount = null;
+            ContractAmount = 8_000_000m;
         }
     }
 }

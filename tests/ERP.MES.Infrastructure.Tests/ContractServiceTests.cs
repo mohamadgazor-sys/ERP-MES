@@ -110,7 +110,7 @@ public class ContractServiceTests
     private static async Task<Stored<RequestContract>> SubmittedAsync(World w, long requestId)
     {
         var draft = await RequiredAsync(w, requestId);
-        var saved = (await w.Contracts.SaveDraftAsync(w.Planning, requestId, draft.Version, "CN-100", "1405/07/25", "قرارداد ساخت", null, Token)).Value!;
+        var saved = (await w.Contracts.SaveDraftAsync(w.Planning, requestId, draft.Version, "CN-100", "1405/07/25", "قرارداد ساخت", null, Token, 8_000_000m)).Value!;
         Tick(w);
         var withPdf = (await w.Contracts.AttachPdfAsync(w.Planning, requestId, saved.Version, "contract.pdf", Pdf("v1"), Token)).Value!;
         Tick(w);
@@ -323,7 +323,7 @@ public class ContractServiceTests
 
         var revising = (await w.Contracts.StartRevisionAsync(w.Planning, id, rejected.Version, Token)).Value!;
         Tick(w);
-        var edited = (await w.Contracts.SaveDraftAsync(w.Planning, id, revising.Version, "CN-100-R1", "1405/08/01", "قرارداد اصلاح‌شده", null, Token)).Value!;
+        var edited = (await w.Contracts.SaveDraftAsync(w.Planning, id, revising.Version, "CN-100-R1", "1405/08/01", "قرارداد اصلاح‌شده", null, Token, 8_000_000m)).Value!;
         Tick(w);
         var replaced = (await w.Contracts.AttachPdfAsync(w.Planning, id, edited.Version, "contract-v2.pdf", Pdf("v2"), Token)).Value!;
         Tick(w);
@@ -401,7 +401,7 @@ public class ContractServiceTests
 
         var again = (await w.Contracts.ChangeRequirementAsync(w.Planning, id, back.Version, ContractRequirement.Required, "دوباره", Token)).Value!;
         Assert.Equal(2, again.Value.Versions.Count);
-        var saved = (await w.Contracts.SaveDraftAsync(w.Planning, id, again.Version, "CN", "1405/07/25", null, null, Token)).Value!;
+        var saved = (await w.Contracts.SaveDraftAsync(w.Planning, id, again.Version, "CN", "1405/07/25", null, null, Token, 8_000_000m)).Value!;
         var pdf = (await w.Contracts.AttachPdfAsync(w.Planning, id, saved.Version, "c.pdf", Pdf(), Token)).Value!;
         var submitted = (await w.Contracts.SubmitAsync(w.Planning, id, pdf.Version, Token)).Value!;
 
@@ -606,5 +606,28 @@ public class ContractServiceTests
         Assert.Equal(7_500_000m, contract.ApprovedAmountRial);
         Assert.Equal((8_000_000m, 7_500_000m), (contract.Versions[0].AmountRial, contract.Versions[1].AmountRial));
         Assert.Equal(2L, Count(w, "ContractVersions WHERE AmountRial IS NOT NULL"));
+    }
+    [Fact]
+    public async Task The_amount_is_optional_while_the_draft_is_prepared_and_mandatory_to_submit_the_contract_to_Management()
+    {
+        using var w = await StartAsync();
+        var id = await ReturnedAsync(w);
+        var draft = await RequiredAsync(w, id);
+
+        // The draft can be saved and the PDF attached without an amount (commercial terms still being negotiated)...
+        var saved = (await w.Contracts.SaveDraftAsync(w.Planning, id, draft.Version, "CN-100", "1405/07/25", "قرارداد", null, Token)).Value!;
+        var withPdf = (await w.Contracts.AttachPdfAsync(w.Planning, id, saved.Version, "contract.pdf", Pdf("v1"), Token)).Value!;
+        Assert.Null(withPdf.Value.CurrentVersion!.AmountRial);
+
+        // ...but it cannot be submitted to Management without one; nothing changes and the contract stays a draft.
+        var refused = await w.Contracts.SubmitAsync(w.Planning, id, withPdf.Version, Token);
+        Assert.Equal(ValidationIssue.ContractAmountRequired, refused.Issue);
+        Assert.Equal(ContractStatus.Draft, (await w.Contracts.GetAsync(w.Planning, id, Token)).Value!.Contract!.Value.Status);
+        Assert.Equal(0, Count(w, "ContractHistory WHERE Action = 'Submitted'"));
+
+        var withAmount = (await w.Contracts.SaveDraftAsync(w.Planning, id, withPdf.Version, "CN-100", "1405/07/25", "قرارداد", null, Token, 8_000_000m)).Value!;
+        var submitted = await w.Contracts.SubmitAsync(w.Planning, id, withAmount.Version, Token);
+        Assert.True(submitted.Succeeded, submitted.Status + " " + submitted.Issue);
+        Assert.Equal(ContractStatus.PendingManagement, submitted.Value!.Value.Status);
     }
 }

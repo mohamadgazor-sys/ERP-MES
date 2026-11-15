@@ -1680,7 +1680,7 @@ The detailed warehouse movement model can evolve later, but the history must nev
 
 ## 17.5 Reversal of a Warehouse record (owner decision B9, Decision Log #142, #144)
 
-The Warehouse proposes the reversal of a mistaken receipt, finished/sent mark or customer dispatch with a mandatory reason; Management approves or rejects. The original record is never deleted or edited: it is marked reversed only after approval, and the reversal links to it with proposer, approver, timestamps and reasons. A database record entered by mistake and a physical movement that really happened are told apart: the latter is corrected by a compensating Warehouse transaction (the approved reversal is that transaction), never pretended away. A receipt cannot be reversed while a current finished/sent mark depends on it (reverse the mark first). After a reversal the Warehouse may record a new receipt or mark (next sequence number) as a real new record.
+The Warehouse proposes the reversal of a mistaken receipt, finished/sent mark or customer dispatch with a mandatory reason; Management approves or rejects. The original record is never deleted or edited: it is marked reversed only after approval, and the reversal links to it with proposer, approver, timestamps and reasons. A database record entered by mistake and a physical movement that really happened are told apart: the latter is corrected by a compensating Warehouse transaction (the approved reversal is that transaction), never pretended away. A receipt cannot be reversed while a current finished/sent mark depends on it: the mark is reversed first through its own authorized proposal and approval, then the receipt (owner decision I-2, 2026-11-15, Decision Log #148). After a reversal the Warehouse may record a new receipt or mark (next sequence number) as a real new record.
 
 ---
 
@@ -1689,6 +1689,8 @@ The Warehouse proposes the reversal of a mistaken receipt, finished/sent mark or
 The contract subsystem remains part of the current design where a request requires a contract before production.
 
 > **Owner decision A2 (2026-11-14, Decision Log #142, #146):** the contract record carries an amount in Iranian Rial. Planning enters it with the contract (optional in this implementation, a labelled interpretation); Management approves it together with the contract; the item price screen of a contract item proposes the approved amount, Management may accept it or change it with a mandatory reason and audit, and the approved contract amount stays distinct from the later item-level price decision. There is no per-item contract price model.
+>
+> **Owner decision I-1 (2026-11-15, Decision Log #148):** the amount is mandatory when the contract is submitted to Management and optional while the contract is being prepared; it is not required at the initial request submission.
 
 ## 18.1 Contract determination by Planning
 
@@ -2072,7 +2074,7 @@ Downtime must not be incorrectly attributed to operator performance when the cau
 
 > **Design annotation (2026-10-22, Decision Log #82/#83; PROPOSAL, not approved unless stated):** R5/R6: daily job reports and KPI reporting over any period X-Y with hour-based operator ranking; the 24-day period becomes a preset (U-33). Reward formulas stay Phase 2 (#21). See `JOB_REPORTS_KPI_AND_OVERTIME_DESIGN.md`.
 
-> **Owner decision B2 (2026-11-14, Decision Log #142, #145):** an approved daily job report can be reopened by Planning or the Production Manager with a mandatory reason. The amendment is a NEW revision; the approved original and its whole history are preserved; the amendment is submitted and approved like a report; only the latest valid approved revision feeds KPIs and costing. If the approved amendment changes the machine time costing used, the affected cost snapshot and price approval become not current until recalculated and re-approved. A physically accurate Warehouse receipt is not invalidated by a report amendment.
+> **Owner decision B2 (2026-11-14, Decision Log #142, #145):** an approved daily job report can be reopened by Planning or the Production Manager with a mandatory reason. The amendment is a NEW revision; the approved original and its whole history are preserved; the amendment is submitted and approved like a report; only the latest valid approved revision feeds KPIs and costing. If the approved amendment changes the machine time costing used, the affected cost snapshot and price approval become not current until recalculated and re-approved. A physically accurate Warehouse receipt is not invalidated by a report amendment. **Owner decisions I-3 and I-4 (2026-11-15, Decision Log #148):** an open amendment that was never submitted may be cancelled by Planning or the Production Manager with a mandatory reason (kept as history, never deleted, the original untouched); a submitted or approved amendment is corrected through the controlled process, not discarded. An amendment shows no new late-report warning; the original report keeps its own submission time and late status, and the amendment's actual submission time and the report history are displayed.
 
 
 ## 22.1 Daily production report

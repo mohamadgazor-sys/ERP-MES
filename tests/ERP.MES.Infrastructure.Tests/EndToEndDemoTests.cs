@@ -73,7 +73,7 @@ public class EndToEndDemoTests
 
         // 2. Planning requires a contract for the request, prepares and submits it with its PDF; Management approves it.
         var decided = (await w.Contracts.DecideRequirementAsync(planning, requestId, ContractRequirement.Required, null, Token)).Value!;
-        var draft = (await w.Contracts.SaveDraftAsync(planning, requestId, decided.Version, "CN-E2E-1", "1405/08/02", "قرارداد آزمون", null, Token)).Value!;
+        var draft = (await w.Contracts.SaveDraftAsync(planning, requestId, decided.Version, "CN-E2E-1", "1405/08/02", "قرارداد آزمون", null, Token, 8_000_000m)).Value!;
         var contractPdf = (await w.Contracts.AttachPdfAsync(planning, requestId, draft.Version, "contract.pdf", Pdf("contract"), Token)).Value!;
         var contractSent = (await w.Contracts.SubmitAsync(planning, requestId, contractPdf.Version, Token)).Value!;
         Assert.True((await w.Contracts.ApproveAsync(manager, requestId, contractSent.Version, null, Token)).Succeeded);
@@ -359,7 +359,7 @@ public class EndToEndDemoTests
         Assert.True((await w.Lifecycle.RecordDrawingResultAsync(drawing, forwarded.Value.Id, forwarded.Version, DrawingOutcome.FullyAccepted, null, Token)).Succeeded);
         var requestId = created.Value.Id;
         var decided = (await w.Contracts.DecideRequirementAsync(planning, requestId, ContractRequirement.Required, null, Token)).Value!;
-        var draft = (await w.Contracts.SaveDraftAsync(planning, requestId, decided.Version, "CN-E2E-2", "1405/08/02", "قرارداد آزمون", null, Token)).Value!;
+        var draft = (await w.Contracts.SaveDraftAsync(planning, requestId, decided.Version, "CN-E2E-2", "1405/08/02", "قرارداد آزمون", null, Token, 8_000_000m)).Value!;
         var contractPdf = (await w.Contracts.AttachPdfAsync(planning, requestId, draft.Version, "contract.pdf", Pdf("contract"), Token)).Value!;
         var contractSent = (await w.Contracts.SubmitAsync(planning, requestId, contractPdf.Version, Token)).Value!;
 

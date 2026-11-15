@@ -449,6 +449,12 @@ public enum ValidationIssue
     /// <summary>The contract amount must be a positive, whole number of Iranian Rial (owner decision A2).</summary>
     ContractAmountInvalid,
 
+    /// <summary>The contract amount in Rial is required to submit the contract to Management (owner decision I-1).</summary>
+    ContractAmountRequired,
+
+    /// <summary>Only an open amendment that was never submitted can be cancelled, with a reason (owner decision I-3).</summary>
+    JobReportCancelNotAllowed,
+
     /// <summary>The inspection decisions are not valid (none, a non-positive count, or a reason missing for rework or scrap).</summary>
     InspectionEntriesInvalid,
 

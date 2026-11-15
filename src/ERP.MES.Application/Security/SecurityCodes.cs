@@ -72,6 +72,7 @@ public static class AuditActions
     public const string JobReportApproved = "JobReportApproved";
     public const string JobReportReturned = "JobReportReturned";
     public const string JobReportReopened = "JobReportReopened";
+    public const string JobReportAmendmentCancelled = "JobReportAmendmentCancelled";
     public const string StageCorrected = "StageCorrected";
     public const string WarehouseReceiptRecorded = "WarehouseReceiptRecorded";
     public const string WarehouseReversalProposed = "WarehouseReversalProposed";
