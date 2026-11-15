@@ -89,6 +89,16 @@ Part 2 - the correction
 
 Which statements are verified: the service-level behaviour of every step 10-20 by `EndToEndDemoTests` and `QcCorrectionTests`; the indicator, warning text and button gating by the Desktop view-model tests; the button's presence for QC and absence/disabled state for the other roles by the Windows UI-interaction script. The steps 1-9 in the UI follow `docs/DEMO_WALKTHROUGH.md`.
 
+## 2d. Warehouse reversal, report revision and contract amount (owner decisions B9, B2, A2; Decision Log #144-#146; needs the package built from the main that contains them)
+
+None of these is seeded in the demonstration data; each is a short live step on existing records.
+
+| Topic | Accounts | Steps |
+|---|---|---|
+| Warehouse reversal (B9) | `demo.warehouse`, `demo.management` | On «دریافت انبار و تکمیل» select an item with a record, choose the record, the nature and a reason, «پیشنهاد برگشت». Say: nothing changes until Management decides. As `demo.management` select the proposal in the lower list, «تأیید برگشت» (the original stays listed «برگشت‌خورده», linked with proposer, approver, times and reasons) or «ردّ برگشت» with a reason. A real new receipt can then be recorded. |
+| Report revision (B2) | `demo.planning` (or `demo.productionmanager`), the operator, the supervisor | On «گزارش کار روزانه» select an approved report, «بازگشایی گزارش تأییدشده با دلیل». The approved original stays valid (shown «اصلاحیه در جریان است»); the operator edits the new revision and submits; the supervisor approves; the original becomes «جایگزین‌شده» and the unit metrics count only the revision. If the machine time changed, the item's cost snapshot is shown not current on «هزینه و قیمت»; the Warehouse receipt is not touched. |
+| Contract amount (A2) | `demo.planning`, `demo.management` | On «قراردادها» for a request that needs a contract enter the amount with the draft, attach the PDF, submit; Management approves. When the item is costed, «هزینه و قیمت» proposes that amount; Management accepts it or changes it with a reason. The contract amount itself is never overwritten. |
+
 ## 3. The strongest features to show
 
 1. One request is the container for everything; MAKE and REPAIR are separate requests; the customer's own request number is kept exactly as typed.
