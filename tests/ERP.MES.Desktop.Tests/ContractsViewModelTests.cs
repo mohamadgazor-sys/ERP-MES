@@ -181,4 +181,36 @@ public class ContractsViewModelTests
         Assert.Equal("قطعهٔ بدون قرارداد", after.ReasonText);
         Assert.False(For(h, h.Management).CanDecideItem);
     }
+    [Fact]
+    public async Task The_contract_list_is_searched_by_contract_number_date_customer_or_request_number_in_Persian_or_Latin_digits()
+    {
+        using var h = await WorkflowHarness.CreateAsync(Token);
+        var id = await ReturnedMakeRequestAsync(h);
+        var planning = For(h, h.Planning);
+        await planning.LoadAsync(Token);
+        await planning.SelectAsync(id, Token);
+        Assert.True(await planning.DecideAsync(true, null, Token));
+        Assert.True(await planning.SaveDraftAsync("CN-77", "۱۴۰۵/۰۷/۲۵", "قرارداد", null, Token));
+        Assert.Single(planning.Rows);
+
+        foreach (var hit in new[] { "cn-77", "CN-7", "۱۴۰۵/۰۷/۲۵", "1405/07/25", "Fictional", "c-1" })
+        {
+            planning.SearchText = hit;
+            Assert.Single(planning.Rows);
+        }
+
+        planning.SearchText = "CN-99";
+        Assert.Empty(planning.Rows);
+        planning.SearchText = "  ";
+        Assert.Single(planning.Rows);
+        Assert.Equal("CN-77", planning.Rows.Single().ContractNoText);
+
+        // A search that hides the selected row clears the selection; reloading keeps the typed search.
+        planning.SearchText = "CN-99";
+        Assert.Null(planning.SelectedRow);
+        await planning.LoadAsync(Token);
+        Assert.Empty(planning.Rows);
+        planning.SearchText = string.Empty;
+        Assert.Single(planning.Rows);
+    }
 }
