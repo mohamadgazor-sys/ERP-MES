@@ -2467,3 +2467,21 @@ Append one dated entry after every substantial session. Do not replace prior ent
 
 ### Recommended exact next action
 - The owner answers I-1..I-4, rehearses `docs/MANAGEMENT_DEMO_ACCEPTANCE_CHECKLIST.md` on the presentation computer with the `629a536` package, and reports defects.
+
+## 2026-11-15 - release stabilization (owner decisions I-1..I-4, final packages)
+
+### Completed
+- Owner decisions I-1..I-4 recorded (Decision Log #148) and implemented in PR #92 (`f896445`): contract amount mandatory to submit to Management (optional while preparing), receipt-reversal restriction kept, never-submitted amendments cancellable with a reason (kept as history), amendments show their actual submission time and a per-report history, no late warning on amendments, the original's lateness preserved. Migrations for both providers.
+- `ebf3e43` main workflows all green (CI 43739948178 `build-test` success 17:14-17:53 UTC; SQL Server 43739948171; UI smoke 43739948188; package 43739948213). `f896445` workflows: SQL Server 43747474344, UI smoke 43747474369, package 43747474427 success; CI 43747474365 running when written.
+- Selected management-demo package: `ERP-MES-OfflineDemo-2026.11.15-f896445-win-x64.zip`, SHA-256 `99719cf2b4070217f8ebc85994ddbaae60df9b4fcd6b63bec8034599ec5fa59d`, run 43747474427, artifact 14175495731 (details in HANDOFF.md). The `ebf3e43` package (identical application code to `629a536`, without I-1/I-3) is recorded as an earlier package.
+- Documents: `docs/PHYSICAL_TEST_GUIDE.md` (Windows 11 Pro 25H2 baseline, short checklist), live-versus-seeded coverage in the acceptance checklist, HANDOFF reconciliation.
+
+### Tests actually run
+- Linux: Domain 610, Application 43, Infrastructure 780 passed; Desktop scratch harness all pass except four source-scan tests that cannot find the repository root from the harness folder (environment/path related, not passes). Windows CI, SQL Server CI, UI smoke and the package workflow as listed.
+
+### Unresolved / risks
+- No physical test of the selected package or of the live demonstration steps; the older 2026-11-13 physical tests were of older packages.
+- Production items listed in HANDOFF.md (SQL Server instance and backups, real overtime limits and master data, deployment method, backup drill).
+
+### Recommended exact next action
+- The owner runs `docs/PHYSICAL_TEST_GUIDE.md` on Windows 11 Pro 25H2 with the selected package, then rehearses `docs/MANAGEMENT_DEMO_ACCEPTANCE_CHECKLIST.md`, and reports defects.

@@ -6,6 +6,58 @@ Repository: `mohamadgazor-sys/ERP-MES` (https://github.com/mohamadgazor-sys/ERP-
 
 ---
 
+## Current state after the release stabilization of 2026-11-15 (read this first; supersedes the close-out section below where they differ)
+
+| Item | Value |
+|---|---|
+| Application code | `main` commit `f8964455fcb37c4e8f3244810af3ad86c8db0d7c` (merge of PR #92, Decision Log #148). Later commits to `main` are documentation only; prove it with `git diff f896445 origin/main -- src tests tools .github` (empty). |
+| Merged since the close-out | #91 `ebf3e43` (documentation only); #92 `f896445` (owner decisions I-1..I-4: the contract amount is mandatory to submit a contract to Management and optional while preparing it; a never-submitted job-report amendment can be cancelled with a reason; amendments show their actual submission time and history and no new late warning; the receipt restriction stays) |
+| Workflows on `ebf3e43` | all four succeeded: CI run 43739948178 (`build-test` job 132890675426, 17:14-17:53 UTC 2026-11-15), SQL Server 43739948171, UI smoke 43739948188, Offline demo package 43739948213 |
+| Workflows on `f896445` | SQL Server 43747474344 success, UI smoke 43747474369 success, Offline demo package 43747474427 success; CI 43747474365 (`build-test`) was still running when this was written - the same tree passed `build-test` on the head of PR #92 (check run 132901875444, success). Do not call `main` completely green until run 43747474365 shows success; if it is red, that is a defect to fix first. |
+| Tests (Linux, before the merge) | Domain 610, Application 43, Infrastructure 780 passed. Desktop view-model tests ran in a scratch project outside the repository: all pass except **four source-scan tests that cannot find the repository root from the scratch folder** - an environment/path problem, not passes; they run and pass on the Windows CI runner. |
+| Owner decisions | all rows of `docs/OWNER_DECISIONS_REQUIRED_2026-11-13.md` (Decision Log #142) and the four interpretations I-1..I-4 (Decision Log #148) are answered. Nothing awaits the owner. |
+| Development | frozen for features. Only genuine defects and documentation changes until production deployment work starts. |
+
+### Offline package - SELECTED FOR THE MANAGEMENT DEMONSTRATION (built from the application code commit `f896445`; contains I-1..I-4)
+
+| Item | Value |
+|---|---|
+| Source commit | `f8964455fcb37c4e8f3244810af3ad86c8db0d7c` |
+| File | `ERP-MES-OfflineDemo-2026.11.15-f896445-win-x64.zip` (a `.sha256` file is beside it) |
+| SHA-256 of the ZIP | `99719cf2b4070217f8ebc85994ddbaae60df9b4fcd6b63bec8034599ec5fa59d` |
+| Size | 106.4 MB (653 files; 242.2 MB unpacked); the GitHub artifact is 111,158,712 bytes |
+| Run / job / artifact | run 43747474427; uploading job `offline-demo (windows-latest)` 132913848116 (the `windows-2022` job 132913848424 proved the same package and does not upload); artifact `erp-mes-offline-demo`, ID 14175495731 |
+| Artifact container digest (not the ZIP checksum) | `sha256:aecb4bd50c44a3d38320300187599e3bc14cf447e748404bda12ab09d37a3661` |
+| Created / expires | 2026-11-15 18:41 UTC / 2026-12-15 (30-day retention); download: `https://github.com/mohamadgazor-sys/ERP-MES/actions/runs/43747474427/artifacts/14175495731` |
+| Proven by the run (automated, Windows Server runners) | the ZIP checksum matches its `.sha256` file; every file matches `FILES.sha256`; no SQL Server provider and no local settings file in the package; Check-Demo shows no FAIL line; all eleven demo accounts sign in and walk the pages their role may see; the demo reset works; no network connection held |
+| Why this one is selected | it is the only package whose application code contains the owner's decisions I-1 (mandatory amount at submission) and I-3 (cancel an open amendment); every earlier package lacks them |
+
+### Earlier packages (recorded exactly; do NOT use for the management demonstration)
+
+| Package | Details | Why not selected |
+|---|---|---|
+| `ERP-MES-OfflineDemo-2026.11.15-ebf3e43-win-x64.zip` | SHA-256 `f7548dcfc2b9f2e84ff381263851bbe3bf1a9ab585f2a92883e42297aca578dc`; source commit `ebf3e4374392fea4ecf41ce30f1980f276669507` (a documentation-only commit); run 43739948213, uploading job 132890675688, artifact 14171928891; 106.4 MB; expires 2026-12-15 | The **package** was generated from `ebf3e43`, but its **application code is identical to `629a536`** (the only commits between them are documentation). It was verified by the automated workflow, but it predates I-1 and I-3 (the amount is optional at submission; an open amendment cannot be cancelled). |
+| `ERP-MES-OfflineDemo-2026.11.15-629a536-win-x64.zip` | SHA-256 `3b42e49b40726596f47959b60917d2554ddea85e0a945487550abc0e31010d8f`; source commit `629a536a5c27f8df97b07a20760f76402496b624`; run 43731400833, artifact 14168542241; 106.4 MB; expires 2026-12-15 | Same application code as the `ebf3e43` package; predates I-1 and I-3. |
+| `ERP-MES-OfflineDemo-2026.11.15-e52cf5a-...`, `...2026.11.13-dfd30f1-...` | run 43725989714; `dfd30f1` SHA-256 `e0187ccf0c61cc91cdeb79a4f378c3842955b8e43b74151ba7e14b0b756adefd`, run 43504351214 | older still; lack features of 2026-11-14/15 |
+
+Later documentation-only merges start the same workflow again and build further packages whose application code is identical to `f896445`. They are equivalent to the selected package, but **this section names the one selected for the demonstration**; compare any ZIP with the SHA-256 above before use.
+
+### Physical testing - three separate things (unchanged in meaning; read `docs/PHYSICAL_TEST_GUIDE.md`)
+1. **Owner's physical tests of 2026-11-13 (older packages):** Windows 10 22H2 and Windows 11 Pro 21H2 on the owner's own PC, without internet; the cable was not established as unplugged and no clean Windows without .NET was tested. **They do not validate the exact latest package** and must not be quoted as doing so.
+2. **Automated Windows tests of the selected package:** the `Offline demo package` workflow on **Windows Server** runners (windows-2022, windows-latest); not a Windows 10/11 client and not a person.
+3. **Physical test of the selected package (`f896445`) and of the new live demonstration steps:** **not done.** Recommended baseline: **Windows 11 Pro 25H2** (Windows 11 22H2 is not on Microsoft's .NET 10 supported list). The short checklist (verify the ZIP hash, unpack, go offline, launch, sign in with all demo accounts, persistence, close and relaunch while disconnected, reset, rehearse) is in `docs/PHYSICAL_TEST_GUIDE.md`.
+
+### Management demonstration: what is live and what is seeded
+See "Live versus seeded" in `docs/MANAGEMENT_DEMO_ACCEPTANCE_CHECKLIST.md`. Seeded: the shaft's external stage (10 sent, 7 returned, 3 lost at the contractor), the bush's work session and QC acceptance, downtime, calendar closure, overtime assignment, a submitted contract. Live only: request creation, item definition and stage titles, bulk release, QC correction (including after dispatch), Warehouse receipt and reversal, job-report amendment (and cancelling an unsent one), the contract amount and its submission rule.
+
+### What remains before production deployment (none of it is missing application functionality)
+- IT: a dedicated supported SQL Server instance (never the 2008 R2 system), Persian-compatible case-insensitive/accent-sensitive collation (integration test exists), nightly full and frequent log backups with restore tests, protected per-machine connection strings, no production credentials in Git.
+- Management: real overtime limits, master data (units, machines and rates, material prices, stage titles, calendar and shifts, users).
+- Deployment: an installer or agreed deployment method (not code-signed), antivirus allow-listing, supported Windows 10/11 builds, a backup and recovery drill, the owner's physical acceptance test.
+- Not in version 1: the performance reward and ranking formula (Phase 2).
+
+---
+
 ## Current state after the close-out of 2026-11-15 (read this first; written in the docs PR after PR #90)
 
 | Item | Value |
@@ -21,7 +73,7 @@ Repository: `mohamadgazor-sys/ERP-MES` (https://github.com/mohamadgazor-sys/ERP-
 | Acceptance | `docs/MANAGEMENT_DEMO_ACCEPTANCE_CHECKLIST.md` (boxes empty until a person ticks them), `docs/MANUAL_UI_CHECKLIST.md` section Z, `docs/MANAGEMENT_DEMO_GUIDE.md` sections 2c and 2d |
 | Open PRs | none except the docs PR that carries this text |
 
-### Offline package - CURRENT (built from the application code commit `629a536`; supersedes the packages of `e52cf5a` and `dfd30f1`)
+### Offline package - EARLIER (built from the application code commit `629a536`; superseded by the package selected above)
 
 | Item | Value |
 |---|---|
