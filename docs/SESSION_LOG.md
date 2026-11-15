@@ -2449,3 +2449,21 @@ Append one dated entry after every substantial session. Do not replace prior ent
 
 ### Recommended exact next action
 - Merge PR-D, rebase this branch onto main (regenerate the migration if the snapshot conflicts), open PR-E, merge when green; then full main validation and a fresh offline package.
+
+## 2026-11-15 - first-milestone close-out
+
+### Completed
+- PRs #89 (contract amount, `e52cf5a`) and #90 (contract search and approved-contract notice, `629a536`) merged; post-merge workflows of `e52cf5a` all green (CI 43725989677, SQL Server 43725989655, UI smoke 43725989690, package 43725989714); of `629a536`: SQL Server 43731400857, UI smoke 43731400893, package 43731400833 green, CI 43731400834 running when written.
+- Requirements review (`docs/REQUIREMENTS_REVIEW_2026-11-15.md`, Decision Log #147): two approved but deferred items built; nothing else found missing.
+- Owner interpretations I-1..I-4 written up with consequences and recommendations; final management-demo acceptance checklist; manual checklist section Z; demo guide sections 2c (complete live sequence) and 2d; decision-status table extended; HANDOFF "Current state after the close-out" with the package record of `629a536`.
+
+### Tests actually run
+- Linux: Domain 608, Application 43, Infrastructure 777 passed; Desktop scratch harness all pass except four source-scan tests that cannot locate the repository root from the harness folder (environment/path related, not passes). Windows CI, SQL Server CI, UI smoke and the offline package workflow as listed above.
+
+### Unresolved / risks
+- I-1..I-4 await the owner (labelled interpretations, not approved requirements).
+- The new package and the new live demo steps have no physical test; the demo steps for reversal, amendment and correction-after-dispatch are not seeded.
+- `ui-smoke` had one UI-Automation timing flake on PR #87 (re-run once, passed).
+
+### Recommended exact next action
+- The owner answers I-1..I-4, rehearses `docs/MANAGEMENT_DEMO_ACCEPTANCE_CHECKLIST.md` on the presentation computer with the `629a536` package, and reports defects.
