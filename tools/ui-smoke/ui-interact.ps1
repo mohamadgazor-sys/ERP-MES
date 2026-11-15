@@ -675,6 +675,14 @@ try {
         }
         Sign-Out
     }
+
+    # ---- 11. Approved-contract notice on the home page for Planning and Warehouse (Master Specification 18.5) ----
+    foreach ($who in @('demo.planning', 'demo.warehouse')) {
+        Sign-In $who | Out-Null
+        Start-Sleep -Seconds 2
+        Check ((Screen-Texts 120) -like '*قراردادهای تأییدشده*') "ROLE: $who sees the approved-contract notice on the home page" "$who does not see the approved-contract tile; screen: $(Screen-Texts 40)"
+        Sign-Out
+    }
 }
 catch {
     Fail ('script error: ' + $_.Exception.Message + ' | ' + $_.ScriptStackTrace)

@@ -24,6 +24,8 @@ public sealed record ContractHistoryRow(string DateText, string ActionText, stri
 public sealed class ContractsViewModel(ContractService service, RequestGateService gates, IJalaliDateService dates, Func<Principal> currentUser, UserDirectoryService? users = null) : ObservableObject
 {
     private readonly ObservableCollection<ContractListRow> _rows = [];
+    private readonly List<ContractListRow> _allRows = [];
+    private string _searchText = string.Empty;
     private readonly ObservableCollection<ContractVersionRow> _versions = [];
     private readonly ObservableCollection<ContractHistoryRow> _history = [];
     private readonly ObservableCollection<ItemContractRow> _itemRows = [];
@@ -37,6 +39,39 @@ public sealed class ContractsViewModel(ContractService service, RequestGateServi
     private bool _isLoading;
 
     public ObservableCollection<ContractListRow> Rows => _rows;
+
+    /// <summary>
+    /// Contract search (Master Specification 18.5): the list is narrowed to the rows whose contract number, contract date (Jalali), customer or request number contain the typed text; Persian and Latin digits
+    /// and letter case are not distinguished. Empty shows every row. Nothing is saved.
+    /// </summary>
+    public string SearchText
+    {
+        get => _searchText;
+        set
+        {
+            if (SetProperty(ref _searchText, value ?? string.Empty))
+            {
+                ApplySearch();
+            }
+        }
+    }
+
+    internal static string Normalize(string? text) =>
+        new string((text ?? string.Empty).Trim().Select(c => c is >= '۰' and <= '۹' ? (char)('0' + (c - '۰')) : c is >= '٠' and <= '٩' ? (char)('0' + (c - '٠')) : c).ToArray()).ToUpperInvariant();
+
+    private void ApplySearch()
+    {
+        var needle = Normalize(_searchText);
+        var keep = _selected?.RequestId;
+        _rows.Clear();
+        foreach (var row in _allRows.Where(r => needle.Length == 0 || new[] { r.ContractNoText, r.DateText, r.CustomerName, r.RequestNo }.Any(f => Normalize(f).Contains(needle, StringComparison.Ordinal))))
+        {
+            _rows.Add(row);
+        }
+
+        _selected = _rows.FirstOrDefault(r => r.RequestId == keep);
+        OnPropertyChanged(nameof(SelectedRow));
+    }
 
     public ObservableCollection<ContractVersionRow> Versions => _versions;
 
@@ -297,6 +332,7 @@ public sealed class ContractsViewModel(ContractService service, RequestGateServi
         _capabilities = await service.GetCapabilitiesAsync(currentUser(), cancellationToken);
         var list = await service.ListAsync(currentUser(), cancellationToken);
         _rows.Clear();
+        _allRows.Clear();
         if (!list.Succeeded)
         {
             ClearDetail();
@@ -307,9 +343,15 @@ public sealed class ContractsViewModel(ContractService service, RequestGateServi
 
         foreach (var item in list.Value!)
         {
-            _rows.Add(new ContractListRow(
+            _allRows.Add(new ContractListRow(
                 item.RequestId, item.RequestNo, item.CustomerName, item.ContractStatus is { } s ? Messages.ContractStatusText(s) : "تصمیم‌گیری نشده",
                 item.ContractNo ?? string.Empty, item.ContractDate is { } d ? dates.FormatDate(d) : string.Empty));
+        }
+
+        var needle = Normalize(_searchText);
+        foreach (var row in _allRows.Where(r => needle.Length == 0 || new[] { r.ContractNoText, r.DateText, r.CustomerName, r.RequestNo }.Any(f => Normalize(f).Contains(needle, StringComparison.Ordinal))))
+        {
+            _rows.Add(row);
         }
 
         _selected = _rows.FirstOrDefault(r => r.RequestId == keepRequestId);

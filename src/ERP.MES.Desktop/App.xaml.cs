@@ -142,8 +142,10 @@ public partial class App : System.Windows.Application
         var dashboardWorkflow = WorkflowServices.Create(_contexts!, _services!.Authorization, dates);
         shell.DashboardLoader = async cancellationToken =>
         {
-            var loaded = await dashboardWorkflow.Queue.LoadAsync(_session?.Principal ?? user, cancellationToken);
-            return loaded.Succeeded ? DashboardTiles.From(loaded.Value!.Entries, DigitStyle.Persian) : null;
+            var principal = _session?.Principal ?? user;
+            var loaded = await dashboardWorkflow.Queue.LoadAsync(principal, cancellationToken);
+            var contracts = await dashboardWorkflow.Contracts.ListAsync(principal, cancellationToken);
+            return DashboardTiles.Compose(loaded.Succeeded ? loaded.Value!.Entries : null, contracts.Succeeded ? contracts.Value : null, DigitStyle.Persian);
         };
 
         // The menu shows only the pages the user's department and role make meaningful. It is a convenience: every Application command checks the user again (Decision Log #122 B2).

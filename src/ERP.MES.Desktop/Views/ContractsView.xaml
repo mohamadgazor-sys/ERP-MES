@@ -13,6 +13,10 @@
             <Button Content="بارگذاری مجدد" Padding="10,3" HorizontalAlignment="Left" Click="OnReloadClick" Margin="0,0,0,8" ToolTip="فهرست را دوباره از پایگاه داده می‌خواند. چیزی ذخیره یا حذف نمی‌شود." />
 
             <TextBlock Text="درخواست‌های ساخت در مرحلهٔ قرارداد یا دارای قرارداد" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource PrimaryBrush}" Margin="0,4,0,6" />
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                <TextBlock Text="جست‌وجو (شمارهٔ قرارداد، تاریخ، مشتری یا شمارهٔ درخواست):" VerticalAlignment="Center" Margin="0,0,8,0" />
+                <TextBox Width="260" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.AutomationId="ContractSearchBox" ToolTip="فهرست را با شمارهٔ قرارداد، تاریخ شمسی (مثلاً ۱۴۰۵/۰۷/۲۵)، نام مشتری یا شمارهٔ درخواست محدود می‌کند. چیزی ذخیره نمی‌شود." />
+            </StackPanel>
             <DataGrid ItemsSource="{Binding Rows}" SelectedItem="{Binding SelectedRow, Mode=TwoWay}" SelectionChanged="OnRowSelected" AutoGenerateColumns="False" IsReadOnly="True"
                       SelectionMode="Single" HeadersVisibility="Column" CanUserAddRows="False" CanUserDeleteRows="False" MaxHeight="200" Background="{StaticResource CardBrush}">
                 <DataGrid.Columns>
