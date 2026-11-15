@@ -40,6 +40,9 @@ public sealed class RequestContract
     /// <summary>The append-only history, oldest first.</summary>
     public IReadOnlyList<ContractHistoryEntry> History => _history;
 
+    /// <summary>The amount Management approved with the contract (owner decision A2); null while the contract is not approved or no amount was entered.</summary>
+    public decimal? ApprovedAmountRial => Status == ContractStatus.Approved ? CurrentVersion?.AmountRial : null;
+
     public ContractVersion? CurrentVersion => _versions.LastOrDefault(v => v.State != ContractVersionState.Withdrawn);
 
     /// <summary>True when the contract gate no longer blocks the request: no contract required, or the required contract is approved.</summary>
@@ -113,12 +116,12 @@ public sealed class RequestContract
     }
 
     /// <summary>Planning edits the draft version's fields. Only a draft can be edited; a submitted version never changes.</summary>
-    public void SaveDraft(ContractEligibility facts, string? contractNo, DateOnly? contractDate, string? title, string? note, WorkflowActor actor, DateTime atUtc)
+    public void SaveDraft(ContractEligibility facts, string? contractNo, DateOnly? contractDate, string? title, string? note, WorkflowActor actor, DateTime atUtc, decimal? amountRial = null)
     {
         RequireEligible(facts);
         var utc = Customer.RequireUtc(atUtc, nameof(atUtc));
         var draft = RequireDraft();
-        draft.SetFields(contractNo, contractDate, title, note);
+        draft.SetFields(contractNo, contractDate, title, note, amountRial);
         Add(ContractAction.DraftSaved, Status, Status, draft.VersionNo, null, actor, utc);
     }
 
@@ -188,7 +191,7 @@ public sealed class RequestContract
         }
 
         var previous = _versions.Last(v => v.State == ContractVersionState.Submitted);
-        var next = new ContractVersion(_versions.Count + 1, previous.ContractNo, previous.ContractDate, previous.Title, previous.Note, actor, utc);
+        var next = new ContractVersion(_versions.Count + 1, previous.ContractNo, previous.ContractDate, previous.Title, previous.Note, actor, utc, previous.AmountRial);
         if (previous.CurrentPdf is { } carried)
         {
             next.CarryOverPdf(carried, actor.UserId, utc);
@@ -255,19 +258,22 @@ public sealed class ContractVersion
     public const int MaxContractNoLength = 50;
     public const int MaxTitleLength = 200;
 
+    /// <summary>The largest contract amount in Iranian Rial (the same ceiling as an item price).</summary>
+    public const decimal MaxAmountRial = ERP.MES.Domain.Costing.ItemPriceDecision.MaxPriceRial;
+
     private readonly List<ContractDocumentLink> _documentLinks = [];
 
     private ContractVersion()
     {
     }
 
-    internal ContractVersion(int versionNo, string? contractNo, DateOnly? contractDate, string? title, string? note, WorkflowActor actor, DateTime createdAtUtc)
+    internal ContractVersion(int versionNo, string? contractNo, DateOnly? contractDate, string? title, string? note, WorkflowActor actor, DateTime createdAtUtc, decimal? amountRial = null)
     {
         VersionNo = versionNo;
         State = ContractVersionState.Draft;
         CreatedByUserId = actor.UserId;
         CreatedAtUtc = createdAtUtc;
-        SetFields(contractNo, contractDate, title, note);
+        SetFields(contractNo, contractDate, title, note, amountRial);
     }
 
     public long Id { get; }
@@ -281,6 +287,9 @@ public sealed class ContractVersion
     public string? Title { get; private set; }
 
     public string? Note { get; private set; }
+
+    /// <summary>The contract amount in Iranian Rial, entered by Planning and approved by Management together with the version (owner decision A2, Decision Log #142). Null when none was entered (older contracts; entering it is optional - a labelled interpretation).</summary>
+    public decimal? AmountRial { get; private set; }
 
     public ContractVersionState State { get; private set; }
 
@@ -311,8 +320,13 @@ public sealed class ContractVersion
         : CurrentPdf is null ? ContractSubmissionProblem.PdfMissing
         : ContractSubmissionProblem.None;
 
-    internal void SetFields(string? contractNo, DateOnly? contractDate, string? title, string? note)
+    internal void SetFields(string? contractNo, DateOnly? contractDate, string? title, string? note, decimal? amountRial = null)
     {
+        if (amountRial is { } amount && (amount <= 0 || amount > MaxAmountRial || amount != decimal.Round(amount, 0, MidpointRounding.AwayFromZero)))
+        {
+            throw new ArgumentOutOfRangeException(nameof(amountRial), amountRial, "The contract amount is a positive, whole number of Rial.");
+        }
+
         var no = string.IsNullOrWhiteSpace(contractNo) ? null : contractNo.Trim();
         var heading = string.IsNullOrWhiteSpace(title) ? null : title.Trim();
         if (no is { Length: > MaxContractNoLength } || heading is { Length: > MaxTitleLength })
@@ -325,6 +339,7 @@ public sealed class ContractVersion
         ContractDate = contractDate;
         Title = heading;
         Note = RequestContract.CleanNote(note, required: false);
+        AmountRial = amountRial;
     }
 
     internal void AttachPdf(StoredDocument document, long userId, DateTime atUtc)

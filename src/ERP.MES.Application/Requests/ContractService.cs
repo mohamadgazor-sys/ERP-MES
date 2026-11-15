@@ -233,7 +233,7 @@ public sealed class ContractService(IContractRepository contracts, CurrentAuthor
     }
 
     public async Task<Outcome<Stored<RequestContract>>> SaveDraftAsync(
-        Principal? principal, long requestId, long expectedVersion, string? contractNo, string? contractDateJalali, string? title, string? note, CancellationToken cancellationToken = default)
+        Principal? principal, long requestId, long expectedVersion, string? contractNo, string? contractDateJalali, string? title, string? note, CancellationToken cancellationToken = default, decimal? amountRial = null)
     {
         DateOnly? date = null;
         if (!string.IsNullOrWhiteSpace(contractDateJalali))
@@ -247,8 +247,8 @@ public sealed class ContractService(IContractRepository contracts, CurrentAuthor
         }
 
         return await RunAsync(principal, Permission.CreateOrSubmitContract, requestId, expectedVersion, AuditActions.ContractDraftSaved, "draft saved", null,
-            validate: () => TextIssue(contractNo, title) is { } issue && issue != ValidationIssue.None ? issue : NoteIssue(note, required: false),
-            (existing, facts, actor, now, _) => { existing!.SaveDraft(facts, contractNo, date, title, note, actor, now); return existing; }, null, cancellationToken);
+            validate: () => TextIssue(contractNo, title) is { } issue && issue != ValidationIssue.None ? issue : AmountIssue(amountRial) is { } amountProblem && amountProblem != ValidationIssue.None ? amountProblem : NoteIssue(note, required: false),
+            (existing, facts, actor, now, _) => { existing!.SaveDraft(facts, contractNo, date, title, note, actor, now, amountRial); return existing; }, null, cancellationToken);
     }
 
     public async Task<Outcome<Stored<RequestContract>>> AttachPdfAsync(
@@ -329,6 +329,9 @@ public sealed class ContractService(IContractRepository contracts, CurrentAuthor
 
         return note.Trim().Length > RequestContract.MaxNoteLength ? ValidationIssue.ReasonTooLong : ValidationIssue.None;
     }
+
+    private static ValidationIssue? AmountIssue(decimal? amountRial) =>
+        amountRial is { } amount && (amount <= 0 || amount > ContractVersion.MaxAmountRial || amount != decimal.Round(amount, 0, MidpointRounding.AwayFromZero)) ? ValidationIssue.ContractAmountInvalid : null;
 
     private static ValidationIssue? TextIssue(string? contractNo, string? title) =>
         contractNo?.Trim().Length > ContractVersion.MaxContractNoLength || title?.Trim().Length > ContractVersion.MaxTitleLength ? ValidationIssue.ContractTextTooLong : null;

@@ -34,6 +34,7 @@
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="نسخه" Binding="{Binding VersionNo}" Width="60" />
                         <DataGridTextColumn Header="شمارهٔ قرارداد" Binding="{Binding ContractNo}" ElementStyle="{StaticResource LtrCell}" Width="120" />
+                        <DataGridTextColumn Header="مبلغ قرارداد" Binding="{Binding AmountText}" Width="150" />
                         <DataGridTextColumn Header="تاریخ" Binding="{Binding DateText}" Width="100" />
                         <DataGridTextColumn Header="وضعیت" Binding="{Binding StateText}" Width="100" />
                         <DataGridTextColumn Header="PDF" Binding="{Binding PdfText}" Width="*" />
@@ -91,6 +92,7 @@
                             <StackPanel Margin="0,0,12,0"><TextBlock Text="شمارهٔ قرارداد" /><TextBox x:Name="ContractNoBox" Width="150" FlowDirection="LeftToRight" /></StackPanel>
                             <StackPanel Margin="0,0,12,0"><TextBlock Text="تاریخ قرارداد (شمسی)" /><TextBox x:Name="ContractDateBox" Width="110" FlowDirection="LeftToRight" /></StackPanel>
                             <StackPanel Margin="0,0,12,0"><TextBlock Text="عنوان" /><TextBox x:Name="TitleBox" Width="220" /></StackPanel>
+                            <StackPanel Margin="0,0,12,0"><TextBlock Text="مبلغ قرارداد (ریال، اختیاری)" /><TextBox x:Name="AmountBox" Width="160" FlowDirection="LeftToRight" IsEnabled="{Binding CanEditDraft}" AutomationProperties.AutomationId="ContractAmountBox" ToolTip="مبلغ قرارداد به ریال. برنامه‌ریزی وارد می‌کند و مدیریت همراه قرارداد تأیید می‌کند؛ صفحهٔ قیمت همین مبلغ را پیشنهاد می‌دهد." /></StackPanel>
                         </WrapPanel>
                         <WrapPanel Margin="0,8,0,0">
                             <Button Content="ذخیرهٔ پیش‌نویس" Padding="12,5" Margin="0,0,8,0" Click="OnSaveDraftClick" IsEnabled="{Binding CanEditDraft}" ToolTip="گزارش را به‌صورت پیش‌نویس ذخیره می‌کند؛ هنوز برای سرپرست ارسال نشده و قابل ویرایش است." />

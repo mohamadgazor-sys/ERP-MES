@@ -44,6 +44,7 @@ public sealed class ContractVersionConfiguration : IEntityTypeConfiguration<Cont
         builder.Property(v => v.ContractDate);
         builder.Property(v => v.Title);
         builder.Property(v => v.Note);
+        builder.Property(v => v.AmountRial);
         builder.Property(v => v.State).HasConversion<int>().IsRequired();
         builder.Property(v => v.CreatedByUserId).IsRequired();
         builder.HasOne<User>().WithMany().HasForeignKey(v => v.CreatedByUserId).IsRequired().OnDelete(DeleteBehavior.Restrict);

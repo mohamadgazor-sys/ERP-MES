@@ -1688,6 +1688,8 @@ The Warehouse proposes the reversal of a mistaken receipt, finished/sent mark or
 
 The contract subsystem remains part of the current design where a request requires a contract before production.
 
+> **Owner decision A2 (2026-11-14, Decision Log #142, #146):** the contract record carries an amount in Iranian Rial. Planning enters it with the contract (optional in this implementation, a labelled interpretation); Management approves it together with the contract; the item price screen of a contract item proposes the approved amount, Management may accept it or change it with a mandatory reason and audit, and the approved contract amount stays distinct from the later item-level price decision. There is no per-item contract price model.
+
 ## 18.1 Contract determination by Planning
 
 After Drawing confirms that the requested work is technically doable, Planning must check whether the request requires a contract. This check occurs before the request is allowed to proceed through a contract-required production release.

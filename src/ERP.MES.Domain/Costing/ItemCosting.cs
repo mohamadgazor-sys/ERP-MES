@@ -185,13 +185,15 @@ public sealed class ItemPriceDecision
     {
     }
 
-    public ItemPriceDecision(ItemCostCalculation calculation, PriceBasis basis)
+    public ItemPriceDecision(ItemCostCalculation calculation, PriceBasis basis, decimal? contractAmountRial = null, string? contractReference = null)
     {
         ArgumentNullException.ThrowIfNull(calculation);
         Calculation = calculation;
         RequestItemId = calculation.RequestItemId;
         Basis = basis;
-        ProposedPriceRial = basis == PriceBasis.Calculated ? calculation.TotalRial : null;
+        // A contract item's price screen proposes the amount Management approved with the contract (owner decision A2); without one (older contracts) Management enters it as before.
+        ProposedPriceRial = basis == PriceBasis.Calculated ? calculation.TotalRial : contractAmountRial;
+        ProposedContractReference = basis == PriceBasis.Contract && contractAmountRial is not null ? contractReference : null;
         Status = PriceDecisionStatus.Draft;
     }
 
@@ -205,8 +207,11 @@ public sealed class ItemPriceDecision
 
     public PriceBasis Basis { get; private set; }
 
-    /// <summary>The calculated total as proposed (null for a contract item: the contract amount is not calculated).</summary>
+    /// <summary>The calculated total as proposed; for a contract item the approved contract amount when the contract has one (owner decision A2), otherwise null.</summary>
     public decimal? ProposedPriceRial { get; private set; }
+
+    /// <summary>The contract number the proposed contract amount belongs to (contract items whose contract has an amount).</summary>
+    public string? ProposedContractReference { get; private set; }
 
     public PriceDecisionStatus Status { get; private set; }
 
@@ -251,11 +256,18 @@ public sealed class ItemPriceDecision
             throw new ArgumentException("The reason or the contract reference is too long.", nameof(reason));
         }
 
+        reference ??= ProposedContractReference;
         if (Basis == PriceBasis.Contract)
         {
-            if (priceRial is null || reference is null)
+            // Without a proposed contract amount Management enters the amount and the reference, as before. With one, the proposal is accepted as it is; a different price needs a reason (owner decision A2).
+            if (reference is null || (ProposedPriceRial is null && priceRial is null))
             {
                 throw new ArgumentException("The contract amount and the contract reference are mandatory.", nameof(contractReference));
+            }
+
+            if (ProposedPriceRial is not null && price != ProposedPriceRial && note is null)
+            {
+                throw new ArgumentException("Changing the proposed contract amount needs a reason.", nameof(reason));
             }
         }
         else if (price != ProposedPriceRial && note is null)

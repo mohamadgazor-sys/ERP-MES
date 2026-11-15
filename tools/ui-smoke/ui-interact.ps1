@@ -390,6 +390,8 @@ try {
     $req = Wait-Enabled 'قرارداد لازم است'
     Check ($req -and $req.Current.IsEnabled) 'Planning can decide that the request needs a contract' "request-level decision button unavailable; screen: $(Screen-Texts 30)"
     if ($req) { Click $req; Start-Sleep -Seconds 2 }
+    $amountPlanning = Find-ById $script:Main 'ContractAmountBox' 6
+    Check ($null -ne $amountPlanning -and $amountPlanning.Current.IsEnabled) 'ROLE: Planning can enter the contract amount (owner decision A2) on the draft contract' 'the contract amount box is missing or disabled for Planning'
     $items = Get-GridRows $script:Main | Where-Object { $_.Joined -like '*DEMO-1405-014-001*' -or $_.Joined -like '*DEMO-1405-014-002*' }
     Check ($items.Count -eq 2) 'the item grid lists both items of the request' ("expected 2 item rows, saw " + $items.Count)
     $row310 = Select-GridRow $script:Main 'DEMO-1405-014-001'
@@ -623,6 +625,8 @@ try {
     Select-GridRow $script:Main $R14 | Out-Null
     $mg = Find-Btn 'این آیتم: قرارداد لازم نیست' 3
     Check (-not $mg -or -not $mg.Current.IsEnabled) 'UNAUTHORIZED: Management cannot make the per-item contract decision (button absent or disabled)' 'Management has an enabled per-item decision button'
+    $amountMgmt = Find-ById $script:Main 'ContractAmountBox' 3
+    Check (-not $amountMgmt -or -not $amountMgmt.Current.IsEnabled) 'UNAUTHORIZED: Management cannot type the contract amount (Planning enters it; Management approves it)' 'Management has an enabled contract amount box'
     Save-Shot 'interact-5-management-contracts'
     Sign-Out
 

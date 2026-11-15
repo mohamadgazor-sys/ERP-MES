@@ -33,6 +33,12 @@ public sealed record CostInputs(
     IReadOnlyList<ERP.MES.Domain.Production.WorkSession>? Sessions = null,
     int UnapprovedFinishedSessions = 0)
 {
+    /// <summary>The amount Management approved with the request's contract, when it has one (owner decision A2); proposed as the price of a contract item.</summary>
+    public decimal? ContractAmountRial { get; init; }
+
+    /// <summary>The number of the approved contract the amount belongs to.</summary>
+    public string? ContractNo { get; init; }
+
     /// <summary>The item's time-approved work sessions (Decision Log #114); machine runtime of these, counted once per machine, is costed beside the approved job report lines.</summary>
     public IReadOnlyList<ERP.MES.Domain.Production.WorkSession> ApprovedSessions { get; } = Sessions ?? [];
 }

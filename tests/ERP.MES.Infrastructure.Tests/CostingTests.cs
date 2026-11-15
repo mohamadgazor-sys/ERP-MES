@@ -181,7 +181,7 @@ public class CostingTests
             Tick(w);
             if (WithContract)
             {
-                var draft = (await w.Contracts.SaveDraftAsync(w.Planning, id, decided.Value!.Version, "CN-100", "1405/07/25", "قرارداد ساخت", null, Token)).Value!;
+                var draft = (await w.Contracts.SaveDraftAsync(w.Planning, id, decided.Value!.Version, "CN-100", "1405/07/25", "قرارداد ساخت", null, Token, ContractAmount)).Value!;
                 Tick(w);
                 var withPdf = (await w.Contracts.AttachPdfAsync(w.Planning, id, draft.Version, "contract.pdf", Pdf("contract"), Token)).Value!;
                 Tick(w);
@@ -196,6 +196,8 @@ public class CostingTests
     }
 
     private static bool WithContract { get; set; }
+
+    private static decimal? ContractAmount { get; set; }
 
     private static async Task<long> VersionAsync(World w, long id) => (await w.Services.Requests.GetAsync(w.Qc, id, Token)).Value!.Request.Version;
 
@@ -541,5 +543,58 @@ public class CostingTests
         var approved = (await w.Costing.ApproveAsync(w.Manager, submitted.Value.Id, submitted.Version, 8_000_000m, null, "CN-100", Token)).Value!;
         Assert.Equal((8_000_000m, "CN-100"), (approved.Value.ApprovedPriceRial, approved.Value.ContractReference));
         Assert.True((await w.Costing.LoadAsync(w.Manager, Token)).Value!.Items.Single().ContractApproved);
+    }
+    // ---- Contract amount (owner decision A2, Decision Log #142): Planning enters it, Management approves it with the contract, the price screen proposes it ----
+
+    [Fact]
+    public async Task The_price_screen_proposes_the_approved_contract_amount_management_may_accept_it_or_change_it_with_a_reason_and_the_contract_amount_stays_separate()
+    {
+        using var w = await StartAsync();
+        ContractAmount = 8_000_000m;
+        try
+        {
+            var s = await ReadyToCostAsync(w, contract: true);
+            var requestContract = (await w.Contracts.GetAsync(w.Manager, s.RequestId, Token)).Value!.Contract!.Value;
+            Assert.Equal((8_000_000m, "CN-100"), (requestContract.ApprovedAmountRial, requestContract.CurrentVersion!.ContractNo));
+
+            var calculated = (await w.Costing.CalculateAsync(w.Warehouse, s.ItemId, Token)).Value!;
+            Assert.Equal(5_700_000m, calculated.Calculation.Value.TotalRial); // the calculated cost stays information
+            Assert.Equal((PriceBasis.Contract, (decimal?)8_000_000m, "CN-100"), (calculated.Decision.Value.Basis, calculated.Decision.Value.ProposedPriceRial, calculated.Decision.Value.ProposedContractReference));
+            var submitted = (await w.Costing.SubmitAsync(w.Warehouse, calculated.Decision.Value.Id, calculated.Decision.Version, Token)).Value!;
+
+            // A different price needs a reason; nobody but Management approves.
+            Assert.Equal(ValidationIssue.ItemPriceInvalid, (await w.Costing.ApproveAsync(w.Manager, submitted.Value.Id, submitted.Version, 7_500_000m, null, null, Token)).Issue);
+            Assert.Equal(OperationStatus.NotAuthorized, (await w.Costing.ApproveAsync(w.Warehouse, submitted.Value.Id, submitted.Version, null, null, null, Token)).Status);
+            var changed = await w.Costing.ApproveAsync(w.Manager, submitted.Value.Id, submitted.Version, 7_500_000m, "تخفیف توافقی با مشتری", null, Token);
+            Assert.True(changed.Succeeded, changed.Status + " " + changed.Issue);
+            Assert.Equal((7_500_000m, "تخفیف توافقی با مشتری", "CN-100", 8_000_000m), (changed.Value!.Value.ApprovedPriceRial, changed.Value.Value.Reason, changed.Value.Value.ContractReference, changed.Value.Value.ProposedPriceRial));
+
+            // The approved contract amount is not overwritten by the item price decision.
+            Assert.Equal(8_000_000m, (await w.Contracts.GetAsync(w.Manager, s.RequestId, Token)).Value!.Contract!.Value.ApprovedAmountRial);
+        }
+        finally
+        {
+            ContractAmount = null;
+        }
+    }
+
+    [Fact]
+    public async Task Accepting_the_proposed_contract_amount_needs_no_typing_and_a_contract_without_an_amount_keeps_the_manual_entry()
+    {
+        using var w = await StartAsync();
+        ContractAmount = 9_000_000m;
+        try
+        {
+            var s = await ReadyToCostAsync(w, contract: true);
+            var calculated = (await w.Costing.CalculateAsync(w.Warehouse, s.ItemId, Token)).Value!;
+            var submitted = (await w.Costing.SubmitAsync(w.Warehouse, calculated.Decision.Value.Id, calculated.Decision.Version, Token)).Value!;
+            var approved = await w.Costing.ApproveAsync(w.Manager, submitted.Value.Id, submitted.Version, null, null, null, Token);
+            Assert.True(approved.Succeeded, approved.Status + " " + approved.Issue);
+            Assert.Equal((9_000_000m, "CN-100", (string?)null), (approved.Value!.Value.ApprovedPriceRial, approved.Value.Value.ContractReference, approved.Value.Value.Reason));
+        }
+        finally
+        {
+            ContractAmount = null;
+        }
     }
 }

@@ -275,6 +275,9 @@ namespace ERP.MES.Infrastructure.SqlServer.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
 
+                    b.Property<decimal?>("AmountRial")
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<DateOnly?>("ContractDate")
                         .HasColumnType("date");
 
@@ -557,6 +560,9 @@ namespace ERP.MES.Infrastructure.SqlServer.Migrations
                         .HasColumnType("bigint");
 
                     b.Property<string>("ContractReference")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ProposedContractReference")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<decimal?>("ProposedPriceRial")

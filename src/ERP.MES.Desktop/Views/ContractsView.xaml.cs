@@ -42,7 +42,7 @@ public partial class ContractsView : UserControl
 
     private async void OnItemNotRequiredClick(object sender, RoutedEventArgs e) => await NoteActionAsync(() => _viewModel.DecideItemAsync(false, NoteBox.Text));
 
-    private async void OnSaveDraftClick(object sender, RoutedEventArgs e) => await SafeAsync(() => _viewModel.SaveDraftAsync(ContractNoBox.Text, ContractDateBox.Text, TitleBox.Text, NoteBox.Text));
+    private async void OnSaveDraftClick(object sender, RoutedEventArgs e) => await SafeAsync(() => _viewModel.SaveDraftAsync(ContractNoBox.Text, ContractDateBox.Text, TitleBox.Text, NoteBox.Text, default, AmountBox.Text));
 
     private async void OnSubmitClick(object sender, RoutedEventArgs e) => await SafeAsync(() => _viewModel.SubmitAsync());
 
