@@ -64,5 +64,25 @@ Accounts: `DEMO-ACCOUNTS.txt` in the package (eleven fictional accounts, one dem
 - [ ] `demo.management` closes a finished request manually (blockers are listed per item and a confirmation is asked); the closed request is read-only.
 - [ ] `Reset-Demo` works; no credential file, database backup or real customer PDF is left on the computer.
 
+## Live versus seeded - what the audience sees without any action, and what you must do live
+Seeded (already in the database after `Reset-Demo`; the data of `docs/MANAGEMENT_DEMO_GUIDE.md` section 1): three customers; requests `DEMO-1405-101` (MAKE, items released: shaft with the external plating stage, bush, retaining plate), `-102` (REPAIR), `-103` (contract submitted, waiting for Management), and the older samples `-014`, `-015`, `-016`; the bush's work session with a pause, its time approval and QC acceptance; the shaft's external dispatch of 10, return of 7 accepted and **3 lost at the contractor** waiting for Management's shortfall decision; one machine downtime window and a breakdown report; a calendar closure and an approved overtime assignment.
+
+| Topic (step of the demonstration) | Seeded? | What you do live |
+|---|---|---|
+| Customer and request creation | no | `demo.secretary`: new customer and request, attach PDF, submit |
+| Management approval and Planning forwarding | partly (`-014`, `-103`) | `demo.management` approves; `demo.planning` forwards to Drawing |
+| Drawing feasibility and contract decisions | partly | `demo.drawing` records the result; `demo.planning` decides per request and per item |
+| Item definition and searchable stage titles | no | `demo.planning`: define an item, type «فرز» in the stage-title box |
+| Bulk production release | no (the seeded request is already released) | the release-all action on a new request; read the question; «خیر» then «بله» |
+| Production queues and work sessions | seeded (the bush) plus live | `demo.supervisor` dispatches, `demo.production` pauses and finishes, `demo.planning` approves time |
+| QC (accept, rework, scrap) | seeded (bush accepted) plus live | `demo.qc` inspects a new stage |
+| **QC correction (incl. after dispatch)** | **no** | live, `MANAGEMENT_DEMO_GUIDE.md` section 2c (20 steps) |
+| **Warehouse receipt and reversal** | **no** | live: receipt, then propose and approve a reversal (section 2d) |
+| **Job-report amendment (and cancelling an open one)** | **no** | live: reopen an approved report, edit, approve; or cancel an unsent amendment with a reason |
+| **Contract amount and approvals** | **no** (the seeded `-103` contract carries an example amount) | live: Planning enters the amount, submit (refused without it), Management approves, the price screen proposes it |
+| External processing, partial returns, contractor losses | **seeded** (shaft: 10 sent, 7 returned, 3 lost) | `demo.management` decides the shortfall; `demo.warehouse` shows the history |
+| Machine downtime and overtime | **seeded** (window, breakdown report, overtime assignment) | `demo.maintenance` reports, `demo.planning` accepts; `demo.productionmanager`/`demo.management` review overtime (limits are examples) |
+| Branding and language | seeded | look at the title, header, Persian RTL, Jalali dates, Rial |
+
 ## Sign-off
 Tested by: ________  Date (Jalali): ________  Computer / Windows version: ________  Package SHA-256 checked: ☐  Defects found (list): ________
