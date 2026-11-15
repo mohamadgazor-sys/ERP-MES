@@ -2453,7 +2453,7 @@ Append one dated entry after every substantial session. Do not replace prior ent
 ## 2026-11-15 - first-milestone close-out
 
 ### Completed
-- PRs #89 (contract amount, `e52cf5a`) and #90 (contract search and approved-contract notice, `629a536`) merged; post-merge workflows of `e52cf5a` all green (CI 43725989677, SQL Server 43725989655, UI smoke 43725989690, package 43725989714); of `629a536`: SQL Server 43731400857, UI smoke 43731400893, package 43731400833 green, CI 43731400834 running when written.
+- PRs #89 (contract amount, `e52cf5a`) and #90 (contract search and approved-contract notice, `629a536`) merged; post-merge workflows of `e52cf5a` all green (CI 43725989677, SQL Server 43725989655, UI smoke 43725989690, package 43725989714); of `629a536`: all four green: CI 43731400834 (build-test 15:42-16:18 UTC), SQL Server 43731400857, UI smoke 43731400893, package 43731400833.
 - Requirements review (`docs/REQUIREMENTS_REVIEW_2026-11-15.md`, Decision Log #147): two approved but deferred items built; nothing else found missing.
 - Owner interpretations I-1..I-4 written up with consequences and recommendations; final management-demo acceptance checklist; manual checklist section Z; demo guide sections 2c (complete live sequence) and 2d; decision-status table extended; HANDOFF "Current state after the close-out" with the package record of `629a536`.
 
