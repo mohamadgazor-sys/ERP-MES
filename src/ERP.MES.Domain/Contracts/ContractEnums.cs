@@ -97,4 +97,7 @@ public enum ContractSubmissionProblem
     ContractNoMissing,
     ContractDateMissing,
     PdfMissing,
+
+    /// <summary>Owner decision I-1 (2026-11-15): the contract amount is mandatory when the contract is submitted to Management; it stays optional while the draft is prepared.</summary>
+    AmountMissing,
 }

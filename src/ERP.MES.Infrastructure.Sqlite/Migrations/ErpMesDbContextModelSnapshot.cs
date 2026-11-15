@@ -2546,6 +2546,15 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
                     b.Property<string>("AmendmentReason")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("CancellationReason")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("CancelledAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long?>("CancelledByUserId")
+                        .HasColumnType("INTEGER");
+
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("TEXT");
 
@@ -2595,6 +2604,8 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("AmendmentOpenedByUserId");
+
+                    b.HasIndex("CancelledByUserId");
 
                     b.HasIndex("CreatedByUserId");
 
@@ -4909,6 +4920,11 @@ namespace ERP.MES.Infrastructure.Sqlite.Migrations
                     b.HasOne("ERP.MES.Domain.Identity.User", null)
                         .WithMany()
                         .HasForeignKey("AmendmentOpenedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("ERP.MES.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("CancelledByUserId")
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("ERP.MES.Domain.Identity.User", null)

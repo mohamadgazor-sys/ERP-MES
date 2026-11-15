@@ -184,7 +184,7 @@ public class WarehouseCompletionTests
             Tick(w);
             if (WithContract)
             {
-                var draft = (await w.Contracts.SaveDraftAsync(w.Planning, id, decided.Value!.Version, "CN-100", "1405/07/25", "قرارداد ساخت", null, Token)).Value!;
+                var draft = (await w.Contracts.SaveDraftAsync(w.Planning, id, decided.Value!.Version, "CN-100", "1405/07/25", "قرارداد ساخت", null, Token, 8_000_000m)).Value!;
                 Tick(w);
                 var withPdf = (await w.Contracts.AttachPdfAsync(w.Planning, id, draft.Version, "contract.pdf", Pdf("contract"), Token)).Value!;
                 Tick(w);
@@ -712,6 +712,96 @@ public class WarehouseCompletionTests
         Assert.True((await w.Services.JobReports.LoadAsync(w.Planning, DateOnly.FromDateTime(Day), DateOnly.FromDateTime(Day), Token)).Value!.Items.Single(i => i.Report.Value.Id == originalId).IsSuperseded);
         Assert.Equal(1L, Count(w, "ItemPriceDecisions"));
     }
+
+    // ---- Cancelling an open amendment (owner decision I-3) and the late-report status of amended reports (owner decision I-4) ----
+
+    [Fact]
+    public async Task An_open_amendment_is_cancelled_with_a_reason_kept_as_history_and_the_original_can_be_reopened_again_but_a_submitted_amendment_cannot_be_cancelled()
+    {
+        using var w = await StartAsync();
+        var s = await SetupAsync(w);
+        await ApprovedReportAsync(w, s);
+        var originalId = OriginalReportId(w);
+        var original = await ReloadAsync(w, originalId);
+
+        var amendment = (await w.Services.JobReports.ReopenAsync(w.Planning, originalId, original.Version, "ساعت اشتباه بود", Token)).Value!;
+
+        // Only Planning and the Production Manager cancel, with a reason.
+        foreach (var other in new[] { w.Production, w.Supervisor, w.Manager, w.Warehouse, w.Qc, w.Admin })
+        {
+            Assert.Equal(OperationStatus.NotAuthorized, (await w.Services.JobReports.CancelAmendmentAsync(other, amendment.Value.Id, amendment.Version, "x", Token)).Status);
+        }
+
+        Assert.Equal(OperationStatus.NotAuthorized, (await w.Services.JobReports.CancelAmendmentAsync(null, amendment.Value.Id, amendment.Version, "x", Token)).Status);
+        Assert.Equal(ValidationIssue.JobReportReasonRequired, (await w.Services.JobReports.CancelAmendmentAsync(w.Planning, amendment.Value.Id, amendment.Version, " ", Token)).Issue);
+        // The original is not an amendment and cannot be cancelled.
+        Assert.Equal(ValidationIssue.JobReportCancelNotAllowed, (await w.Services.JobReports.CancelAmendmentAsync(w.Planning, originalId, (await ReloadAsync(w, originalId)).Version, "x", Token)).Issue);
+
+        var cancelled = await w.Services.JobReports.CancelAmendmentAsync(w.ProductionManager, amendment.Value.Id, amendment.Version, "بازگشایی اشتباه بود", Token);
+        Assert.True(cancelled.Succeeded, cancelled.Status + " " + cancelled.Issue);
+        Assert.Equal((JobReportStatus.Cancelled, w.ProductionManager.UserId, "بازگشایی اشتباه بود"), (cancelled.Value!.Value.Status, cancelled.Value.Value.CancelledByUserId!.Value, cancelled.Value.Value.CancellationReason));
+        Assert.NotNull(cancelled.Value.Value.CancelledAtUtc);
+
+        // Nothing is deleted: both rows stay, the cancellation is in the history and the audit trail; the original is unchanged and still the valid report.
+        Assert.Equal(2L, Count(w, "DailyJobReports"));
+        Assert.Equal(1L, Count(w, "DailyJobReports WHERE Status = 5"));
+        Assert.Equal(1L, Count(w, "AuditLog WHERE ActionCode = 'JobReportAmendmentCancelled'"));
+        Assert.Contains(cancelled.Value.Value.Events, e => e.Kind == JobReportEventKind.Cancelled);
+        Assert.Equal(JobReportStatus.Approved, (await ReloadAsync(w, originalId)).Value.Status);
+        Assert.Equal(240, await OperatorMinutesAsync(w));
+        Assert.Equal(0, Count(w, "RecordInvalidations"));
+
+        // A cancelled amendment is closed: it cannot be edited, submitted or cancelled again.
+        Assert.False((await w.Reports.SaveDraftAsync(w.Production, amendment.Value.Id, cancelled.Value.Version, DateOnly.FromDateTime(Day), s.Unit, s.Template, [Line(s, 8, 11, 10)], Token)).Succeeded);
+        Assert.False((await w.Reports.SubmitAsync(w.Production, amendment.Value.Id, cancelled.Value.Version, Token)).Succeeded);
+        Assert.Equal(ValidationIssue.JobReportCancelNotAllowed, (await w.Services.JobReports.CancelAmendmentAsync(w.Planning, amendment.Value.Id, cancelled.Value.Version, "دوباره", Token)).Issue);
+
+        // The original can be reopened again; the new amendment takes the next free number.
+        var again = await w.Services.JobReports.ReopenAsync(w.Planning, originalId, (await ReloadAsync(w, originalId)).Version, "این بار درست", Token);
+        Assert.True(again.Succeeded, again.Status + " " + again.Issue);
+        Assert.Equal(2, again.Value!.Value.AmendmentNo);
+
+        // Once submitted, an amendment is no longer cancelled: it is returned or approved through the controlled process.
+        var edited = (await w.Reports.SaveDraftAsync(w.Production, again.Value.Value.Id, again.Value.Version, DateOnly.FromDateTime(Day), s.Unit, s.Template, [Line(s, 8, 11, 10)], Token)).Value!;
+        var submitted = (await w.Reports.SubmitAsync(w.Production, again.Value.Value.Id, edited.Version, Token)).Value!;
+        Assert.Equal(ValidationIssue.JobReportCancelNotAllowed, (await w.Services.JobReports.CancelAmendmentAsync(w.Planning, again.Value.Value.Id, submitted.Version, "x", Token)).Issue);
+        var returned = (await w.Reports.ReviewAsync(w.Supervisor, again.Value.Value.Id, submitted.Version, false, "اصلاح شود", Token)).Value!;
+        Assert.Equal(ValidationIssue.JobReportCancelNotAllowed, (await w.Services.JobReports.CancelAmendmentAsync(w.Planning, again.Value.Value.Id, returned.Version, "x", Token)).Issue);
+        Assert.Equal(3L, Count(w, "DailyJobReports"));
+    }
+
+    [Fact]
+    public async Task An_amendment_shows_its_own_submission_time_and_no_late_warning_while_the_original_keeps_its_own_submission_time_and_lateness()
+    {
+        using var w = await StartAsync();
+        var s = await SetupAsync(w);
+        await ApprovedReportAsync(w, s);
+        var originalId = OriginalReportId(w);
+        var day = DateOnly.FromDateTime(Day);
+        DailyJobReportView View(IReadOnlyList<JobReportItem> items, long id) => new(items.Single(i => i.Report.Value.Id == id));
+        var before = View((await w.Services.JobReports.LoadAsync(w.Planning, day, day, Token)).Value!.Items, originalId);
+
+        // Time passes (more than five working days after the work date), then the report is amended and the amendment is submitted and approved.
+        w.Fixture.Clock.Advance(TimeSpan.FromDays(20));
+        var amendment = (await w.Services.JobReports.ReopenAsync(w.Planning, originalId, (await ReloadAsync(w, originalId)).Version, "تصحیح", Token)).Value!;
+        var edited = (await w.Reports.SaveDraftAsync(w.Production, amendment.Value.Id, amendment.Version, day, s.Unit, s.Template, [Line(s, 8, 11, 10)], Token)).Value!;
+        var submitted = (await w.Reports.SubmitAsync(w.Production, amendment.Value.Id, edited.Version, Token)).Value!;
+        Assert.True((await w.Reports.ReviewAsync(w.Supervisor, amendment.Value.Id, submitted.Version, true, null, Token)).Succeeded);
+
+        var items = (await w.Services.JobReports.LoadAsync(w.Planning, day, day, Token)).Value!.Items;
+        var after = View(items, originalId);
+        var amended = View(items, amendment.Value.Id);
+
+        // The original keeps its own submission time and its own lateness.
+        Assert.Equal(before.Item.Report.Value.SubmittedAtUtc, after.Item.Report.Value.SubmittedAtUtc);
+        Assert.Equal((before.Item.LateWorkingDays, before.Item.IsLate), (after.Item.LateWorkingDays, after.Item.IsLate));
+        // The amendment carries its own, actual submission time, later than the original's, and no late-report warning.
+        Assert.True(amended.Item.Report.Value.SubmittedAtUtc > after.Item.Report.Value.SubmittedAtUtc);
+        Assert.Equal((0, false), (amended.Item.LateWorkingDays, amended.Item.IsLate));
+        Assert.True(after.Item.IsSuperseded);
+    }
+
+    private sealed record DailyJobReportView(JobReportItem Item);
 
     [Fact]
     public async Task Only_warehouse_records_and_warehouse_planning_and_management_read()

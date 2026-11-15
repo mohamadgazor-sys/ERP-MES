@@ -400,6 +400,7 @@ public sealed class ContractService(IContractRepository contracts, CurrentAuthor
             {
                 ContractSubmissionProblem.ContractNoMissing => ValidationIssue.ContractNoRequired,
                 ContractSubmissionProblem.ContractDateMissing => ValidationIssue.ContractDateRequired,
+                ContractSubmissionProblem.AmountMissing => ValidationIssue.ContractAmountRequired,
                 _ => ValidationIssue.ContractPdfRequired,
             });
         }

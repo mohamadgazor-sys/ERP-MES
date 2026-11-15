@@ -670,6 +670,8 @@ try {
             Open-Page 'گزارش کار روزانه'
             $reopen = Find-ById $script:Main 'ReopenReportButton' 4
             Check (($null -ne $reopen) -eq $who[1]) "ROLE: $($who[0]) $(if ($who[1]) { 'sees' } else { 'does not see' }) the reopen-approved-report button" "$($who[0]): unexpected state of the reopen button (found: $($null -ne $reopen))"
+            $cancelAmend = Find-ById $script:Main 'CancelAmendmentButton' 3
+            Check (($null -ne $cancelAmend) -eq $who[1]) "ROLE: $($who[0]) $(if ($who[1]) { 'sees' } else { 'does not see' }) the cancel-open-amendment button (owner decision I-3)" "$($who[0]): unexpected state of the cancel-amendment button"
         } else {
             Check (-not $who[1]) "ROLE: $($who[0]) has no job-report page (and must not need the reopen button)" "$($who[0]) should see the job-report page"
         }

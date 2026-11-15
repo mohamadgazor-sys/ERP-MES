@@ -39,6 +39,7 @@
                     <DataGridTextColumn Header="ردیف‌های کار" Binding="{Binding LinesText}" Width="*" />
                     <DataGridTextColumn Header="علامت" Binding="{Binding FlagsText}" Width="*" />
                     <DataGridTextColumn Header="بررسی" Binding="{Binding ReviewText}" Width="*" />
+                    <DataGridTextColumn Header="تاریخچه" Binding="{Binding HistoryText}" Width="2*"><DataGridTextColumn.ElementStyle><Style TargetType="TextBlock"><Setter Property="TextWrapping" Value="Wrap" /></Style></DataGridTextColumn.ElementStyle></DataGridTextColumn>
                 </DataGrid.Columns>
             </DataGrid>
             <WrapPanel Margin="0,6,0,0" IsEnabled="{Binding CanReview}">
@@ -48,6 +49,7 @@
 
             <WrapPanel Margin="0,0,0,4" Visibility="{Binding CanReopen, Converter={StaticResource BoolToVisibility}}">
                 <Button Content="بازگشایی گزارش تأییدشده با دلیل" Padding="10,3" Margin="0,0,6,4" Click="OnReopen" AutomationProperties.AutomationId="ReopenReportButton" ToolTip="گزارش تأییدشده را برای اصلاح بازمی‌کند: گزارش اصلی و سابقه‌اش بدون تغییر می‌ماند و یک اصلاحیهٔ جدید برای اپراتور ساخته می‌شود. تا تأیید اصلاحیه، گزارش اصلی معتبر است. فقط برنامه‌ریزی و مدیر تولید." />
+                <Button Content="لغو اصلاحیهٔ ارسال‌نشده با دلیل" Padding="10,3" Margin="0,0,6,4" Click="OnCancelAmendment" AutomationProperties.AutomationId="CancelAmendmentButton" ToolTip="اصلاحیه‌ای را که هنوز ارسال نشده با ذکر دلیل لغو می‌کند. اصلاحیه حذف نمی‌شود و با دلیل، کاربر و زمان در سابقه می‌ماند؛ گزارش اصلی تغییر نمی‌کند. اصلاحیهٔ ارسال‌شده یا تأییدشده را با بازگرداندن یا بازگشایی دوباره اصلاح کنید. فقط برنامه‌ریزی و مدیر تولید." />
             </WrapPanel>
             <StackPanel Visibility="{Binding CanSubmit, Converter={StaticResource BoolToVisibility}}">
                 <TextBlock Text="گزارش من" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource PrimaryBrush}" Margin="0,14,0,4" />

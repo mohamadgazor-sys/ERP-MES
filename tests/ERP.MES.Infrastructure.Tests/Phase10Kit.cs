@@ -104,7 +104,7 @@ internal sealed class KitWorld : IDisposable
         Tick();
         if (contractRequired)
         {
-            var draft = (await Services.Contracts.SaveDraftAsync(Planning, id, decided.Value!.Version, "CN-100", "1405/07/25", "قرارداد ساخت", null, Token)).Value!;
+            var draft = (await Services.Contracts.SaveDraftAsync(Planning, id, decided.Value!.Version, "CN-100", "1405/07/25", "قرارداد ساخت", null, Token, 8_000_000m)).Value!;
             Tick();
             var withContractPdf = (await Services.Contracts.AttachPdfAsync(Planning, id, draft.Version, "contract.pdf", Pdf("contract"), Token)).Value!;
             Tick();

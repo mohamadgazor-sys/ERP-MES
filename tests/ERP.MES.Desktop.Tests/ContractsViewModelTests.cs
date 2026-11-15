@@ -75,7 +75,7 @@ public class ContractsViewModelTests
         await planning.LoadAsync(Token);
         await planning.SelectAsync(id, Token);
         await planning.DecideAsync(true, null, Token);
-        await planning.SaveDraftAsync("CN-1", "1405/07/25", null, null, Token);
+        await planning.SaveDraftAsync("CN-1", "1405/07/25", null, null, Token, "8000000");
         await planning.AttachPdfAsync("contract.pdf", Pdf("c"), Token);
         await planning.SubmitAsync(Token);
 
@@ -93,7 +93,7 @@ public class ContractsViewModelTests
         await planning.SelectAsync(id, Token);
         Assert.True(planning.CanStartRevision);
         Assert.True(await planning.StartRevisionAsync(Token));
-        Assert.True(await planning.SaveDraftAsync("CN-1-R1", "1405/08/01", null, null, Token));
+        Assert.True(await planning.SaveDraftAsync("CN-1-R1", "1405/08/01", null, null, Token, "8000000"));
         Assert.True(await planning.SubmitAsync(Token));
         Assert.Equal(2, planning.Versions.Count);
 

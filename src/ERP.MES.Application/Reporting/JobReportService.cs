@@ -26,6 +26,9 @@ public sealed record JobReportItem(Stored<DailyJobReport> Report, string Operato
     /// <summary>The signed-in user may reopen this approved report for amendment (Planning, the Production Manager).</summary>
     public bool CanReopen { get; init; }
 
+    /// <summary>The signed-in user may cancel this amendment: it is still a draft that was never submitted (owner decision I-3).</summary>
+    public bool CanCancel { get; init; }
+
     /// <summary>True when the report was (or, for a draft, would be today) entered more than <see cref="JobReportService.LateAfterWorkingDays"/> working days after its work date (Decision Log #142 B1). A warning only; a late report is never refused.</summary>
     public bool IsLate => LateWorkingDays > JobReportService.LateAfterWorkingDays;
 }
@@ -106,7 +109,7 @@ public sealed class JobReportService(
             var calendar = (await scheduling.LoadConfigurationAsync(cancellationToken)).ToCalendar();
             var nowUtc = clock.UtcNow;
             var all = await store.ListAsync(from, toInclusive, cancellationToken);
-            var amended = all.Where(r => r.Value.PreviousRevisionReportId is not null).Select(r => r.Value.PreviousRevisionReportId!.Value).ToHashSet();
+            var amended = all.Where(r => r.Value is { PreviousRevisionReportId: not null, Status: not JobReportStatus.Cancelled }).Select(r => r.Value.PreviousRevisionReportId!.Value).ToHashSet();
             var superseded = all.Where(r => r.Value is { PreviousRevisionReportId: not null, Status: JobReportStatus.Approved }).Select(r => r.Value.PreviousRevisionReportId!.Value).ToHashSet();
             var items = all
                 .Where(r => broad || r.Value.OperatorId == own || supervised.Contains(r.Value.ProductionUnitId))
@@ -120,6 +123,7 @@ public sealed class JobReportService(
                         IsSuperseded = superseded.Contains(r.Value.Id),
                         HasAmendment = amended.Contains(r.Value.Id),
                         CanReopen = set.Has(Permission.ReopenJobReport) && r.Value.Status == JobReportStatus.Approved && !amended.Contains(r.Value.Id),
+                        CanCancel = set.Has(Permission.ReopenJobReport) && r.Value.IsAmendment && r.Value.Status == JobReportStatus.Draft && !r.Value.Events.Any(e => e.Kind == JobReportEventKind.Submitted),
                     };
                 })
                 .OrderByDescending(i => i.Report.Value.WorkDate).ThenBy(i => i.OperatorName, StringComparer.Ordinal).ToList();
@@ -486,6 +490,52 @@ public sealed class JobReportService(
         catch (InvalidOperationException)
         {
             return Outcome<Stored<DailyJobReport>>.Invalid(ValidationIssue.JobReportReopenNotAllowed);
+        }
+    }
+
+    /// <summary>
+    /// Owner decision I-3: Planning or the Production Manager cancels an open amendment that was never submitted, with a mandatory reason. The amendment row is kept with who, when and why; the amended report is
+    /// untouched and can be reopened again. A submitted, returned or approved amendment is not cancelled this way: it is returned or reopened again through the controlled process.
+    /// </summary>
+    public async Task<Outcome<Stored<DailyJobReport>>> CancelAmendmentAsync(Principal? principal, long reportId, long expectedVersion, string? reason, CancellationToken cancellationToken = default)
+    {
+        var decision = await authorization.CheckAsync(principal, Permission.ReopenJobReport, cancellationToken);
+        if (!decision.IsAllowed)
+        {
+            return Outcome<Stored<DailyJobReport>>.Fail(OperationStatus.NotAuthorized);
+        }
+
+        var text = reason?.Trim();
+        if (string.IsNullOrEmpty(text) || text.Length > JobReportLine.MaxNoteLength)
+        {
+            return Outcome<Stored<DailyJobReport>>.Invalid(ValidationIssue.JobReportReasonRequired);
+        }
+
+        var user = decision.Current!;
+        var now = clock.UtcNow;
+        try
+        {
+            return await CustomerService.GuardAsync(async () =>
+            {
+                var report = await store.FindAsync(reportId, cancellationToken);
+                if (report is null)
+                {
+                    return Outcome<Stored<DailyJobReport>>.Fail(OperationStatus.NotFound);
+                }
+
+                if (!report.Value.IsAmendment || report.Value.Status != JobReportStatus.Draft || report.Value.Events.Any(e => e.Kind == JobReportEventKind.Submitted))
+                {
+                    return Outcome<Stored<DailyJobReport>>.Invalid(ValidationIssue.JobReportCancelNotAllowed);
+                }
+
+                return Outcome<Stored<DailyJobReport>>.Ok(await store.UpdateAsync(
+                    reportId, expectedVersion, r => r.Cancel(user.UserId, text, now),
+                    Audit(user, now, AuditActions.JobReportAmendmentCancelled, reportId.ToString(System.Globalization.CultureInfo.InvariantCulture), $"Amendment {reportId} cancelled before submission: {text}"), cancellationToken));
+            });
+        }
+        catch (InvalidOperationException)
+        {
+            return Outcome<Stored<DailyJobReport>>.Invalid(ValidationIssue.JobReportCancelNotAllowed);
         }
     }
 
