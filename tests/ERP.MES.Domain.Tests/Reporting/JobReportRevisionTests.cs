@@ -67,4 +67,44 @@ public class JobReportRevisionTests
         // An amendment of an approved amendment is amendment number 2.
         Assert.Equal(2, amendment.Reopen(21, "y", T.AddDays(2)).AmendmentNo);
     }
+    // ---- Cancelling an open amendment (owner decision I-3, 2026-11-15) ----
+
+    [Fact]
+    public void An_amendment_that_was_never_submitted_is_cancelled_with_a_reason_and_kept_while_the_amended_report_is_untouched()
+    {
+        var original = Approved();
+        var eventsBefore = original.Events.Count;
+        var amendment = original.Reopen(21, "x", T.AddDays(1));
+
+        Assert.Throws<ArgumentException>(() => amendment.Cancel(22, "  ", T.AddDays(2)));
+        Assert.Equal(JobReportStatus.Draft, amendment.Status); // the refused cancellation changed nothing
+
+        amendment.Cancel(22, "  بازگشایی اشتباه بود  ", T.AddDays(2));
+        Assert.Equal((JobReportStatus.Cancelled, 22L, T.AddDays(2), "بازگشایی اشتباه بود"), (amendment.Status, amendment.CancelledByUserId!.Value, amendment.CancelledAtUtc!.Value, amendment.CancellationReason));
+        Assert.Contains(amendment.Events, e => e.Kind == JobReportEventKind.Cancelled && e.UserId == 22 && e.Reason == "بازگشایی اشتباه بود");
+        Assert.Equal(1, amendment.Lines.Count); // the lines are kept as history
+        Assert.False(amendment.IsEditable);
+        Assert.Throws<InvalidOperationException>(() => amendment.Cancel(22, "دوباره", T.AddDays(3)));
+        Assert.Throws<InvalidOperationException>(() => amendment.ReplaceLines([]));
+
+        // The amended report is exactly as it was (the one Reopened event aside).
+        Assert.Equal((JobReportStatus.Approved, eventsBefore + 1), (original.Status, original.Events.Count));
+    }
+
+    [Fact]
+    public void A_submitted_returned_or_approved_amendment_and_an_original_report_are_never_cancelled()
+    {
+        Assert.Throws<InvalidOperationException>(() => Approved().Cancel(22, "x", T)); // not an amendment
+
+        var submitted = Approved().Reopen(21, "x", T.AddDays(1));
+        submitted.Submit(11, T.AddDays(1), new Dictionary<int, JobLineFlags>());
+        Assert.Throws<InvalidOperationException>(() => submitted.Cancel(22, "x", T.AddDays(2)));
+
+        submitted.Return(12, T.AddDays(2), "اصلاح شود", planningFallback: false); // returned: it was submitted once
+        Assert.Throws<InvalidOperationException>(() => submitted.Cancel(22, "x", T.AddDays(3)));
+
+        submitted.Submit(11, T.AddDays(3), new Dictionary<int, JobLineFlags>());
+        submitted.Approve(12, T.AddDays(3), planningFallback: false);
+        Assert.Throws<InvalidOperationException>(() => submitted.Cancel(22, "x", T.AddDays(4)));
+    }
 }

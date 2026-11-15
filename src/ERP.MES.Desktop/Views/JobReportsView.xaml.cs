@@ -56,6 +56,14 @@ public partial class JobReportsView : UserControl
         }
     }
 
+    private async void OnCancelAmendment(object sender, RoutedEventArgs e)
+    {
+        if (ReportGrid.SelectedItem is JobReportRow row && PromptWindow.Ask(Window.GetWindow(this), "لغو اصلاحیه", "دلیل لغو (الزامی):") is { } reason)
+        {
+            await _viewModel.CancelAmendmentAsync(row, reason);
+        }
+    }
+
     private void OnEdit(object sender, RoutedEventArgs e)
     {
         if (ReportGrid.SelectedItem is JobReportRow row)

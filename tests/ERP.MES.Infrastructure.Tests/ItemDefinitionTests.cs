@@ -361,7 +361,7 @@ public class ItemDefinitionTests
         // A required contract that is only a draft or pending no longer blocks DEFINITION (Decision Log #111: the contract is decided per item after the items exist); it still holds the request gate for release and start.
         var draft = (await w.Contracts.DecideRequirementAsync(w.Planning, id, ContractRequirement.Required, null, Token)).Value!;
         Tick(w);
-        var named = (await w.Contracts.SaveDraftAsync(w.Planning, id, draft.Version, "CN-1", "1405/07/25", null, null, Token)).Value!;
+        var named = (await w.Contracts.SaveDraftAsync(w.Planning, id, draft.Version, "CN-1", "1405/07/25", null, null, Token, 8_000_000m)).Value!;
         var pdf = (await w.Contracts.AttachPdfAsync(w.Planning, id, named.Version, "c.pdf", Pdf(), Token)).Value!;
         var pending = (await w.Contracts.SubmitAsync(w.Planning, id, pdf.Version, Token)).Value!;
         var done = await w.Items.DefineItemAsync(w.Planning, id, await VersionAsync(w, id), Make(piece, material), Token);

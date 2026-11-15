@@ -53,15 +53,15 @@ Rule used: a row counts as resolved only when `docs/DECISION_LOG.md` entry **#14
 
 Items I decided without an owner decision and that are therefore only labelled defaults: the working-day counting detail of B1 (production calendar of the unit), the exact blocker list of B10, the table/field names, and the demo values. They are marked as such in the code comments and Decision Log entries #142/#143 and can be changed by the owner.
 
-## Interpretations still awaiting the owner (not owner-approved requirements)
+## Interpretations decided by the owner on 2026-11-15 (Decision Log #148)
 Full text and consequences: `docs/OWNER_INTERPRETATION_DECISIONS_2026-11-15.md`.
 
-| # | Question | Where recorded | In the application now | Recommended |
-|---|---|---|---|---|
-| I-1 | Contract amount optional or mandatory at submission | #146 | optional | mandatory for new submissions |
-| I-2 | Reverse a receipt while a finished/sent mark depends on it | #144 | blocked (mark first) | keep blocked |
-| I-3 | Discard an opened job-report amendment | #145 | not possible | allow cancel with a reason, history kept |
-| I-4 | Late-report warning on an amendment | #145 | not shown | keep none |
+| # | Question | Decision | Implemented |
+|---|---|---|---|
+| I-1 | Contract amount optional or mandatory at submission | mandatory when submitted to Management; optional while preparing | yes (code PR after #91) |
+| I-2 | Reverse a receipt while a finished/sent mark depends on it | keep blocked; reverse the mark first | already so (#144) |
+| I-3 | Discard an opened job-report amendment | allow cancel with a mandatory reason, never-submitted amendments only, history kept | yes (code PR after #91) |
+| I-4 | Late-report warning on an amendment | keep none; preserve the original's lateness; show the amendment's actual submission time | yes (display and history) |
 
 ## Approved items found missing in the close-out review (2026-11-15)
 Contract search (Master Specification 18.5) and the approved-contract notice on the Planning and Warehouse dashboards (#4, 18.5): implemented in PR #90, Decision Log #147. No other approved requirement was found unbuilt (`docs/REQUIREMENTS_REVIEW_2026-11-15.md`).

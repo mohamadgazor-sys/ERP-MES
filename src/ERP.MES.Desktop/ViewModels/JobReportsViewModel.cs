@@ -16,7 +16,7 @@ namespace ERP.MES.Desktop.ViewModels;
 
 public sealed record StageChoice(UnitQueueEntry Entry, string Text);
 
-public sealed record JobReportRow(JobReportItem Item, string DateText, string OperatorText, string UnitText, string ShiftText, string StatusText, string LinesText, string FlagsText, string ReviewText);
+public sealed record JobReportRow(JobReportItem Item, string DateText, string OperatorText, string UnitText, string ShiftText, string StatusText, string LinesText, string FlagsText, string ReviewText, string HistoryText = "");
 
 public sealed record DraftLineRow(JobLineInput Input, string StageText, string MachineText, string TimeText, string UnitsText);
 
@@ -272,7 +272,8 @@ public sealed class JobReportsViewModel(
                 Digits(r.Lines.Count.ToString(CultureInfo.InvariantCulture)) + " ردیف کار، " + Digits(r.Lines.Sum(l => l.ProductiveMinutes).ToString(CultureInfo.InvariantCulture)) + " دقیقهٔ مفید",
                 (r.HasFlaggedLines ? $"{Digits(r.Lines.Count(l => l.Flags != JobLineFlags.None).ToString(CultureInfo.InvariantCulture))} ردیف کار علامت‌دار" : string.Empty)
                 + (item.IsLate ? (r.HasFlaggedLines ? "؛ " : string.Empty) + $"هشدار: گزارش دیرهنگام - {Digits(item.LateWorkingDays.ToString(CultureInfo.InvariantCulture))} روز کاری پس از تاریخ کار (مجاز: {Digits(JobReportService.LateAfterWorkingDays.ToString(CultureInfo.InvariantCulture))} روز)" : string.Empty),
-                item.CanReview ? (item.ReviewWouldBePlanningFallback ? "قابل بررسی (به‌عنوان جایگزین سرپرست)" : "قابل بررسی") : string.Empty));
+                item.CanReview ? (item.ReviewWouldBePlanningFallback ? "قابل بررسی (به‌عنوان جایگزین سرپرست)" : "قابل بررسی") : string.Empty,
+                HistoryOf(item)));
         }
 
         await LoadStagesAsync(cancellationToken);
@@ -295,13 +296,27 @@ public sealed class JobReportsViewModel(
     }
 
     /// <summary>The status text of a row: an amendment (owner decision B2) is named as such with its reason; an approved report that has an amendment says so, and a replaced one says it no longer counts.</summary>
+    /// <summary>The whole history of one report, oldest first: what happened, when and why (owner decision I-4: an amendment shows its own actual times and the original keeps its own).</summary>
+    private string HistoryOf(JobReportItem item) => string.Join("؛ ", item.Report.Value.Events.Select(e =>
+        e.Kind switch
+        {
+            JobReportEventKind.Created => "ایجاد",
+            JobReportEventKind.Submitted => "ارسال",
+            JobReportEventKind.Returned => "بازگردانده شد",
+            JobReportEventKind.Approved => "تأیید شد",
+            JobReportEventKind.Reopened => "برای اصلاح بازگشایی شد",
+            JobReportEventKind.RevisionOpened => "اصلاحیه باز شد",
+            _ => "اصلاحیه لغو شد",
+        } + " " + dates.FormatDateTime(e.AtUtc) + (e.Reason is { Length: > 0 } why ? " (" + why + ")" : string.Empty)));
+
     private string StatusOf(JobReportItem item)
     {
         var r = item.Report.Value;
-        var text = r.Status switch { JobReportStatus.Draft => "پیش‌نویس", JobReportStatus.Submitted => "ارسال‌شده", JobReportStatus.Returned => "بازگردانده‌شده: " + r.ReturnReason, _ => "تأییدشده" + (r.ReviewedByPlanningFallback ? " (بررسی توسط برنامه‌ریزی چون واحد سرپرست ندارد)" : string.Empty) };
+        var text = r.Status switch { JobReportStatus.Draft => "پیش‌نویس", JobReportStatus.Submitted => "ارسال‌شده", JobReportStatus.Returned => "بازگردانده‌شده: " + r.ReturnReason, JobReportStatus.Cancelled => "لغوشده پیش از ارسال: " + r.CancellationReason, _ => "تأییدشده" + (r.ReviewedByPlanningFallback ? " (بررسی توسط برنامه‌ریزی چون واحد سرپرست ندارد)" : string.Empty) };
         if (r.IsAmendment)
         {
-            text = "اصلاحیهٔ " + Digits(r.AmendmentNo.ToString(CultureInfo.InvariantCulture)) + " (دلیل بازگشایی: " + r.AmendmentReason + ") — " + text;
+            text = "اصلاحیهٔ " + Digits(r.AmendmentNo.ToString(CultureInfo.InvariantCulture)) + " (دلیل بازگشایی: " + r.AmendmentReason + ") — " + text
+                + (r.SubmittedAtUtc is { } submittedAt ? " — زمان واقعی ارسال اصلاحیه: " + dates.FormatDateTime(submittedAt) : string.Empty);
         }
 
         if (item.IsSuperseded)
@@ -320,6 +335,13 @@ public sealed class JobReportsViewModel(
     public Task ReopenAsync(JobReportRow row, string? reason) => CommandAsync("گزارش برای اصلاح بازگشایی شد؛ گزارش تأییدشدهٔ اصلی بدون تغییر ماند و اصلاحیهٔ جدید برای اپراتور ساخته شد.", async token =>
     {
         var outcome = await reports.ReopenAsync(currentUser(), row.Item.Report.Value.Id, row.Item.Report.Version, reason, token);
+        return outcome.Succeeded ? Outcome<int>.Ok(0) : new Outcome<int>(outcome.Status, 0, outcome.Issue, outcome.DateError);
+    });
+
+    /// <summary>Planning or the Production Manager cancels an open amendment that was never submitted, with a mandatory reason; the amendment stays as history and the amended report is untouched (owner decision I-3).</summary>
+    public Task CancelAmendmentAsync(JobReportRow row, string? reason) => CommandAsync("اصلاحیه با دلیل لغو شد؛ سابقهٔ آن می‌ماند و گزارش اصلی تغییری نکرده است.", async token =>
+    {
+        var outcome = await reports.CancelAmendmentAsync(currentUser(), row.Item.Report.Value.Id, row.Item.Report.Version, reason, token);
         return outcome.Succeeded ? Outcome<int>.Ok(0) : new Outcome<int>(outcome.Status, 0, outcome.Issue, outcome.DateError);
     });
 

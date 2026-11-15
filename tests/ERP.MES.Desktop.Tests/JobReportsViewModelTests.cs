@@ -117,6 +117,24 @@ public class JobReportsViewModelTests
         await operatorVm.LoadAsync(Token);
         Assert.True(operatorVm.Rows.Single(r => r.Item.Report.Value.IsAmendment).Item.CanEdit); // the operator corrects the amendment
 
+        // Cancelling the open amendment (owner decision I-3): a mandatory reason; the amendment stays as history and the original can be reopened again.
+        var openAmendment = planning.Rows.Single(r => r.Item.Report.Value.IsAmendment);
+        Assert.True(openAmendment.Item.CanCancel);
+        Assert.False(operatorVm.CanReopen);
+        await planning.CancelAmendmentAsync(openAmendment, " ");
+        Assert.True(planning.IsErrorMessage);
+        Assert.Equal(Messages.ForIssue(ValidationIssue.JobReportReasonRequired, JalaliDateError.None), planning.Message);
+        await planning.CancelAmendmentAsync(openAmendment, "بازگشایی اشتباه بود");
+        Assert.False(planning.IsErrorMessage, planning.Message);
+        var cancelledRow = planning.Rows.Single(r => r.Item.Report.Value.IsAmendment);
+        Assert.Contains("لغوشده پیش از ارسال: بازگشایی اشتباه بود", cancelledRow.StatusText, StringComparison.Ordinal);
+        Assert.Contains("اصلاحیه لغو شد", cancelledRow.HistoryText, StringComparison.Ordinal);
+        Assert.False(cancelledRow.Item.CanCancel);
+        var originalAgain = planning.Rows.Single(r => !r.Item.Report.Value.IsAmendment);
+        Assert.True(originalAgain.Item.CanReopen);
+        Assert.DoesNotContain("اصلاحیه در جریان است", originalAgain.StatusText, StringComparison.Ordinal);
+        Assert.Contains("برای اصلاح بازگشایی شد", originalAgain.HistoryText, StringComparison.Ordinal); // the history of the original keeps the reopening
+
         // Other departments are denied.
         var drawing = For(h, h.Drawing);
         await drawing.LoadAsync(Token);

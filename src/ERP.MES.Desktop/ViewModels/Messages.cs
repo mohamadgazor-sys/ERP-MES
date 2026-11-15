@@ -255,6 +255,8 @@ public static class Messages
         ValidationIssue.JobReportLineInvalid => "یکی از خط‌های گزارش معتبر نیست (ماشین واحد دیگر، مرحلهٔ آزادنشده یا مرحلهٔ واحد دیگر، زمان نامعتبر، توقف بدون دلیل یا تعداد منفی).",
         ValidationIssue.JobReportLinesOverlap => "ساعت‌های گزارش با هم یا با گزارش ثبت‌شدهٔ دیگر همین اپراتور هم‌پوشانی دارند.",
         ValidationIssue.JobReportReasonRequired => "دلیل بازگرداندن را وارد کنید (حداکثر ۳۰۰ نویسه).",
+        ValidationIssue.ContractAmountRequired => "برای ارسال قرارداد به مدیریت، مبلغ قرارداد (ریال) الزامی است؛ هنگام تهیهٔ پیش‌نویس اختیاری است.",
+        ValidationIssue.JobReportCancelNotAllowed => "فقط اصلاحیه‌ای که هنوز ارسال نشده است با ذکر دلیل لغو می‌شود؛ اصلاحیهٔ ارسال‌شده یا تأییدشده را با روش کنترل‌شدهٔ اصلاح (بازگرداندن یا بازگشایی دوباره) اصلاح کنید.",
         ValidationIssue.ContractAmountInvalid => "مبلغ قرارداد باید عددی مثبت و کامل به ریال باشد (بدون اعشار).",
         ValidationIssue.JobReportReopenNotAllowed => "فقط گزارش تأییدشده‌ای که هنوز اصلاحیه ندارد با ذکر دلیل بازگشایی می‌شود؛ گزارش اصلی تأییدشده تغییر نمی‌کند.",
         ValidationIssue.JobReportReviewerNotAllowed => "فقط سرپرست همین واحد (و در نبود سرپرست، برنامه‌ریزی) گزارش را بررسی می‌کند و کسی گزارش خودش را بررسی نمی‌کند.",

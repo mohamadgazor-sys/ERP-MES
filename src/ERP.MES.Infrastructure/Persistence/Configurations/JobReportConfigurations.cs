@@ -39,6 +39,10 @@ public sealed class DailyJobReportConfiguration : IEntityTypeConfiguration<Daily
         builder.HasOne<User>().WithMany().HasForeignKey(r => r.AmendmentOpenedByUserId).IsRequired(false).OnDelete(DeleteBehavior.Restrict);
         builder.Property(r => r.AmendmentOpenedAtUtc);
         builder.Ignore(r => r.IsAmendment);
+        builder.Property(r => r.CancelledByUserId);
+        builder.HasOne<User>().WithMany().HasForeignKey(r => r.CancelledByUserId).IsRequired(false).OnDelete(DeleteBehavior.Restrict);
+        builder.Property(r => r.CancelledAtUtc);
+        builder.Property(r => r.CancellationReason);
         builder.Property(r => r.CreatedByUserId).IsRequired();
         builder.HasOne<User>().WithMany().HasForeignKey(r => r.CreatedByUserId).IsRequired().OnDelete(DeleteBehavior.Restrict);
         builder.Property(r => r.CreatedAtUtc).IsRequired();

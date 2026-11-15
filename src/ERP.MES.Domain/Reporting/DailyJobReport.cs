@@ -8,6 +8,9 @@ public enum JobReportStatus
     Submitted,
     Returned,
     Approved,
+
+    /// <summary>An amendment that was cancelled before it was ever submitted (owner decision I-3, 2026-11-15); kept as history, never counted, never deleted.</summary>
+    Cancelled,
 }
 
 /// <summary>Why a report line needs the reviewer's attention (Decision Log #101, docs/JOB_REPORTS_KPI_AND_OVERTIME_DESIGN.md sections 4 and 6). A flagged line is not rejected; the reviewer decides.</summary>
@@ -136,6 +139,9 @@ public enum JobReportEventKind
 
     /// <summary>First event of an amendment: the reopening reason.</summary>
     RevisionOpened,
+
+    /// <summary>The amendment was cancelled before submission, with a reason (owner decision I-3).</summary>
+    Cancelled,
 }
 
 /// <summary>Append-only history of a report: who did what and when, with the reason of a return and whether Planning reviewed as the fallback.</summary>
@@ -221,6 +227,13 @@ public sealed class DailyJobReport
     public DateTime? AmendmentOpenedAtUtc { get; private set; }
 
     public bool IsAmendment => PreviousRevisionReportId is not null;
+
+    /// <summary>Who cancelled the amendment, when and why (owner decision I-3); null unless the status is Cancelled.</summary>
+    public long? CancelledByUserId { get; private set; }
+
+    public DateTime? CancelledAtUtc { get; private set; }
+
+    public string? CancellationReason { get; private set; }
 
     public long CreatedByUserId { get; private set; }
 
@@ -353,6 +366,42 @@ public sealed class DailyJobReport
         revision.ReplaceLines(_lines.Select(l => new JobReportLine(l.LineNo, l.MachineId, l.RequestId, l.RequestItemId, l.StageNo, l.StartUtc, l.EndUtc, l.DowntimeMinutes, l.DowntimeReason, l.ProcessedBaseUnits, l.Note)));
         _events.Add(new JobReportEvent(JobReportEventKind.Reopened, userId, at, text, planningFallback: false));
         return revision;
+    }
+
+    /// <summary>
+    /// Owner decision I-3: cancels an open amendment that was never submitted, with a mandatory reason. The amendment row is kept (status Cancelled, who, when, why, one event); the amended report is untouched.
+    /// An amendment that was submitted, returned or approved is corrected through the controlled process (return and resubmit, or reopen again), never discarded.
+    /// </summary>
+    public void Cancel(long userId, string? reason, DateTime atUtc)
+    {
+        if (!IsAmendment || Status != JobReportStatus.Draft || _events.Any(e => e.Kind == JobReportEventKind.Submitted))
+        {
+            throw new InvalidOperationException("Only an amendment that was never submitted can be cancelled.");
+        }
+
+        var text = reason?.Trim();
+        if (string.IsNullOrEmpty(text) || text.Length > JobReportLine.MaxNoteLength)
+        {
+            throw new ArgumentException("A cancellation reason of 1 to " + JobReportLine.MaxNoteLength + " characters is required.", nameof(reason));
+        }
+
+        var at = Customer.RequireUtc(atUtc, nameof(atUtc));
+        Status = JobReportStatus.Cancelled;
+        CancelledByUserId = userId;
+        CancelledAtUtc = at;
+        CancellationReason = text;
+        _events.Add(new JobReportEvent(JobReportEventKind.Cancelled, userId, at, text, planningFallback: false));
+    }
+
+    /// <summary>Sets the amendment number when an earlier cancelled amendment already used the next one (the repository assigns it so the unique key holds).</summary>
+    public void AssignAmendmentNo(int amendmentNo)
+    {
+        if (!IsAmendment || amendmentNo < 1)
+        {
+            throw new InvalidOperationException("Only an amendment has an amendment number.");
+        }
+
+        AmendmentNo = amendmentNo;
     }
 
     private void RequireSubmitted(string action)

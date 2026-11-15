@@ -2641,6 +2641,15 @@ namespace ERP.MES.Infrastructure.SqlServer.Migrations
                     b.Property<string>("AmendmentReason")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("CancellationReason")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("CancelledAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<long?>("CancelledByUserId")
+                        .HasColumnType("bigint");
+
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
@@ -2690,6 +2699,8 @@ namespace ERP.MES.Infrastructure.SqlServer.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("AmendmentOpenedByUserId");
+
+                    b.HasIndex("CancelledByUserId");
 
                     b.HasIndex("CreatedByUserId");
 
@@ -5054,6 +5065,11 @@ namespace ERP.MES.Infrastructure.SqlServer.Migrations
                     b.HasOne("ERP.MES.Domain.Identity.User", null)
                         .WithMany()
                         .HasForeignKey("AmendmentOpenedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("ERP.MES.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("CancelledByUserId")
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("ERP.MES.Domain.Identity.User", null)

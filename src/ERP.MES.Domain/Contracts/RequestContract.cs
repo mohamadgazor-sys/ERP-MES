@@ -318,6 +318,7 @@ public sealed class ContractVersion
         string.IsNullOrWhiteSpace(ContractNo) ? ContractSubmissionProblem.ContractNoMissing
         : ContractDate is null ? ContractSubmissionProblem.ContractDateMissing
         : CurrentPdf is null ? ContractSubmissionProblem.PdfMissing
+        : AmountRial is null ? ContractSubmissionProblem.AmountMissing
         : ContractSubmissionProblem.None;
 
     internal void SetFields(string? contractNo, DateOnly? contractDate, string? title, string? note, decimal? amountRial = null)
