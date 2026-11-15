@@ -1,4 +1,6 @@
+using ERP.MES.Application.Persistence;
 using ERP.MES.Application.Requests;
+using ERP.MES.Domain.Contracts;
 using ERP.MES.Desktop.ViewModels;
 using ERP.MES.Domain.Calendar;
 using ERP.MES.Domain.Requests;
@@ -29,6 +31,48 @@ public class DashboardTilesTests
         Assert.Equal("۲", tiles["آیتم‌های در تولید"]);              // in progress and waiting QC; the planned one and the completed one are not
         Assert.Equal("۱", tiles["در انتظار تأیید کنترل کیفیت"]);
         Assert.Equal("۲", tiles["آیتم‌های فوری"]);                  // very urgent in progress, urgent waiting QC; the completed one and the cancelled request's do not count
+    }
+
+    // ---- Approved-contract notice for Planning and Warehouse (Master Specification 18.5, Decision Log #4) ----
+
+    private static ContractListItem Contract(long id, string requestNo, RequestStatus request, ContractStatus? contract) =>
+        new(id, requestNo, "مشتری", request, contract, contract is null ? null : "CN-" + id, null, contract is null ? null : 1, null);
+
+    [Fact]
+    public void The_contract_notice_counts_approved_contracts_of_open_requests_and_lists_their_request_numbers_without_storing_anything()
+    {
+        var contracts = new[]
+        {
+            Contract(1, "R-2", RequestStatus.MgmtApprovedAtPlanning, ContractStatus.Approved),
+            Contract(2, "R-1", RequestStatus.MgmtApprovedAtPlanning, ContractStatus.Approved),
+            Contract(3, "R-3", RequestStatus.MgmtApprovedAtPlanning, ContractStatus.PendingManagement),   // not approved yet
+            Contract(4, "R-4", RequestStatus.Closed, ContractStatus.Approved),                              // closed request
+            Contract(5, "R-5", RequestStatus.Cancelled, ContractStatus.Approved),                           // cancelled request
+            Contract(6, "R-6", RequestStatus.MgmtApprovedAtPlanning, null),                                 // no decision
+        };
+
+        var tile = DashboardTiles.ContractNotice(contracts, DigitStyle.Persian);
+        Assert.Equal(("قراردادهای تأییدشده", "۲"), (tile.Title, tile.ValueText));
+        Assert.Contains("R-1، R-2", tile.Note, StringComparison.Ordinal);
+        Assert.DoesNotContain("R-3", tile.Note, StringComparison.Ordinal);
+        Assert.Equal("۰", DashboardTiles.ContractNotice([], DigitStyle.Persian).ValueText);
+
+        var many = Enumerable.Range(1, 8).Select(i => Contract(i, "R-" + i, RequestStatus.MgmtApprovedAtPlanning, ContractStatus.Approved)).ToArray();
+        var big = DashboardTiles.ContractNotice(many, DigitStyle.Persian);
+        Assert.Equal("۸", big.ValueText);
+        Assert.Contains("و ۳ مورد دیگر", big.Note, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void The_home_page_composes_the_production_counts_and_the_contract_notice_by_what_the_user_may_read()
+    {
+        var entries = new[] { Entry(1, "1-1", RequestStatus.MgmtApprovedAtPlanning, Priority.Normal, QueueRouteState.Open, ItemStageStatus.Planned) };
+        var contracts = new[] { Contract(1, "R-1", RequestStatus.MgmtApprovedAtPlanning, ContractStatus.Approved) };
+
+        Assert.Equal(5, DashboardTiles.Compose(entries, contracts, DigitStyle.Persian)!.Count);   // Planning: counts and notice
+        Assert.Equal(["قراردادهای تأییدشده"], DashboardTiles.Compose(null, contracts, DigitStyle.Persian)!.Select(t => t.Title));   // Warehouse: the notice only
+        Assert.Equal(4, DashboardTiles.Compose(entries, null, DigitStyle.Persian)!.Count);        // a user who reads no contracts
+        Assert.Null(DashboardTiles.Compose(null, null, DigitStyle.Persian));                      // nothing readable: placeholders stay
     }
 
     [Fact]
