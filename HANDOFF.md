@@ -6,6 +6,49 @@ Repository: `mohamadgazor-sys/ERP-MES` (https://github.com/mohamadgazor-sys/ERP-
 
 ---
 
+## Current state after the close-out of 2026-11-15 (read this first; written in the docs PR after PR #90)
+
+| Item | Value |
+|---|---|
+| Application code | `main` commit `629a536a5c27f8df97b07a20760f76402496b624` (merge of PR #90). Later commits to `main` are documentation only; compare `git diff 629a536 origin/main -- src tests tools .github` to prove it. |
+| Merged this stretch | #86 `85af213` (owner decisions of 2026-11-14, R1, B1, B10, A4 collation test, QC correction Q1-Q8 with Requests indicator and Management warning); #87 `15d7508` (Warehouse reversal, B9); #88 `76e0b4a` (job-report revision, B2); #89 `e52cf5a` (contract amount, A2); #90 `629a536` (contract search and the approved-contract notice, Master Specification 18.5) |
+| Post-merge workflows on `e52cf5a` | all four succeeded: CI run 43725989677 (`build-test`, 14:44-15:24 UTC), SQL Server 43725989655, UI smoke 43725989690, Offline demo package 43725989714 |
+| Post-merge workflows on `629a536` | all four succeeded: CI 43731400834 (`build-test` job 132864403053, 15:42-16:18 UTC), SQL Server 43731400857, UI smoke 43731400893, Offline demo package 43731400833 |
+| Tests (Linux, before the merges) | Domain 608, Application 43, Infrastructure 777 passed. Desktop view-model tests ran in a scratch project outside the repository (the repository has no Linux Desktop harness): all pass except **four source-scan tests that cannot find the repository root from the scratch folder** - an environment/path problem, not passes; they run and pass on the Windows CI runner. |
+| Owner decisions | all rows of `docs/OWNER_DECISIONS_REQUIRED_2026-11-13.md` are answered (Decision Log #142). Traceability of each to its decision: `docs/OWNER_DECISION_STATUS_2026-11-14.md`. |
+| Awaiting the owner | four **interpretations** (not owner-approved requirements) in `docs/OWNER_INTERPRETATION_DECISIONS_2026-11-15.md`: I-1 contract amount optional or mandatory (recommend mandatory for new submissions), I-2 receipt reversal while a finished mark depends on it (recommend keep blocked), I-3 discarding an opened report amendment (recommend allow cancel with a reason), I-4 late warning on amendments (recommend none) |
+| Requirements review | `docs/REQUIREMENTS_REVIEW_2026-11-15.md`: only contract search and the approved-contract notice were missing (built in #90, Decision Log #147); everything else open is an owner or IT action |
+| Acceptance | `docs/MANAGEMENT_DEMO_ACCEPTANCE_CHECKLIST.md` (boxes empty until a person ticks them), `docs/MANUAL_UI_CHECKLIST.md` section Z, `docs/MANAGEMENT_DEMO_GUIDE.md` sections 2c and 2d |
+| Open PRs | none except the docs PR that carries this text |
+
+### Offline package - CURRENT (built from the application code commit `629a536`; supersedes the packages of `e52cf5a` and `dfd30f1`)
+
+| Item | Value |
+|---|---|
+| Source commit | `629a536a5c27f8df97b07a20760f76402496b624` |
+| File | `ERP-MES-OfflineDemo-2026.11.15-629a536-win-x64.zip` (a `.sha256` file is beside it) |
+| SHA-256 of the ZIP | `3b42e49b40726596f47959b60917d2554ddea85e0a945487550abc0e31010d8f` |
+| Size | 106.4 MB (653 files; 242.1 MB unpacked); the GitHub artifact is 111,142,654 bytes |
+| Run / job / artifact | run 43731400833; uploading job `offline-demo (windows-latest)` 132864403231 (the `windows-2022` job 132864403012 proved the same package and does not upload); artifact `erp-mes-offline-demo`, ID 14168542241 |
+| Artifact container digest (not the ZIP checksum) | `sha256:66b47cb3cc1ac2ef22f46c90e68178369238f7edb1ef4d203b50ea9c692f442d` |
+| Created / expires | 2026-11-15 15:50 UTC / 2026-12-15 (30-day retention); download: Actions run 43731400833 -> Artifacts, or `https://github.com/mohamadgazor-sys/ERP-MES/actions/runs/43731400833/artifacts/14168542241` |
+| Proven by the run (automated, Windows Server runners) | the ZIP checksum matches its `.sha256` file; every file matches `FILES.sha256`; no SQL Server provider and no local settings file in the package; launcher and database initialisation work from the ZIP alone; all eleven demo accounts sign in and walk the pages their role may see; the demo reset works; no network connection held; the demo passphrase is in no log |
+| Later builds | merging a docs-only commit starts the same workflow again and builds another package from that docs commit; its application code is identical to `629a536` (see the diff command above). This section names the package of the code commit; a later package is equivalent. Earlier, different packages: `ERP-MES-OfflineDemo-2026.11.13-dfd30f1-win-x64.zip` (SHA-256 `e0187ccf0c61cc91cdeb79a4f378c3842955b8e43b74151ba7e14b0b756adefd`, run 43504351214) lacks everything of 2026-11-14/15; the package of `e52cf5a` (run 43725989714) lacks the contract search and notice. Do not hand either out as the latest. |
+
+### Physical testing - three separate things (do not blur them; unchanged in meaning)
+
+1. **Owner's physical tests (2026-11-13, an earlier package):** ran without internet on Windows 10 22H2 and Windows 11 Pro 21H2, both on the owner's same PC; the cable was not established as unplugged and no clean Windows without .NET was tested (details in the section below).
+2. **Automated Windows tests of the latest package (this section):** the `Offline demo package` workflow on **Windows Server** runners (windows-2022, windows-latest), not a Windows 10/11 client, not a person.
+3. **Physical test of the latest package (`629a536`) and of the new live demo steps (QC correction after dispatch, Warehouse reversal, report amendment, contract amount):** **not done.** It is a separate step for the owner. Until then the package must not be described as physically tested.
+
+### What remains before production deployment (none of it is missing application functionality)
+- IT: a dedicated, supported SQL Server instance, Persian-compatible case-insensitive/accent-sensitive collation (the integration test exists), nightly full and frequent log backups with restore tests, protected per-machine connection strings, never the company's SQL Server 2008 R2 (`docs/SQL_SERVER_PRODUCTION_ARCHITECTURE.md`); the production database is empty until Management enters real data.
+- Management: the real overtime limits; the answers to I-1 to I-4; the master data (units, machines and rates, material prices, stage titles, calendar and shifts, users).
+- Deployment: a signed installer or an agreed deployment method (the package is not code-signed), antivirus allow-listing, a supported Windows 10/11 build (Windows 11 22H2 is not on Microsoft's .NET 10 list), a backup and recovery drill, and the owner's physical acceptance test (checklist above).
+- Not in version 1: the performance reward and ranking formula (Phase 2).
+
+---
+
 ## Owner-performed acceptance testing (recorded 2026-11-13; physical, not automated)
 
 The owner personally tested the application **without internet access** on **Windows 10 22H2** and on **Windows 11 Pro 21H2**, both on the **same PC** (not two separate computers); it worked on both. Limits of that evidence: it does not establish that the Ethernet cable was physically unplugged, and **no clean Windows installation without .NET was tested**. Do not claim those two as done. The owner also completed live: Secretary created a customer and a MAKE request and sent it to Management; Management approved and forwarded to Planning; Planning forwarded to Drawing; Drawing fully accepted feasibility and returned it; Planning decided "no contract required", started defining items, created a sample item, and then hit the stage-title selection problem (a title that is not an exact catalog entry is an error) that the searchable dropdown of the next PR addresses.
